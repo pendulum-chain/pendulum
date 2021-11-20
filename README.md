@@ -2,8 +2,8 @@
 
 Pendulum chain by SatoshiPay.
 
-Node runtime and the pallets it requires.
+Node runtimethat is parachain ready (configured with cumulus).
 
 🚧 This is a work in progress. 🚧
 
-Based on Substrate. Repository based on [substrate-developer-hub/substrate-node-template](https://github.com/substrate-developer-hub/substrate-node-template).
+Based on Substrate. Repository based on [Substrate parachain template](https://github.com/substrate-developer-hub/substrate-parachain-template).

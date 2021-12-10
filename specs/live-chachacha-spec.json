@@ -1,10 +1,10 @@
 {
-  "name": "Local Testnet",
-  "id": "local_testnet",
-  "chainType": "Local",
+  "name": "Pendulum Testnet",
+  "id": "pendulum_live_testnet",
+  "chainType": "Live",
   "bootNodes": [],
-  "telemetryEndpoints": null,
-  "protocolId": "template-local",
+  "telemetryEndpoints": [["/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F", 0]],
+  "protocolId": "pendulum_testnet",
   "properties": {
     "ss58Format": 42,
     "tokenDecimals": 12,

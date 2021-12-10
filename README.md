@@ -2,7 +2,7 @@
 
 Pendulum chain by SatoshiPay.
 
-Node runtimethat is parachain ready (configured with cumulus).
+Node runtime that is parachain ready (configured with cumulus).
 
 🚧 This is a work in progress. 🚧
 

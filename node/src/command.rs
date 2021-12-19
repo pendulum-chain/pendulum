@@ -18,14 +18,11 @@ use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::Block as BlockT;
 use std::{io::Write, net::SocketAddr};
 
-fn load_spec(
-	id: &str,
-	para_id: ParaId,
-) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
+fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	Ok(match id {
-		"dev" => Box::new(chain_spec::development_config(para_id)),
-		"template-rococo" => Box::new(chain_spec::local_testnet_config(para_id)),
-		"" | "local" => Box::new(chain_spec::local_testnet_config(para_id)),
+		"dev" => Box::new(chain_spec::development_config()),
+		"pendulum-rococo" => Box::new(chain_spec::local_testnet_config()),
+		"" | "local" => Box::new(chain_spec::local_testnet_config()),
 		path => Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?),
 	})
 }
@@ -62,7 +59,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-		load_spec(id, self.run.parachain_id.unwrap_or(2000).into())
+		load_spec(id)
 	}
 
 	fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
@@ -144,27 +141,27 @@ pub fn run() -> Result<()> {
 		Some(Subcommand::BuildSpec(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
-		},
+		}
 		Some(Subcommand::CheckBlock(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
 				Ok(cmd.run(components.client, components.import_queue))
 			})
-		},
+		}
 		Some(Subcommand::ExportBlocks(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
 				Ok(cmd.run(components.client, config.database))
 			})
-		},
+		}
 		Some(Subcommand::ExportState(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
 				Ok(cmd.run(components.client, config.chain_spec))
 			})
-		},
+		}
 		Some(Subcommand::ImportBlocks(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
 				Ok(cmd.run(components.client, components.import_queue))
 			})
-		},
+		}
 		Some(Subcommand::PurgeChain(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 
@@ -183,21 +180,19 @@ pub fn run() -> Result<()> {
 
 				cmd.run(config, polkadot_config)
 			})
-		},
+		}
 		Some(Subcommand::Revert(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
 				Ok(cmd.run(components.client, components.backend))
 			})
-		},
+		}
 		Some(Subcommand::ExportGenesisState(params)) => {
 			let mut builder = sc_cli::LoggerBuilder::new("");
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
 			let _ = builder.init();
 
-			let block: Block = generate_genesis_block(&load_spec(
-				&params.chain.clone().unwrap_or_default(),
-				params.parachain_id.unwrap_or(2000).into(),
-			)?)?;
+			let block: Block =
+				generate_genesis_block(&load_spec(&params.chain.clone().unwrap_or_default())?)?;
 			let raw_header = block.header().encode();
 			let output_buf = if params.raw {
 				raw_header
@@ -212,7 +207,7 @@ pub fn run() -> Result<()> {
 			}
 
 			Ok(())
-		},
+		}
 		Some(Subcommand::ExportGenesisWasm(params)) => {
 			let mut builder = sc_cli::LoggerBuilder::new("");
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
@@ -233,8 +228,8 @@ pub fn run() -> Result<()> {
 			}
 
 			Ok(())
-		},
-		Some(Subcommand::Benchmark(cmd)) =>
+		}
+		Some(Subcommand::Benchmark(cmd)) => {
 			if cfg!(feature = "runtime-benchmarks") {
 				let runner = cli.create_runner(cmd)?;
 
@@ -243,7 +238,8 @@ pub fn run() -> Result<()> {
 				Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`."
 					.into())
-			},
+			}
+		}
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 
@@ -256,7 +252,7 @@ pub fn run() -> Result<()> {
 					[RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
 				);
 
-				let id = ParaId::from(cli.run.parachain_id.or(para_id).unwrap_or(2000));
+				let id = ParaId::from(para_id.unwrap_or(2000));
 
 				let parachain_account =
 					AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
@@ -280,7 +276,7 @@ pub fn run() -> Result<()> {
 					.map(|r| r.0)
 					.map_err(Into::into)
 			})
-		},
+		}
 	}
 }
 

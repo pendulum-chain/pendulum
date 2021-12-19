@@ -1,10 +1,14 @@
 use cumulus_primitives_core::ParaId;
+use hex_literal::hex;
 use pendulum_parachain_runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::{
+	traits::{IdentifyAccount, Verify},
+	AccountId32,
+};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec =
@@ -58,7 +62,7 @@ pub fn template_session_keys(keys: AuraId) -> pendulum_parachain_runtime::Sessio
 	pendulum_parachain_runtime::SessionKeys { aura: keys }
 }
 
-pub fn development_config(id: ParaId) -> ChainSpec {
+pub fn development_config() -> ChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "UNIT".into());
@@ -98,7 +102,7 @@ pub fn development_config(id: ParaId) -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				id,
+				ParaId::from(2000),
 			)
 		},
 		Vec::new(),
@@ -107,12 +111,12 @@ pub fn development_config(id: ParaId) -> ChainSpec {
 		None,
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: id.into(),
+			para_id: ParaId::from(2000).into(),
 		},
 	)
 }
 
-pub fn local_testnet_config(id: ParaId) -> ChainSpec {
+pub fn local_testnet_config() -> ChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "UNIT".into());
@@ -152,7 +156,7 @@ pub fn local_testnet_config(id: ParaId) -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				id,
+				ParaId::from(2000),
 			)
 		},
 		// Bootnodes
@@ -166,7 +170,7 @@ pub fn local_testnet_config(id: ParaId) -> ChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: id.into(),
+			para_id: ParaId::from(2000).into(),
 		},
 	)
 }
@@ -181,7 +185,6 @@ fn testnet_genesis(
 			code: pendulum_parachain_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
-			changes_trie_config: Default::default(),
 		},
 		balances: pendulum_parachain_runtime::BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),

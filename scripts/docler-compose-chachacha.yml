@@ -1,0 +1,13 @@
+version: "3.2"
+
+services:
+  pendulum-collator-1:
+    container_name: pendulum-collator-1
+    image: pendulum-node:latest
+    ports:
+      - "9941:9944"
+      - "9931:9933"
+      - "30331:30333"
+    command: bash -c "wget https://raw.githubusercontent.com/pendulum-chain/pendulum/blob/master/specs/live-chachacha-spec.json; wget https://raw.githubusercontent.com/centrifuge/polkadot/chachacha/node/service/res/rococo-chachacha.json;/pendulum-collator --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors all  --rpc-external --rpc-methods Unsafe -d cumulus_parachain/kylin-collator-1  --name pichiu-collator-1 --ws-port 9942 --port 30333 --rpc-port 9930 --parachain-id 2112 --chain pichiu-chachacha-spec.json --execution=Native --  --port 30334 --chain rococo-chachacha.json --execution=wasm --sync fast --pruning archive"
+    volumes:
+      - ./pendulum/parachain_1:/parachain/

@@ -1,0 +1,21 @@
+[package]
+name = "pendulum-common"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
+serde = { version = '1.0.100', default-features = false, features = ['derive'] }
+serde_json = { version = '1.0.45', default-features = false, features = ['alloc'] }
+sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.13" }
+sp-std = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.13" }
+substrate-stellar-sdk = { git = "https://github.com/pendulum-chain/substrate-stellar-sdk", branch = "polkadot-v0.9.13", default-features = false }
+
+[features]
+default = ['std']
+std = [
+	"codec/std",
+	"sp-runtime/std",
+	"sp-std/std",
+	"substrate-stellar-sdk/std"
+]

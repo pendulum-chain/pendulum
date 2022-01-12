@@ -5,7 +5,7 @@ authors = ["Satoshipay"]
 description = "Pendulum node configured with Cumulus ready"
 license = "Unlicense"
 homepage = "https://substrate.io"
-repository = 'https://github.com/substrate-developer-hub/substrate-parachain-template'
+repository = 'https://github.com/pendulum-chain/pendulum'
 edition = "2018"
 build = "build.rs"
 

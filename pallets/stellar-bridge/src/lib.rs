@@ -162,7 +162,7 @@ pub mod pallet {
     }
 
     #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance", CurrencyIdOf<T> = "Currency")]
+    // #[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance", CurrencyIdOf<T> = "Currency")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     // #[pallet::generate_withdrawal(pub(super) fn withdrawal_event)]
     pub enum Event<T: Config> {
@@ -199,7 +199,7 @@ pub mod pallet {
         //
         // For instance you can generate extrinsics for the upcoming produced block.
         fn offchain_worker(_n: T::BlockNumber) {
-            debug::info!("Hello from an offchain worker 👋");
+            log::info!("Hello from an offchain worker 👋");
 
             let res = Self::fetch_latest_txs();
             let transactions = &res.unwrap()._embedded.records;
@@ -235,7 +235,7 @@ pub mod pallet {
 
             submission_result
                 .map_err(|error| {
-                    debug::error!(
+                    log::error!(
                         "🚨 Processing outbound Stellar tx queue failed: {:?}",
                         error
                     );
@@ -262,7 +262,7 @@ pub mod pallet {
                 signed_by,
             } = payload;
 
-            debug::info!(
+            log::info!(
                 "submit_deposit_unsigned_with_signed_payload: ({:?}, {:?}, {:?})",
                 amount,
                 destination,
@@ -270,7 +270,7 @@ pub mod pallet {
             );
 
             let result = T::Currency::deposit(currency_id, &destination, amount);
-            debug::info!("{:?}", result);
+            log::info!("{:?}", result);
 
             Self::deposit_event(Event::Deposit(currency_id, destination, amount));
             Ok(().into())
@@ -288,7 +288,7 @@ pub mod pallet {
             let pendulum_account_id = ensure_signed(origin)?;
             let stellar_address = T::AddressConversion::lookup(pendulum_account_id.clone())?;
 
-            debug::debug!(
+            log::debug!(
                 "Queue withdrawal: ({:?}, {:?}, {:?})",
                 currency_id,
                 amount,
@@ -351,7 +351,7 @@ pub mod pallet {
 
             let stellar_address = T::AddressConversion::lookup(pendulum_account_id.clone())?;
 
-            debug::info!(
+            log::info!(
                 "Execute withdrawal: ({:?}, {:?}, {:?})",
                 currency_id,
                 amount,
@@ -365,7 +365,7 @@ pub mod pallet {
                 Self::sign_stellar_tx(transaction, T::GatewayEscrowKeypair::get())?;
 
             let result = Self::submit_stellar_tx(signed_envelope);
-            debug::info!(
+            log::info!(
                 "✔️  Successfully submitted withdrawal transaction to Stellar, crediting {}",
                 str::from_utf8(stellar_address.to_encoding().as_slice()).unwrap()
             );
@@ -386,7 +386,7 @@ pub mod pallet {
                 .get::<Withdrawal<BalanceOf<T>, CurrencyIdOf<T>, T::AccountId>>()
             {
                 Some(Some(withdrawal)) => {
-                    debug::info!(
+                    log::info!(
                         "Found queued withdrawal. Clearing it from storage and returning it…",
                     );
                     pending_withdrawal_storage.clear();
@@ -410,7 +410,7 @@ pub mod pallet {
                 b"stellar-bridge::pending-withdrawal",
                 withdrawal.encode().as_slice(),
             );
-            debug::info!("Wrote withdrawal data into offchain worker storage.");
+            log::info!("Wrote withdrawal data into offchain worker storage.");
         }
 
         fn sign_stellar_tx(
@@ -427,7 +427,7 @@ pub mod pallet {
             let mut last_error: Option<Error<T>> = None;
 
             for attempt in 1..=3 {
-                debug::debug!("Attempt #{} to submit Stellar transaction…", attempt);
+                log::debug!("Attempt #{} to submit Stellar transaction…", attempt);
 
                 match Self::try_once_submit_stellar_tx(&tx) {
                     Ok(result) => {
@@ -447,7 +447,7 @@ pub mod pallet {
             let horizon_base_url = "https://horizon-testnet.stellar.org";
             let horizon = stellar::horizon::Horizon::new(horizon_base_url);
 
-            debug::info!(
+            log::info!(
                 "Submitting transaction to Stellar network: {}",
                 horizon_base_url
             );
@@ -457,8 +457,8 @@ pub mod pallet {
                 .map_err(|error| {
                     match error {
                         stellar::horizon::FetchError::UnexpectedResponseStatus { status, body } => {
-                            debug::error!("Unexpected HTTP request status code: {}", status);
-                            debug::error!("  Response body: {}", str::from_utf8(&body).unwrap());
+                            log::error!("Unexpected HTTP request status code: {}", status);
+                            log::error!("  Response body: {}", str::from_utf8(&body).unwrap());
                         }
                         _ => (),
                     }
@@ -469,7 +469,7 @@ pub mod pallet {
         }
 
         fn fetch_from_remote(request_url: &str) -> Result<Response, Error<T>> {
-            debug::info!("Sending request to: {}", request_url);
+            log::info!("Sending request to: {}", request_url);
 
             let request = Request::get(request_url);
             let timeout = sp_io::offchain::timestamp().add(FETCH_TIMEOUT_PERIOD);
@@ -482,8 +482,8 @@ pub mod pallet {
                 .map_err(|_| <Error<T>>::HttpFetchingError)?;
 
             if response.code != 200 {
-                debug::error!("Unexpected HTTP request status code: {}", response.code);
-                debug::error!(
+                log::error!("Unexpected HTTP request status code: {}", response.code);
+                log::error!(
                     "  Response body: {}",
                     str::from_utf8(response.body().collect::<Vec<u8>>().as_slice())?
                 );
@@ -498,7 +498,7 @@ pub mod pallet {
                 String::from("https://horizon-testnet.stellar.org/accounts/") + stellar_addr;
 
             let response = Self::fetch_from_remote(request_url.as_str()).map_err(|e| {
-                debug::error!("fetch_latest_seq_no error: {:?}", e);
+                log::error!("fetch_latest_seq_no error: {:?}", e);
                 <Error<T>>::HttpFetchingError
             })?;
 
@@ -525,7 +525,7 @@ pub mod pallet {
                 + "/transactions?order=desc&limit=1";
 
             let response = Self::fetch_from_remote(request_url.as_str()).map_err(|e| {
-                debug::error!("fetch_latest_txs error: {:?}", e);
+                log::error!("fetch_latest_txs error: {:?}", e);
                 <Error<T>>::HttpFetchingError
             })?;
 
@@ -550,7 +550,7 @@ pub mod pallet {
                     + str::from_utf8(escrow_address.to_encoding().as_slice())?;
 
             let response = Self::fetch_from_remote(request_url.as_str()).map_err(|e| {
-                debug::error!("fetch_latest_txs error: {:?}", e);
+                log::error!("fetch_latest_txs error: {:?}", e);
                 <Error<T>>::HttpFetchingError
             })?;
 
@@ -582,12 +582,12 @@ pub mod pallet {
                 Call::submit_deposit_unsigned_with_signed_payload,
             ) {
                 return res.map_err(|_| {
-                    debug::error!("Failed in offchain_unsigned_tx_signed_payload");
+                    log::error!("Failed in offchain_unsigned_tx_signed_payload");
                     Error::OffchainUnsignedTxSignedPayloadError
                 });
             } else {
                 // The case of `None`: no account is available for sending
-                debug::error!("No local account available");
+                log::error!("No local account available");
                 Err(Error::NoLocalAcctForSigning)
             }
         }
@@ -603,7 +603,7 @@ pub mod pallet {
                 if let stellar::MuxedAccount::KeyTypeEd25519(key) = transaction.source_account {
                     T::AddressConversion::unlookup(stellar::PublicKey::from_binary(key))
                 } else {
-                    debug::error!("❌  Source account format not supported.");
+                    log::error!("❌  Source account format not supported.");
                     return;
                 };
 
@@ -632,9 +632,9 @@ pub mod pallet {
                             amount,
                             destination,
                         ) {
-                            Err(_) => debug::warn!("Sending the tx failed."),
+                            Err(_) => log::warn!("Sending the tx failed."),
                             Ok(_) => {
-                                debug::info!("✅ Deposit successfully Executed");
+                                log::info!("✅ Deposit successfully Executed");
                                 ()
                             }
                         }
@@ -666,7 +666,7 @@ pub mod pallet {
             match res {
                 Ok(Ok(saved_tx_id)) => {
                     if !initial {
-                        debug::info!("✴️  New transaction from Horizon (id {:#?}). Starting to replicate transaction in Pendulum.", str::from_utf8(&saved_tx_id).unwrap());
+                        log::info!("✴️  New transaction from Horizon (id {:#?}). Starting to replicate transaction in Pendulum.", str::from_utf8(&saved_tx_id).unwrap());
 
                         // Decode transaction to Base64 and then to Stellar XDR to get transaction details
                         let tx_xdr = base64::decode(&tx.envelope_xdr).unwrap();
@@ -678,10 +678,10 @@ pub mod pallet {
                     }
                 }
                 Err(UP_TO_DATE) => {
-                    debug::info!("Already up to date");
+                    log::info!("Already up to date");
                 }
                 Ok(Err(_)) => {
-                    debug::info!("Failed to save last transaction id.");
+                    log::info!("Failed to save last transaction id.");
                 }
             }
         }
@@ -728,7 +728,7 @@ pub mod pallet {
                     let res = transaction.append_operation(claim_operation);
                     match res {
                         Ok(_) => {}
-                        Err(_) => debug::warn!("🛑 Failed adding Claim Operation to Transaction"),
+                        Err(_) => log::warn!("🛑 Failed adding Claim Operation to Transaction"),
                     }
                 } else {
                     let asset: stellar::Asset = Self::extract_asset(&cb.asset).unwrap();
@@ -739,13 +739,13 @@ pub mod pallet {
                     match transaction.append_operation(trust_operation) {
                         Ok(_) => {}
                         Err(_) => {
-                            debug::warn!("🛑 Failed adding Trust Asset Operation to Transaction")
+                            log::warn!("🛑 Failed adding Trust Asset Operation to Transaction")
                         }
                     }
 
                     match transaction.append_operation(claim_operation) {
                         Ok(_) => {}
-                        Err(_) => debug::warn!("🛑 Failed adding Claim Operation to Transaction"),
+                        Err(_) => log::warn!("🛑 Failed adding Claim Operation to Transaction"),
                     }
                 }
 
@@ -773,10 +773,10 @@ pub mod pallet {
                     Self::sign_stellar_tx(transaction, source_keypair.clone()).unwrap();
                 let result = Self::submit_stellar_tx(signed_envelope);
                 match result {
-                    Ok(_) => debug::info!(
+                    Ok(_) => log::info!(
                         "✅ Successfully submitted Claim Balances transaction to Stellar"
                     ),
-                    Err(_) => debug::warn!("🛑 Claimable Balance submission failed."),
+                    Err(_) => log::warn!("🛑 Claimable Balance submission failed."),
                 }
 
                 match Self::offchain_unsigned_tx_signed_payload(
@@ -784,9 +784,9 @@ pub mod pallet {
                     amount_as_balance,
                     destination,
                 ) {
-                    Err(_) => debug::warn!("🛑 Deposit Claimable Balance failed."),
+                    Err(_) => log::warn!("🛑 Deposit Claimable Balance failed."),
                     Ok(_) => {
-                        debug::info!("✅ Pendulum Claimable Deposit successfully Executed");
+                        log::info!("✅ Pendulum Claimable Deposit successfully Executed");
                         ()
                     }
                 }

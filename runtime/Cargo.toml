@@ -87,6 +87,8 @@ orml-currencies = { default-features = false, git = "https://github.com/open-web
 orml-tokens = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.13" }
 orml-traits = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.13" }
 
+getrandom = { version = "0.2.3" , features = ["js"] }
+
 [features]
 default = [
 	"std",
@@ -114,6 +116,8 @@ std = [
 	"pallet-aura/std",
 	"pallet-authorship/std",
 	"pallet-balances/std",
+	"pallet-contracts/std",
+	"pallet-contracts-primitives/std",
 	"pallet-collator-selection/std",
 	"pallet-randomness-collective-flip/std",
 	"pallet-session/std",

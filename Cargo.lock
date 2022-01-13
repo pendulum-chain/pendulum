@@ -5534,6 +5534,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex",
+ "log",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -5543,6 +5544,7 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot 0.11.2",
  "pendulum-common",
+ "scale-info",
  "serde",
  "serde_json",
  "sp-arithmetic",
@@ -5963,6 +5965,7 @@ name = "pendulum-common"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
+ "scale-info",
  "serde",
  "serde_json",
  "sp-runtime",
@@ -10383,7 +10386,7 @@ dependencies = [
 [[package]]
 name = "substrate-stellar-sdk"
 version = "0.2.2"
-source = "git+https://github.com/pendulum-chain/substrate-stellar-sdk?tag=polkadot-v0.9.13#57ff2ba09aba4d3552920606f13b4b3eb26df55b"
+source = "git+https://github.com/pendulum-chain/substrate-stellar-sdk?branch=polkadot-v0.9.13#736b599eae02cd680cdf199a412f11d9f9093ff5"
 dependencies = [
  "base64",
  "hex",
@@ -10772,7 +10775,7 @@ dependencies = [
  "chrono",
  "lazy_static",
  "matchers",
- "parking_lot 0.10.2",
+ "parking_lot 0.11.2",
  "regex",
  "serde",
  "serde_json",

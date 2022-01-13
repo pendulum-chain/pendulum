@@ -1,3 +1,4 @@
+use sp_runtime::scale_info::TypeInfo;
 use sp_std::convert::From;
 use sp_std::convert::Into;
 use sp_std::convert::TryFrom;
@@ -19,7 +20,7 @@ pub type AssetIssuer = [u8; 32];
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord)]
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
     Native,

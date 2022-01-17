@@ -57,9 +57,6 @@ use xcm_builder::{
 };
 use xcm_executor::{Config, XcmExecutor};
 
-use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::parameter_type_with_key;
-
 mod address_conv;
 mod balance_conv;
 mod currency_conv;

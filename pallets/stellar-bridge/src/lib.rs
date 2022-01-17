@@ -474,7 +474,7 @@ pub mod pallet {
 					"  Response body: {}",
 					str::from_utf8(response.body().collect::<Vec<u8>>().as_slice())?
 				);
-				return Err(<Error<T>>::HttpFetchingError)
+				return Err(<Error<T>>::HttpFetchingError);
 			}
 
 			Ok(response)
@@ -507,9 +507,9 @@ pub mod pallet {
 			let escrow_keypair = T::GatewayEscrowKeypair::get();
 			let escrow_address = escrow_keypair.get_public();
 
-			let request_url = String::from("https://horizon-testnet.stellar.org/accounts/") +
-				str::from_utf8(escrow_address.to_encoding().as_slice())? +
-				"/transactions?order=desc&limit=1";
+			let request_url = String::from("https://horizon-testnet.stellar.org/accounts/")
+				+ str::from_utf8(escrow_address.to_encoding().as_slice())?
+				+ "/transactions?order=desc&limit=1";
 
 			let response = Self::fetch_from_remote(request_url.as_str()).map_err(|e| {
 				log::error!("fetch_latest_txs error: {:?}", e);
@@ -533,8 +533,8 @@ pub mod pallet {
 			let escrow_address = escrow_keypair.get_public();
 
 			let request_url =
-				String::from("https://horizon-testnet.stellar.org/claimable_balances?claimant=") +
-					str::from_utf8(escrow_address.to_encoding().as_slice())?;
+				String::from("https://horizon-testnet.stellar.org/claimable_balances?claimant=")
+					+ str::from_utf8(escrow_address.to_encoding().as_slice())?;
 
 			let response = Self::fetch_from_remote(request_url.as_str()).map_err(|e| {
 				log::error!("fetch_latest_txs error: {:?}", e);
@@ -574,7 +574,7 @@ pub mod pallet {
 				return res.map_err(|_| {
 					log::error!("Failed in offchain_unsigned_tx_signed_payload");
 					Error::OffchainUnsignedTxSignedPayloadError
-				})
+				});
 			} else {
 				// The case of `None`: no account is available for sending
 				log::error!("No local account available");
@@ -583,7 +583,7 @@ pub mod pallet {
 		}
 
 		fn is_escrow(public_key: [u8; 32]) -> bool {
-			return public_key == *T::GatewayEscrowKeypair::get().get_public().as_binary()
+			return public_key == *T::GatewayEscrowKeypair::get().get_public().as_binary();
 		}
 
 		fn process_new_transaction(transaction: stellar::types::Transaction) {
@@ -594,7 +594,7 @@ pub mod pallet {
 					T::AddressConversion::unlookup(stellar::PublicKey::from_binary(key))
 				} else {
 					log::error!("❌  Source account format not supported.");
-					return
+					return;
 				};
 
 			let payment_ops: Vec<&PaymentOp> = transaction
@@ -628,7 +628,7 @@ pub mod pallet {
 								()
 							},
 						}
-						return
+						return;
 					}
 				}
 			}
@@ -782,7 +782,7 @@ pub mod pallet {
 
 		fn extract_asset(asset: &Vec<u8>) -> Option<stellar::Asset> {
 			if asset == &"native".as_bytes().to_vec() {
-				return Some(stellar::Asset::native())
+				return Some(stellar::Asset::native());
 			}
 
 			let stringed_asset_vec: Vec<_> = str::from_utf8(&asset).unwrap().split(':').collect();
@@ -799,7 +799,7 @@ pub mod pallet {
 				let asset_aphanum4 =
 					stellar::types::AssetAlphaNum4 { asset_code: code, issuer: issuer.clone() };
 				let asset = stellar::Asset::AssetTypeCreditAlphanum4(asset_aphanum4);
-				return Some(asset)
+				return Some(asset);
 			}
 
 			if asset_code_len > 4 {
@@ -809,7 +809,7 @@ pub mod pallet {
 				let asset_aphanum12 =
 					stellar::types::AssetAlphaNum12 { asset_code: code, issuer: issuer.clone() };
 				let asset = stellar::Asset::AssetTypeCreditAlphanum12(asset_aphanum12);
-				return Some(asset)
+				return Some(asset);
 			}
 			None
 		}
@@ -832,7 +832,7 @@ pub mod pallet {
 			match call {
 				Call::submit_deposit_unsigned_with_signed_payload { payload, signature } => {
 					if !SignedPayload::<T>::verify::<T::AuthorityId>(payload, signature.clone()) {
-						return InvalidTransaction::BadProof.into()
+						return InvalidTransaction::BadProof.into();
 					}
 					valid_tx(b"submit_deposit_unsigned_with_signed_payload".to_vec())
 				},

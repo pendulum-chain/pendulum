@@ -6,6 +6,8 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use codec::Encode;
+
 use pallet_contracts::weights::WeightInfo;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -37,6 +39,7 @@ use frame_system::{
 	EnsureRoot,
 };
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_runtime::SaturatedConversion;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 
 #[cfg(any(feature = "std", test))]
@@ -60,6 +63,9 @@ use xcm_executor::{Config, XcmExecutor};
 
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
+
+use stellar::SecretKey;
+use substrate_stellar_sdk as stellar;
 
 pub use pendulum_common::currency::CurrencyId;
 
@@ -425,6 +431,70 @@ impl orml_currencies::Config for Runtime {
 	type WeightInfo = ();
 }
 
+pub const XLM: Balance = 10_000_000;
+
+parameter_types! {
+	pub const AssetDeposit: Balance = 100 * XLM;
+	pub const ApprovalDeposit: Balance = 1 * XLM;
+	pub const StringLimit: u32 = 50;
+	pub const MetadataDepositBase: Balance = 10 * XLM;
+	pub const MetadataDepositPerByte: Balance = 1 * XLM;
+	pub GatewayEscrowKeypair: SecretKey = SecretKey::from_encoding("SACLCZW75A7QASXCEPSD4ZZII7THVHDUGCOKUBOINZLSVA3VKTGLOV33").unwrap();
+}
+
+// ---------------------- Stellar Bridge Pallet Configurations ----------------------
+impl pallet_stellar_bridge::Config for Runtime {
+	type AddressConversion = StellarAddressConversion;
+	type BalanceConversion = StellarBalanceConversion;
+	type CurrencyConversion = StellarCurrencyConversion;
+	type StringCurrencyConversion = StellarStringCurrencyConversion;
+	type AuthorityId = pallet_stellar_bridge::crypto::TestAuthId;
+	type Call = Call;
+	type Event = Event;
+	type Currency = Currencies;
+	type GatewayEscrowKeypair = GatewayEscrowKeypair;
+}
+
+pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
+
+impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
+where
+	Call: From<LocalCall>,
+{
+	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
+		call: Call,
+		public: <Signature as sp_runtime::traits::Verify>::Signer,
+		account: AccountId,
+		index: Index,
+	) -> Option<(Call, <UncheckedExtrinsic as sp_runtime::traits::Extrinsic>::SignaturePayload)> {
+		let period = BlockHashCount::get() as u64;
+		let current_block = System::block_number().saturated_into::<u64>().saturating_sub(1);
+		let tip = 0;
+		let extra: SignedExtra = (
+			frame_system::CheckSpecVersion::<Runtime>::new(),
+			frame_system::CheckTxVersion::<Runtime>::new(),
+			frame_system::CheckGenesis::<Runtime>::new(),
+			frame_system::CheckEra::<Runtime>::from(generic::Era::mortal(period, current_block)),
+			frame_system::CheckNonce::<Runtime>::from(index),
+			frame_system::CheckWeight::<Runtime>::new(),
+			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+		);
+
+		#[cfg_attr(not(feature = "std"), allow(unused_variables))]
+		let raw_payload = SignedPayload::new(call, extra)
+			.map_err(|e| {
+				log::warn!("SignedPayload error: {:?}", e);
+			})
+			.ok()?;
+
+		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
+
+		let address = MultiAddress::Id(account);
+		let (call, extra, _) = raw_payload.deconstruct();
+		Some((call, (address, signature, extra)))
+	}
+}
+
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
@@ -689,6 +759,19 @@ impl pallet_contracts::Config for Runtime {
 	type CallStack = [pallet_contracts::Frame<Self>; 31];
 }
 
+impl frame_system::offchain::SigningTypes for Runtime {
+	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
+	type Signature = Signature;
+}
+
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
+	Call: From<C>,
+{
+	type OverarchingCall = Call;
+	type Extrinsic = UncheckedExtrinsic;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -728,6 +811,9 @@ construct_runtime!(
 
 		// Contracts.
 		Contracts: pallet_contracts::{Pallet, Call, Storage, Event<T>} = 40,
+
+		// Include stellar-watch pallet.
+		StellarBridge: pallet_stellar_bridge::{Pallet, Call, Storage, Event<T>, ValidateUnsigned} = 50,
 	}
 );
 

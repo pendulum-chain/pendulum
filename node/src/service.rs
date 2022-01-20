@@ -365,7 +365,7 @@ pub fn parachain_build_import_queue(
 	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
 	cumulus_client_consensus_aura::import_queue::<
-		sp_consensus_aura::sr25519::AuthorityPair,
+		sp_consensus_aura::ed25519::AuthorityPair,
 		_,
 		_,
 		_,
@@ -431,7 +431,7 @@ pub async fn start_parachain_node(
 			let relay_chain_backend = relay_chain_node.backend.clone();
 			let relay_chain_client = relay_chain_node.client.clone();
 			Ok(build_aura_consensus::<
-				sp_consensus_aura::sr25519::AuthorityPair,
+				sp_consensus_aura::ed25519::AuthorityPair,
 				_,
 				_,
 				_,

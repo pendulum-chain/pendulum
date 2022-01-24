@@ -13,6 +13,9 @@
 # The cache for docker container dependency
 /.cargo/config
 
+# Local source crates for testing
+/crates
+
 .DS_Store
 .idea
 .vscode

@@ -1,10 +1,10 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use pendulum_parachain_runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT};
+use pendulum_parachain_runtime::{AccountId, AuraId, CurrencyId, Signature, EXISTENTIAL_DEPOSIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
-use sp_core::{sr25519, Pair, Public};
+use sp_core::{ed25519, Pair, Public};
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	AccountId32,
@@ -80,27 +80,27 @@ pub fn development_config() -> ChainSpec {
 				// initial collators.
 				vec![
 					(
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
+						get_account_id_from_seed::<ed25519::Public>("Alice"),
 						get_collator_keys_from_seed("Alice"),
 					),
 					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
+						get_account_id_from_seed::<ed25519::Public>("Bob"),
 						get_collator_keys_from_seed("Bob"),
 					),
 				],
 				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+					get_account_id_from_seed::<ed25519::Public>("Alice"),
+					get_account_id_from_seed::<ed25519::Public>("Bob"),
+					get_account_id_from_seed::<ed25519::Public>("Charlie"),
+					get_account_id_from_seed::<ed25519::Public>("Dave"),
+					get_account_id_from_seed::<ed25519::Public>("Eve"),
+					get_account_id_from_seed::<ed25519::Public>("Ferdie"),
+					get_account_id_from_seed::<ed25519::Public>("Alice//stash"),
+					get_account_id_from_seed::<ed25519::Public>("Bob//stash"),
+					get_account_id_from_seed::<ed25519::Public>("Charlie//stash"),
+					get_account_id_from_seed::<ed25519::Public>("Dave//stash"),
+					get_account_id_from_seed::<ed25519::Public>("Eve//stash"),
+					get_account_id_from_seed::<ed25519::Public>("Ferdie//stash"),
 				],
 				ParaId::from(2000),
 			)
@@ -134,27 +134,27 @@ pub fn local_testnet_config() -> ChainSpec {
 				// initial collators.
 				vec![
 					(
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
+						get_account_id_from_seed::<ed25519::Public>("Alice"),
 						get_collator_keys_from_seed("Alice"),
 					),
 					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
+						get_account_id_from_seed::<ed25519::Public>("Bob"),
 						get_collator_keys_from_seed("Bob"),
 					),
 				],
 				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+					get_account_id_from_seed::<ed25519::Public>("Alice"),
+					get_account_id_from_seed::<ed25519::Public>("Bob"),
+					get_account_id_from_seed::<ed25519::Public>("Charlie"),
+					get_account_id_from_seed::<ed25519::Public>("Dave"),
+					get_account_id_from_seed::<ed25519::Public>("Eve"),
+					get_account_id_from_seed::<ed25519::Public>("Ferdie"),
+					get_account_id_from_seed::<ed25519::Public>("Alice//stash"),
+					get_account_id_from_seed::<ed25519::Public>("Bob//stash"),
+					get_account_id_from_seed::<ed25519::Public>("Charlie//stash"),
+					get_account_id_from_seed::<ed25519::Public>("Dave//stash"),
+					get_account_id_from_seed::<ed25519::Public>("Eve//stash"),
+					get_account_id_from_seed::<ed25519::Public>("Ferdie//stash"),
 				],
 				ParaId::from(2000),
 			)
@@ -180,6 +180,17 @@ fn testnet_genesis(
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 ) -> pendulum_parachain_runtime::GenesisConfig {
+	let stellar_usdc_asset: CurrencyId = CurrencyId::try_from((
+		"USDC",
+		stellar::PublicKey::from_encoding(
+			"GAKNDFRRWA3RPWNLTI3G4EBSD3RGNZZOY5WKWYMQ6CQTG3KIEKPYWAYC",
+		)
+		.unwrap()
+		.as_binary()
+		.clone(),
+	))
+	.unwrap();
+
 	pendulum_parachain_runtime::GenesisConfig {
 		system: pendulum_parachain_runtime::SystemConfig {
 			code: pendulum_parachain_runtime::WASM_BINARY
@@ -212,5 +223,11 @@ fn testnet_genesis(
 		aura: Default::default(),
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
+		orml_tokens: Some(TokensConfig {
+			endowed_accounts: endowed_accounts
+				.iter()
+				.flat_map(|x| vec![(x.clone(), stellar_usdc_asset, 10u128.pow(12))])
+				.collect(),
+		}),
 	}
 }

@@ -8,7 +8,12 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use codec::Encode;
 
-use pallet_contracts::weights::WeightInfo;
+use pallet_contracts::{
+	chain_extension::{
+		ChainExtension, Environment, Ext, InitState, RetVal, SysConfig, UncheckedFrom,
+	},
+	weights::WeightInfo,
+};
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -491,6 +496,123 @@ where
 		let address = MultiAddress::Id(account);
 		let (call, extra, _) = raw_payload.deconstruct();
 		Some((call, (address, signature, extra)))
+	}
+}
+
+//--------------------- Chain Extension --------------------------
+pub struct BalanceChainExtension;
+use sp_runtime::DispatchError;
+
+use core::convert::TryFrom;
+use orml_traits::MultiCurrency;
+use sp_std::str;
+
+type FetchBalanceInput = [u8; 32 + 32 + 12]; // 1-> owner:AccountId, 2-> asset_issuer: [u8;32], 3-> asset_code: [u8;12]
+type TransferBalanceInput = [u8; 32 + 32 + 32 + 12 + 16]; // 1-> from: AccoundId, 2-> to: AccountId, 3-> asset_issuer: [u8;32], 4-> asset_code: [u8;12], 5-> balance: u128
+
+impl ChainExtension<Runtime> for BalanceChainExtension {
+	fn call<E: Ext>(func_id: u32, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
+	where
+		<E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
+	{
+		log::info!("Call chain extension: {:?}", func_id,);
+
+		match func_id {
+			// fetch_balance()
+			1101 => {
+				let mut env = env.buf_in_buf_out();
+				let input = env.read_as::<FetchBalanceInput>();
+				match input {
+					Ok(input) => {
+						let mut account_array: [u8; 32] = Default::default();
+						account_array.copy_from_slice(&input[0..32]);
+						let account_id = AccountId::from(account_array);
+
+						let mut issuer_array: [u8; 32] = Default::default();
+						issuer_array.copy_from_slice(&input[32..64]);
+
+						let mut asset_code_array: [u8; 12] = Default::default();
+						asset_code_array.copy_from_slice(&input[64..]);
+						let asset_str: &str = str::from_utf8(&asset_code_array).map_err(|_| {
+							DispatchError::Other("ChainExtension failed to decode asset")
+						})?;
+						let asset_str = asset_str.trim_matches(char::from(0));
+						let currency_id: CurrencyId =
+							CurrencyId::try_from((asset_str, issuer_array))?;
+
+						let balance = <Tokens as MultiCurrency<AccountId>>::total_balance(
+							currency_id,
+							&account_id,
+						);
+
+						let ret_val = balance.encode();
+						env.write(&ret_val, false, None).map_err(|_| {
+							DispatchError::Other("ChainExtension failed to fetch balance")
+						})?;
+					},
+					Err(err) => {
+						log::info!("encountered error: {:?}", err);
+					},
+				}
+			},
+			// transfer_balance()
+			1102 => {
+				let mut env = env.buf_in_buf_out();
+				let input = env.read_as::<TransferBalanceInput>();
+				match input {
+					Ok(input) => {
+						let mut from_account_array: [u8; 32] = Default::default();
+						from_account_array.copy_from_slice(&input[0..32]);
+						let from_account_id = AccountId::from(from_account_array);
+
+						let mut to_account_array: [u8; 32] = Default::default();
+						to_account_array.copy_from_slice(&input[32..64]);
+						let to_account_id = AccountId::from(to_account_array);
+
+						let mut issuer_array: [u8; 32] = Default::default();
+						issuer_array.copy_from_slice(&input[64..96]);
+
+						let mut asset_code_array: [u8; 12] = Default::default();
+						asset_code_array.copy_from_slice(&input[96..108]);
+						let asset_str: &str = str::from_utf8(&asset_code_array).map_err(|_| {
+							DispatchError::Other("ChainExtension failed to decode asset")
+						})?;
+						let asset_str = asset_str.trim_matches(char::from(0));
+						let currency_id: CurrencyId =
+							CurrencyId::try_from((asset_str, issuer_array))?;
+
+						let mut amount_array: [u8; 16] = Default::default();
+						amount_array.copy_from_slice(&input[108..]);
+						let amount: u128 = u128::from_le_bytes(amount_array);
+
+						let dispatch_result = <Currencies as MultiCurrency<AccountId>>::transfer(
+							currency_id,
+							&from_account_id,
+							&to_account_id,
+							amount,
+						);
+
+						let ret_val = dispatch_result.encode();
+						env.write(&ret_val, false, None).map_err(|_| {
+							DispatchError::Other("ChainExtension failed to fetch balance")
+						})?;
+					},
+					Err(err) => {
+						log::info!("encountered error: {:?}", err);
+					},
+				}
+			},
+
+			_ => {
+				// error!("Called an unregistered `func_id`: {:}", func_id);
+				return Err(DispatchError::Other("Unimplemented func_id"))
+			},
+		}
+		Ok(RetVal::Converging(0))
+	}
+
+	fn enabled() -> bool {
+		true
 	}
 }
 

@@ -1,14 +1,15 @@
 use cumulus_primitives_core::ParaId;
-use hex_literal::hex;
-use pendulum_parachain_runtime::{AccountId, AuraId, CurrencyId, Signature, EXISTENTIAL_DEPOSIT};
+use pendulum_parachain_runtime::{
+	AccountId, AuraId, CurrencyId, Signature, TokensConfig, EXISTENTIAL_DEPOSIT,
+};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{ed25519, Pair, Public};
-use sp_runtime::{
-	traits::{IdentifyAccount, Verify},
-	AccountId32,
-};
+use sp_std::convert::TryFrom;
+use substrate_stellar_sdk as stellar;
+
+use sp_runtime::traits::{IdentifyAccount, Verify};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec =
@@ -223,11 +224,11 @@ fn testnet_genesis(
 		aura: Default::default(),
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
-		orml_tokens: Some(TokensConfig {
-			endowed_accounts: endowed_accounts
+		tokens: TokensConfig {
+			balances: endowed_accounts
 				.iter()
 				.flat_map(|x| vec![(x.clone(), stellar_usdc_asset, 10u128.pow(12))])
 				.collect(),
-		}),
+		},
 	}
 }

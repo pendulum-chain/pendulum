@@ -38,7 +38,7 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
-pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+pub use sp_consensus_aura::ed25519::AuthorityId as AuraId;
 use sp_runtime::SaturatedConversion;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 
@@ -64,8 +64,7 @@ use xcm_executor::{Config, XcmExecutor};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 
-use stellar::SecretKey;
-use substrate_stellar_sdk as stellar;
+use substrate_stellar_sdk::SecretKey;
 
 pub use pendulum_common::currency::CurrencyId;
 
@@ -394,7 +393,7 @@ impl pallet_transaction_payment::Config for Runtime {
 
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
-	fn contains(a: &AccountId) -> bool {
+	fn contains(_a: &AccountId) -> bool {
 		false
 		// TODO check https://github.com/AcalaNetwork/Acala/blob/master/runtime/acala/src/lib.rs#L173
 		// get_all_module_accounts().contains(a)

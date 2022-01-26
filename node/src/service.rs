@@ -270,6 +270,26 @@ where
 			warp_sync: None,
 		})?;
 
+	let keystore = params.keystore_container.sync_keystore();
+	if parachain_config.offchain_worker.enabled {
+		// Initialize seed for signing transaction using off-chain workers. This is a convenience
+		// so learners can see the transactions submitted simply running the node.
+		// Typically these keys should be inserted with RPC calls to `author_insertKey`.
+		sp_keystore::SyncCryptoStore::ed25519_generate_new(
+			&*keystore,
+			pendulum_parachain_runtime::pallet_stellar_bridge::KEY_TYPE,
+			Some("//Alice"),
+		)
+		.expect("Creating key with account Alice should succeed.");
+
+		sc_service::build_offchain_workers(
+			&parachain_config,
+			task_manager.spawn_handle(),
+			client.clone(),
+			network.clone(),
+		);
+	}
+
 	let rpc_extensions_builder = {
 		let client = client.clone();
 		let transaction_pool = transaction_pool.clone();
@@ -284,15 +304,6 @@ where
 			Ok(crate::rpc::create_full(deps))
 		})
 	};
-
-	if parachain_config.offchain_worker.enabled {
-		sc_service::build_offchain_workers(
-			&parachain_config,
-			task_manager.spawn_handle(),
-			client.clone(),
-			network.clone(),
-		);
-	}
 
 	sc_service::spawn_tasks(sc_service::SpawnTasksParams {
 		rpc_extensions_builder,

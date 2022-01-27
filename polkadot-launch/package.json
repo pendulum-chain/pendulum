@@ -1,0 +1,23 @@
+{
+  "name": "pendulum-launch",
+  "version": "1.0.0",
+  "description": "Pendulum parachain launcher",
+  "main": "src/index.ts",
+  "license": "MIT",
+  "scripts": {
+    "start": "node ./build/index.js",
+    "build": "etsc",
+    "clean": "rm -rf ./build ./*.log ./rococo-local-raw.json ./rococo-local.json"
+  },
+  "dependencies": {
+    "polkadot-launch": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.12",
+    "@types/typescript": "^2.0.0",
+    "esbuild": "^0.14.14",
+    "esbuild-node-tsc": "^1.8.2",
+    "esbuild-plugin-tsc": "^0.3.0",
+    "typescript": "^4.5.5"
+  }
+}

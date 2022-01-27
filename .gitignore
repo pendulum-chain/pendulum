@@ -10,6 +10,9 @@
 # The cache for chain data in container
 .local
 
+# Logs
+**/logs/**
+
 # The cache for docker container dependency
 /.cargo/config
 

@@ -8,6 +8,9 @@ fi
 
 PARA_ID=$1
 
+rm -rf /tmp/parachain
+rm -rf /tmp/relaychain
+
 # Start Relay `Alice` node
 nohup ../polkadot/target/release/polkadot \
 --alice \

@@ -48,7 +48,6 @@ rm "./specs/rococo-local-parachain-tmp-plain.json"
 ./target/release/parachain-collator export-genesis-wasm --chain "./specs/rococo-local-parachain-$PARA_ID-raw.json" > "./specs/para-$PARA_ID-wasm"
 ./target/release/parachain-collator export-genesis-state --chain "./specs/rococo-local-parachain-$PARA_ID-raw.json" > "./specs/para-$PARA_ID-genesis"
 
-
 nohup ./target/release/parachain-collator \
 --alice \
 --collator \
@@ -66,3 +65,10 @@ nohup ./target/release/parachain-collator \
 
 COLLATOR_PID=$!
 echo "Collator running in pid $COLLATOR_PID"
+
+wait $ALICE_PID
+wait $BOB_PID
+wait $COLLATOR_PID
+
+echo "Nodes are running."
+echo "Press Ctrl + C to finish all the processes at once"

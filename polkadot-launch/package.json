@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node ./build/index.js",
     "build": "etsc",
-    "clean": "rm -rf ./node_modules"
+    "clean": "rm -rf ./build ./*.log ./rococo-local-raw.json ./rococo-local.json"
   },
   "dependencies": {
     "polkadot-launch": "^2.1.0"

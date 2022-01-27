@@ -10,6 +10,9 @@ PARA_ID=$1
 
 rm -rf /tmp/parachain
 rm -rf /tmp/relaychain
+rm -rf ./logs
+
+mkdir ./logs
 
 # Start Relay `Alice` node
 nohup ../polkadot/target/release/polkadot \
@@ -18,7 +21,7 @@ nohup ../polkadot/target/release/polkadot \
 --base-path /tmp/relay/alice \
 --chain ./specs/rococo-custom-2-raw.json \
 --port 30333 \
---ws-port 9944 > alice.log &
+--ws-port 9944 > logs/alice.log &
 
 ALICE_PID=$!
 echo "Alice running in pid $ALICE_PID"
@@ -30,7 +33,7 @@ nohup ../polkadot/target/release/polkadot \
 --base-path /tmp/relay-bob \
 --chain "./specs/rococo-custom-2-raw.json" \
 --port 30334 \
---ws-port 9945 > bob.log &
+--ws-port 9945 > logs/bob.log &
 
 BOB_PID=$!
 echo "Bob running in pid $BOB_PID"
@@ -61,14 +64,17 @@ nohup ./target/release/parachain-collator \
 --execution wasm \
 --chain "./specs/rococo-custom-2-raw.json" \
 --port 30343 \
---ws-port 9977 > collator.log &
+--ws-port 9977 > logs/collator.log &
 
 COLLATOR_PID=$!
 echo "Collator running in pid $COLLATOR_PID"
 
+echo "Nodes are running."
+echo "Check alice logs with tail -f logs/alice.log"
+echo "Check bob logs with tail -f logs/bob.log"
+echo "Check collator logs with tail -f logs/collator.log"
+echo "Press Ctrl + C to finish all the processes at once"
+
 wait $ALICE_PID
 wait $BOB_PID
 wait $COLLATOR_PID
-
-echo "Nodes are running."
-echo "Press Ctrl + C to finish all the processes at once"

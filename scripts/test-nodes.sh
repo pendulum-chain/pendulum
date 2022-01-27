@@ -2,7 +2,7 @@
 
 if [ $# -eq 0 ]
   then
-    echo "We need one argument which is the parachain id"
+    echo "\\nRun with \\n./test-nodes.sh <PARA_ID>\\n"
     exit 1
 fi
 
@@ -34,8 +34,14 @@ echo "Bob running in pid $BOB_PID"
 
 echo "Generating Parachain spec files"
 
+# Generate plain spec file
 ./target/release/parachain-collator build-spec --disable-default-bootnode > "./specs/rococo-local-parachain-plain.json"
-./target/release/parachain-collator build-spec --chain "./specs/rococo-local-parachain-plain.json" --raw --disable-default-bootnode > "./specs/rococo-local-parachain-$PARA_ID-raw.json"
+
+sed -E 's/"para_id": 2000/"para_id": '$PARA_ID'/' "./specs/rococo-local-parachain-plain.json" > "./specs/rococo-local-parachain-tmp-plain.json"
+sed -E 's/"parachainId": 2000/"parachainId": '$PARA_ID'/' "./specs/rococo-local-parachain-tmp-plain.json" > "./specs/rococo-local-parachain-$PARA_ID-plain.json"
+rm "./specs/rococo-local-parachain-tmp-plain.json"
+
+./target/release/parachain-collator build-spec --chain "./specs/rococo-local-parachain-$PARA_ID-plain.json" --raw --disable-default-bootnode > "./specs/rococo-local-parachain-$PARA_ID-raw.json"
 ./target/release/parachain-collator export-genesis-wasm --chain "./specs/rococo-local-parachain-$PARA_ID-raw.json" > "./specs/para-$PARA_ID-wasm"
 ./target/release/parachain-collator export-genesis-state --chain "./specs/rococo-local-parachain-$PARA_ID-raw.json" > "./specs/para-$PARA_ID-genesis"
 

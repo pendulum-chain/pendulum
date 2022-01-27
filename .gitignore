@@ -13,6 +13,17 @@
 # The cache for docker container dependency
 /.cargo/config
 
+# Local binaries
+/bin
+
+# Anomalous black holes and logs
+**/node_modules/
+**/*.log
+
+# Local specs generated from `polkadot-launch`
+/polkadot-launch/rococo-local.json
+/polkadot-launch/rococo-local-raw.json
+
 .DS_Store
 .idea
 .vscode

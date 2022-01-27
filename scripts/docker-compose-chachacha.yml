@@ -1,0 +1,13 @@
+version: "3.2"
+
+services:
+  pendulum-collator-fox-1:
+    container_name: pendulum-collator-fox-1
+    image: pendulumchain/pendulum:latest
+    ports:
+      - "9945:9945"
+      - "9935:9935"
+      - "30335:30335"
+      - "30334:30334"
+    command: bash -c "wget https://raw.githubusercontent.com/pendulum-chain/pendulum/master/specs/live-chachacha-spec.json; wget https://raw.githubusercontent.com/centrifuge/polkadot/chachacha/node/service/res/rococo-chachacha.json;/pendulum-collator --collator --allow-private-ipv4 --unsafe-ws-external --rpc-cors all  --rpc-external --rpc-methods Unsafe --name pendulum-collator-fox-1 --ws-port 9945 --port 30335 --rpc-port 9935 --chain live-chachacha-spec.json --execution=Native --  --port 30334 --chain rococo-chachacha.json --execution=wasm --sync fast --pruning archive"
+

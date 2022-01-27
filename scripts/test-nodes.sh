@@ -54,6 +54,7 @@ nohup ./target/release/parachain-collator \
 --collator \
 --force-authoring \
 --chain "./specs/rococo-local-parachain-$PARA_ID-raw.json" \
+--enable-offchain-indexing "true" \
 --base-path /tmp/parachain/alice \
 --port 40333 \
 --ws-port 8844 \

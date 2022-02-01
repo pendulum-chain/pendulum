@@ -207,7 +207,7 @@ pub mod pallet {
 		//
 		// For instance you can generate extrinsics for the upcoming produced block.
 		fn offchain_worker(_n: T::BlockNumber) {
-			log::info!("Hello from an offchain worker 👋");
+			log::info!("[OCW] Hello from an offchain worker 👋");
 
 			let res = Self::fetch_latest_txs();
 			let transactions = &res.unwrap()._embedded.records;
@@ -243,7 +243,7 @@ pub mod pallet {
 
 			submission_result
 				.map_err(|error| {
-					log::error!("🚨 Processing outbound Stellar tx queue failed: {:?}", error);
+					log::error!("[OCW] 🚨 Processing outbound Stellar tx queue failed: {:?}", error);
 				})
 				.ok();
 		}
@@ -263,14 +263,14 @@ pub mod pallet {
 			let DepositPayload { currency_id, amount, destination, signed_by } = payload;
 
 			log::info!(
-				"submit_deposit_unsigned_with_signed_payload: ({:?}, {:?}, {:?})",
+				"[OCW] Submit_deposit_unsigned_with_signed_payload: ({:?}, {:?}, {:?})",
 				amount,
 				destination,
 				signed_by
 			);
 
 			let result = T::Currency::deposit(currency_id, &destination, amount);
-			log::info!("{:?}", result);
+			log::info!("[OCW] {:?}", result);
 
 			Self::deposit_event(Event::Deposit(currency_id, destination, amount));
 			Ok(().into())
@@ -289,7 +289,7 @@ pub mod pallet {
 			let stellar_address = T::AddressConversion::lookup(pendulum_account_id.clone())?;
 
 			log::debug!(
-				"Queue withdrawal: ({:?}, {:?}, {:?})",
+				"[OCW] Queue withdrawal: ({:?}, {:?}, {:?})",
 				currency_id,
 				amount,
 				stellar_address
@@ -349,7 +349,7 @@ pub mod pallet {
 			let stellar_address = T::AddressConversion::lookup(pendulum_account_id.clone())?;
 
 			log::info!(
-				"Execute withdrawal: ({:?}, {:?}, {:?})",
+				"[OCW] Execute withdrawal: ({:?}, {:?}, {:?})",
 				currency_id,
 				amount,
 				str::from_utf8(stellar_address.to_encoding().as_slice())?,
@@ -363,7 +363,7 @@ pub mod pallet {
 
 			let result = Self::submit_stellar_tx(signed_envelope);
 			log::info!(
-				"✔️  Successfully submitted withdrawal transaction to Stellar, crediting {}",
+				"[OCW] ✔️  Successfully submitted withdrawal transaction to Stellar, crediting {}",
 				str::from_utf8(stellar_address.to_encoding().as_slice()).unwrap()
 			);
 
@@ -383,7 +383,7 @@ pub mod pallet {
 			{
 				Ok(Some(withdrawal)) => {
 					log::info!(
-						"Found queued withdrawal. Clearing it from storage and returning it…",
+						"[OCW] Found queued withdrawal. Clearing it from storage and returning it…",
 					);
 					pending_withdrawal_storage.clear();
 					Ok(Some(withdrawal))
@@ -402,7 +402,7 @@ pub mod pallet {
 				b"stellar-bridge::pending-withdrawal",
 				withdrawal.encode().as_slice(),
 			);
-			log::info!("Wrote withdrawal data into offchain worker storage.");
+			log::info!("[OCW] Wrote withdrawal data into offchain worker storage.");
 		}
 
 		fn sign_stellar_tx(
@@ -419,7 +419,7 @@ pub mod pallet {
 			let mut last_error: Option<Error<T>> = None;
 
 			for attempt in 1..=3 {
-				log::debug!("Attempt #{} to submit Stellar transaction…", attempt);
+				log::debug!("[OCW] Attempt #{} to submit Stellar transaction…", attempt);
 
 				match Self::try_once_submit_stellar_tx(&tx) {
 					Ok(result) => return Ok(result),
@@ -437,7 +437,7 @@ pub mod pallet {
 			let horizon_base_url = "https://horizon-testnet.stellar.org";
 			let horizon = stellar::horizon::Horizon::new(horizon_base_url);
 
-			log::info!("Submitting transaction to Stellar network: {}", horizon_base_url);
+			log::info!("[OCW] Submitting transaction to Stellar network: {}", horizon_base_url);
 
 			let _response = horizon
 				.submit_transaction(&tx, SUBMISSION_TIMEOUT_PERIOD.millis(), true)
@@ -456,7 +456,7 @@ pub mod pallet {
 		}
 
 		fn fetch_from_remote(request_url: &str) -> Result<Response, Error<T>> {
-			log::info!("Sending request to: {}", request_url);
+			log::info!("[OCW] Sending request to: {}", request_url);
 
 			let request = Request::get(request_url);
 			let timeout = sp_io::offchain::timestamp().add(FETCH_TIMEOUT_PERIOD);
@@ -622,9 +622,9 @@ pub mod pallet {
 							amount,
 							destination,
 						) {
-							Err(_) => log::warn!("Sending the tx failed."),
+							Err(_) => log::warn!("[OCW] Sending the tx failed."),
 							Ok(_) => {
-								log::info!("✅ Deposit successfully Executed");
+								log::info!("[OCW] ✅ Deposit successfully Executed");
 								()
 							},
 						}
@@ -657,7 +657,7 @@ pub mod pallet {
 			match res {
 				Ok(saved_tx_id) => {
 					if !initial {
-						log::info!("✴️  New transaction from Horizon (id {:#?}). Starting to replicate transaction in Pendulum.", str::from_utf8(&saved_tx_id).unwrap());
+						log::info!("[OCW] ✴️  New transaction from Horizon (id {:#?}). Starting to replicate transaction in Pendulum.", str::from_utf8(&saved_tx_id).unwrap());
 
 						// Decode transaction to Base64 and then to Stellar XDR to get transaction details
 						let tx_xdr = base64::decode(&tx.envelope_xdr).unwrap();
@@ -669,10 +669,10 @@ pub mod pallet {
 					}
 				},
 				Err(MutateStorageError::ValueFunctionFailed(UP_TO_DATE)) => {
-					log::info!("Already up to date");
+					log::info!("[OCW] Already up to date");
 				},
 				Err(MutateStorageError::ConcurrentModification(_)) => {
-					log::info!("Failed to save last transaction id.");
+					log::info!("[OCW] Failed to save last transaction id.");
 				},
 			}
 		}
@@ -715,7 +715,7 @@ pub mod pallet {
 					let res = transaction.append_operation(claim_operation);
 					match res {
 						Ok(_) => {},
-						Err(_) => log::warn!("🛑 Failed adding Claim Operation to Transaction"),
+						Err(_) => log::warn!("[OCW] 🛑 Failed adding Claim Operation to Transaction"),
 					}
 				} else {
 					let asset: stellar::Asset = Self::extract_asset(&cb.asset).unwrap();
@@ -726,13 +726,13 @@ pub mod pallet {
 					match transaction.append_operation(trust_operation) {
 						Ok(_) => {},
 						Err(_) => {
-							log::warn!("🛑 Failed adding Trust Asset Operation to Transaction")
+							log::warn!("[OCW] 🛑 Failed adding Trust Asset Operation to Transaction")
 						},
 					}
 
 					match transaction.append_operation(claim_operation) {
 						Ok(_) => {},
-						Err(_) => log::warn!("🛑 Failed adding Claim Operation to Transaction"),
+						Err(_) => log::warn!("[OCW] 🛑 Failed adding Claim Operation to Transaction"),
 					}
 				}
 
@@ -761,9 +761,9 @@ pub mod pallet {
 				let result = Self::submit_stellar_tx(signed_envelope);
 				match result {
 					Ok(_) => log::info!(
-						"✅ Successfully submitted Claim Balances transaction to Stellar"
+						"[OCW] ✅ Successfully submitted Claim Balances transaction to Stellar"
 					),
-					Err(_) => log::warn!("🛑 Claimable Balance submission failed."),
+					Err(_) => log::warn!("[OCW] 🛑 Claimable Balance submission failed."),
 				}
 
 				match Self::offchain_unsigned_tx_signed_payload(
@@ -771,9 +771,9 @@ pub mod pallet {
 					amount_as_balance,
 					destination,
 				) {
-					Err(_) => log::warn!("🛑 Deposit Claimable Balance failed."),
+					Err(_) => log::warn!("[OCW] 🛑 Deposit Claimable Balance failed."),
 					Ok(_) => {
-						log::info!("✅ Pendulum Claimable Deposit successfully Executed");
+						log::info!("[OCW] ✅ Pendulum Claimable Deposit successfully Executed");
 						()
 					},
 				}

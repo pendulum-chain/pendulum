@@ -84,6 +84,9 @@ use currency_conv::{
 	StringCurrencyConversion as StellarStringCurrencyConversion,
 };
 
+// A few exports that help ease life for downstream crates.
+pub use pallet_stellar_bridge;
+
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
 

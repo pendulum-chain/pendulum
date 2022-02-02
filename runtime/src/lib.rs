@@ -522,9 +522,9 @@ impl ChainExtension<Runtime> for BalanceChainExtension {
 		log::info!("Call chain extension: {:?}", func_id,);
 
 		trace!(
-		target: "runtime",
-		"[ChainExtension]|call|func_id:{:}",
-		func_id
+			target: "runtime",
+			"[ChainExtension]|call|func_id:{:}",
+			func_id
 		);
 
 		match func_id {

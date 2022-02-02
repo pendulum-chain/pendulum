@@ -8,6 +8,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use codec::Encode;
 
+use frame_support::log::{error, trace};
 use pallet_contracts::{
 	chain_extension::{
 		ChainExtension, Environment, Ext, InitState, RetVal, SysConfig, UncheckedFrom,
@@ -520,6 +521,12 @@ impl ChainExtension<Runtime> for BalanceChainExtension {
 	{
 		log::info!("Call chain extension: {:?}", func_id,);
 
+		trace!(
+			target: "runtime",
+			"[ChainExtension]|call|func_id:{:}",
+			func_id
+		);
+
 		match func_id {
 			// fetch_balance()
 			1101 => {
@@ -555,6 +562,7 @@ impl ChainExtension<Runtime> for BalanceChainExtension {
 					},
 					Err(err) => {
 						log::info!("encountered error: {:?}", err);
+						error!("Called an unregistered `func_id`: {:}", func_id);
 					},
 				}
 			},
@@ -602,12 +610,13 @@ impl ChainExtension<Runtime> for BalanceChainExtension {
 					},
 					Err(err) => {
 						log::info!("encountered error: {:?}", err);
+						error!("Called an unregistered `func_id`: {:}", func_id);
 					},
 				}
 			},
 
 			_ => {
-				// error!("Called an unregistered `func_id`: {:}", func_id);
+				error!("Called an unregistered `func_id`: {:}", func_id);
 				return Err(DispatchError::Other("Unimplemented func_id"))
 			},
 		}
@@ -876,7 +885,7 @@ impl pallet_contracts::Config for Runtime {
 	type ContractDeposit = ContractDeposit;
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-	type ChainExtension = ();
+	type ChainExtension = BalanceChainExtension;
 	type DeletionQueueDepth = DeletionQueueDepth;
 	type DeletionWeightLimit = DeletionWeightLimit;
 	type Schedule = Schedule;

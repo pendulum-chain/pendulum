@@ -8,9 +8,7 @@
 use std::sync::Arc;
 
 use pallet_contracts_rpc::{Contracts, ContractsApi};
-use pendulum_parachain_runtime::{
-	opaque::Block, AccountId, Balance, BlockNumber, Hash, Index,
-};
+use pendulum_parachain_runtime::{opaque::Block, AccountId, Balance, BlockNumber, Hash, Index};
 use sc_client_api::AuxStore;
 pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
 use sc_transaction_pool_api::TransactionPool;

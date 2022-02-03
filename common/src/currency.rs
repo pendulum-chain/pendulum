@@ -1,13 +1,13 @@
 use sp_runtime::scale_info::TypeInfo;
-use sp_std::convert::From;
-use sp_std::convert::TryFrom;
-use sp_std::convert::TryInto;
-use sp_std::fmt;
-use sp_std::str;
+use sp_std::{
+	convert::{From, TryFrom, TryInto},
+	fmt, str,
+};
 
-use stellar::types::AssetAlphaNum12;
-use stellar::types::AssetAlphaNum4;
-use stellar::PublicKey;
+use stellar::{
+	types::{AssetAlphaNum12, AssetAlphaNum4},
+	PublicKey,
+};
 use substrate_stellar_sdk as stellar;
 
 use codec::{Decode, Encode};
@@ -62,12 +62,11 @@ impl From<stellar::Asset> for CurrencyId {
 				code: asset_alpha_num4.asset_code,
 				issuer: asset_alpha_num4.issuer.into_binary(),
 			},
-			stellar::Asset::AssetTypeCreditAlphanum12(asset_alpha_num12) => {
+			stellar::Asset::AssetTypeCreditAlphanum12(asset_alpha_num12) =>
 				CurrencyId::AlphaNum12 {
 					code: asset_alpha_num12.asset_code,
 					issuer: asset_alpha_num12.issuer.into_binary(),
-				}
-			},
+				},
 		}
 	}
 }
@@ -79,18 +78,16 @@ impl TryInto<stellar::Asset> for CurrencyId {
 		match self {
 			Self::Native => Err("PEN token not defined in the Stellar world."),
 			Self::StellarNative => Ok(stellar::Asset::native()),
-			Self::AlphaNum4 { code, issuer } => {
+			Self::AlphaNum4 { code, issuer } =>
 				Ok(stellar::Asset::AssetTypeCreditAlphanum4(AssetAlphaNum4 {
 					asset_code: code,
 					issuer: PublicKey::PublicKeyTypeEd25519(issuer),
-				}))
-			},
-			Self::AlphaNum12 { code, issuer } => {
+				})),
+			Self::AlphaNum12 { code, issuer } =>
 				Ok(stellar::Asset::AssetTypeCreditAlphanum12(AssetAlphaNum12 {
 					asset_code: code,
 					issuer: PublicKey::PublicKeyTypeEd25519(issuer),
-				}))
-			},
+				})),
 		}
 	}
 }

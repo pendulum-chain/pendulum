@@ -10,7 +10,7 @@ use stellar::{
 };
 use substrate_stellar_sdk as stellar;
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 
 pub type Bytes4 = [u8; 4];
 pub type Bytes12 = [u8; 12];
@@ -19,7 +19,7 @@ pub type AssetIssuer = [u8; 32];
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord, TypeInfo)]
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
 	Native,

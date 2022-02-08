@@ -422,7 +422,6 @@ impl orml_tokens::Config for Runtime {
 	type OnDust = ();
 	type MaxLocks = MaxLocks;
 	type DustRemovalWhitelist = DustRemovalWhitelist;
-	type MaxEncodedLen
 }
 
 parameter_type_with_key! {
@@ -868,7 +867,7 @@ parameter_types! {
 			<Runtime as pallet_contracts::Config>::WeightInfo::on_initialize_per_queue_item(0)
 		)) / 5) as u32;
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
-	
+
 }
 
 impl pallet_contracts::Config for Runtime {

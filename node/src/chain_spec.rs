@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use sp_core::{ed25519, Pair, Public};
 use sp_std::convert::TryFrom;
 use substrate_stellar_sdk as stellar;
-use hex_literal::hex;
 
 use sp_runtime::traits::{IdentifyAccount, Verify};
 

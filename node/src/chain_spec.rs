@@ -11,6 +11,9 @@ use substrate_stellar_sdk as stellar;
 
 use sp_runtime::traits::{IdentifyAccount, Verify};
 
+/// The ID of this Parachain as registered on the Relay Chain.
+pub const PARA_ID: u32 = 2000;
+
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec =
 	sc_service::GenericChainSpec<pendulum_parachain_runtime::GenesisConfig, Extensions>;
@@ -103,16 +106,17 @@ pub fn development_config() -> ChainSpec {
 					get_account_id_from_seed::<ed25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<ed25519::Public>("Ferdie//stash"),
 				],
-				ParaId::from(2000),
+				PARA_ID.into(),
 			)
 		},
 		Vec::new(),
 		None,
 		None,
 		None,
+		Some(properties),
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: ParaId::from(2000).into(),
+			para_id: PARA_ID,
 		},
 	)
 }
@@ -157,7 +161,7 @@ pub fn local_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<ed25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<ed25519::Public>("Ferdie//stash"),
 				],
-				ParaId::from(2000),
+				PARA_ID.into(),
 			)
 		},
 		// Bootnodes
@@ -166,12 +170,14 @@ pub fn local_testnet_config() -> ChainSpec {
 		None,
 		// Protocol ID
 		Some("template-local"),
+		// Fork ID
+		None,
 		// Properties
 		Some(properties),
 		// Extensions
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: ParaId::from(2000).into(),
+			para_id: PARA_ID,
 		},
 	)
 }

@@ -1,9 +1,13 @@
-.git
+**/node_modules/
 **/target/
+
+**/.*
 **/*.txt
 **/*.md
-/docker/
-!/target/release/polkadot-collator
+./docker-compose.yml
+./LICENSE
 
-# dotfiles in the repo root
-/.*
+./scripts
+./bin
+./docs
+./polkadot-launch

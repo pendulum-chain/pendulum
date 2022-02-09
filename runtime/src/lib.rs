@@ -9,6 +9,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use codec::Encode;
 
 use frame_support::log::{error, trace};
+
 use pallet_contracts::{
 	chain_extension::{
 		ChainExtension, Environment, Ext, InitState, RetVal, SysConfig, UncheckedFrom,
@@ -147,7 +148,7 @@ pub type Executive = frame_executive::Executive<
 	Block,
 	frame_system::ChainContext<Runtime>,
 	Runtime,
-	AllPallets,
+	AllPalletsWithSystem,
 >;
 
 /// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
@@ -208,7 +209,8 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_version: 1,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 1,
+	transaction_version: 0,
+	state_version: 0,
 };
 
 /// This determines the average expected block time that we are targeting.
@@ -341,6 +343,7 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = SS58Prefix;
 	/// The action to take on a Runtime Upgrade
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -635,7 +638,7 @@ parameter_types! {
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
-	type OnValidationData = ();
+	type OnSystemEvent = ();
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type DmpMessageHandler = DmpQueue;
 	type ReservedDmpWeight = ReservedDmpWeight;
@@ -790,6 +793,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type ChannelInfo = ParachainSystem;
 	type VersionWrapper = ();
+	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -853,10 +857,8 @@ impl pallet_collator_selection::Config for Runtime {
 }
 
 parameter_types! {
-	pub ContractDeposit: Balance = deposit(
-		1,
-		<pallet_contracts::Pallet<Runtime>>::contract_info_size(),
-	);
+	pub const DepositPerItem: Balance = deposit(1, 0);
+	pub const DepositPerByte: Balance = deposit(0, 1);
 	// The lazy deletion runs inside on_initialize.
 	pub DeletionWeightLimit: Weight = AVERAGE_ON_INITIALIZE_RATIO *
 		RuntimeBlockWeights::get().max_block;
@@ -867,6 +869,7 @@ parameter_types! {
 			<Runtime as pallet_contracts::Config>::WeightInfo::on_initialize_per_queue_item(0)
 		)) / 5) as u32;
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
+
 }
 
 impl pallet_contracts::Config for Runtime {
@@ -882,7 +885,8 @@ impl pallet_contracts::Config for Runtime {
 	/// change because that would break already deployed contracts. The `Call` structure itself
 	/// is not allowed to change the indices of existing pallets, too.
 	type CallFilter = frame_support::traits::Nothing;
-	type ContractDeposit = ContractDeposit;
+	type DepositPerByte = DepositPerByte;
+	type DepositPerItem = DepositPerItem;
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
 	type ChainExtension = BalanceChainExtension;
@@ -890,6 +894,7 @@ impl pallet_contracts::Config for Runtime {
 	type DeletionWeightLimit = DeletionWeightLimit;
 	type Schedule = Schedule;
 	type CallStack = [pallet_contracts::Frame<Self>; 31];
+	type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
 }
 
 impl frame_system::offchain::SigningTypes for Runtime {
@@ -1052,8 +1057,8 @@ impl_runtime_apis! {
 	}
 
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
-		fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
-			ParachainSystem::collect_collation_info()
+		fn collect_collation_info(header: &<Block as BlockT>::Header) -> cumulus_primitives_core::CollationInfo {
+			ParachainSystem::collect_collation_info(header)
 		}
 	}
 
@@ -1128,21 +1133,32 @@ impl_runtime_apis! {
 			dest: AccountId,
 			value: Balance,
 			gas_limit: u64,
+			storage_deposit_limit: Option<Balance>,
 			input_data: Vec<u8>,
-		) -> pallet_contracts_primitives::ContractExecResult {
-			Contracts::bare_call(origin, dest, value, gas_limit, input_data, CONTRACTS_DEBUG_OUTPUT)
+		) -> pallet_contracts_primitives::ContractExecResult<Balance> {
+			Contracts::bare_call(origin, dest, value, gas_limit, storage_deposit_limit, input_data, CONTRACTS_DEBUG_OUTPUT)
 		}
 
 		fn instantiate(
 			origin: AccountId,
-			endowment: Balance,
+			value: Balance,
 			gas_limit: u64,
+			storage_deposit_limit: Option<Balance>,
 			code: pallet_contracts_primitives::Code<Hash>,
 			data: Vec<u8>,
 			salt: Vec<u8>,
-		) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId>
+		) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
 		{
-			Contracts::bare_instantiate(origin, endowment, gas_limit, code, data, salt, CONTRACTS_DEBUG_OUTPUT)
+			Contracts::bare_instantiate(origin, value, gas_limit, storage_deposit_limit, code, data, salt, CONTRACTS_DEBUG_OUTPUT)
+		}
+
+		fn upload_code(
+			origin: AccountId,
+			code: Vec<u8>,
+			storage_deposit_limit: Option<Balance>,
+		) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance>
+		{
+			Contracts::bare_upload_code(origin, code, storage_deposit_limit)
 		}
 
 		fn get_storage(

@@ -164,7 +164,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		// Telemetry
 		None,
 		// Protocol ID
-		Some("template-local"),
+		Some("pendulum-local"),
 		// Fork ID
 		None,
 		// Properties

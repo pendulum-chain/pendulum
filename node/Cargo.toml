@@ -1,12 +1,12 @@
 [package]
-authors = ["Anonymous"]
+authors = ["Satoshipay"]
 build = "build.rs"
-description = "A new Cumulus FRAME-based Substrate Node, ready for hacking together a parachain."
+description = "Pendulum node configured with Cumulus ready"
 edition = "2021"
 homepage = "https://substrate.io"
 license = "Unlicense"
 name = "pendulum-node"
-repository = "https://github.com/paritytech/cumulus/"
+repository = 'https://github.com/substrate-developer-hub/substrate-parachain-template'
 version = "0.1.0"
 
 [package.metadata.docs.rs]

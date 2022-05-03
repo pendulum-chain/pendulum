@@ -46,6 +46,7 @@ frame-benchmarking-cli = {git = "https://github.com/paritytech/substrate", branc
 try-runtime-cli = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17"}
 
 pallet-transaction-payment-rpc = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17"}
+pallet-contracts-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 
 substrate-frame-rpc-system = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17"}
 substrate-prometheus-endpoint = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17"}

@@ -23,6 +23,18 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+// #[cfg(feature = "std")]
+// use pallet_spacewalk;
+#[cfg(feature = "std")]
+use pallet_spacewalk::{
+	address_conv::AddressConversion as StellarAddressConversion,
+	balance_conv::BalanceConversion as StellarBalanceConversion,
+	currency_conv::{
+		CurrencyConversion as StellarCurrencyConversion,
+		StringCurrencyConversion as StellarStringCurrencyConversion,
+	},
+};
+
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::Everything,

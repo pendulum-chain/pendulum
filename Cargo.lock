@@ -5120,9 +5120,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.11.0"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b10983b38c53aebdf33f542c6275b0f58a238129d00c4ae0e6fb59738d783ca"
+checksum = "7709cef83f0c1f58f666e746a08b21e0085f7440fa6a29cc194d68aac97a4225"
 
 [[package]]
 name = "opaque-debug"
@@ -5185,6 +5185,7 @@ dependencies = [
  "orml-utilities",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-io",
  "sp-runtime",
  "sp-std",
@@ -5199,6 +5200,7 @@ dependencies = [
  "frame-support",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-io",
  "sp-runtime",
  "sp-std",
@@ -5884,6 +5886,7 @@ version = "4.0.0-dev"
 source = "git+https://github.com/pendulum-chain/spacewalk#e640b830d044c309ff79f3de8046b2543c0fbfcb"
 dependencies = [
  "base64",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex",
@@ -5897,6 +5900,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-core",
  "sp-io",
+ "sp-keystore",
  "sp-runtime",
  "sp-std",
  "substrate-stellar-sdk",
@@ -10845,9 +10849,9 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "target-lexicon"
-version = "0.12.3"
+version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7fa7e55043acb85fca6b3c01485a2eeb6b69c5d21002e273c79e465f43b7ac1"
+checksum = "c02424087780c9b71cc96799eaeddff35af2bc513278cda5c99fc1f5d026d3c1"
 
 [[package]]
 name = "tempfile"

@@ -3257,6 +3257,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "index-fixed"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4161ceaf2f41b6cd3f6502f5da085d4ad4393a51e0c70ed2fce1d5698d798fae"
+
+[[package]]
 name = "indexmap"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3943,6 +3949,9 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+dependencies = [
+ "spin",
+]
 
 [[package]]
 name = "lazycell"
@@ -5166,6 +5175,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-traits"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=2b5d4ce1d08fb54c0007c2055653892d2c93a92e#2b5d4ce1d08fb54c0007c2055653892d2c93a92e"
+dependencies = [
+ "frame-support",
+ "impl-trait-for-tuples",
+ "num-traits",
+ "orml-utilities",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
+name = "orml-utilities"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=2b5d4ce1d08fb54c0007c2055653892d2c93a92e#2b5d4ce1d08fb54c0007c2055653892d2c93a92e"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "os_str_bytes"
 version = "6.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5840,6 +5879,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-spacewalk"
+version = "4.0.0-dev"
+source = "git+https://github.com/pendulum-chain/spacewalk#e640b830d044c309ff79f3de8046b2543c0fbfcb"
+dependencies = [
+ "base64",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "log",
+ "orml-traits",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "substrate-stellar-sdk",
+]
+
+[[package]]
 name = "pallet-staking"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.18#fc3fd073d3a0acf9933c3994b660ebd7b5833f65"
@@ -6375,6 +6438,7 @@ dependencies = [
  "pallet-balances",
  "pallet-collator-selection",
  "pallet-session",
+ "pallet-spacewalk",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -9801,6 +9865,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sodalite"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41784a359d15c58bba298cccb7f30a847a1a42d0620c9bdaa0aa42fdb3c280e0"
+dependencies = [
+ "index-fixed",
+]
+
+[[package]]
 name = "soketto"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10699,6 +10772,24 @@ dependencies = [
  "prometheus",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "substrate-stellar-sdk"
+version = "0.2.2"
+source = "git+https://github.com/pendulum-chain/substrate-stellar-sdk?branch=polkadot-v0.9.18#17ac7552467bd64b89523429d2092aeaa64b5854"
+dependencies = [
+ "base64",
+ "hex",
+ "lazy_static",
+ "num-rational 0.4.0",
+ "serde",
+ "serde_json",
+ "sha2 0.9.9",
+ "sodalite",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

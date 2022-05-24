@@ -23,8 +23,10 @@ serde = {version = "1.0.132", optional = true, features = ["derive"]}
 smallvec = "1.6.1"
 
 # Spacewalk Dependencies
-# pallet-spacewalk = {git = "https://github.com/xiuxiu62/spacewalk", default-features = false, optional = true, branch = "wasm-build"}
-pallet-spacewalk = {git = "https://github.com/pendulum-chain/spacewalk", default-features = false, optional = true}
+pallet-spacewalk = {git = "https://github.com/pendulum-chain/spacewalk", default-features = false}
+orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e", default-features = false}
+orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e", default-features = false}
+orml-traits = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e", default-features = false}
 
 # Substrate Dependencies
 ## Substrate Primitive Dependencies

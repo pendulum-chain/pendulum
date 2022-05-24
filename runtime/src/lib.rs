@@ -13,7 +13,7 @@ use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, MultiSignature,
 };
@@ -23,12 +23,11 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-// #[cfg(feature = "std")]
-// use pallet_spacewalk;
-#[cfg(feature = "std")]
+use orml_traits::parameter_type_with_key;
 use pallet_spacewalk::{
 	address_conv::AddressConversion as StellarAddressConversion,
 	balance_conv::BalanceConversion as StellarBalanceConversion,
+	currency::CurrencyId,
 	currency_conv::{
 		CurrencyConversion as StellarCurrencyConversion,
 		StringCurrencyConversion as StellarStringCurrencyConversion,
@@ -37,7 +36,7 @@ use pallet_spacewalk::{
 
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::Everything,
+	traits::{Contains, Everything},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		DispatchClass, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
@@ -72,6 +71,9 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 
 /// Balance of an account.
 pub type Balance = u128;
+
+// Signed version of Balance
+pub type Amount = i128;
 
 /// Index of a transaction in the chain.
 pub type Index = u32;
@@ -430,6 +432,32 @@ impl pallet_aura::Config for Runtime {
 	type MaxAuthorities = MaxAuthorities;
 }
 
+parameter_type_with_key! {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+		Zero::zero()
+	};
+}
+
+pub struct DustRemovalWhitelist;
+
+impl Contains<AccountId> for DustRemovalWhitelist {
+	fn contains(a: &AccountId) -> bool {
+		vec![].contains(a)
+	}
+}
+
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = Amount;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_tokens::BurnDust<Runtime>;
+	type MaxLocks = MaxLocks;
+	type DustRemovalWhitelist = DustRemovalWhitelist;
+}
+
 parameter_types! {
 	pub const PotId: PalletId = PalletId(*b"PotStake");
 	pub const MaxCandidates: u32 = 1000;
@@ -458,6 +486,16 @@ impl pallet_collator_selection::Config for Runtime {
 	type WeightInfo = ();
 }
 
+// impl pallet_spacewalk::Config for Runtime {
+// 	type Event = Event;
+// 	type Call = Call;
+// 	type Currency = Balances;
+// 	type AddressConversion = StellarAddressConversion;
+// 	type StringCurrencyConversion = StellarStringCurrencyConversion;
+// 	type BalanceConversion = StellarBalanceConversion;
+// 	type CurrencyConversion = StellarCurrencyConversion;
+// }
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -472,6 +510,9 @@ construct_runtime!(
 		} = 1,
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 2,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 3,
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 4,
+		// Spacewalk: pallet_spacewalk::{Pallet, Call, Storage, Event<T>} = 5,
+		// Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>} = 6,
 
 		// Monetary stuff.
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,

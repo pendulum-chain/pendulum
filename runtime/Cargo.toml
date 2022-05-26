@@ -22,6 +22,12 @@ scale-info = {version = "2.1.2", default-features = false, features = ["derive"]
 serde = {version = "1.0.132", optional = true, features = ["derive"]}
 smallvec = "1.6.1"
 
+# Spacewalk Dependencies
+pallet-spacewalk = {git = "https://github.com/pendulum-chain/spacewalk", default-features = false}
+orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e", default-features = false}
+orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e", default-features = false}
+orml-traits = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e", default-features = false}
+
 # Substrate Dependencies
 ## Substrate Primitive Dependencies
 sp-api = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18"}
@@ -107,6 +113,7 @@ std = [
   "pallet-balances/std",
   "pallet-collator-selection/std",
   "pallet-session/std",
+  "pallet-spacewalk/std",
   "pallet-sudo/std",
   "pallet-timestamp/std",
   "pallet-transaction-payment-rpc-runtime-api/std",
@@ -138,6 +145,7 @@ runtime-benchmarks = [
   "frame-system/runtime-benchmarks",
   "pallet-balances/runtime-benchmarks",
   "pallet-collator-selection/runtime-benchmarks",
+  "pallet-spacewalk/runtime-benchmarks",
   "pallet-timestamp/runtime-benchmarks",
   "pallet-xcm/runtime-benchmarks",
   "cumulus-pallet-session-benchmarking/runtime-benchmarks",

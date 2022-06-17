@@ -24,7 +24,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::parameter_type_with_key;
+use orml_traits::{MultiCurrency, parameter_type_with_key};
 use pallet_spacewalk::{
 	address_conv::AddressConversion as StellarAddressConversion,
 	balance_conv::BalanceConversion as StellarBalanceConversion,
@@ -34,6 +34,7 @@ use pallet_spacewalk::{
 		StringCurrencyConversion as StellarStringCurrencyConversion,
 	},
 };
+use pallet_pendulum_amm::AmmExtension;
 
 use frame_support::{
 	construct_runtime, parameter_types,
@@ -45,6 +46,7 @@ use frame_support::{
 	},
 	PalletId,
 };
+use frame_support::traits::ConstU128;
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
@@ -506,6 +508,42 @@ impl pallet_collator_selection::Config for Runtime {
 	type WeightInfo = ();
 }
 
+
+parameter_types! {
+	pub StellarUsdcAsset: CurrencyId = CurrencyId::try_from((
+		"USDC",
+		[
+			20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46,
+			199, 108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
+		],
+	))
+	.unwrap();
+
+	pub StellarEurAsset: CurrencyId = CurrencyId::try_from((
+		"EUR",
+		[
+			20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46,
+			199, 108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
+		],
+	))
+	.unwrap();
+}
+
+impl pallet_pendulum_amm::Config for Runtime {
+	type Event = Event;
+	type WeightInfo = pallet_pendulum_amm::weights::WeightInfo<Runtime>;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
+	type AmmExtension = Extension;
+	type MinimumLiquidity = ConstU128<1000>;
+
+	type MintFee = ConstU128<5>;
+	type BaseFee = ConstU128<3>;
+	type Asset0 = StellarEurAsset;
+	type Asset1 = StellarUsdcAsset;
+}
+
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -522,7 +560,7 @@ construct_runtime!(
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 3,
 
 		// Monetary stuff.
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 10,
+		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
 		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>} = 11,
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 12,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 13,
@@ -539,7 +577,9 @@ construct_runtime!(
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 30,
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 31,
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 32,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
+
+		AmmEURUSDC: pallet_pendulum_amm = 34
 	}
 );
 
@@ -757,4 +797,26 @@ cumulus_pallet_parachain_system::register_validate_block! {
 	Runtime = Runtime,
 	BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
 	CheckInherents = CheckInherents,
+}
+
+//--------------------- AMM Balance Extension --------------------------
+struct Extension;
+
+impl AmmExtension<AccountId, CurrencyId, Balance, u64> for Extension {
+	fn fetch_balance(owner: &AccountId, asset: CurrencyId) -> Balance {
+		<Tokens as MultiCurrency<AccountId>>::total_balance(asset, owner)
+	}
+
+	fn transfer_balance(
+		from: &AccountId,
+		to: &AccountId,
+		asset: CurrencyId,
+		amount: Balance,
+	) -> sp_runtime::DispatchResult {
+		<Currencies as MultiCurrency<AccountId>>::transfer(asset, from, to, amount)
+	}
+
+	fn moment_to_balance_type(moment: u64) -> Balance {
+		Balance::from(moment)
+	}
 }

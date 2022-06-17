@@ -61,6 +61,12 @@ pub fn template_session_keys(keys: AuraId) -> pendulum_parachain_runtime::Sessio
 	pendulum_parachain_runtime::SessionKeys { aura: keys }
 }
 
+struct AmmConfig {
+	contract_id: AccountId,
+	zero_account: AccountId,
+	fee_to_setter: AccountId
+}
+
 pub fn development_config() -> ChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
@@ -101,6 +107,11 @@ pub fn development_config() -> ChainSpec {
 					get_account_id_from_seed::<ed25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<ed25519::Public>("Ferdie//stash"),
 				],
+				AmmConfig{
+					contract_id: get_account_id_from_seed::<ed25519::Public>("Contract"),
+					zero_account: get_account_id_from_seed::<ed25519::Public>("Zero"),
+					fee_to_setter: get_account_id_from_seed::<ed25519::Public>("Alice")
+				},
 				1000.into(),
 			)
 		},
@@ -156,6 +167,11 @@ pub fn local_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<ed25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<ed25519::Public>("Ferdie//stash"),
 				],
+				AmmConfig{
+					contract_id: get_account_id_from_seed::<ed25519::Public>("Contract"),
+					zero_account: get_account_id_from_seed::<ed25519::Public>("Zero"),
+					fee_to_setter: get_account_id_from_seed::<ed25519::Public>("Alice")
+				},
 				1000.into(),
 			)
 		},
@@ -180,8 +196,10 @@ pub fn local_testnet_config() -> ChainSpec {
 fn testnet_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
+	amm_config: AmmConfig,
 	id: ParaId,
 ) -> pendulum_parachain_runtime::GenesisConfig {
+
 	pendulum_parachain_runtime::GenesisConfig {
 		system: pendulum_parachain_runtime::SystemConfig {
 			code: pendulum_parachain_runtime::WASM_BINARY
@@ -217,5 +235,22 @@ fn testnet_genesis(
 		polkadot_xcm: pendulum_parachain_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
 		},
+
+		tokens: pendulum_parachain_runtime::TokensConfig {
+			balances: endowed_accounts.iter().flat_map(|acc_id| {
+				vec![
+					(acc_id.clone(), pendulum_parachain_runtime::StellarUsdcAsset, 1000u128.pow(12)),
+					(acc_id.clone(), pendulum_parachain_runtime::StellarEurAsset, 1000u128.pow(12))
+				]
+			})
+			.collect()
+		},
+
+		amm_eurusdc: pendulum_parachain_runtime::AmmEURUSDCConfig {
+			contract_id: Some(amm_config.contract_id),
+			zero_account: Some(amm_config.zero_account),
+			fee_to_setter: Some(amm_config.fee_to_setter)
+
+		}
 	}
 }

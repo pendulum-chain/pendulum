@@ -24,6 +24,8 @@ smallvec = "1.6.1"
 
 # Spacewalk Dependencies
 pallet-spacewalk = {git = "https://github.com/pendulum-chain/spacewalk", default-features = false}
+pallet-pendulum-amm = {git = "https://github.com/pendulum-chain/pendulum-amm.git", package = "pallet-pendulum-amm", tag= "polkadot-v0.9.18", default-features = false }
+
 orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e", default-features = false}
 orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e", default-features = false}
 orml-traits = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e", default-features = false}
@@ -114,6 +116,7 @@ std = [
   "pallet-collator-selection/std",
   "pallet-session/std",
   "pallet-spacewalk/std",
+  "pallet-pendulum-amm/std",
   "pallet-sudo/std",
   "pallet-timestamp/std",
   "pallet-transaction-payment-rpc-runtime-api/std",
@@ -146,6 +149,7 @@ runtime-benchmarks = [
   "pallet-balances/runtime-benchmarks",
   "pallet-collator-selection/runtime-benchmarks",
   "pallet-spacewalk/runtime-benchmarks",
+  "pallet-timestamp/runtime-benchmarks",
   "pallet-timestamp/runtime-benchmarks",
   "pallet-xcm/runtime-benchmarks",
   "cumulus-pallet-session-benchmarking/runtime-benchmarks",

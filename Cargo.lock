@@ -5802,7 +5802,7 @@ dependencies = [
 [[package]]
 name = "pallet-pendulum-amm"
 version = "0.1.0"
-source = "git+https://github.com/pendulum-chain/pendulum-amm.git?branch=31-create-a-branch-and-plug-the-amm-pallet-into-pendulum#a7e97022389132502bc3a7730e54168f5de36e6c"
+source = "git+https://github.com/pendulum-chain/pendulum-amm.git#d293ba65fbc287e72bf0db309f9c1538a44550fd"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

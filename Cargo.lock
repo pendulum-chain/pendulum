@@ -5200,6 +5200,7 @@ dependencies = [
  "orml-traits",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-runtime",
  "sp-std",
 ]
@@ -5795,6 +5796,22 @@ dependencies = [
  "scale-info",
  "sp-runtime",
  "sp-staking",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-pendulum-amm"
+version = "0.1.0"
+source = "git+https://github.com/pendulum-chain/pendulum-amm.git?branch=31-create-a-branch-and-plug-the-amm-pallet-into-pendulum#a7e97022389132502bc3a7730e54168f5de36e6c"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-runtime",
  "sp-std",
 ]
 
@@ -6474,6 +6491,7 @@ dependencies = [
  "pallet-authorship",
  "pallet-balances",
  "pallet-collator-selection",
+ "pallet-pendulum-amm",
  "pallet-session",
  "pallet-spacewalk",
  "pallet-sudo",

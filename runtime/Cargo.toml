@@ -24,7 +24,7 @@ smallvec = "1.6.1"
 
 # Spacewalk Dependencies
 pallet-spacewalk = {git = "https://github.com/pendulum-chain/spacewalk", default-features = false}
-pallet-pendulum-amm = {git = "https://github.com/pendulum-chain/pendulum-amm.git", package = "pallet-pendulum-amm", tag= "polkadot-v0.9.18", default-features = false }
+pallet-pendulum-amm = {git = "https://github.com/pendulum-chain/pendulum-amm.git", package = "pallet-pendulum-amm", branch = "31-create-a-branch-and-plug-the-amm-pallet-into-pendulum", default-features = false }
 
 orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e", default-features = false}
 orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e", default-features = false}
@@ -136,6 +136,8 @@ std = [
   "xcm-builder/std",
   "xcm-executor/std",
   "xcm/std",
+
+  "orml-tokens/std"
 ]
 
 runtime-benchmarks = [

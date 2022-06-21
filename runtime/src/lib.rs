@@ -28,7 +28,6 @@ use orml_traits::{MultiCurrency, parameter_type_with_key};
 use pallet_spacewalk::{
 	address_conv::AddressConversion as StellarAddressConversion,
 	balance_conv::BalanceConversion as StellarBalanceConversion,
-	currency::CurrencyId,
 	currency_conv::{
 		CurrencyConversion as StellarCurrencyConversion,
 		StringCurrencyConversion as StellarStringCurrencyConversion,
@@ -53,6 +52,7 @@ use frame_system::{
 };
 pub use sp_consensus_aura::ed25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
+pub use pallet_spacewalk::currency::CurrencyId;
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
 #[cfg(any(feature = "std", test))]
@@ -800,7 +800,7 @@ cumulus_pallet_parachain_system::register_validate_block! {
 }
 
 //--------------------- AMM Balance Extension --------------------------
-struct Extension;
+pub struct Extension;
 
 impl AmmExtension<AccountId, CurrencyId, Balance, u64> for Extension {
 	fn fetch_balance(owner: &AccountId, asset: CurrencyId) -> Balance {

@@ -199,6 +199,23 @@ fn testnet_genesis(
 	amm_config: AmmConfig,
 	id: ParaId,
 ) -> pendulum_parachain_runtime::GenesisConfig {
+	let stellar_usdc_asset = pendulum_parachain_runtime::CurrencyId::try_from((
+		"USDC",
+		[
+			20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46,
+			199, 108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
+		],
+	))
+		.unwrap();
+
+	let stellar_eur_asset = pendulum_parachain_runtime::CurrencyId::try_from((
+		"EUR",
+		[
+			20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46,
+			199, 108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
+		],
+	))
+		.unwrap();
 
 	pendulum_parachain_runtime::GenesisConfig {
 		system: pendulum_parachain_runtime::SystemConfig {
@@ -239,8 +256,9 @@ fn testnet_genesis(
 		tokens: pendulum_parachain_runtime::TokensConfig {
 			balances: endowed_accounts.iter().flat_map(|acc_id| {
 				vec![
-					(acc_id.clone(), pendulum_parachain_runtime::StellarUsdcAsset, 1000u128.pow(12)),
-					(acc_id.clone(), pendulum_parachain_runtime::StellarEurAsset, 1000u128.pow(12))
+
+					(acc_id.clone(), stellar_eur_asset, 1000u128.pow(12)),
+					(acc_id.clone(), stellar_usdc_asset, 1000u128.pow(12))
 				]
 			})
 			.collect()

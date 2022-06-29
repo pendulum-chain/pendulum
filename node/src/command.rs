@@ -1,14 +1,14 @@
 use crate::{
 	chain_spec,
 	cli::{Cli, RelayChainCli, Subcommand},
-	service::{new_partial, TemplateRuntimeExecutor},
+	service::{new_partial, AmplitudeRuntimeExecutor, DevelopmentRuntimeExecutor},
 };
 use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::info;
-use parachain_template_runtime::{Block, RuntimeApi};
+use runtime_common::opaque::Block;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
 	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
@@ -21,12 +21,47 @@ use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 use std::{io::Write, net::SocketAddr};
 
+enum ChainIdentity {
+	Amplitude,
+	// Pendulum,
+	Development,
+}
+
+trait IdentifyChain {
+	fn identify(&self) -> ChainIdentity;
+}
+
+impl IdentifyChain for dyn sc_service::ChainSpec {
+	fn identify(&self) -> ChainIdentity {
+		if self.id().starts_with("amplitude") {
+			ChainIdentity::Amplitude
+		} else {
+			ChainIdentity::Development
+		}
+	}
+}
+
+impl<T: sc_service::ChainSpec + 'static> IdentifyChain for T {
+	fn identify(&self) -> ChainIdentity {
+		<dyn sc_service::ChainSpec>::identify(self)
+	}
+}
+
 fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-	Ok(match id {
-		"dev" => Box::new(chain_spec::development_config()),
-		"" | "local" => Box::new(chain_spec::local_testnet_config()),
-		path => Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?),
-	})
+	match id {
+		"amplitude" => Ok(Box::new(chain_spec::amplitude_config())),
+		"dev" => Ok(Box::new(chain_spec::development_config())),
+		"" | "local" => Ok(Box::new(chain_spec::local_testnet_config())),
+		path => {
+			let chain_spec = chain_spec::AmplitudeChainSpec::from_json_file(path.into())?;
+			Ok(match chain_spec.identify() {
+				ChainIdentity::Amplitude => {
+					Box::new(chain_spec::AmplitudeChainSpec::from_json_file(path.into())?)
+				},
+				ChainIdentity::Development => Box::new(chain_spec::development_config()),
+			})
+		},
+	}
 }
 
 impl SubstrateCli for Cli {
@@ -62,8 +97,11 @@ impl SubstrateCli for Cli {
 		load_spec(id)
 	}
 
-	fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		&parachain_template_runtime::VERSION
+	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+		match spec.identify() {
+			ChainIdentity::Amplitude => &amplitude_runtime::VERSION,
+			ChainIdentity::Development => &development_runtime::VERSION,
+		}
 	}
 }
 
@@ -118,18 +156,28 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
 		let runner = $cli.create_runner($cmd)?;
-		runner.async_run(|$config| {
-			let $components = new_partial::<
-				RuntimeApi,
-				TemplateRuntimeExecutor,
-				_
-			>(
-				&$config,
-				crate::service::parachain_build_import_queue,
-			)?;
-			let task_manager = $components.task_manager;
-			{ $( $code )* }.map(|v| (v, task_manager))
-		})
+		match runner.config().chain_spec.identify() {
+			ChainIdentity::Amplitude => {
+				runner.async_run(|$config| {
+					let $components = new_partial::<amplitude_runtime::RuntimeApi, AmplitudeRuntimeExecutor, _>(
+						&$config,
+						crate::service::amplitude_parachain_build_import_queue,
+					)?;
+					let task_manager = $components.task_manager;
+					{ $( $code )* }.map(|v| (v, task_manager))
+				})
+			},
+			ChainIdentity::Development => {
+				runner.async_run(|$config| {
+					let $components = new_partial::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor, _>(
+						&$config,
+						crate::service::development_parachain_build_import_queue,
+					)?;
+					let task_manager = $components.task_manager;
+					{ $( $code )* }.map(|v| (v, task_manager))
+				})
+			}
+		}
 	}}
 }
 
@@ -236,31 +284,23 @@ pub fn run() -> Result<()> {
 			match cmd {
 				BenchmarkCmd::Pallet(cmd) => {
 					if cfg!(feature = "runtime-benchmarks") {
-						runner.sync_run(|config| cmd.run::<Block, TemplateRuntimeExecutor>(config))
+						match runner.config().chain_spec.identify() {
+							ChainIdentity::Amplitude => runner.sync_run(|config| {
+								cmd.run::<Block, AmplitudeRuntimeExecutor>(config)
+							}),
+							ChainIdentity::Development => runner.sync_run(|config| {
+								cmd.run::<Block, DevelopmentRuntimeExecutor>(config)
+							}),
+						}
 					} else {
 						Err("Benchmarking wasn't enabled when building the node. \
 					You can enable it with `--features runtime-benchmarks`."
 							.into())
 					}
 				},
-				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
-					let partials = new_partial::<RuntimeApi, TemplateRuntimeExecutor, _>(
-						&config,
-						crate::service::parachain_build_import_queue,
-					)?;
-					cmd.run(partials.client)
-				}),
-				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
-					let partials = new_partial::<RuntimeApi, TemplateRuntimeExecutor, _>(
-						&config,
-						crate::service::parachain_build_import_queue,
-					)?;
-					let db = partials.backend.expose_db();
-					let storage = partials.backend.expose_storage();
-
-					cmd.run(config, partials.client.clone(), db, storage)
-				}),
-				BenchmarkCmd::Overhead(_) => Err("Unsupported benchmarking command".into()),
+				BenchmarkCmd::Block(_) | BenchmarkCmd::Storage(_) | BenchmarkCmd::Overhead(_) => {
+					Err("Unsupported benchmarking command".into())
+				},
 				BenchmarkCmd::Machine(cmd) => {
 					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone()))
 				},
@@ -276,9 +316,14 @@ pub fn run() -> Result<()> {
 					TaskManager::new(runner.config().tokio_handle.clone(), *registry)
 						.map_err(|e| format!("Error: {:?}", e))?;
 
-				runner.async_run(|config| {
-					Ok((cmd.run::<Block, TemplateRuntimeExecutor>(config), task_manager))
-				})
+				match runner.config().chain_spec.identify() {
+					ChainIdentity::Amplitude => runner.async_run(|config| {
+						Ok((cmd.run::<Block, AmplitudeRuntimeExecutor>(config), task_manager))
+					}),
+					ChainIdentity::Development => runner.async_run(|config| {
+						Ok((cmd.run::<Block, DevelopmentRuntimeExecutor>(config), task_manager))
+					}),
+				}
 			} else {
 				Err("Try-runtime must be enabled by `--features try-runtime`.".into())
 			}
@@ -326,16 +371,28 @@ pub fn run() -> Result<()> {
 				info!("Parachain genesis state: {}", genesis_state);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
-				crate::service::start_parachain_node(
-					config,
-					polkadot_config,
-					collator_options,
-					id,
-					hwbench,
-				)
-				.await
-				.map(|r| r.0)
-				.map_err(Into::into)
+				match config.chain_spec.identify() {
+					ChainIdentity::Amplitude => crate::service::start_amplitude_parachain_node(
+						config,
+						polkadot_config,
+						collator_options,
+						id,
+						hwbench,
+					)
+					.await
+					.map(|r| r.0)
+					.map_err(Into::into),
+					ChainIdentity::Development => crate::service::start_development_parachain_node(
+						config,
+						polkadot_config,
+						collator_options,
+						id,
+						hwbench,
+					)
+					.await
+					.map(|r| r.0)
+					.map_err(Into::into),
+				}
 			})
 		},
 	}

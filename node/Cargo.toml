@@ -22,7 +22,9 @@ hex-literal = "0.3.4"
 jsonrpsee = { version = "0.13.1", features = ["server"] }
 
 # Local
-parachain-template-runtime = { path = "../runtime" }
+runtime-common = { path = "../runtime/common" }
+amplitude-runtime = { path = "../runtime/amplitude" }
+development-runtime = { path = "../runtime/development" }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
@@ -87,7 +89,8 @@ substrate-build-script-utils = { git = "https://github.com/paritytech/substrate"
 [features]
 default = []
 runtime-benchmarks = [
-	"parachain-template-runtime/runtime-benchmarks",
+	"amplitude-runtime/runtime-benchmarks",
+	"runtime-common/runtime-benchmarks",
 	"polkadot-cli/runtime-benchmarks",
 ]
-try-runtime = ["parachain-template-runtime/try-runtime"]
+try-runtime = ["amplitude-runtime/try-runtime"]

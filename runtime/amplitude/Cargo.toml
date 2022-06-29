@@ -1,11 +1,12 @@
 [package]
-name = "parachain-template-runtime"
+name = "amplitude-runtime"
 version = "0.1.0"
 authors = ["Pendulum"]
 description = "Amplitude runtime"
 homepage = "https://pendulumchain.org"
 repository = "https://github.com/pendulum-chain/pendulum"
 edition = "2021"
+build = "build.rs"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -20,6 +21,9 @@ log = { version = "0.4.17", default-features = false }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 serde = { version = "1.0.137", optional = true, features = ["derive"] }
 smallvec = "1.6.1"
+
+# Local
+runtime-common = { path = "../common", default-features = false }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.24" }
@@ -105,6 +109,7 @@ std = [
 	"parachain-info/std",
 	"polkadot-parachain/std",
 	"polkadot-runtime-common/std",
+	"runtime-common/std",
 	"sp-api/std",
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",

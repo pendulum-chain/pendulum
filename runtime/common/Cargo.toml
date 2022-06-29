@@ -1,0 +1,32 @@
+[package]
+name = "runtime-common"
+version = "0.1.0"
+authors = ["Pendulum"]
+description = "Pendulum runtime common"
+homepage = "https://pendulumchain.org"
+repository = "https://github.com/pendulum-chain/pendulum"
+edition = "2021"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+# Substrate
+sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
+sp-consensus-aura = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
+sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
+
+[features]
+default = [
+	"std",
+]
+
+std = [
+	"sp-consensus-aura/std",
+	"sp-runtime/std",
+	"sp-core/std",
+]
+
+runtime-benchmarks = [
+	"sp-runtime/runtime-benchmarks",
+]

@@ -276,14 +276,14 @@ fn amplitude_genesis(
 	let mut balances: Vec<_> = signatories
 		.iter()
 		.cloned()
-		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY * UNIT))
+		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY))
 		.collect();
 
 	balances.push((
 		sudo_account.clone(),
 		(AMPLITUDE_INITIAL_ISSUANCE.saturating_sub(
 			INITIAL_ISSUANCE_PER_SIGNATORY.saturating_mul(balances.len().try_into().unwrap()),
-		)) * UNIT,
+		)),
 	));
 
 	amplitude_runtime::GenesisConfig {

@@ -21,6 +21,7 @@ use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 use std::{io::Write, net::SocketAddr};
 
+#[derive(PartialEq, Eq)]
 enum ChainIdentity {
 	Amplitude,
 	// Pendulum,
@@ -188,7 +189,14 @@ pub fn run() -> Result<()> {
 	match &cli.subcommand {
 		Some(Subcommand::BuildSpec(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
+			runner.sync_run(|config| {
+				if config.chain_spec.identify() == ChainIdentity::Amplitude {
+					sp_core::crypto::set_default_ss58_version(
+						amplitude_runtime::SS58Prefix::get().into(),
+					);
+				}
+				cmd.run(config.chain_spec, config.network)
+			})
 		},
 		Some(Subcommand::CheckBlock(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
@@ -372,16 +380,22 @@ pub fn run() -> Result<()> {
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
 				match config.chain_spec.identify() {
-					ChainIdentity::Amplitude => crate::service::start_amplitude_parachain_node(
-						config,
-						polkadot_config,
-						collator_options,
-						id,
-						hwbench,
-					)
-					.await
-					.map(|r| r.0)
-					.map_err(Into::into),
+					ChainIdentity::Amplitude => {
+						sp_core::crypto::set_default_ss58_version(
+							amplitude_runtime::SS58Prefix::get().into(),
+						);
+						crate::service::start_amplitude_parachain_node(
+							config,
+							polkadot_config,
+							collator_options,
+							id,
+							hwbench,
+						)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
+					},
+
 					ChainIdentity::Development => crate::service::start_development_parachain_node(
 						config,
 						polkadot_config,

@@ -16,6 +16,8 @@ pub type DevelopmentChainSpec =
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
+const AMPLITUDE_PARACHAIN_ID: u32 = 2124;
+
 /// Helper function to generate a crypto pair from seed
 pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
 	TPublic::Pair::from_string(&format!("//{}", seed), None)
@@ -71,9 +73,9 @@ pub fn get_development_session_keys(keys: AuraId) -> development_runtime::Sessio
 pub fn amplitude_config() -> AmplitudeChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "UNIT".into());
+	properties.insert("tokenSymbol".into(), "AMPE".into());
 	properties.insert("tokenDecimals".into(), 12.into());
-	properties.insert("ss58Format".into(), 42.into());
+	properties.insert("ss58Format".into(), amplitude_runtime::SS58Prefix::get().into());
 
 	AmplitudeChainSpec::from_genesis(
 		// Name
@@ -108,7 +110,7 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				1000.into(),
+				AMPLITUDE_PARACHAIN_ID.into(),
 			)
 		},
 		// Bootnodes
@@ -116,15 +118,15 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 		// Telemetry
 		None,
 		// Protocol ID
-		Some("template-local"),
+		Some("amplitude"),
 		// Fork ID
 		None,
 		// Properties
 		Some(properties),
 		// Extensions
 		Extensions {
-			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000,
+			relay_chain: "kusama".into(), // You MUST set this to the correct network!
+			para_id: AMPLITUDE_PARACHAIN_ID,
 		},
 	)
 }
@@ -232,7 +234,7 @@ pub fn local_testnet_config() -> DevelopmentChainSpec {
 		// Telemetry
 		None,
 		// Protocol ID
-		Some("template-local"),
+		Some("pendulum-development"),
 		// Fork ID
 		None,
 		// Properties
@@ -285,6 +287,10 @@ fn amplitude_genesis(
 		polkadot_xcm: amplitude_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
 		},
+		council: Default::default(),
+		democracy: Default::default(),
+		sudo: Default::default(),
+		technical_committee: Default::default(),
 	}
 }
 

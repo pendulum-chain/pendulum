@@ -6219,6 +6219,7 @@ dependencies = [
  "hex-literal",
  "jsonrpsee",
  "log",
+ "pallet-multisig",
  "pallet-transaction-payment-rpc",
  "parity-scale-codec",
  "polkadot-cli",

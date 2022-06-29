@@ -1,9 +1,12 @@
 use cumulus_primitives_core::ParaId;
-use runtime_common::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT};
+use runtime_common::{AccountId, AuraId, Balance, Signature, EXISTENTIAL_DEPOSIT, UNIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
-use sp_core::{sr25519, Pair, Public};
+use sp_core::{
+	crypto::{Ss58Codec, UncheckedInto},
+	sr25519, Pair, Public,
+};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
@@ -17,6 +20,28 @@ pub type DevelopmentChainSpec =
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 const AMPLITUDE_PARACHAIN_ID: u32 = 2124;
+
+const AMPLITUDE_INITIAL_ISSUANCE: Balance = 200_000_000 * UNIT;
+const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
+
+const INITIAL_AMPLITUDE_SUDO_SIGNATORIES: [&str; 5] = [
+	"6nJwMD3gk36fe6pMRL2UpbwAEjDdjjxdngQGShe753pyAvCT",
+	"6i4xDEE1Q2Bv8tnJtgD4jse4YTAzzCwCJVUehRQ93hCqKp8f",
+	"6n62KZWvmZHgeyEXTvQFmoHRMqjKfFWvQVsApkePekuNfek5",
+	"6kwxQBRKMadrY9Lq3K8gZXkw1UkjacpqYhcqvX3AqmN9DofF",
+	"6kKHwcpCVC18KepwvdMSME8Q7ZTNr1RoRUrFDH9AdAmhL3Pt",
+];
+
+const INITIAL_AMPLITUDE_VALIDATORS: [&str; 8] = [
+	"6mTATq7Ug9RPk4s8aMv5H7WVZ7RvwrJ1JitbYMXWPhanzqiv",
+	"6n8WiWqjEB8nCNRo5mxXc89FqhuMd2dgXNSrzuPxoZSnatnL",
+	"6ic56zZmjqo746yifWzcNxxzxLe3pRo8WNitotniUQvgKnyU",
+	"6gvFApEyYj4EavJP26mwbVu7YxFBYZ9gaJFB7gv5gA6vNfze",
+	"6mz3ymVAsfHotEhHphVRvLLBhMZ2frnwbuvW5QZiMRwJghxE",
+	"6mpD3zcHcUBkxCjTsGg2tMTfmQZdXLVYZnk4UkN2XAUTLkRe",
+	"6mGcZntk59RK2JfxfdmprgDJeByVUgaffMQYkp1ZeoEKeBJA",
+	"6jq7obxC7AxhWeJNzopwYidKNNe48cLrbGSgB2zs2SuRTWGA",
+];
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -74,42 +99,37 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "AMPE".into());
-	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("tokenDecimals".into(), 12u32.into());
 	properties.insert("ss58Format".into(), amplitude_runtime::SS58Prefix::get().into());
+
+	let mut signatories: Vec<_> = INITIAL_AMPLITUDE_SUDO_SIGNATORIES
+		.iter()
+		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
+		.collect();
+	signatories.sort();
+
+	let invulnerables: Vec<_> = INITIAL_AMPLITUDE_VALIDATORS
+		.iter()
+		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
+		.collect();
+
+	let sudo_account = pallet_multisig::Pallet::<amplitude_runtime::Runtime>::multi_account_id(
+		&signatories[..],
+		3,
+	);
 
 	AmplitudeChainSpec::from_genesis(
 		// Name
 		"Amplitude",
 		// ID
 		"amplitude",
-		ChainType::Local,
+		ChainType::Local, // !!!!
 		move || {
 			amplitude_genesis(
 				// initial collators.
-				vec![
-					(
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
-						get_collator_keys_from_seed("Alice"),
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
-						get_collator_keys_from_seed("Bob"),
-					),
-				],
-				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-				],
+				invulnerables.clone(),
+				signatories.clone(),
+				sudo_account.clone(),
 				AMPLITUDE_PARACHAIN_ID.into(),
 			)
 		},
@@ -248,33 +268,45 @@ pub fn local_testnet_config() -> DevelopmentChainSpec {
 }
 
 fn amplitude_genesis(
-	invulnerables: Vec<(AccountId, AuraId)>,
-	endowed_accounts: Vec<AccountId>,
+	invulnerables: Vec<AccountId>,
+	signatories: Vec<AccountId>,
+	sudo_account: AccountId,
 	id: ParaId,
 ) -> amplitude_runtime::GenesisConfig {
+	let mut balances: Vec<_> = signatories
+		.iter()
+		.cloned()
+		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY * UNIT))
+		.collect();
+
+	balances.push((
+		sudo_account.clone(),
+		(AMPLITUDE_INITIAL_ISSUANCE.saturating_sub(
+			INITIAL_ISSUANCE_PER_SIGNATORY.saturating_mul(balances.len().try_into().unwrap()),
+		)) * UNIT,
+	));
+
 	amplitude_runtime::GenesisConfig {
 		system: amplitude_runtime::SystemConfig {
 			code: amplitude_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
 		},
-		balances: amplitude_runtime::BalancesConfig {
-			balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
-		},
+		balances: amplitude_runtime::BalancesConfig { balances },
 		parachain_info: amplitude_runtime::ParachainInfoConfig { parachain_id: id },
 		collator_selection: amplitude_runtime::CollatorSelectionConfig {
-			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
+			invulnerables: invulnerables.clone(),
 			candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
 			..Default::default()
 		},
 		session: amplitude_runtime::SessionConfig {
 			keys: invulnerables
 				.into_iter()
-				.map(|(acc, aura)| {
+				.map(|acc| {
 					(
-						acc.clone(),                      // account id
-						acc,                              // validator id
-						get_amplitude_session_keys(aura), // session keys
+						acc.clone(),
+						acc.clone(),
+						get_amplitude_session_keys(Into::<[u8; 32]>::into(acc).unchecked_into()),
 					)
 				})
 				.collect(),
@@ -287,10 +319,16 @@ fn amplitude_genesis(
 		polkadot_xcm: amplitude_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
 		},
-		council: Default::default(),
+		council: amplitude_runtime::CouncilConfig {
+			members: signatories.clone(),
+			..Default::default()
+		},
 		democracy: Default::default(),
-		sudo: Default::default(),
-		technical_committee: Default::default(),
+		sudo: amplitude_runtime::SudoConfig { key: Some(sudo_account) },
+		technical_committee: amplitude_runtime::TechnicalCommitteeConfig {
+			members: signatories.clone(),
+			..Default::default()
+		},
 	}
 }
 

@@ -123,7 +123,7 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 		"Amplitude",
 		// ID
 		"amplitude",
-		ChainType::Local, // !!!!
+		ChainType::Live,
 		move || {
 			amplitude_genesis(
 				// initial collators.

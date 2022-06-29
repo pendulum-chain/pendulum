@@ -1,7 +1,7 @@
 {
   "name": "Amplitude",
   "id": "amplitude",
-  "chainType": "Local",
+  "chainType": "Live",
   "bootNodes": [],
   "telemetryEndpoints": null,
   "protocolId": "amplitude",

@@ -1,4 +1,5 @@
 use cumulus_primitives_core::ParaId;
+use pendulum_parachain_runtime::{CurrencyId, TokensConfig};
 use runtime_common::{AccountId, AuraId, Balance, Signature, EXISTENTIAL_DEPOSIT, UNIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
@@ -213,7 +214,7 @@ pub fn development_config() -> DevelopmentChainSpec {
 	)
 }
 
-pub fn local_testnet_config() -> DevelopmentChainSpec {
+pub fn local_development_config() -> DevelopmentChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "UNIT".into());
@@ -222,9 +223,9 @@ pub fn local_testnet_config() -> DevelopmentChainSpec {
 
 	DevelopmentChainSpec::from_genesis(
 		// Name
-		"Local Testnet",
+		"Local Development",
 		// ID
-		"local_testnet",
+		"local_development",
 		ChainType::Local,
 		move || {
 			development_genesis(
@@ -286,7 +287,7 @@ pub fn testnet_config() -> TestnetChainSpec {
 		"Testnet",
 		// ID
 		"testnet",
-		ChainType::Testnet,
+		ChainType::Local,
 		move || {
 			testnet_genesis(
 				// initial collators.
@@ -468,8 +469,8 @@ fn testnet_genesis(
 				.into_iter()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                        // account id
-						acc,                                // validator id
+						acc.clone(),                    // account id
+						acc,                            // validator id
 						get_testnet_session_keys(aura), // session keys
 					)
 				})
@@ -482,6 +483,63 @@ fn testnet_genesis(
 		parachain_system: Default::default(),
 		polkadot_xcm: amplitude_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
+		},
+	}
+}
+
+fn testnet_genesis(
+	invulnerables: Vec<(AccountId, AuraId)>,
+	endowed_accounts: Vec<AccountId>,
+	id: ParaId,
+) -> testnet_runtime::GenesisConfig {
+	let stellar_usdc_asset: CurrencyId = CurrencyId::try_from((
+		"USDC",
+		stellar::PublicKey::from_encoding(
+			"GAKNDFRRWA3RPWNLTI3G4EBSD3RGNZZOY5WKWYMQ6CQTG3KIEKPYWAYC",
+		)
+		.unwrap()
+		.as_binary()
+		.clone(),
+	))
+	.unwrap();
+
+	testnet_runtime::GenesisConfig {
+		system: testnet_runtime::SystemConfig {
+			code: testnet_runtime::WASM_BINARY
+				.expect("WASM binary was not build, please build it!")
+				.to_vec(),
+		},
+		balances: testnet_runtime::BalancesConfig {
+			balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
+		},
+		parachain_info: testnet_runtime::ParachainInfoConfig { parachain_id: id },
+		collator_selection: testnet_runtime::CollatorSelectionConfig {
+			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
+			candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
+			..Default::default()
+		},
+		session: testnet_runtime::SessionConfig {
+			keys: invulnerables
+				.into_iter()
+				.map(|(acc, aura)| {
+					(
+						acc.clone(),                 // account id
+						acc,                         // validator id
+						template_session_keys(aura), // session keys
+					)
+				})
+				.collect(),
+		},
+		// no need to pass anything to aura, in fact it will panic if we do. Session will take care
+		// of this.
+		aura: Default::default(),
+		aura_ext: Default::default(),
+		parachain_system: Default::default(),
+		tokens: TokensConfig {
+			balances: endowed_accounts
+				.iter()
+				.flat_map(|x| vec![(x.clone(), stellar_usdc_asset, 10u128.pow(12))])
+				.collect(),
 		},
 	}
 }

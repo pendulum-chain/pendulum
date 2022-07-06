@@ -1,7 +1,7 @@
 use crate::{
 	chain_spec,
 	cli::{Cli, RelayChainCli, Subcommand},
-	service::{new_partial, AmplitudeRuntimeExecutor, DevelopmentRuntimeExecutor},
+	service::{new_partial, AmplitudeRuntimeExecutor, DevelopmentRuntimeExecutor, TestnetRuntimeExecutor},
 };
 use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
@@ -56,7 +56,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		"amplitude" => Ok(Box::new(chain_spec::amplitude_config())),
 		"dev" => Ok(Box::new(chain_spec::development_config())),
 		"testnet" => Ok(Box::new(chain_spec::testnet_config())),
-		"" | "local" => Ok(Box::new(chain_spec::local_testnet_config())),
+		"" | "local" => Ok(Box::new(chain_spec::local_development_config())),
 		path => {
 			let chain_spec = chain_spec::AmplitudeChainSpec::from_json_file(path.into())?;
 			Ok(match chain_spec.identify() {

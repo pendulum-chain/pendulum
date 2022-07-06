@@ -26,6 +26,7 @@ enum ChainIdentity {
 	Amplitude,
 	// Pendulum,
 	Development,
+	Testnet
 }
 
 trait IdentifyChain {
@@ -36,6 +37,8 @@ impl IdentifyChain for dyn sc_service::ChainSpec {
 	fn identify(&self) -> ChainIdentity {
 		if self.id().starts_with("amplitude") {
 			ChainIdentity::Amplitude
+		else if self.id().starts_with("testnet") {
+			ChainIdentity::Testnet
 		} else {
 			ChainIdentity::Development
 		}
@@ -52,6 +55,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 	match id {
 		"amplitude" => Ok(Box::new(chain_spec::amplitude_config())),
 		"dev" => Ok(Box::new(chain_spec::development_config())),
+		"testnet" => Ok(Box::new(chain_spec::testnet_config())),
 		"" | "local" => Ok(Box::new(chain_spec::local_testnet_config())),
 		path => {
 			let chain_spec = chain_spec::AmplitudeChainSpec::from_json_file(path.into())?;
@@ -60,6 +64,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 					Box::new(chain_spec::AmplitudeChainSpec::from_json_file(path.into())?)
 				},
 				ChainIdentity::Development => Box::new(chain_spec::development_config()),
+				ChainIdentity::Testnet => Box::new(chain_spec::testnet_config()),
 			})
 		},
 	}
@@ -102,6 +107,7 @@ impl SubstrateCli for Cli {
 		match spec.identify() {
 			ChainIdentity::Amplitude => &amplitude_runtime::VERSION,
 			ChainIdentity::Development => &development_runtime::VERSION,
+			ChainIdentity::Testnet => &testnet_runtime::VERSION,
 		}
 	}
 }
@@ -173,6 +179,16 @@ macro_rules! construct_async_run {
 					let $components = new_partial::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor, _>(
 						&$config,
 						crate::service::development_parachain_build_import_queue,
+					)?;
+					let task_manager = $components.task_manager;
+					{ $( $code )* }.map(|v| (v, task_manager))
+				})
+			}
+			ChainIdentity::Testnet => {
+				runner.async_run(|$config| {
+					let $components = new_partial::<testnet_runtime::RuntimeApi, TestnetRuntimeExecutor, _>(
+						&$config,
+						crate::service::testnet_parachain_build_import_queue,
 					)?;
 					let task_manager = $components.task_manager;
 					{ $( $code )* }.map(|v| (v, task_manager))
@@ -299,6 +315,9 @@ pub fn run() -> Result<()> {
 							ChainIdentity::Development => runner.sync_run(|config| {
 								cmd.run::<Block, DevelopmentRuntimeExecutor>(config)
 							}),
+							ChainIdentity::Testnet => runner.sync_run(|config| {
+								cmd.run::<Block, TestnetRuntimeExecutor>(config)
+							}),
 						}
 					} else {
 						Err("Benchmarking wasn't enabled when building the node. \
@@ -330,6 +349,9 @@ pub fn run() -> Result<()> {
 					}),
 					ChainIdentity::Development => runner.async_run(|config| {
 						Ok((cmd.run::<Block, DevelopmentRuntimeExecutor>(config), task_manager))
+					}),
+					ChainIdentity::Testnet => runner.async_run(|config| {
+						Ok((cmd.run::<Block, TestnetRuntimeExecutor>(config), task_manager))
 					}),
 				}
 			} else {
@@ -397,6 +419,17 @@ pub fn run() -> Result<()> {
 					},
 
 					ChainIdentity::Development => crate::service::start_development_parachain_node(
+						config,
+						polkadot_config,
+						collator_options,
+						id,
+						hwbench,
+					)
+					.await
+					.map(|r| r.0)
+					.map_err(Into::into),
+					
+					ChainIdentity::Testnet => crate::service::start_testnet_parachain_node(
 						config,
 						polkadot_config,
 						collator_options,

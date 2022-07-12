@@ -1,41 +1,102 @@
 # Pendulum Chain
 
-Pendulum chain by SatoshiPay.
+Pendulum chain by SatoshiPay. More information about Pendulum can be found [here](https://pendulum.gitbook.io/pendulum-docs/).
 
-Node runtime that is parachain ready (configured with cumulus).
+### How to Run Tests
+To run the unit tests, execute
+```
+cargo test
+```
 
-🚧 This is a work in progress. 🚧
+### How to Build
+To build the project, execute
+```
+cargo b --release
+```
+A successful build will create a **target** folder with a sub folder **release**.
+Check for `parachain-collator` in the **release** folder.
 
-Based on Substrate. Repository based on [Substrate parachain template](https://github.com/substrate-developer-hub/substrate-parachain-template).
+### How to Generate Chain Spec
+There are 2 different [runtime](runtime)s currently in the repo; **amplitude** for the Amplitude parachain and **development** for the Pendulum parachain. Any of these runtimes are used depending on the config. The config is created by generating the chain spec:
+```
+./target/release/parachain-collator build-spec --disable-default-bootnode > local-parachain-plain.json
+```
+To create the amplitude spec, the `--chain` has to be specified:
+```
+./target/release/parachain-collator build-spec --chain amplitude --disable-default-bootnode > local-parachain-plain.json
+```
 
-More information about Pendulum can be found [here](https://pendulum.gitbook.io/pendulum-docs/).
-### Tests
-To run the unit tests, execute `cargo test`.
+For the raw chain spec, just add the option `--raw` and the `--chain` should be the one you just generated:
+```
+./target/release/parachain-collator build-spec --chain local-parachain-plain.json --raw --disable-default-bootnode > local-parachain-raw.json
+```
 
-### Building and running locally
-Refer to the pendulum docs about [running the pendulum locally](https://pendulum.gitbook.io/pendulum-docs/build/running-pendulum-locally).
+### How to Generate Wasm:
+```
+/target/release/parachain-collator export-genesis-wasm --chain local-parachain-raw.json > para-2000-wasm
+```
+### How to Generate Genesis State:
+```
+./target/release/parachain-collator export-genesis-state --chain rococo-local-parachain-raw.json > para-2000-genesis
+```
 
-### Amplitude Chain
-Amplitude is a canary network of the blockchain Pendulum. More information can be found in the [pendulum docs](https://pendulum.gitbook.io/pendulum-docs/amplitude-parachain/amplitude-and-ampe).
+Note: The amplitude chain specs, the wasm and the genesis state are already available in the [res](res) folder.
 
-The chain spec, wasm, and genesis state are located in the [res folder](res).
+### How to Run:
+To run the collator, execute:
+```
+./target/release/parachain-collator
+--collator \
+--allow-private-ipv4 \
+--unsafe-ws-external \
+--rpc-cors all \
+--rpc-external \
+--rpc-methods Unsafe \
+--name <INSERT_NAME> \
+--ws-port <WS_PORT> --port <PARA_PORT> --rpc-port <RPC_PORT> \
+--chain <PARA_SPEC_RAW.json> \
+--execution=Native \
+-- \
+--port <RELAY_PORT>\
+--chain <RELAY_SPEC_RAW.json> \
+--execution=wasm --sync fast --pruning archive
+```
+An example for Amplitude will look like this:
+```
+./target/release/parachain-collator
+--collator \
+--allow-private-ipv4 \
+--unsafe-ws-external \
+--rpc-cors all \
+--rpc-external \
+--rpc-methods Unsafe \
+--name amplitude-collator-1 \
+--ws-port 9945 --port 30335 --rpc-port 9935 \
+--chain res/amplitude-spec-raw.json \
+--execution=Native \
+-- \
+--port 30334 \
+--chain kusama-raw.json \
+--execution=wasm --sync fast --pruning archive
+```
+For a local testing, you can replace `--name` with just `--alice` or `--bob`. You also need to specify the `--bootnode`.  Here's an example:
+```
+./target/release/parachain-collator \
+--alice \
+--rpc-cors=all \
+--collator \
+--force-authoring \
+--chain rococo-local-parachain-2000-raw.json \
+--base-path /tmp/parachain/alice \
+--port 40333 \
+--ws-port 8844 \
+--enable-offchain-indexing TRUE \
+-- \
+--execution wasm \
+--chain ./rococo-custom-2-raw.json \
+--bootnodes /ip4/127.0.0.1/tcp/30333/p2p/<ALICE_NODE_ID> \
+--port 30343 \
+--ws-port 9977
+```
 
-Governance is applied in Amplitude. Here are the additional pallets added in its runtime:
-* [sudo](https://paritytech.github.io/substrate/master/pallet_sudo/index.html)
-* [democracy](https://paritytech.github.io/substrate/master/pallet_democracy/index.html)
-* council [collective](https://paritytech.github.io/substrate/master/pallet_collective/index.html)
-* technical committee collective
-* [scheduler](https://paritytech.github.io/substrate/master/pallet_scheduler/index.html)
-* [preimage](https://paritytech.github.io/substrate/master/pallet_preimage/index.html)
-* [multisig](https://paritytech.github.io/substrate/master/pallet_multisig/index.html)
-
-Some implementation differences between the Amplitude and Pendulum development:
-
-|                |Amplitude            | Pendulum development                      |
-|----------------|-------------------------------|-----------------------------|
-|fees |distributed to the collators            |not handled           |
-|identifier|57          |42          |
-|session period          |4 hours|6 hours|
-| max number of aura authorities | 200 | 100_000 |
-| weight to fee calculation |  |
-
+There are prerequisites to run the collator with a local relay chain. Refer to [how to run Pendulum locally](https://pendulum.gitbook.io/pendulum-docs/build/running-pendulum-locally).

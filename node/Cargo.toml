@@ -25,6 +25,7 @@ jsonrpsee = { version = "0.13.1", features = ["server"] }
 runtime-common = { path = "../runtime/common" }
 amplitude-runtime = { path = "../runtime/amplitude" }
 development-runtime = { path = "../runtime/development" }
+testnet-runtime = { path = "../runtime/testnet" }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }

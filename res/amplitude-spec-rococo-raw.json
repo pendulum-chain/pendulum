@@ -1,4 +1,3 @@
-CARLA CARLA load_spec: "res/amplitude-spec-rococo.json"
 {
   "name": "Amplitude",
   "id": "amplitude",

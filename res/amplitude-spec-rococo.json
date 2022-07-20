@@ -11,7 +11,7 @@
     "tokenSymbol": "AMPE"
   },
   "relay_chain": "rococo",
-  "para_id": 2000,
+  "para_id": 2124,
   "codeSubstitutes": {},
   "genesis": {
     "runtime": {
@@ -20,7 +20,7 @@
       },
       "parachainSystem": null,
       "parachainInfo": {
-        "parachainId": 2000
+        "parachainId": 2124
       },
       "balances": {
         "balances": [

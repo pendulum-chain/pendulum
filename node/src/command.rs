@@ -56,9 +56,8 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		path => {
 			let chain_spec = chain_spec::AmplitudeChainSpec::from_json_file(path.into())?;
 			Ok(match chain_spec.identify() {
-				ChainIdentity::Amplitude => {
-					Box::new(chain_spec::AmplitudeChainSpec::from_json_file(path.into())?)
-				},
+				ChainIdentity::Amplitude =>
+					Box::new(chain_spec::AmplitudeChainSpec::from_json_file(path.into())?),
 				ChainIdentity::Development => Box::new(chain_spec::development_config()),
 			})
 		},
@@ -78,7 +77,7 @@ impl SubstrateCli for Cli {
 		"Pendulum Collator\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
-		parachain-collator <parachain-args> -- <relay-chain-args>"
+		pendulum-collator <parachain-args> -- <relay-chain-args>"
 			.into()
 	}
 
@@ -119,7 +118,7 @@ impl SubstrateCli for RelayChainCli {
 		"Pendulum Collatore\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
-		parachain-collator <parachain-args> -- <relay-chain-args>"
+		pendulum-collator <parachain-args> -- <relay-chain-args>"
 			.into()
 	}
 
@@ -290,7 +289,7 @@ pub fn run() -> Result<()> {
 			let runner = cli.create_runner(cmd)?;
 			// Switch on the concrete benchmark sub-command-
 			match cmd {
-				BenchmarkCmd::Pallet(cmd) => {
+				BenchmarkCmd::Pallet(cmd) =>
 					if cfg!(feature = "runtime-benchmarks") {
 						match runner.config().chain_spec.identify() {
 							ChainIdentity::Amplitude => runner.sync_run(|config| {
@@ -304,14 +303,11 @@ pub fn run() -> Result<()> {
 						Err("Benchmarking wasn't enabled when building the node. \
 					You can enable it with `--features runtime-benchmarks`."
 							.into())
-					}
-				},
-				BenchmarkCmd::Block(_) | BenchmarkCmd::Storage(_) | BenchmarkCmd::Overhead(_) => {
-					Err("Unsupported benchmarking command".into())
-				},
-				BenchmarkCmd::Machine(cmd) => {
-					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone()))
-				},
+					},
+				BenchmarkCmd::Block(_) | BenchmarkCmd::Storage(_) | BenchmarkCmd::Overhead(_) =>
+					Err("Unsupported benchmarking command".into()),
+				BenchmarkCmd::Machine(cmd) =>
+					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())),
 			}
 		},
 		Some(Subcommand::TryRuntime(cmd)) => {

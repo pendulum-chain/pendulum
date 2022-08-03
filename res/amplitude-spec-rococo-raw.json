@@ -2,7 +2,10 @@
   "name": "Amplitude",
   "id": "amplitude",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootnodes": [
+    "/dns4/penboot-roc-00.pendulumchain.tech/tcp/30335/p2p/12D3KooWERQvnnatnnBUqKf4Hsggm13Kfy8YbWZPsqNFfWJzFSyA",
+    "/dns4/penboot-roc-01.pendulumchain.tech/tcp/30335/p2p/12D3KooWERQvnnatnnBUqKf4Hsggm13Kfy8YbWZPsqNFfWJzFSyA"
+  ],
   "telemetryEndpoints": null,
   "protocolId": "amplitude",
   "properties": {

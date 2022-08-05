@@ -216,28 +216,28 @@ pub struct BaseFilter;
 impl Contains<Call> for BaseFilter {
 	fn contains(call: &Call) -> bool {
 		match call {
-			Call::Balances(pallet_balances::Call::transfer { .. })
-			| Call::Balances(pallet_balances::Call::transfer_all { .. })
-			| Call::Balances(pallet_balances::Call::transfer_keep_alive { .. }) => false,
+			Call::Balances(pallet_balances::Call::transfer { .. }) |
+			Call::Balances(pallet_balances::Call::transfer_all { .. }) |
+			Call::Balances(pallet_balances::Call::transfer_keep_alive { .. }) => false,
 
 			// These modules are all allowed to be called by transactions:
-			Call::Democracy(_)
-			| Call::Council(_)
-			| Call::TechnicalCommittee(_)
-			| Call::System(_)
-			| Call::Scheduler(_)
-			| Call::Preimage(_)
-			| Call::Timestamp(_)
-			| Call::Balances(_)
-			| Call::Authorship(_)
-			| Call::Session(_)
-			| Call::ParachainSystem(_)
-			| Call::Sudo(_)
-			| Call::CollatorSelection(_)
-			| Call::XcmpQueue(_)
-			| Call::PolkadotXcm(_)
-			| Call::DmpQueue(_)
-			| Call::Multisig(_) => true,
+			Call::Democracy(_) |
+			Call::Council(_) |
+			Call::TechnicalCommittee(_) |
+			Call::System(_) |
+			Call::Scheduler(_) |
+			Call::Preimage(_) |
+			Call::Timestamp(_) |
+			Call::Balances(_) |
+			Call::Authorship(_) |
+			Call::Session(_) |
+			Call::ParachainSystem(_) |
+			Call::Sudo(_) |
+			Call::CollatorSelection(_) |
+			Call::XcmpQueue(_) |
+			Call::PolkadotXcm(_) |
+			Call::DmpQueue(_) |
+			Call::Multisig(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}

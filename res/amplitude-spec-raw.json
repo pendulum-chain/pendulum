@@ -2,7 +2,12 @@
   "name": "Amplitude",
   "id": "amplitude",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootNodes": [
+    "/dns4/penboot-kus-00.pendulumchain.tech/tcp/30335/p2p/12D3KooWK9tH2RBW7eLZ8QU1s522oa5gNLdAqScSEMZdwPpGZ37c",
+    "/dns4/penboot-kus-01.pendulumchain.tech/tcp/30335/p2p/12D3KooWQ4AaE5tS2zLaESQ8i8gxyhzZVAvLez5ANbCKb8enAGPN",
+    "/dns4/pencol-kus-00.pendulumchain.tech/tcp/30335/p2p/12D3KooWMgV8XwABHVdzAU2131Q8aNhPi1S9GmzHLpNJXGU4uwEH",
+    "/dns4/pencol-kus-01.pendulumchain.tech/tcp/30335/p2p/12D3KooWDyN8khdReGiCUgnkxTMrJ87DLJgT6Evd3dSNwagBE7Cb"
+  ],
   "telemetryEndpoints": null,
   "protocolId": "amplitude",
   "properties": {

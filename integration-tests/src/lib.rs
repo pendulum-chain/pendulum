@@ -180,7 +180,7 @@ mod tests {
 		KusamaNet::execute_with(|| {
 			assert_ok!(RelayChainPalletXcm::send_xcm(
 				Here,
-				Parachain(3331),
+				Parachain(3333),
 				Xcm(vec![Transact {
 					origin_type: OriginKind::SovereignAccount,
 					require_weight_at_most: INITIAL_BALANCE as u64,
@@ -196,6 +196,35 @@ mod tests {
 				r.event,
 				Event::System(frame_system::Event::Remarked { .. })
 			)));
+		});
+	}
+
+	#[test]
+	fn reserve_transfer() {
+		TestNet::reset();
+
+		let withdraw_amount = 123;
+
+		KusamaNet::execute_with(|| {
+			assert_ok!(RelayChainPalletXcm::reserve_transfer_assets(
+				kusama_runtime::Origin::signed(ALICE),
+				Box::new(X1(Parachain(3333)).into().into()),
+				Box::new(X1(AccountId32 { network: Any, id: ALICE.into() }).into().into()),
+				Box::new((Here, withdraw_amount).into()),
+				0,
+			));
+			assert_eq!(
+				amplitude_runtime::Balances::free_balance(&para_account_id(3333)),
+				INITIAL_BALANCE + withdraw_amount
+			);
+		});
+
+		ParaA::execute_with(|| {
+			// free execution, full amount received
+			assert_eq!(
+				pallet_balances::Pallet::<amplitude_runtime::Runtime>::free_balance(&ALICE),
+				INITIAL_BALANCE + withdraw_amount
+			);
 		});
 	}
 }

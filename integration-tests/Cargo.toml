@@ -6,6 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+codec = { package = "parity-scale-codec", version = "3.0.0" }
+
 # Substrate
 frame-support   = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24' }
 frame-system    = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24' }

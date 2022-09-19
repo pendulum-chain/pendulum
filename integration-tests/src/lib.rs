@@ -100,3 +100,53 @@ pub const KSM_DECIMAL: u32 = 12;
 pub fn ksm(n: f64) -> u128 {
     (n as u128) * 10u128.pow(KSM_DECIMAL)
 }
+
+pub fn para_account_id(id: u32) -> sp_runtime::AccountId32 {
+	ParaId::from(id).into_account_truncating()
+}
+
+pub type RelayChainPalletXcm = pallet_xcm::Pallet<kusama_runtime::Runtime>;
+pub type ParachainPalletXcm = pallet_xcm::Pallet<amplitude_runtime::Runtime>;
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	use codec::Encode;
+	use frame_support::assert_ok;
+	use xcm::latest::prelude::*;
+	use xcm_simulator::TestExt;
+
+	// Helper function for forming buy execution message
+	fn buy_execution<C>(fees: impl Into<MultiAsset>) -> Instruction<C> {
+		BuyExecution { fees: fees.into(), weight_limit: Unlimited }
+	}
+
+	#[test]
+	fn dmp() {
+		MockNet::reset();
+
+		let remark = amplitude_runtime::RuntimeCall::System(
+			frame_system::Call::<amplitude_runtime::Runtime>::remark_with_event { remark: vec![1, 2, 3] },
+		);
+		KusamaNet::execute_with(|| {
+			assert_ok!(RelayChainPalletXcm::send_xcm(
+				Here,
+				Parachain(1),
+				Xcm(vec![Transact {
+					origin_type: OriginKind::SovereignAccount,
+					require_weight_at_most: INITIAL_BALANCE as u64,
+					call: remark.encode().into(),
+				}]),
+			));
+		});
+
+		ParaA::execute_with(|| {
+			use amplitude_runtime::{RuntimeEvent, System};
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::System(frame_system::Event::Remarked { .. })
+			)));
+		});
+	}
+}

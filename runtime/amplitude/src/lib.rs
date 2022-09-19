@@ -220,6 +220,7 @@ impl Contains<Call> for BaseFilter {
 			Call::Balances(pallet_balances::Call::transfer_all { .. }) |
 			Call::Balances(pallet_balances::Call::transfer_keep_alive { .. }) => false,
 
+			
 			// These modules are all allowed to be called by transactions:
 			Call::Democracy(_) |
 			Call::Council(_) |
@@ -237,6 +238,7 @@ impl Contains<Call> for BaseFilter {
 			Call::XcmpQueue(_) |
 			Call::PolkadotXcm(_) |
 			Call::DmpQueue(_) |
+			Call::Assets(_) |
 			Call::Multisig(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -621,6 +623,42 @@ impl pallet_multisig::Config for Runtime {
 	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
 }
 
+pub type CurrencyId = u32;
+pub const MILLICENTS: Balance = 10_000_000;
+pub const CENTS: Balance = 1_000 * MILLICENTS; // assume this is worth about a cent.
+pub const DOLLARS: Balance = 100 * CENTS;
+
+pub const EXISTENTIAL_DEPOSIT_ASSETS: u128 = 10 * CENTS; // 0.1 Native Token Balance
+
+pub const fn deposit(items: u32, bytes: u32) -> Balance {
+	items as Balance * 15 * CENTS + (bytes as Balance) * 6 * CENTS
+}
+parameter_types! {
+    pub const AssetDeposit: Balance = DOLLARS; // 1 UNIT deposit to create asset
+    pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT_ASSETS;
+    pub const AssetAccountDeposit: Balance = deposit(1, 16);
+    pub const AssetsStringLimit: u32 = 50;
+    pub const MetadataDepositBase: Balance = deposit(1, 68);
+    pub const MetadataDepositPerByte: Balance = deposit(0, 1);
+}
+
+impl pallet_assets::Config for Runtime {
+    type Event = Event;
+    type Balance = Balance;
+    type AssetId = CurrencyId;
+    type Currency = Balances;
+    type ForceOrigin = EnsureRoot<AccountId>;
+    type AssetDeposit = AssetDeposit;
+    type MetadataDepositBase = MetadataDepositBase;
+    type MetadataDepositPerByte = MetadataDepositPerByte;
+    type AssetAccountDeposit = AssetAccountDeposit;
+    type ApprovalDeposit = ApprovalDeposit;
+    type StringLimit = AssetsStringLimit;
+    type Freezer = ();
+    type WeightInfo = ();
+    type Extra = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -662,6 +700,8 @@ construct_runtime!(
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 41,
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 42,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
+
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50
 	}
 );
 

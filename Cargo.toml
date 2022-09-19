@@ -7,4 +7,5 @@ members = [
 	"runtime/common",
 	"runtime/amplitude",
 	"runtime/development",
+	"integration-tests",
 ]

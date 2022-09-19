@@ -124,9 +124,9 @@ mod tests {
 
 	#[test]
 	fn dmp() {
-		MockNet::reset();
+		TestNet::reset();
 
-		let remark = amplitude_runtime::RuntimeCall::System(
+		let remark = amplitude_runtime::Call::System(
 			frame_system::Call::<amplitude_runtime::Runtime>::remark_with_event { remark: vec![1, 2, 3] },
 		);
 		KusamaNet::execute_with(|| {
@@ -142,10 +142,10 @@ mod tests {
 		});
 
 		ParaA::execute_with(|| {
-			use amplitude_runtime::{RuntimeEvent, System};
+			use amplitude_runtime::{Event, System};
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
-				RuntimeEvent::System(frame_system::Event::Remarked { .. })
+				Runtime::System(frame_system::Event::Remarked { .. })
 			)));
 		});
 	}

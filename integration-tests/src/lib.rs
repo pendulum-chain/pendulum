@@ -48,6 +48,14 @@ pub fn para_ext(para_id: u32) -> TestExternalities {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
+	<parachain_info::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
+		&parachain_info::GenesisConfig {
+			parachain_id: ParaId::from(para_id),
+		},
+		&mut t,
+	)
+	.unwrap();
+
 	let mut ext = TestExternalities::new(t);
 	ext.execute_with(|| {
 		System::set_block_number(1);
@@ -172,7 +180,7 @@ mod tests {
 		KusamaNet::execute_with(|| {
 			assert_ok!(RelayChainPalletXcm::send_xcm(
 				Here,
-				Parachain(1),
+				Parachain(3331),
 				Xcm(vec![Transact {
 					origin_type: OriginKind::SovereignAccount,
 					require_weight_at_most: INITIAL_BALANCE as u64,
@@ -183,6 +191,7 @@ mod tests {
 
 		ParaA::execute_with(|| {
 			use amplitude_runtime::{Event, System};
+			println!("{}", System::events().len());
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				Event::System(frame_system::Event::Remarked { .. })

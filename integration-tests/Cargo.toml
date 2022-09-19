@@ -31,6 +31,7 @@ kusama-runtime = { git = 'https://github.com/paritytech/polkadot.git', branch = 
 
 polkadot-runtime-parachains = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.24' }
 polkadot-primitives = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.24' }
+parachain-info = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.24' }
 amplitude-runtime = { path = "../runtime/amplitude" }
 # # Cumulus dependencies
 # cumulus-pallet-dmp-queue        = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.24' }

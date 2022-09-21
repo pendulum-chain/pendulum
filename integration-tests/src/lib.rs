@@ -10,6 +10,7 @@ use frame_support::traits::GenesisBuild;
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use polkadot_primitives::v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
 // use primitives::AccountId;
+mod parachain;
 
 decl_test_parachain! {
 	pub struct ParaA {
@@ -230,7 +231,7 @@ mod tests {
 			println!("Kusama Bob : {}", pallet_balances::Pallet::<kusama_runtime::Runtime>::free_balance(&BOB));
 
 			use kusama_runtime::{System};
-			println!("events {}", System::events().len());
+			println!("events xxx {}", System::events().len());
 			for e in System::events(){
 				println!("{:?}", e);
 			}
@@ -259,6 +260,35 @@ mod tests {
 				pallet_balances::Pallet::<amplitude_runtime::Runtime>::free_balance(&ALICE),
 				INITIAL_BALANCE + withdraw_amount
 			);
+		});
+	}
+
+	#[test]
+	fn withdraw_and_deposit() {
+		TestNet::reset();
+
+		let send_amount = 10;
+
+		ParaA::execute_with(|| {
+			let message = Xcm(vec![
+				WithdrawAsset((Here, send_amount).into()),
+				buy_execution((Here, send_amount)),
+				DepositAsset {
+					assets: All.into(),
+					max_assets: 1,
+					beneficiary: Parachain(2).into(),
+				},
+			]);
+			// Send withdraw and deposit
+			assert_ok!(ParachainPalletXcm::send_xcm(Here, Parent, message.clone()));
+		});
+
+		KusamaNet::execute_with(|| {
+			assert_eq!(
+				kusama_runtime::Balances::free_balance(para_account_id(1)),
+				INITIAL_BALANCE - send_amount
+			);
+			assert_eq!(kusama_runtime::Balances::free_balance(para_account_id(2)), send_amount);
 		});
 	}
 }

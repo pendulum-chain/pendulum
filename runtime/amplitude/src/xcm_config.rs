@@ -1,7 +1,8 @@
 use super::{
 	AccountId, Balances, Call, Event, Origin, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
-	WeightToFee, XcmpQueue,
+	WeightToFee,
 };
+use super::mock_msg_queue;
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
@@ -192,7 +193,7 @@ pub type XcmRouter = (
 	// Two routers - use UMP to communicate with the relay chain:
 	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm>,
 	// ..and XCMP to communicate with the sibling chains.
-	XcmpQueue,
+	// DmpQueue,
 );
 
 impl pallet_xcm::Config for Runtime {
@@ -220,3 +221,7 @@ impl cumulus_pallet_xcm::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
+
+
+
+

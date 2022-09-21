@@ -8,6 +8,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod weights;
 pub mod xcm_config;
+pub mod mock_msg_queue;
 
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -409,11 +410,11 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type WeightInfo = ();
 }
 
-impl cumulus_pallet_dmp_queue::Config for Runtime {
-	type Event = Event;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
-}
+// impl cumulus_pallet_dmp_queue::Config for Runtime {
+// 	type Event = Event;
+// 	type XcmExecutor = XcmExecutor<XcmConfig>;
+// 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+// }
 
 parameter_types! {
 	pub const Period: u32 = 4 * HOURS;
@@ -658,6 +659,10 @@ impl pallet_assets::Config for Runtime {
     type WeightInfo = ();
     type Extra = ();
 }
+impl mock_msg_queue::mock_msg_queue::Config for Runtime {
+	type Event = Event;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+}
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -699,7 +704,7 @@ construct_runtime!(
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 41,
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 42,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
+		DmpQueue: mock_msg_queue::mock_msg_queue::{Pallet, Call, Storage, Event<T>} = 43,
 
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50
 	}

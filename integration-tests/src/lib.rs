@@ -2,6 +2,7 @@ use sp_runtime::traits::AccountIdConversion;
 use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
 use amplitude_runtime;
 pub const ALICE: sp_runtime::AccountId32 = sp_runtime::AccountId32::new([0u8; 32]);
+pub const BOB: sp_runtime::AccountId32 = sp_runtime::AccountId32::new([1u8; 32]);
 pub const INITIAL_BALANCE: u128 = 1_000_000_000;
 use xcm_simulator::TestExternalities;
 use polkadot_parachain::primitives::Id as ParaId;
@@ -206,6 +207,12 @@ mod tests {
 		let withdraw_amount = 123;
 
 		KusamaNet::execute_with(|| {
+
+			println!("kusama balances {}", kusama_runtime::Balances::free_balance(&para_account_id(3333)));
+			println!("kusama balances {}", kusama_runtime::Balances::free_balance(&para_account_id(1)));
+			println!("Kusama Alice : {}", pallet_balances::Pallet::<kusama_runtime::Runtime>::free_balance(&ALICE));
+			println!("Kusama Bob : {}", pallet_balances::Pallet::<kusama_runtime::Runtime>::free_balance(&BOB));
+
 			assert_ok!(RelayChainPalletXcm::reserve_transfer_assets(
 				kusama_runtime::Origin::signed(ALICE),
 				Box::new(X1(Parachain(3333)).into().into()),
@@ -213,14 +220,41 @@ mod tests {
 				Box::new((Here, withdraw_amount).into()),
 				0,
 			));
-			assert_eq!(
-				amplitude_runtime::Balances::free_balance(&para_account_id(3333)),
-				INITIAL_BALANCE + withdraw_amount
-			);
+
+			println!("parachain balances {}", amplitude_runtime::Balances::free_balance(&para_account_id(3333)));
+			println!("Alice : {}", pallet_balances::Pallet::<amplitude_runtime::Runtime>::free_balance(&ALICE));
+
+			println!("kusama balances {}", kusama_runtime::Balances::free_balance(&para_account_id(3333)));
+			println!("kusama balances {}", kusama_runtime::Balances::free_balance(&para_account_id(1)));
+			println!("Kusama Alice : {}", pallet_balances::Pallet::<kusama_runtime::Runtime>::free_balance(&ALICE));
+			println!("Kusama Bob : {}", pallet_balances::Pallet::<kusama_runtime::Runtime>::free_balance(&BOB));
+
+			use kusama_runtime::{System};
+			println!("events {}", System::events().len());
+			for e in System::events(){
+				println!("{:?}", e);
+			}
+			// assert_eq!(
+			// 	amplitude_runtime::Balances::free_balance(&para_account_id(3333)),
+			// 	INITIAL_BALANCE + withdraw_amount
+			// );
 		});
 
 		ParaA::execute_with(|| {
 			// free execution, full amount received
+			println!("kusama balances {}", amplitude_runtime::Balances::free_balance(&para_account_id(3333)));
+			println!("kusama balances {}", amplitude_runtime::Balances::free_balance(&para_account_id(1)));
+			println!("Kusama Alice : {}", pallet_balances::Pallet::<amplitude_runtime::Runtime>::free_balance(&ALICE));
+			println!("Kusama Alice : {}", pallet_balances::Pallet::<amplitude_runtime::Runtime>::free_balance(&BOB));
+
+			
+
+			use amplitude_runtime::{System};
+			println!("events {}", System::events().len());
+			for e in System::events(){
+				println!("{:?}", e);
+			}
+
 			assert_eq!(
 				pallet_balances::Pallet::<amplitude_runtime::Runtime>::free_balance(&ALICE),
 				INITIAL_BALANCE + withdraw_amount

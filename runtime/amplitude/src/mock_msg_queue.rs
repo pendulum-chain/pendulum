@@ -113,6 +113,12 @@ pub mod mock_msg_queue {
 			unimplemented!()
 		}
 	}
+	impl<T> xcm::v2::SendXcm for Pallet<T>{
+		fn send_xcm(destination: impl Into<MultiLocation>, message: Xcm<()>) -> SendResult{
+			println!("unimplemented send_xcm");
+			unimplemented!();
+		}
+	}
 
 	impl<T: Config> XcmpMessageHandler for Pallet<T> {
 		fn handle_xcmp_messages<'a, I: Iterator<Item = (ParaId, BlockNumber, &'a [u8])>>(

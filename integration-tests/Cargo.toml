@@ -10,40 +10,40 @@ edition = "2021"
 codec = { package = "parity-scale-codec", version = "3.0.0" }
 
 # Substrate
-frame-support   = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24' }
-frame-system    = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24' }
-pallet-balances = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24' }
-pallet-staking  = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24' }
-sp-runtime      = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24' }
-sp-std          = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24' }
-sp-io           = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
+frame-support   = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.26' }
+frame-system    = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.26' }
+pallet-balances = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.26' }
+pallet-staking  = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.26' }
+sp-runtime      = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.26' }
+sp-std          = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.26' }
+sp-io           = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26" }
 # Polkadot dependencies
-pallet-xcm              = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.24' }
-polkadot-parachain      = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.24' }
-polkadot-runtime-common = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.24' }
-xcm                     = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.24' }
-xcm-builder             = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.24' }
-xcm-executor            = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.24' }
+pallet-xcm              = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.26' }
+polkadot-parachain      = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.26' }
+polkadot-runtime-common = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.26' }
+xcm                     = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.26' }
+xcm-builder             = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.26' }
+xcm-executor            = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.26' }
 
-xcm-simulator              = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.24' }
+xcm-simulator              = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.26' }
 
-kusama-runtime = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.24' }
+kusama-runtime = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.26' }
 
-polkadot-runtime-parachains = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.24' }
-polkadot-primitives = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.24' }
-parachain-info = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.24' }
+polkadot-runtime-parachains = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.26' }
+polkadot-primitives = { git = 'https://github.com/paritytech/polkadot.git', branch = 'release-v0.9.26' }
+parachain-info = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.26' }
 amplitude-runtime = { path = "../runtime/amplitude" }
 
-sp-core = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24' }
+sp-core = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.26' }
 # # Cumulus dependencies
-# cumulus-pallet-dmp-queue        = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.24' }
-# cumulus-pallet-parachain-system = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.24' }
-# cumulus-pallet-xcm              = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.24' }
-# cumulus-pallet-xcmp-queue       = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.24' }
-# cumulus-primitives-core         = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.24' }
-# cumulus-primitives-timestamp    = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.24' }
-# cumulus-primitives-utility      = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.24' }
-# pallet-collator-selection       = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.24' }
+# cumulus-pallet-dmp-queue        = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.26' }
+# cumulus-pallet-parachain-system = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.26' }
+# cumulus-pallet-xcm              = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.26' }
+# cumulus-pallet-xcmp-queue       = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.26' }
+# cumulus-primitives-core         = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.26' }
+# cumulus-primitives-timestamp    = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.26' }
+# cumulus-primitives-utility      = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.26' }
+# pallet-collator-selection       = { git = 'https://github.com/paritytech/cumulus.git', branch = 'polkadot-v0.9.26' }
 
 [dev-dependencies]
 env_logger                            = '0.9.0'

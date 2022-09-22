@@ -4,7 +4,7 @@ use amplitude_runtime;
 pub const ALICE: sp_runtime::AccountId32 = sp_runtime::AccountId32::new([0u8; 32]);
 pub const BOB: sp_runtime::AccountId32 = sp_runtime::AccountId32::new([1u8; 32]);
 pub const INITIAL_BALANCE: u128 = 1_000_000_000;
-use xcm_simulator::TestExternalities;
+use sp_io::TestExternalities;
 use polkadot_parachain::primitives::Id as ParaId;
 use frame_support::traits::GenesisBuild;
 use polkadot_runtime_parachains::configuration::HostConfiguration;

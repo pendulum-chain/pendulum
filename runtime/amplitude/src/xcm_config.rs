@@ -1,5 +1,5 @@
 use super::{
-	AccountId, Balances, Call, Event, Origin, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
+	AccountId, CurrencyId, Balance, Balances, Tokens, Currencies, Call, Event, Origin, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
 	WeightToFee, XcmpQueue,
 };
 use core::marker::PhantomData;
@@ -8,24 +8,26 @@ use frame_support::{
 	traits::{Everything, Nothing},
 	weights::Weight,
 };
+use sp_runtime::traits::{Convert};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use xcm::latest::prelude::*;
 use xcm_builder::{
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
+	ConvertedConcreteAssetId, FungiblesAdapter, AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
 	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset, ParentIsPreset,
 	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	UsingComponents,
 };
-use xcm_executor::{traits::ShouldExecute, XcmExecutor};
+use xcm_executor::{traits::ShouldExecute, XcmExecutor, traits::JustTry};
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const RelayNetwork: NetworkId = NetworkId::Any;
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
+	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
@@ -41,17 +43,88 @@ pub type LocationToAccountId = (
 );
 
 /// Means for transacting assets on this chain.
-pub type LocalAssetTransactor = CurrencyAdapter<
-	// Use this currency:
-	Balances,
-	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<RelayLocation>,
-	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
+// pub type LocalAssetTransactor = CurrencyAdapter<
+// 	// Use this currency:
+// 	Tokens,
+// 	// Use this currency when it is a fungible asset matching the given location or name:
+// 	IsConcrete<RelayLocation>,
+// 	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
+// 	LocationToAccountId,
+// 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+// 	AccountId,
+// 	// We don't track any teleports.
+// 	(),
+// >;
+
+
+/// CurrencyIdConvert
+/// This type implements conversions from our `CurrencyId` type into `MultiLocation` and vice-versa.
+/// A currency locally is identified with a `CurrencyId` variant but in the network it is identified
+/// in the form of a `MultiLocation`, in this case a pCfg (Para-Id, Currency-Id).
+pub struct CurrencyIdConvert;
+
+impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
+    fn convert(id: CurrencyId) -> Option<MultiLocation> {
+		match id{
+			CurrencyId::KSM => Some(MultiLocation::parent()),
+			_ => None,
+		}
+	}
+}
+
+impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
+    fn convert(location: MultiLocation) -> Option<CurrencyId> {
+        match location {
+			MultiLocation {
+                parents: 1,
+                interior: Here,
+            } => Some(CurrencyId::KSM),
+			_ => None,
+		}
+	}
+}
+
+impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
+    fn convert(a: MultiAsset) -> Option<CurrencyId> {
+        if let MultiAsset {
+            id: AssetId::Concrete(id),
+            fun: _,
+        } = a
+        {
+            Self::convert(id)
+        } else {
+            None
+        }
+    }
+}
+
+/// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
+/// Here we need to know the canonical representation of all the tokens we handle in order to
+/// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
+impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
+	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
+		if location == MultiLocation::parent() {
+			return Ok(CurrencyId::KSM);
+		}
+		Err(location.clone())
+	}
+}
+
+/// Means for transacting the fungibles assets of ths parachain.
+pub type FungiblesTransactor = FungiblesAdapter<
+	// Use this fungibles implementation
+	Tokens,
+	// This means that this adapter should handle any token that `CurrencyIdConvert` can convert
+	// to `CurrencyId`, the `CurrencyId` type of `Tokens`, the fungibles implementation it uses.
+	ConvertedConcreteAssetId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
+	// Convert an XCM MultiLocation into a local account id
 	LocationToAccountId,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+	// Our chain's account ID type (we can't get away without mentioning it explicitly)
 	AccountId,
-	// We don't track any teleports.
-	(),
+	// We dont allow teleports.
+	Nothing,
+	// The account to use for tracking teleports.
+	CheckingAccount,
 >;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
@@ -168,7 +241,7 @@ impl xcm_executor::Config for XcmConfig {
 	type Call = Call;
 	type XcmSender = XcmRouter;
 	// How to withdraw and deposit an asset.
-	type AssetTransactor = LocalAssetTransactor;
+	type AssetTransactor = FungiblesTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = NativeAsset;
 	type IsTeleporter = (); // Teleporting is disabled.

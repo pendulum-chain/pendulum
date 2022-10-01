@@ -6,6 +6,9 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 mod weights;
 pub mod xcm_config;
 
@@ -18,6 +21,8 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
+
+use orml_traits::parameter_type_with_key;
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -238,7 +243,7 @@ impl Contains<Call> for BaseFilter {
 			Call::XcmpQueue(_) |
 			Call::PolkadotXcm(_) |
 			Call::DmpQueue(_) |
-			Call::Assets(_) |
+			// Call::Tokens(_) |
 			Call::Multisig(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -626,7 +631,7 @@ impl pallet_multisig::Config for Runtime {
 	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
 }
 
-pub type CurrencyId = u32;
+// pub type CurrencyId = u32;
 pub const MILLICENTS: Balance = 10_000_000;
 pub const CENTS: Balance = 1_000 * MILLICENTS; // assume this is worth about a cent.
 pub const DOLLARS: Balance = 100 * CENTS;
@@ -645,21 +650,76 @@ parameter_types! {
     pub const MetadataDepositPerByte: Balance = deposit(0, 1);
 }
 
-impl pallet_assets::Config for Runtime {
-    type Event = Event;
-    type Balance = Balance;
-    type AssetId = CurrencyId;
-    type Currency = Balances;
-    type ForceOrigin = EnsureRoot<AccountId>;
-    type AssetDeposit = AssetDeposit;
-    type MetadataDepositBase = MetadataDepositBase;
-    type MetadataDepositPerByte = MetadataDepositPerByte;
-    type AssetAccountDeposit = AssetAccountDeposit;
-    type ApprovalDeposit = ApprovalDeposit;
-    type StringLimit = AssetsStringLimit;
-    type Freezer = ();
-    type WeightInfo = ();
-    type Extra = ();
+// impl pallet_assets::Config for Runtime {
+//     type Event = Event;
+//     type Balance = Balance;
+//     type AssetId = CurrencyId;
+//     type Currency = Balances;
+//     type ForceOrigin = EnsureRoot<AccountId>;
+//     type AssetDeposit = AssetDeposit;
+//     type MetadataDepositBase = MetadataDepositBase;
+//     type MetadataDepositPerByte = MetadataDepositPerByte;
+//     type AssetAccountDeposit = AssetAccountDeposit;
+//     type ApprovalDeposit = ApprovalDeposit;
+//     type StringLimit = AssetsStringLimit;
+//     type Freezer = ();
+//     type WeightInfo = ();
+//     type Extra = ();
+// }
+
+use codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
+
+
+
+
+#[derive(
+	Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
+)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum CurrencyId {
+	// The Native token, representing AIR in Altair and CFG in Centrifuge.
+	Native,
+
+	KSM,
+
+	AUSD,
+	/// A foreign asset
+	ForeignAsset(ForeignAssetId),
+}
+
+pub type ForeignAssetId = u32;
+
+impl Default for CurrencyId {
+	fn default() -> Self {
+		CurrencyId::Native
+	}
+}
+
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		match currency_id {
+			CurrencyId::Native => ExistentialDeposit::get(),
+			_ => 0,
+		}
+	};
+}
+
+pub type IBalance = i128;
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = IBalance;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
+	type MaxLocks = MaxLocks;
+	type MaxReserves = MaxReserves;
+	type ReserveIdentifier = [u8; 8];
+	type DustRemovalWhitelist = frame_support::traits::Nothing;
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -702,7 +762,8 @@ construct_runtime!(
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 42,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
 
-		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50
+		//::{Pallet, Call, Storage, Event<T>} = 50
+		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 50,
 	}
 );
 

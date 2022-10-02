@@ -8,6 +8,10 @@ use frame_support::{
 	traits::{Everything, Nothing},
 	weights::Weight,
 };
+use orml_traits::{
+    location::AbsoluteReserveProvider, parameter_type_with_key, DataFeeder, DataProvider,
+    DataProviderExtended,
+};
 use sp_runtime::traits::{Convert};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
@@ -152,6 +156,9 @@ parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
 	pub UnitWeightCost: Weight = 1_000_000_000;
 	pub const MaxInstructions: u32 = 100;
+	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
+	pub const BaseXcmWeight: Weight = 150_000_000;
+	pub const MaxAssetsForTransfer: usize = 2;
 }
 
 match_types! {
@@ -245,7 +252,7 @@ impl xcm_executor::Config for XcmConfig {
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = NativeAsset;
 	type IsTeleporter = (); // Teleporting is disabled.
-	type LocationInverter = LocationInverter<Ancestry>;
+	type LocationInverter = LocationInverter<Ancestry>; //TODO check Ancestry???
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
 	type Trader =
@@ -288,6 +295,85 @@ impl pallet_xcm::Config for Runtime {
 	// ^ Override for AdvertisedXcmVersion default
 	type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
 }
+
+parameter_type_with_key! {
+	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+		None
+	};
+}
+
+// Min fee required when transferring asset back to reserve sibling chain
+// which use another asset(e.g Relaychain's asset) as fee
+// parameter_type_with_key! {
+//     pub ParachainMinFee: |location: MultiLocation| -> Option<u128> {
+//         #[allow(clippy::match_ref_pats)] // false positive
+//         match (location.parents, location.first_interior()) {
+//             (1, Some(Parachain(paras::statemint::ID))) => Some(XcmHelper::get_xcm_weight_fee_to_sibling(location.clone()).fee),//default fee should be enough even if not configured
+//             _ => None,
+//         }
+//     };
+// }
+
+
+impl orml_xtokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
+	type CurrencyIdConvert = CurrencyIdConvert;
+	type AccountIdToMultiLocation = AccountIdToMultiLocation;
+	type SelfLocation = SelfLocation;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+	type BaseXcmWeight = BaseXcmWeight;
+	type LocationInverter = LocationInverter<Ancestry>;
+	type MaxAssetsForTransfer = MaxAssetsForTransfer;
+	type MinXcmFee = ParachainMinFee; //TODO to support hrmp transfer beetween parachain adjust this parameter
+	type MultiLocationsFilter = Everything;
+	type ReserveProvider = AbsoluteReserveProvider;
+}
+
+pub struct AccountIdToMultiLocation;
+impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
+	// fn convert(account: AccountId) -> MultiLocation {
+	// 	X1(AccountId32 {
+	// 		network: NetworkId::Any,
+	// 		id: account.into(),
+	// 	})
+	// 	.into()
+	// }
+	fn convert(account: AccountId) -> MultiLocation {
+        MultiLocation {
+            parents: 0,
+            interior: X1(AccountId32 {
+                network: NetworkId::Any,
+                id: account.into(),
+            }),
+        }
+    }
+}
+
+
+// impl orml_xtokens::Config for Runtime {
+//     type Event = Event;
+//     type Balance = Balance;
+//     type CurrencyId = CurrencyId;
+//     type CurrencyIdConvert = CurrencyIdtoMultiLocation<
+//         CurrencyIdConvert,
+//         AsAssetType<CurrencyId, AssetType, AssetRegistry>,
+//     >;
+//     type AccountIdToMultiLocation = AccountIdToMultiLocation<AccountId>;
+//     type SelfLocation = SelfLocation;
+//     type XcmExecutor = XcmExecutor<XcmConfig>;
+//     type Weigher = FixedWeightBounds<BaseXcmWeight, Call, MaxInstructions>;
+//     type BaseXcmWeight = BaseXcmWeight;
+//     type LocationInverter = LocationInverter<Ancestry>;
+//     type MaxAssetsForTransfer = MaxAssetsForTransfer;
+//     type MinXcmFee = ParachainMinFee;
+//     type MultiLocationsFilter = Everything;
+//     type ReserveProvider = AbsoluteReserveProvider;
+// }
+
+
 
 impl cumulus_pallet_xcm::Config for Runtime {
 	type Event = Event;

@@ -243,7 +243,7 @@ impl Contains<Call> for BaseFilter {
 			Call::XcmpQueue(_) |
 			Call::PolkadotXcm(_) |
 			Call::DmpQueue(_) |
-			// Call::Tokens(_) |
+			Call::XTokens(_) |
 			Call::Multisig(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -771,9 +771,9 @@ construct_runtime!(
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 42,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
 
-		//::{Pallet, Call, Storage, Event<T>} = 50
 		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 50,
 		Currencies: orml_currencies::{Pallet} = 51,
+		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 52,
 	}
 );
 

@@ -379,3 +379,92 @@ impl cumulus_pallet_xcm::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
+
+
+/*
+use crate::xcm::kusama::test_net::Amplitude;
+#[test]
+fn transfer_ksm_from_relay_chain_to_amplitude() {
+	let transfer_amount: Balance = ksm(2);
+	println!("transfer KSM amount : {} ", transfer_amount);
+	let mut balance_before = 0;
+	let mut orml_tokens_before = 0;
+	Amplitude::execute_with(|| {
+		balance_before = Balances::free_balance(&ALICE.into());
+		println!("Alice balance_before {}", balance_before);
+		let orml_tokens_before = amplitude_runtime::Tokens::free_balance(amplitude_runtime::CurrencyId::KSM, &ALICE.into());
+		println!("Alice orml tokens KSM before {}", orml_tokens_before);
+	});
+
+	KusamaNet::execute_with(|| {
+		assert_ok!(kusama_runtime::XcmPallet::reserve_transfer_assets(
+			kusama_runtime::Origin::signed(ALICE.into()),
+			Box::new(Parachain(1234).into().into()),
+			Box::new(
+				Junction::AccountId32 {
+					network: NetworkId::Any,
+					id: ALICE,
+				}
+				.into()
+				.into()
+			),
+			Box::new((Here, transfer_amount).into()),
+			0
+		));
+	});
+
+	
+	Amplitude::execute_with(|| {
+		assert_eq!(
+			amplitude_runtime::Tokens::free_balance(amplitude_runtime::CurrencyId::KSM, &ALICE.into()),
+			orml_tokens_before + transfer_amount - KSM_FEE
+		);
+	});
+
+	//old version. when transfer works to native currency. not to orml tokens
+	// Amplitude::execute_with(|| {
+	// 	assert_eq!(
+	// 		Balances::free_balance(&ALICE.into()),
+	// 		balance_before + transfer_amount - ksm_fee()
+	// 	);
+	// });
+
+	KusamaNet::execute_with(|| {
+		let before_bob_free_balance = kusama_runtime::Balances::free_balance(&BOB.into());
+		println!("BOB KSM BEFORE balance on relay chain {} ", before_bob_free_balance);
+		assert_eq!(
+			before_bob_free_balance,
+			0
+		);
+	});
+
+	Amplitude::execute_with(|| {
+		assert_ok!(amplitude_runtime::XTokens::transfer(
+			amplitude_runtime::Origin::signed(ALICE.into()),
+			amplitude_runtime::CurrencyId::KSM,
+			ksm(1),
+			Box::new(
+				MultiLocation::new(
+					1,
+					X1(Junction::AccountId32 {
+						id: BOB,
+						network: NetworkId::Any,
+					})
+				)
+				.into()
+			),
+			4_000_000_000
+		));
+	});
+
+	KusamaNet::execute_with(|| {
+		let after_bob_free_balance = kusama_runtime::Balances::free_balance(&BOB.into());
+		println!("BOB KSM AFTER balance on relay chain {} ", after_bob_free_balance);
+		assert_eq!(
+			after_bob_free_balance,
+			999988476752
+		);
+	});
+
+}
+*/

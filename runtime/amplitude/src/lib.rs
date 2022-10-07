@@ -6,6 +6,9 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
 mod weights;
 pub mod xcm_config;
 
@@ -18,6 +21,8 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
+
+use orml_traits::parameter_type_with_key;
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -223,6 +228,7 @@ impl Contains<Call> for BaseFilter {
 			Call::Balances(pallet_balances::Call::transfer_keep_alive { .. }) |
 			Call::Vesting(pallet_vesting::Call::vested_transfer { .. }) => false,
 
+			
 			// These modules are all allowed to be called by transactions:
 			Call::Democracy(_) |
 			Call::Council(_) |
@@ -242,6 +248,7 @@ impl Contains<Call> for BaseFilter {
 			Call::DmpQueue(_) |
 			Call::Utility(_) |
 			Call::Vesting(_) |
+			Call::XTokens(_) |
 			Call::Multisig(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -380,6 +387,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
+	
 }
 
 parameter_types! {
@@ -648,6 +656,106 @@ impl pallet_vesting::Config for Runtime {
 	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
 
+// pub type CurrencyId = u32;
+pub const MILLICENTS: Balance = 10_000_000;
+pub const CENTS: Balance = 1_000 * MILLICENTS; // assume this is worth about a cent.
+pub const DOLLARS: Balance = 100 * CENTS;
+
+pub const EXISTENTIAL_DEPOSIT_ASSETS: u128 = 10 * CENTS; // 0.1 Native Token Balance
+
+pub const fn deposit(items: u32, bytes: u32) -> Balance {
+	items as Balance * 15 * CENTS + (bytes as Balance) * 6 * CENTS
+}
+parameter_types! {
+    pub const AssetDeposit: Balance = DOLLARS; // 1 UNIT deposit to create asset
+    pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT_ASSETS;
+    pub const AssetAccountDeposit: Balance = deposit(1, 16);
+    pub const AssetsStringLimit: u32 = 50;
+    pub const MetadataDepositBase: Balance = deposit(1, 68);
+    pub const MetadataDepositPerByte: Balance = deposit(0, 1);
+}
+
+// impl pallet_assets::Config for Runtime {
+//     type Event = Event;
+//     type Balance = Balance;
+//     type AssetId = CurrencyId;
+//     type Currency = Balances;
+//     type ForceOrigin = EnsureRoot<AccountId>;
+//     type AssetDeposit = AssetDeposit;
+//     type MetadataDepositBase = MetadataDepositBase;
+//     type MetadataDepositPerByte = MetadataDepositPerByte;
+//     type AssetAccountDeposit = AssetAccountDeposit;
+//     type ApprovalDeposit = ApprovalDeposit;
+//     type StringLimit = AssetsStringLimit;
+//     type Freezer = ();
+//     type WeightInfo = ();
+//     type Extra = ();
+// }
+
+use codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
+
+#[derive(
+	Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
+)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum CurrencyId {
+	// The Native token, representing AIR in Altair and CFG in Centrifuge.
+	Native,
+
+	KSM,
+
+	AUSD,
+	/// A foreign asset
+	ForeignAsset(ForeignAssetId),
+}
+
+pub type ForeignAssetId = u32;
+
+impl Default for CurrencyId {
+	fn default() -> Self {
+		CurrencyId::Native
+	}
+}
+
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		match currency_id {
+			CurrencyId::Native => ExistentialDeposit::get(),
+			_ => 0,
+		}
+	};
+}
+
+pub type IBalance = i128;
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = IBalance;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
+	type MaxLocks = MaxLocks;
+	type MaxReserves = MaxReserves;
+	type ReserveIdentifier = [u8; 8];
+	type DustRemovalWhitelist = frame_support::traits::Nothing;
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
+}
+use orml_currencies::BasicCurrencyAdapter;
+
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
+}
+pub type Amount = i128;
+impl orml_currencies::Config for Runtime {
+	type MultiCurrency = Tokens;
+	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type WeightInfo = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -657,9 +765,7 @@ construct_runtime!(
 	{
 		// System support stuff.
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-		ParachainSystem: cumulus_pallet_parachain_system::{
-			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
-		} = 1,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>} = 1,
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 2,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 3,
 
@@ -692,6 +798,10 @@ construct_runtime!(
 		// Amendments
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>} = 50,
 		Utility: pallet_utility::{Pallet, Call, Event} = 51,
+
+		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 50,
+		Currencies: orml_currencies::{Pallet} = 51,
+		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 52,
 	}
 );
 

@@ -156,7 +156,7 @@ parameter_types! {
 	pub UnitWeightCost: u64 = 1_000_000_000;
 	pub const MaxInstructions: u32 = 100;
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
-	pub const BaseXcmWeight: Weight = 150_000_000;
+	pub const BaseXcmWeight: XCMWeight = 150_000_000;
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 

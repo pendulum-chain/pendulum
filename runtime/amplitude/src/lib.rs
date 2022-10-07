@@ -791,9 +791,8 @@ construct_runtime!(
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>} = 50,
 		Utility: pallet_utility::{Pallet, Call, Event} = 51,
 
-		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 50,
-		
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 51,
+		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 52,
+		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 53
 	}
 );
 

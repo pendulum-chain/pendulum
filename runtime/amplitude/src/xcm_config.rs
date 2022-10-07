@@ -1,5 +1,5 @@
 use super::{
-	AccountId, CurrencyId, Balance, Balances, Tokens, Currencies, Call, Event, Origin, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
+	AccountId, CurrencyId, Balance, Balances, Tokens, Call, Event, Origin, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
 	WeightToFee, XcmpQueue,
 };
 use core::marker::PhantomData;

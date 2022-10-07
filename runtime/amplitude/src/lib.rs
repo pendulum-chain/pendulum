@@ -743,17 +743,9 @@ impl orml_tokens::Config for Runtime {
 	type OnNewTokenAccount = ();
 	type OnKilledTokenAccount = ();
 }
-use orml_currencies::BasicCurrencyAdapter;
 
 parameter_types! {
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
-}
-pub type Amount = i128;
-impl orml_currencies::Config for Runtime {
-	type MultiCurrency = Tokens;
-	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
-	type WeightInfo = ();
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -800,8 +792,8 @@ construct_runtime!(
 		Utility: pallet_utility::{Pallet, Call, Event} = 51,
 
 		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 50,
-		Currencies: orml_currencies::{Pallet} = 51,
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 52,
+		
+		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 51,
 	}
 );
 

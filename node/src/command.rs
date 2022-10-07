@@ -3,13 +3,13 @@ use crate::{
 	cli::{Cli, RelayChainCli, Subcommand},
 	service::{new_partial, AmplitudeRuntimeExecutor, DevelopmentRuntimeExecutor},
 };
+use amplitude_runtime::RuntimeApi;
 use codec::Encode;
 use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::info;
 use runtime_common::opaque::Block;
-use amplitude_runtime::RuntimeApi;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
 	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
@@ -20,9 +20,7 @@ use sc_service::{
 };
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
-use std::{net::SocketAddr};
-
-
+use std::net::SocketAddr;
 
 #[derive(PartialEq, Eq)]
 enum ChainIdentity {

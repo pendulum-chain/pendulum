@@ -144,7 +144,6 @@ std = [
   "xcm-builder/std",
   "xcm-executor/std",
   "xcm/std",
-  "pallet-assets/std",
   "orml-tokens/std",
   "orml-currencies/std",
   "orml-xtokens/std"

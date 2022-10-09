@@ -16,11 +16,15 @@ pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 
 /// Balance of an account.
 pub type Balance = u128;
+pub type Amount = i128;
+
+pub type ReserveIdentifier = [u8; 8];
 
 // Unit = the base number of indivisible units for balances
 pub const UNIT: Balance = 1_000_000_000_000;
 pub const MILLIUNIT: Balance = 1_000_000_000;
 pub const MICROUNIT: Balance = 1_000_000;
+pub const NANOUNIT: Balance = 1_000;
 
 /// The existential deposit. Set to 1/10 of the Connected Relay Chain.
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLIUNIT;

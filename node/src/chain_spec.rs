@@ -322,16 +322,6 @@ fn amplitude_genesis(
 			inflation_config,
 			max_candidate_stake: 400_000 * UNIT,
 		},
-		parachain_staking: amplitude_runtime::ParachainStakingConfig {
-			stakers,
-			inflation_config,
-			max_candidate_stake: 400_000 * UNIT,
-		},
-		parachain_staking: amplitude_runtime::ParachainStakingConfig {
-			stakers,
-			inflation_config,
-			max_candidate_stake: 400_000 * UNIT,
-		},
 		session: amplitude_runtime::SessionConfig {
 			keys: invulnerables
 				.into_iter()

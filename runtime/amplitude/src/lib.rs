@@ -423,7 +423,6 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 }
 
 parameter_types! {
-	pub const Period: u32 = MINUTES; // 4 * HOURS; // TODO
 	pub const Offset: u32 = 0;
 	pub const MaxAuthorities: u32 = 200;
 }

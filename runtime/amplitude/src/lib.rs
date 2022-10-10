@@ -65,7 +65,6 @@ use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 // XCM Imports
-use xcm::latest::prelude::BodyId;
 use xcm_executor::XcmExecutor;
 
 /// The address format for describing accounts.
@@ -148,10 +147,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 3,
+	spec_version: 4,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 3,
+	transaction_version: 4,
 	state_version: 1,
 };
 
@@ -248,7 +247,6 @@ impl Contains<Call> for BaseFilter {
 			Call::Session(_) |
 			Call::ParachainSystem(_) |
 			Call::Sudo(_) |
-			Call::CollatorSelection(_) |
 			Call::XcmpQueue(_) |
 			Call::PolkadotXcm(_) |
 			Call::DmpQueue(_) |
@@ -333,7 +331,7 @@ impl pallet_authorship::Config for Runtime {
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
 	type UncleGenerations = UncleGenerations;
 	type FilterUncle = ();
-	type EventHandler = (CollatorSelection,);
+	type EventHandler = ParachainStaking;
 }
 
 parameter_types! {
@@ -364,14 +362,6 @@ parameter_types! {
 
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
-pub struct ToStakingPot;
-impl OnUnbalanced<NegativeImbalance> for ToStakingPot {
-	fn on_nonzero_unbalanced(amount: NegativeImbalance) {
-		let staking_pot = PotId::get().into_account_truncating();
-		Balances::resolve_creating(&staking_pot, amount);
-	}
-}
-
 pub struct DealWithFees;
 impl OnUnbalanced<NegativeImbalance> for DealWithFees {
 	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
@@ -379,8 +369,8 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
 			if let Some(tips) = fees_then_tips.next() {
 				tips.merge_into(&mut fees);
 			}
-			// pay fees to collators
-			<ToStakingPot as OnUnbalanced<_>>::on_unbalanced(fees);
+			// for fees and tips, 100% to treasury
+			Treasury::on_unbalanced(fees);
 		}
 	}
 }
@@ -433,7 +423,7 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 }
 
 parameter_types! {
-	pub const Period: u32 = 4 * HOURS;
+	pub const Period: u32 = MINUTES; // 4 * HOURS; // TODO
 	pub const Offset: u32 = 0;
 	pub const MaxAuthorities: u32 = 200;
 }
@@ -441,12 +431,10 @@ parameter_types! {
 impl pallet_session::Config for Runtime {
 	type Event = Event;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
-	// we don't have stash and controller, thus we don't need the convert as well.
-	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
-	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
-	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
-	type SessionManager = CollatorSelection;
-	// Essentially just Aura, but lets be pedantic.
+	type ValidatorIdOf = ConvertInto;
+	type ShouldEndSession = ParachainStaking;
+	type NextSessionRotation = ParachainStaking;
+	type SessionManager = ParachainStaking;
 	type SessionHandler = <SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
 	type Keys = SessionKeys;
 	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
@@ -456,33 +444,6 @@ impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 	type DisabledValidators = ();
 	type MaxAuthorities = MaxAuthorities;
-}
-
-parameter_types! {
-	pub const PotId: PalletId = PalletId(*b"PotStake");
-	pub const MaxCandidates: u32 = 400;
-	pub const MinCandidates: u32 = 5;
-	pub const MaxInvulnerables: u32 = 100;
-	pub const ExecutiveBody: BodyId = BodyId::Executive;
-}
-
-// We allow root only to execute privileged collator selection operations.
-pub type CollatorSelectionUpdateOrigin = EnsureRoot<AccountId>;
-
-impl pallet_collator_selection::Config for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-	type UpdateOrigin = CollatorSelectionUpdateOrigin;
-	type PotId = PotId;
-	type MaxCandidates = MaxCandidates;
-	type MinCandidates = MinCandidates;
-	type MaxInvulnerables = MaxInvulnerables;
-	// should be a multiple of session or things will get inconsistent
-	type KickThreshold = Period;
-	type ValidatorId = <Self as frame_system::Config>::AccountId;
-	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
-	type ValidatorRegistration = Session;
-	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -859,7 +820,6 @@ construct_runtime!(
 
 		// Collator support. The order of these 4 are important and shall not change.
 		Authorship: pallet_authorship::{Pallet, Call, Storage} = 30,
-		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 31,
 		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 32,
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 33,
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 34,
@@ -890,7 +850,6 @@ mod benches {
 		[pallet_balances, Balances]
 		[pallet_session, SessionBench::<Runtime>]
 		[pallet_timestamp, Timestamp]
-		[pallet_collator_selection, CollatorSelection]
 		[cumulus_pallet_xcmp_queue, XcmpQueue]
 	);
 }
@@ -999,6 +958,16 @@ impl_runtime_apis! {
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
 		fn collect_collation_info(header: &<Block as BlockT>::Header) -> cumulus_primitives_core::CollationInfo {
 			ParachainSystem::collect_collation_info(header)
+		}
+	}
+
+	impl parachain_staking::runtime_api::ParachainStakingApi<Block, AccountId, Balance> for Runtime {
+		fn get_unclaimed_staking_rewards(account: &AccountId) -> Balance {
+			ParachainStaking::get_unclaimed_staking_rewards(account)
+		}
+
+		fn get_staking_rates() -> parachain_staking::runtime_api::StakingRates {
+			ParachainStaking::get_staking_rates()
 		}
 	}
 

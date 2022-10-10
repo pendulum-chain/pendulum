@@ -143,8 +143,8 @@ pub mod pallet {
 		pallet_prelude::*,
 		storage::bounded_btree_map::BoundedBTreeMap,
 		traits::{
-			Currency, EstimateNextSessionRotation, Get, Imbalance, LockIdentifier, LockableCurrency, OnUnbalanced,
-			ReservableCurrency, StorageVersion, WithdrawReasons,
+			Currency, EstimateNextSessionRotation, Get, Imbalance, LockIdentifier,
+			LockableCurrency, OnUnbalanced, ReservableCurrency, StorageVersion, WithdrawReasons,
 		},
 		BoundedVec,
 	};
@@ -162,8 +162,8 @@ pub mod pallet {
 	use crate::{
 		set::OrderedSet,
 		types::{
-			BalanceOf, Candidate, CandidateOf, CandidateStatus, DelegationCounter, Delegator, NegativeImbalanceOf,
-			RoundInfo, Stake, StakeOf, TotalStake,
+			BalanceOf, Candidate, CandidateOf, CandidateStatus, DelegationCounter, Delegator,
+			NegativeImbalanceOf, RoundInfo, Stake, StakeOf, TotalStake,
 		},
 	};
 	use sp_std::{convert::TryInto, fmt::Debug};
@@ -182,7 +182,9 @@ pub mod pallet {
 
 	/// Configuration trait of this pallet.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_balances::Config + pallet_session::Config {
+	pub trait Config:
+		frame_system::Config + pallet_balances::Config + pallet_session::Config
+	{
 		/// Overarching event type
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		// FIXME: Remove Currency and CurrencyBalance types. Problem: Need to restrict
@@ -505,7 +507,8 @@ pub mod pallet {
 			// on success, mint each block
 			if now > T::NetworkRewardStart::get() {
 				T::NetworkRewardBeneficiary::on_unbalanced(Self::issue_network_reward());
-				post_weight = post_weight.saturating_add(<T as Config>::WeightInfo::on_initialize_network_rewards());
+				post_weight = post_weight
+					.saturating_add(<T as Config>::WeightInfo::on_initialize_network_rewards());
 			}
 			post_weight
 		}
@@ -536,8 +539,13 @@ pub mod pallet {
 	/// It maps from an account to its delegation details.
 	#[pallet::storage]
 	#[pallet::getter(fn delegator_state)]
-	pub(crate) type DelegatorState<T: Config> =
-		StorageMap<_, Twox64Concat, T::AccountId, Delegator<T::AccountId, BalanceOf<T>>, OptionQuery>;
+	pub(crate) type DelegatorState<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		T::AccountId,
+		Delegator<T::AccountId, BalanceOf<T>>,
+		OptionQuery,
+	>;
 
 	/// The staking information for a candidate.
 	///
@@ -560,7 +568,8 @@ pub mod pallet {
 	/// non collating candidates is not included in [TotalCollatorStake].
 	#[pallet::storage]
 	#[pallet::getter(fn total_collator_stake)]
-	pub(crate) type TotalCollatorStake<T: Config> = StorageValue<_, TotalStake<BalanceOf<T>>, ValueQuery>;
+	pub(crate) type TotalCollatorStake<T: Config> =
+		StorageValue<_, TotalStake<BalanceOf<T>>, ValueQuery>;
 
 	/// The collator candidates with the highest amount of stake.
 	///
@@ -574,8 +583,11 @@ pub mod pallet {
 	/// stake.
 	#[pallet::storage]
 	#[pallet::getter(fn top_candidates)]
-	pub(crate) type TopCandidates<T: Config> =
-		StorageValue<_, OrderedSet<Stake<T::AccountId, BalanceOf<T>>, T::MaxTopCandidates>, ValueQuery>;
+	pub(crate) type TopCandidates<T: Config> = StorageValue<
+		_,
+		OrderedSet<Stake<T::AccountId, BalanceOf<T>>, T::MaxTopCandidates>,
+		ValueQuery,
+	>;
 
 	/// Inflation configuration.
 	#[pallet::storage]
@@ -599,7 +611,8 @@ pub mod pallet {
 	/// The maximum amount a collator candidate can stake.
 	#[pallet::storage]
 	#[pallet::getter(fn max_candidate_stake)]
-	pub(crate) type MaxCollatorCandidateStake<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+	pub(crate) type MaxCollatorCandidateStake<T: Config> =
+		StorageValue<_, BalanceOf<T>, ValueQuery>;
 
 	/// The year in which the last automatic reduction of the reward rates
 	/// occurred.
@@ -624,14 +637,16 @@ pub mod pallet {
 	// TODO: Maybe rather use u64. Assuming 30 validators, u32 would suffice for 27 years of constant 12s blocktime.
 	#[pallet::storage]
 	#[pallet::getter(fn reward_count)]
-	pub(crate) type RewardCount<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, u32, ValueQuery>;
+	pub(crate) type RewardCount<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, u32, ValueQuery>;
 
 	/// The accumulated rewards for collator candidates and delegators.
 	///
 	/// It maps from accounts to their total rewards since the last payout.
 	#[pallet::storage]
 	#[pallet::getter(fn rewards)]
-	pub(crate) type Rewards<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
+	pub(crate) type Rewards<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
 
 	pub type GenesisStaker<T> = Vec<(
 		<T as frame_system::Config>::AccountId,
@@ -697,7 +712,8 @@ pub mod pallet {
 			<Pallet<T>>::update_total_stake();
 
 			// Start Round 0 at Block 0
-			let round: RoundInfo<T::BlockNumber> = RoundInfo::new(0u32, 0u32.into(), T::DefaultBlocksPerRound::get());
+			let round: RoundInfo<T::BlockNumber> =
+				RoundInfo::new(0u32, 0u32.into(), T::DefaultBlocksPerRound::get());
 			<Round<T>>::put(round);
 		}
 	}
@@ -795,7 +811,10 @@ pub mod pallet {
 			*new,
 			T::MaxDelegatorsPerCollator::get()
 		))]
-		pub fn set_max_selected_candidates(origin: OriginFor<T>, new: u32) -> DispatchResultWithPostInfo {
+		pub fn set_max_selected_candidates(
+			origin: OriginFor<T>,
+			new: u32,
+		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			ensure!(new >= T::MinCollators::get(), Error::<T>::CannotSetBelowMin);
 			ensure!(new <= T::MaxTopCandidates::get(), Error::<T>::CannotSetAboveMax);
@@ -868,10 +887,7 @@ pub mod pallet {
 
 			// *** No Fail beyond this point ***
 
-			<Round<T>>::put(RoundInfo {
-				length: new,
-				..old_round
-			});
+			<Round<T>>::put(RoundInfo { length: new, ..old_round });
 
 			Self::deposit_event(Event::BlocksPerRoundSet(
 				old_round.current,
@@ -891,10 +907,7 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::set_max_candidate_stake())]
 		pub fn set_max_candidate_stake(origin: OriginFor<T>, new: BalanceOf<T>) -> DispatchResult {
 			ensure_root(origin)?;
-			ensure!(
-				new >= T::MinCollatorCandidateStake::get(),
-				Error::<T>::CannotSetBelowMin
-			);
+			ensure!(new >= T::MinCollatorCandidateStake::get(), Error::<T>::CannotSetBelowMin);
 
 			// *** No Fail beyond this point ***
 
@@ -941,10 +954,7 @@ pub mod pallet {
 			Self::remove_candidate(&collator, &state)?;
 
 			let (num_collators, num_delegators) = if candidates
-				.remove(&Stake {
-					owner: collator.clone(),
-					amount: state.total,
-				})
+				.remove(&Stake { owner: collator.clone(), amount: state.total })
 				.is_some()
 			{
 				// update top candidates
@@ -985,23 +995,21 @@ pub mod pallet {
 			T::MaxTopCandidates::get(),
 			T::MaxDelegatorsPerCollator::get()
 		))]
-		pub fn join_candidates(origin: OriginFor<T>, stake: BalanceOf<T>) -> DispatchResultWithPostInfo {
+		pub fn join_candidates(
+			origin: OriginFor<T>,
+			stake: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			if let Some(is_active_candidate) = Self::is_active_candidate(&sender) {
 				ensure!(is_active_candidate, Error::<T>::AlreadyLeaving);
 				ensure!(!is_active_candidate, Error::<T>::CandidateExists);
 			}
 			ensure!(!Self::is_delegator(&sender), Error::<T>::DelegatorExists);
+			ensure!(stake >= T::MinCollatorCandidateStake::get(), Error::<T>::ValStakeBelowMin);
+			ensure!(stake <= MaxCollatorCandidateStake::<T>::get(), Error::<T>::ValStakeAboveMax);
 			ensure!(
-				stake >= T::MinCollatorCandidateStake::get(),
-				Error::<T>::ValStakeBelowMin
-			);
-			ensure!(
-				stake <= MaxCollatorCandidateStake::<T>::get(),
-				Error::<T>::ValStakeAboveMax
-			);
-			ensure!(
-				Unstaking::<T>::get(&sender).len().saturated_into::<u32>() < T::MaxUnstakeRequests::get(),
+				Unstaking::<T>::get(&sender).len().saturated_into::<u32>() <
+					T::MaxUnstakeRequests::get(),
 				Error::<T>::CannotJoinBeforeUnlocking
 			);
 
@@ -1060,7 +1068,8 @@ pub mod pallet {
 		))]
 		pub fn init_leave_candidates(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let collator = ensure_signed(origin)?;
-			let mut state = CandidatePool::<T>::get(&collator).ok_or(Error::<T>::CandidateNotFound)?;
+			let mut state =
+				CandidatePool::<T>::get(&collator).ok_or(Error::<T>::CandidateNotFound)?;
 			ensure!(!state.is_leaving(), Error::<T>::AlreadyLeaving);
 			let mut candidates = TopCandidates::<T>::get();
 			ensure!(
@@ -1075,10 +1084,7 @@ pub mod pallet {
 			// *** No Fail beyond this point ***
 
 			let (num_collators, num_delegators) = if candidates
-				.remove(&Stake {
-					owner: collator.clone(),
-					amount: state.total,
-				})
+				.remove(&Stake { owner: collator.clone(), amount: state.total })
 				.is_some()
 			{
 				// update top candidates
@@ -1161,7 +1167,8 @@ pub mod pallet {
 		))]
 		pub fn cancel_leave_candidates(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let candidate = ensure_signed(origin)?;
-			let mut state = CandidatePool::<T>::get(&candidate).ok_or(Error::<T>::CandidateNotFound)?;
+			let mut state =
+				CandidatePool::<T>::get(&candidate).ok_or(Error::<T>::CandidateNotFound)?;
 			ensure!(state.is_leaving(), Error::<T>::NotLeaving);
 
 			// revert leaving state
@@ -1207,18 +1214,18 @@ pub mod pallet {
 			T::MaxDelegatorsPerCollator::get(),
 			T::MaxUnstakeRequests::get().saturated_into::<u32>()
 		))]
-		pub fn candidate_stake_more(origin: OriginFor<T>, more: BalanceOf<T>) -> DispatchResultWithPostInfo {
+		pub fn candidate_stake_more(
+			origin: OriginFor<T>,
+			more: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
 			let collator = ensure_signed(origin)?;
 
 			ensure!(!more.is_zero(), Error::<T>::ValStakeZero);
-			let mut state = CandidatePool::<T>::get(&collator).ok_or(Error::<T>::CandidateNotFound)?;
+			let mut state =
+				CandidatePool::<T>::get(&collator).ok_or(Error::<T>::CandidateNotFound)?;
 			ensure!(!state.is_leaving(), Error::<T>::CannotStakeIfLeaving);
 
-			let CandidateOf::<T, _> {
-				stake: before_stake,
-				total: before_total,
-				..
-			} = state;
+			let CandidateOf::<T, _> { stake: before_stake, total: before_total, .. } = state;
 			state.stake_more(more);
 			let after_stake = state.stake;
 			ensure!(
@@ -1275,23 +1282,20 @@ pub mod pallet {
 			T::MaxTopCandidates::get(),
 			T::MaxDelegatorsPerCollator::get()
 		))]
-		pub fn candidate_stake_less(origin: OriginFor<T>, less: BalanceOf<T>) -> DispatchResultWithPostInfo {
+		pub fn candidate_stake_less(
+			origin: OriginFor<T>,
+			less: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
 			let collator = ensure_signed(origin)?;
 			ensure!(!less.is_zero(), Error::<T>::ValStakeZero);
 
-			let mut state = CandidatePool::<T>::get(&collator).ok_or(Error::<T>::CandidateNotFound)?;
+			let mut state =
+				CandidatePool::<T>::get(&collator).ok_or(Error::<T>::CandidateNotFound)?;
 			ensure!(!state.is_leaving(), Error::<T>::CannotStakeIfLeaving);
 
-			let CandidateOf::<T, _> {
-				stake: before_stake,
-				total: before_total,
-				..
-			} = state;
+			let CandidateOf::<T, _> { stake: before_stake, total: before_total, .. } = state;
 			let after = state.stake_less(less).ok_or(Error::<T>::Underflow)?;
-			ensure!(
-				after >= T::MinCollatorCandidateStake::get(),
-				Error::<T>::ValStakeBelowMin
-			);
+			ensure!(after >= T::MinCollatorCandidateStake::get(), Error::<T>::ValStakeBelowMin);
 
 			// *** No Fail except during prep_unstake beyond this point ***
 
@@ -1370,7 +1374,8 @@ pub mod pallet {
 			// cannot be a collator candidate and delegator with same AccountId
 			ensure!(Self::is_active_candidate(&acc).is_none(), Error::<T>::CandidateExists);
 			ensure!(
-				Unstaking::<T>::get(&acc).len().saturated_into::<u32>() < T::MaxUnstakeRequests::get(),
+				Unstaking::<T>::get(&acc).len().saturated_into::<u32>() <
+					T::MaxUnstakeRequests::get(),
 				Error::<T>::CannotJoinBeforeUnlocking
 			);
 			// cannot delegate if number of delegations in this round exceeds
@@ -1378,14 +1383,12 @@ pub mod pallet {
 			let delegation_counter = Self::get_delegation_counter(&acc)?;
 
 			// prepare update of collator state
-			let mut state = CandidatePool::<T>::get(&collator).ok_or(Error::<T>::CandidateNotFound)?;
+			let mut state =
+				CandidatePool::<T>::get(&collator).ok_or(Error::<T>::CandidateNotFound)?;
 			let num_delegations_pre_insertion: u32 = state.delegators.len().saturated_into();
 
 			ensure!(!state.is_leaving(), Error::<T>::CannotDelegateIfLeaving);
-			let delegation = Stake {
-				owner: acc.clone(),
-				amount,
-			};
+			let delegation = Stake { owner: acc.clone(), amount };
 
 			// attempt to insert delegator and check for uniqueness
 			// NOTE: excess is handled below because we support replacing a delegator with
@@ -1398,15 +1401,8 @@ pub mod pallet {
 			// should never fail but let's be safe
 			ensure!(insert_delegator, Error::<T>::DelegatorExists);
 
-			let delegator_state = Delegator {
-				amount,
-				owner: Some(collator.clone()),
-			};
-			let CandidateOf::<T, _> {
-				stake: old_stake,
-				total: old_total,
-				..
-			} = state;
+			let delegator_state = Delegator { amount, owner: Some(collator.clone()) };
+			let CandidateOf::<T, _> { stake: old_stake, total: old_total, .. } = state;
 
 			// update state and potentially prepare kicking a delegator with less staked
 			// amount (includes setting rewards for kicked delegator)
@@ -1512,8 +1508,10 @@ pub mod pallet {
 			ensure!(!more.is_zero(), Error::<T>::ValStakeZero);
 
 			let candidate = T::Lookup::lookup(candidate)?;
-			let mut delegation = DelegatorState::<T>::get(&delegator).ok_or(Error::<T>::DelegatorNotFound)?;
-			let mut collator = CandidatePool::<T>::get(&candidate).ok_or(Error::<T>::CandidateNotFound)?;
+			let mut delegation =
+				DelegatorState::<T>::get(&delegator).ok_or(Error::<T>::DelegatorNotFound)?;
+			let mut collator =
+				CandidatePool::<T>::get(&candidate).ok_or(Error::<T>::CandidateNotFound)?;
 			ensure!(!collator.is_leaving(), Error::<T>::CannotDelegateIfLeaving);
 			let stake_after = delegation
 				.inc_delegation(candidate.clone(), more)
@@ -1524,11 +1522,7 @@ pub mod pallet {
 			// update lock
 			let unstaking_len = Self::increase_lock(&delegator, stake_after, more)?;
 
-			let CandidateOf::<T, _> {
-				stake: before_stake,
-				total: before_total,
-				..
-			} = collator;
+			let CandidateOf::<T, _> { stake: before_stake, total: before_total, .. } = collator;
 			collator.inc_delegator(delegator.clone(), more);
 			let after = collator.total;
 
@@ -1552,7 +1546,12 @@ pub mod pallet {
 			CandidatePool::<T>::insert(&candidate, collator);
 			DelegatorState::<T>::insert(&delegator, delegation);
 
-			Self::deposit_event(Event::DelegatorStakedMore(delegator, candidate, before_total, after));
+			Self::deposit_event(Event::DelegatorStakedMore(
+				delegator,
+				candidate,
+				before_total,
+				after,
+			));
 			Ok(Some(<T as pallet::Config>::WeightInfo::delegator_stake_more(
 				n,
 				T::MaxDelegatorsPerCollator::get(),
@@ -1590,28 +1589,23 @@ pub mod pallet {
 			ensure!(!less.is_zero(), Error::<T>::ValStakeZero);
 
 			let candidate = T::Lookup::lookup(candidate)?;
-			let mut delegations = DelegatorState::<T>::get(&delegator).ok_or(Error::<T>::DelegatorNotFound)?;
-			let mut collator = CandidatePool::<T>::get(&candidate).ok_or(Error::<T>::CandidateNotFound)?;
+			let mut delegations =
+				DelegatorState::<T>::get(&delegator).ok_or(Error::<T>::DelegatorNotFound)?;
+			let mut collator =
+				CandidatePool::<T>::get(&candidate).ok_or(Error::<T>::CandidateNotFound)?;
 			ensure!(!collator.is_leaving(), Error::<T>::CannotDelegateIfLeaving);
 			let stake_after = delegations
 				.dec_delegation(candidate.clone(), less)
 				.map_err(|_| Error::<T>::DelegationNotFound)?
 				.ok_or(Error::<T>::Underflow)?;
 
-			ensure!(
-				stake_after >= T::MinDelegatorStake::get(),
-				Error::<T>::DelegationBelowMin
-			);
+			ensure!(stake_after >= T::MinDelegatorStake::get(), Error::<T>::DelegationBelowMin);
 
 			// *** No Fail except during prep_unstake beyond this point ***
 
 			Self::prep_unstake(&delegator, less, false)?;
 
-			let CandidateOf::<T, _> {
-				stake: before_stake,
-				total: before_total,
-				..
-			} = collator;
+			let CandidateOf::<T, _> { stake: before_stake, total: before_total, .. } = collator;
 			collator.dec_delegator(delegator.clone(), less);
 			let after = collator.total;
 
@@ -1635,7 +1629,12 @@ pub mod pallet {
 			CandidatePool::<T>::insert(&candidate, collator);
 			DelegatorState::<T>::insert(&delegator, delegations);
 
-			Self::deposit_event(Event::DelegatorStakedLess(delegator, candidate, before_total, after));
+			Self::deposit_event(Event::DelegatorStakedLess(
+				delegator,
+				candidate,
+				before_total,
+				after,
+			));
 			Ok(Some(<T as pallet::Config>::WeightInfo::delegator_stake_less(
 				n,
 				T::MaxDelegatorsPerCollator::get(),
@@ -1732,7 +1731,8 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::increment_delegator_rewards())]
 		pub fn increment_delegator_rewards(origin: OriginFor<T>) -> DispatchResult {
 			let delegator = ensure_signed(origin)?;
-			let delegation = DelegatorState::<T>::get(&delegator).ok_or(Error::<T>::DelegatorNotFound)?;
+			let delegation =
+				DelegatorState::<T>::get(&delegator).ok_or(Error::<T>::DelegatorNotFound)?;
 			// should never throw
 			let collator = delegation.owner.ok_or(Error::<T>::DelegationNotFound)?;
 
@@ -1760,10 +1760,13 @@ pub mod pallet {
 			// Calculate new inflation based on last year
 			let inflation = InflationConfig::<T>::get();
 			// collator reward rate decreases by 2% p.a. of the previous one
-			let c_reward_rate = inflation.collator.reward_rate.annual * Perquintill::from_percent(98);
+			// Amplitude: the decay value differs from the original
+			let c_reward_rate = inflation.collator.reward_rate.annual *
+				Perquintill::from_rational(9368798532u64, 10000000000u64);
 			// delegator reward rate should be 6% in 2nd year and 0% afterwards
 			let d_reward_rate = if year == T::BlockNumber::one() {
-				Perquintill::from_percent(6)
+				// Amplitude: this value differs from the original
+				Perquintill::from_percent(7)
 			} else {
 				Perquintill::zero()
 			};
@@ -1783,7 +1786,8 @@ pub mod pallet {
 			// set rewards for all collators and delegators before updating reward rates
 			let mut max_num_delegators = 0;
 			CandidatePool::<T>::iter().for_each(|(id, state)| {
-				max_num_delegators = max_num_delegators.max(Self::do_inc_collator_reward(&id, state.stake));
+				max_num_delegators =
+					max_num_delegators.max(Self::do_inc_collator_reward(&id, state.stake));
 			});
 
 			// update inflation config
@@ -1836,17 +1840,14 @@ pub mod pallet {
 		) -> u32 {
 			let mut top_candidates = TopCandidates::<T>::get();
 			let num_top_candidates: u32 = top_candidates.len().saturated_into();
-			let old_stake = Stake {
-				owner: candidate.clone(),
-				amount: old_self.saturating_add(old_delegators),
-			};
-			let new_stake = Stake {
-				owner: candidate.clone(),
-				amount: new_self.saturating_add(new_delegators),
-			};
+			let old_stake =
+				Stake { owner: candidate.clone(), amount: old_self.saturating_add(old_delegators) };
+			let new_stake =
+				Stake { owner: candidate.clone(), amount: new_self.saturating_add(new_delegators) };
 
 			// update TopCandidates set
-			let maybe_top_candidate_update = if let Ok(i) = top_candidates.linear_search(&old_stake) {
+			let maybe_top_candidate_update = if let Ok(i) = top_candidates.linear_search(&old_stake)
+			{
 				// case 1: candidate is member of TopCandidates with old stake
 				top_candidates.mutate(|vec| {
 					if let Some(stake) = vec.get_mut(i) {
@@ -1866,8 +1867,10 @@ pub mod pallet {
 
 			// update storage for TotalCollatorStake and TopCandidates
 			if let Some((maybe_old_idx, top_candidates)) = maybe_top_candidate_update {
-				let max_selected_candidates = MaxSelectedCandidates::<T>::get().saturated_into::<usize>();
-				let was_collating = maybe_old_idx.map(|i| i < max_selected_candidates).unwrap_or(false);
+				let max_selected_candidates =
+					MaxSelectedCandidates::<T>::get().saturated_into::<usize>();
+				let was_collating =
+					maybe_old_idx.map(|i| i < max_selected_candidates).unwrap_or(false);
 				let is_collating = top_candidates
 					.linear_search(&new_stake)
 					.map(|i| i < max_selected_candidates)
@@ -1876,34 +1879,51 @@ pub mod pallet {
 				// update TopCollatorStake storage iff candidate was or will be a collator
 				match (was_collating, is_collating) {
 					(true, true) => {
-						Self::update_total_stake_by(new_self, new_delegators, old_self, old_delegators);
-					}
+						Self::update_total_stake_by(
+							new_self,
+							new_delegators,
+							old_self,
+							old_delegators,
+						);
+					},
 					(true, false) => {
 						// candidate left the collator set because they staked less and have been
 						// replaced by the next candidate in the queue at position
 						// min(max_selected_candidates, top_candidates) - 1 in TopCandidates
-						let new_col_idx = max_selected_candidates.min(top_candidates.len()).saturating_sub(1);
+						let new_col_idx =
+							max_selected_candidates.min(top_candidates.len()).saturating_sub(1);
 
 						// get displacer
 						let (add_collators, add_delegators) =
 							Self::get_top_candidate_stake_at(&top_candidates, new_col_idx)
 								// shouldn't be possible to fail, but we handle it gracefully
 								.unwrap_or((new_self, new_delegators));
-						Self::update_total_stake_by(add_collators, add_delegators, old_self, old_delegators);
-					}
+						Self::update_total_stake_by(
+							add_collators,
+							add_delegators,
+							old_self,
+							old_delegators,
+						);
+					},
 					(false, true) => {
 						// candidate pushed out the least staked collator which is now at position
 						// min(max_selected_top_candidates, top_candidates - 1) in TopCandidates
-						let old_col_idx = max_selected_candidates.min(top_candidates.len().saturating_sub(1));
+						let old_col_idx =
+							max_selected_candidates.min(top_candidates.len().saturating_sub(1));
 
 						// get amount to subtract from TotalCollatorStake
 						let (drop_self, drop_delegators) =
 							Self::get_top_candidate_stake_at(&top_candidates, old_col_idx)
 								// default to zero if candidate DNE, e.g. TopCandidates is not full
 								.unwrap_or((BalanceOf::<T>::zero(), BalanceOf::<T>::zero()));
-						Self::update_total_stake_by(new_self, new_delegators, drop_self, drop_delegators);
-					}
-					_ => {}
+						Self::update_total_stake_by(
+							new_self,
+							new_delegators,
+							drop_self,
+							drop_delegators,
+						);
+					},
+					_ => {},
 				}
 
 				// update TopCandidates storage
@@ -1935,14 +1955,10 @@ pub mod pallet {
 			sub_delegators: BalanceOf<T>,
 		) {
 			TotalCollatorStake::<T>::mutate(|total| {
-				total.collators = total
-					.collators
-					.saturating_sub(sub_collators)
-					.saturating_add(add_collators);
-				total.delegators = total
-					.delegators
-					.saturating_sub(sub_delegators)
-					.saturating_add(add_delegators);
+				total.collators =
+					total.collators.saturating_sub(sub_collators).saturating_add(add_collators);
+				total.delegators =
+					total.delegators.saturating_sub(sub_delegators).saturating_add(add_delegators);
 			});
 		}
 
@@ -1963,9 +1979,10 @@ pub mod pallet {
 
 			// Snapshot exposure for round for weighting reward distribution
 			for account in collators.iter() {
-				let state =
-					CandidatePool::<T>::get(&account).expect("all members of TopCandidates must be candidates q.e.d");
-				num_of_delegators = num_of_delegators.max(state.delegators.len().saturated_into::<u32>());
+				let state = CandidatePool::<T>::get(&account)
+					.expect("all members of TopCandidates must be candidates q.e.d");
+				num_of_delegators =
+					num_of_delegators.max(state.delegators.len().saturated_into::<u32>());
 
 				// sum up total stake and amount of collators, delegators
 				let amount_collator = state.stake;
@@ -1990,8 +2007,12 @@ pub mod pallet {
 		/// as incrementing their accumulated rewards.
 		///
 		/// This operation affects the pallet's total stake.
-		fn delegator_leaves_collator(delegator: T::AccountId, collator: T::AccountId) -> DispatchResult {
-			let mut state = CandidatePool::<T>::get(&collator).ok_or(Error::<T>::CandidateNotFound)?;
+		fn delegator_leaves_collator(
+			delegator: T::AccountId,
+			collator: T::AccountId,
+		) -> DispatchResult {
+			let mut state =
+				CandidatePool::<T>::get(&collator).ok_or(Error::<T>::CandidateNotFound)?;
 
 			let delegator_stake = state
 				.delegators
@@ -2003,11 +2024,7 @@ pub mod pallet {
 				.map(|nom| nom.amount)
 				.ok_or(Error::<T>::DelegatorNotFound)?;
 
-			let CandidateOf::<T, _> {
-				stake: old_stake,
-				total: old_total,
-				..
-			} = state;
+			let CandidateOf::<T, _> { stake: old_stake, total: old_total, .. } = state;
 			state.total = state.total.saturating_sub(delegator_stake);
 			let new_total = state.total;
 
@@ -2083,10 +2100,8 @@ pub mod pallet {
 			mut state: Candidate<T::AccountId, BalanceOf<T>, T::MaxDelegatorsPerCollator>,
 		) -> Result<CandidateOf<T, T::MaxDelegatorsPerCollator>, DispatchError> {
 			// attempt to replace the last element of the set
-			let stake_to_remove = state
-				.delegators
-				.try_insert_replace(stake.clone())
-				.map_err(|err_too_many| {
+			let stake_to_remove =
+				state.delegators.try_insert_replace(stake.clone()).map_err(|err_too_many| {
 					if err_too_many {
 						Error::<T>::TooManyDelegators
 					} else {
@@ -2102,7 +2117,11 @@ pub mod pallet {
 				state.total = state.total.saturating_sub(stake_to_remove.amount);
 
 				// set rewards for kicked delegator
-				Self::do_inc_delegator_reward(&stake_to_remove.owner, stake_to_remove.amount, &state.id);
+				Self::do_inc_delegator_reward(
+					&stake_to_remove.owner,
+					stake_to_remove.amount,
+					&state.id,
+				);
 				// prepare unstaking for kicked delegator
 				Self::prep_unstake(&stake_to_remove.owner, stake_to_remove.amount, true)?;
 				// remove Delegator state for kicked delegator
@@ -2126,7 +2145,11 @@ pub mod pallet {
 		///
 		/// Consumes unstaked balance which can be unlocked in the future up to
 		/// amount and updates `Unstaking` storage accordingly.
-		fn increase_lock(who: &T::AccountId, amount: BalanceOf<T>, more: BalanceOf<T>) -> Result<u32, DispatchError> {
+		fn increase_lock(
+			who: &T::AccountId,
+			amount: BalanceOf<T>,
+			more: BalanceOf<T>,
+		) -> Result<u32, DispatchError> {
 			ensure!(
 				pallet_balances::Pallet::<T>::free_balance(who) >= amount.into(),
 				pallet_balances::Error::<T>::InsufficientBalance
@@ -2146,7 +2169,7 @@ pub mod pallet {
 				unstaking_len = unstaking.len().saturated_into();
 				for (block_number, locked_balance) in unstaking.clone() {
 					if amt_consuming_unstaking.is_zero() {
-						break;
+						break
 					} else if locked_balance > amt_consuming_unstaking {
 						// amount is only reducible by locked_balance - amt_consuming_unstaking
 						let delta = locked_balance.saturating_sub(amt_consuming_unstaking);
@@ -2157,7 +2180,8 @@ pub mod pallet {
 						amt_consuming_unstaking = Zero::zero();
 					} else {
 						// amount is either still reducible or reached
-						amt_consuming_unstaking = amt_consuming_unstaking.saturating_sub(locked_balance);
+						amt_consuming_unstaking =
+							amt_consuming_unstaking.saturating_sub(locked_balance);
 						unstaking.remove(&block_number);
 					}
 				}
@@ -2178,7 +2202,11 @@ pub mod pallet {
 		/// Throws if the amount is zero (unlikely) or if active unlocking
 		/// requests exceed limit. The latter defends against stake reduction
 		/// spamming.
-		fn prep_unstake(who: &T::AccountId, amount: BalanceOf<T>, is_removal: bool) -> DispatchResult {
+		fn prep_unstake(
+			who: &T::AccountId,
+			amount: BalanceOf<T>,
+			is_removal: bool,
+		) -> DispatchResult {
 			// should never occur but let's be safe
 			ensure!(!amount.is_zero(), Error::<T>::StakeNotFound);
 
@@ -2200,7 +2228,8 @@ pub mod pallet {
 
 			// if existent, we have to add the current amount of same unlock_block, because
 			// insert overwrites the current value
-			let amount = amount.saturating_add(*unstaking.get(&unlock_block).unwrap_or(&BalanceOf::<T>::zero()));
+			let amount = amount
+				.saturating_add(*unstaking.get(&unlock_block).unwrap_or(&BalanceOf::<T>::zero()));
 			unstaking
 				.try_insert(unlock_block, amount)
 				.map_err(|_| Error::<T>::NoMoreUnstaking)?;
@@ -2240,7 +2269,9 @@ pub mod pallet {
 				.into_iter()
 				.enumerate()
 				.find_map(|(i, id)| {
-					if <T as pallet_session::Config>::ValidatorIdOf::convert(collator.clone()) == Some(id) {
+					if <T as pallet_session::Config>::ValidatorIdOf::convert(collator.clone()) ==
+						Some(id)
+					{
 						Some(i)
 					} else {
 						None
@@ -2281,7 +2312,9 @@ pub mod pallet {
 
 			// iterate balance locks to retrieve amount of locked balance
 			let locks = Locks::<T>::get(who);
-			total_locked = if let Some(BalanceLock { amount, .. }) = locks.iter().find(|l| l.id == STAKING_ID) {
+			total_locked = if let Some(BalanceLock { amount, .. }) =
+				locks.iter().find(|l| l.id == STAKING_ID)
+			{
 				amount.saturating_sub(total_unlocked.into()).into()
 			} else {
 				// should never fail to find the lock since we checked whether unstaking is not
@@ -2303,26 +2336,22 @@ pub mod pallet {
 		/// Checks whether a delegator can still delegate in this round, e.g.,
 		/// if they have not delegated MaxDelegationsPerRound many times
 		/// already in this round.
-		fn get_delegation_counter(delegator: &T::AccountId) -> Result<DelegationCounter, DispatchError> {
+		fn get_delegation_counter(
+			delegator: &T::AccountId,
+		) -> Result<DelegationCounter, DispatchError> {
 			let last_delegation = <LastDelegation<T>>::get(delegator);
 			let round = <Round<T>>::get();
 
 			// reset counter if the round advanced since last delegation
-			let counter = if last_delegation.round < round.current {
-				0u32
-			} else {
-				last_delegation.counter
-			};
+			let counter =
+				if last_delegation.round < round.current { 0u32 } else { last_delegation.counter };
 
 			ensure!(
 				counter < T::MaxDelegationsPerRound::get(),
 				Error::<T>::DelegationsPerRoundExceeded
 			);
 
-			Ok(DelegationCounter {
-				round: round.current,
-				counter: counter.saturating_add(1),
-			})
+			Ok(DelegationCounter { round: round.current, counter: counter.saturating_add(1) })
 		}
 
 		/// Calculates the network rewards per block with the current data and
@@ -2344,9 +2373,9 @@ pub mod pallet {
 		/// NetworkRewardRate`
 		fn issue_network_reward() -> NegativeImbalanceOf<T> {
 			// Multiplication with Perquintill cannot overflow
-			let max_col_rewards = InflationConfig::<T>::get().collator.reward_rate.per_block
-				* MaxCollatorCandidateStake::<T>::get()
-				* MaxSelectedCandidates::<T>::get().into();
+			let max_col_rewards = InflationConfig::<T>::get().collator.reward_rate.per_block *
+				MaxCollatorCandidateStake::<T>::get() *
+				MaxSelectedCandidates::<T>::get().into();
 			let network_reward = T::NetworkRewardRate::get() * max_col_rewards;
 
 			T::Currency::issue(network_reward)
@@ -2357,17 +2386,19 @@ pub mod pallet {
 		///
 		/// Depends on the current total issuance and staking reward
 		/// configuration for collators.
-		fn calc_block_rewards_collator(stake: BalanceOf<T>, multiplier: BalanceOf<T>) -> BalanceOf<T> {
+		fn calc_block_rewards_collator(
+			stake: BalanceOf<T>,
+			multiplier: BalanceOf<T>,
+		) -> BalanceOf<T> {
 			let total_issuance = T::Currency::total_issuance();
-			let TotalStake {
-				collators: total_collators,
-				..
-			} = <TotalCollatorStake<T>>::get();
+			let TotalStake { collators: total_collators, .. } = <TotalCollatorStake<T>>::get();
 			let staking_rate = Perquintill::from_rational(total_collators, total_issuance);
 
-			InflationConfig::<T>::get()
-				.collator
-				.compute_reward::<T>(stake, staking_rate, multiplier)
+			InflationConfig::<T>::get().collator.compute_reward::<T>(
+				stake,
+				staking_rate,
+				multiplier,
+			)
 		}
 
 		/// Calculates the delegator staking rewards for `multiplier` many
@@ -2375,17 +2406,19 @@ pub mod pallet {
 		///
 		/// Depends on the current total issuance and staking reward
 		/// configuration for delegators.
-		fn calc_block_rewards_delegator(stake: BalanceOf<T>, multiplier: BalanceOf<T>) -> BalanceOf<T> {
+		fn calc_block_rewards_delegator(
+			stake: BalanceOf<T>,
+			multiplier: BalanceOf<T>,
+		) -> BalanceOf<T> {
 			let total_issuance = T::Currency::total_issuance();
-			let TotalStake {
-				delegators: total_delegators,
-				..
-			} = <TotalCollatorStake<T>>::get();
+			let TotalStake { delegators: total_delegators, .. } = <TotalCollatorStake<T>>::get();
 			let staking_rate = Perquintill::from_rational(total_delegators, total_issuance);
 
-			InflationConfig::<T>::get()
-				.delegator
-				.compute_reward::<T>(stake, staking_rate, multiplier)
+			InflationConfig::<T>::get().delegator.compute_reward::<T>(
+				stake,
+				staking_rate,
+				multiplier,
+			)
 		}
 
 		/// Calculates the staking rewards for a given account address.
@@ -2401,17 +2434,20 @@ pub mod pallet {
 				// scalable, see [increment_delegator_rewards] for details
 				// therefore, we need to query the counter of the collator
 				// (`delegator_stare.owner`)
-				reward_count =
-					reward_count.saturating_add(delegator_state.owner.map(RewardCount::<T>::get).unwrap_or(0u32));
+				reward_count = reward_count.saturating_add(
+					delegator_state.owner.map(RewardCount::<T>::get).unwrap_or(0u32),
+				);
 				let stake = delegator_state.amount;
 				// rewards += stake * (self_count + collator_count) * delegator_reward_rate
-				rewards.saturating_add(Self::calc_block_rewards_delegator(stake, reward_count.into()))
+				rewards
+					.saturating_add(Self::calc_block_rewards_delegator(stake, reward_count.into()))
 			} else if Self::is_active_candidate(acc).is_some() {
 				let stake = CandidatePool::<T>::get(acc)
 					.map(|state| state.stake)
 					.unwrap_or_else(BalanceOf::<T>::zero);
 				// rewards += stake * self_count * collator_reward_rate
-				rewards.saturating_add(Self::calc_block_rewards_collator(stake, reward_count.into()))
+				rewards
+					.saturating_add(Self::calc_block_rewards_collator(stake, reward_count.into()))
 			} else {
 				BalanceOf::<T>::zero()
 			}
@@ -2431,7 +2467,10 @@ pub mod pallet {
 
 			// set reward data for collator
 			Rewards::<T>::mutate(collator, |reward| {
-				*reward = reward.saturating_add(Self::calc_block_rewards_collator(stake, col_reward_count.into()));
+				*reward = reward.saturating_add(Self::calc_block_rewards_collator(
+					stake,
+					col_reward_count.into(),
+				));
 			});
 
 			// set reward data for delegators
@@ -2456,7 +2495,11 @@ pub mod pallet {
 		/// Increment the accumulated rewards of a delegator by consuming their
 		/// current rewards counter. The counter will be reset to the collator
 		/// counter.
-		fn do_inc_delegator_reward(acc: &T::AccountId, stake: BalanceOf<T>, col: &T::AccountId) -> Weight {
+		fn do_inc_delegator_reward(
+			acc: &T::AccountId,
+			stake: BalanceOf<T>,
+			col: &T::AccountId,
+		) -> Weight {
 			// get reward counters
 			let del_reward_count = RewardCount::<T>::get(acc);
 			let col_reward_count = RewardCount::<T>::get(col);
@@ -2465,7 +2508,8 @@ pub mod pallet {
 			// only update if collator has higher reward count
 			if diff > 0 {
 				Rewards::<T>::mutate(acc, |reward| {
-					*reward = reward.saturating_add(Self::calc_block_rewards_delegator(stake, diff.into()));
+					*reward = reward
+						.saturating_add(Self::calc_block_rewards_delegator(stake, diff.into()));
 				});
 				// align with collator counter such that incrementing would
 				// lead to 0 rewards until the collator counter increases
@@ -2486,8 +2530,10 @@ pub mod pallet {
 			let total_issuance = T::Currency::total_issuance();
 			let total_stake = TotalCollatorStake::<T>::get();
 			let inflation_config = InflationConfig::<T>::get();
-			let collator_staking_rate = Perquintill::from_rational(total_stake.collators, total_issuance);
-			let delegator_staking_rate = Perquintill::from_rational(total_stake.delegators, total_issuance);
+			let collator_staking_rate =
+				Perquintill::from_rational(total_stake.collators, total_issuance);
+			let delegator_staking_rate =
+				Perquintill::from_rational(total_stake.delegators, total_issuance);
 			let collator_reward_rate = Perquintill::from_rational(
 				inflation_config.collator.max_rate.deconstruct(),
 				collator_staking_rate.deconstruct(),
@@ -2617,7 +2663,9 @@ pub mod pallet {
 			)
 		}
 
-		fn estimate_next_session_rotation(_now: T::BlockNumber) -> (Option<T::BlockNumber>, Weight) {
+		fn estimate_next_session_rotation(
+			_now: T::BlockNumber,
+		) -> (Option<T::BlockNumber>, Weight) {
 			let round = <Round<T>>::get();
 
 			(

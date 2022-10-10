@@ -317,10 +317,15 @@ fn amplitude_genesis(
 		},
 		balances: amplitude_runtime::BalancesConfig { balances },
 		parachain_info: amplitude_runtime::ParachainInfoConfig { parachain_id: id },
-		collator_selection: amplitude_runtime::CollatorSelectionConfig {
-			invulnerables: invulnerables.clone(),
-			candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
-			..Default::default()
+		parachain_staking: amplitude_runtime::ParachainStakingConfig {
+			stakers,
+			inflation_config,
+			max_candidate_stake: 400_000 * UNIT,
+		},
+		parachain_staking: amplitude_runtime::ParachainStakingConfig {
+			stakers,
+			inflation_config,
+			max_candidate_stake: 400_000 * UNIT,
 		},
 		parachain_staking: amplitude_runtime::ParachainStakingConfig {
 			stakers,

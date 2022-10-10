@@ -67,7 +67,7 @@ construct_runtime!(
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: Weight = 1024;
+	pub const MaximumBlockWeight: Weight = Weight::from_ref_time(1024);
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
 	pub const SS58Prefix: u8 = 42;
@@ -256,7 +256,10 @@ impl ExtBuilder {
 	}
 
 	#[must_use]
-	pub(crate) fn with_delegators(mut self, delegators: Vec<(AccountId, AccountId, Balance)>) -> Self {
+	pub(crate) fn with_delegators(
+		mut self,
+		delegators: Vec<(AccountId, AccountId, Balance)>,
+	) -> Self {
 		self.delegators = delegators;
 		self
 	}
@@ -293,11 +296,9 @@ impl ExtBuilder {
 			.build_storage::<Test>()
 			.expect("Frame system builds valid default genesis config");
 
-		pallet_balances::GenesisConfig::<Test> {
-			balances: self.balances.clone(),
-		}
-		.assimilate_storage(&mut t)
-		.expect("Pallet balances storage can be assimilated");
+		pallet_balances::GenesisConfig::<Test> { balances: self.balances.clone() }
+			.assimilate_storage(&mut t)
+			.expect("Pallet balances storage can be assimilated");
 
 		let mut stakers: Vec<(AccountId, Option<AccountId>, Balance)> = Vec::new();
 		for collator in self.collators.clone() {
@@ -318,15 +319,7 @@ impl ExtBuilder {
 		let session_keys: Vec<_> = self
 			.collators
 			.iter()
-			.map(|(k, _)| {
-				(
-					*k,
-					*k,
-					MockSessionKeys {
-						aura: UintAuthorityId(*k).to_public_key(),
-					},
-				)
-			})
+			.map(|(k, _)| (*k, *k, MockSessionKeys { aura: UintAuthorityId(*k).to_public_key() }))
 			.collect();
 
 		// NOTE: this will initialize the aura authorities
@@ -371,7 +364,9 @@ pub(crate) fn roll_to(n: BlockNumber, authors: Vec<Option<AccountId>>) {
 		}
 		<AllPalletsReversedWithSystemFirst as OnFinalize<u64>>::on_finalize(System::block_number());
 		System::set_block_number(System::block_number() + 1);
-		<AllPalletsReversedWithSystemFirst as OnInitialize<u64>>::on_initialize(System::block_number());
+		<AllPalletsReversedWithSystemFirst as OnInitialize<u64>>::on_initialize(
+			System::block_number(),
+		);
 	}
 }
 
@@ -394,7 +389,8 @@ pub(crate) fn roll_to_claim_rewards(n: BlockNumber, authors: Vec<Option<AccountI
 			assert_ok!(StakePallet::claim_rewards(Origin::signed(*author)));
 
 			// claim rewards for delegators
-			let col_state = StakePallet::candidate_pool(author).expect("Block author must be candidate");
+			let col_state =
+				StakePallet::candidate_pool(author).expect("Block author must be candidate");
 			for delegation in col_state.delegators {
 				// NOTE: cannot use assert_ok! as we sometimes expect zero rewards for
 				// delegators such that the claiming would throw
@@ -403,7 +399,9 @@ pub(crate) fn roll_to_claim_rewards(n: BlockNumber, authors: Vec<Option<AccountI
 		}
 		<AllPalletsReversedWithSystemFirst as OnFinalize<u64>>::on_finalize(System::block_number());
 		System::set_block_number(System::block_number() + 1);
-		<AllPalletsReversedWithSystemFirst as OnInitialize<u64>>::on_initialize(System::block_number());
+		<AllPalletsReversedWithSystemFirst as OnInitialize<u64>>::on_initialize(
+			System::block_number(),
+		);
 	}
 }
 
@@ -415,12 +413,6 @@ pub(crate) fn events() -> Vec<pallet::Event<Test>> {
 	System::events()
 		.into_iter()
 		.map(|r| r.event)
-		.filter_map(|e| {
-			if let Event::StakePallet(inner) = e {
-				Some(inner)
-			} else {
-				None
-			}
-		})
+		.filter_map(|e| if let Event::StakePallet(inner) = e { Some(inner) } else { None })
 		.collect::<Vec<_>>()
 }

@@ -6170,6 +6170,7 @@ dependencies = [
  "log",
  "pallet-multisig",
  "pallet-transaction-payment-rpc",
+ "parachain-staking",
  "parity-scale-codec",
  "polkadot-cli",
  "polkadot-parachain",

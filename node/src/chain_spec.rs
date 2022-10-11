@@ -7,7 +7,10 @@ use sp_core::{
 	crypto::{Ss58Codec, UncheckedInto},
 	sr25519, Pair, Public,
 };
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::{
+	traits::{IdentifyAccount, Verify},
+	Perquintill,
+};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type AmplitudeChainSpec =
@@ -23,6 +26,7 @@ const AMPLITUDE_PARACHAIN_ID: u32 = 2124;
 
 const AMPLITUDE_INITIAL_ISSUANCE: Balance = 200_000_000 * UNIT;
 const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
+const INITIAL_COLLATOR_STAKING: Balance = 10_000 * UNIT;
 
 const INITIAL_AMPLITUDE_SUDO_SIGNATORIES: [&str; 5] = [
 	"6nJwMD3gk36fe6pMRL2UpbwAEjDdjjxdngQGShe753pyAvCT",
@@ -277,14 +281,33 @@ fn amplitude_genesis(
 		.iter()
 		.cloned()
 		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY))
+		.chain(invulnerables.iter().cloned().map(|k| (k, INITIAL_COLLATOR_STAKING)))
 		.collect();
 
 	balances.push((
 		sudo_account.clone(),
-		(AMPLITUDE_INITIAL_ISSUANCE.saturating_sub(
-			INITIAL_ISSUANCE_PER_SIGNATORY.saturating_mul(balances.len().try_into().unwrap()),
-		)),
+		AMPLITUDE_INITIAL_ISSUANCE
+			.saturating_sub(
+				INITIAL_ISSUANCE_PER_SIGNATORY.saturating_mul(balances.len().try_into().unwrap()),
+			)
+			.saturating_sub(
+				INITIAL_COLLATOR_STAKING.saturating_mul(invulnerables.len().try_into().unwrap()),
+			),
 	));
+
+	let stakers: Vec<_> = invulnerables
+		.iter()
+		.cloned()
+		.map(|account_id| (account_id, None, INITIAL_COLLATOR_STAKING))
+		.collect();
+
+	let inflation_config = parachain_staking::InflationInfo::new(
+		amplitude_runtime::BLOCKS_PER_YEAR.into(),
+		Perquintill::from_percent(10),
+		Perquintill::from_percent(11),
+		Perquintill::from_percent(40),
+		Perquintill::from_percent(9),
+	);
 
 	amplitude_runtime::GenesisConfig {
 		system: amplitude_runtime::SystemConfig {
@@ -298,6 +321,11 @@ fn amplitude_genesis(
 			invulnerables: invulnerables.clone(),
 			candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
 			..Default::default()
+		},
+		parachain_staking: amplitude_runtime::ParachainStakingConfig {
+			stakers,
+			inflation_config,
+			max_candidate_stake: 400_000 * UNIT,
 		},
 		session: amplitude_runtime::SessionConfig {
 			keys: invulnerables

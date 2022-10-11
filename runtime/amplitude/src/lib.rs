@@ -6,6 +6,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+mod currency;
 mod weights;
 pub mod xcm_config;
 
@@ -40,16 +41,20 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
-pub use sp_runtime::{traits::AccountIdConversion, MultiAddress, Perbill, Permill};
+pub use sp_runtime::{traits::AccountIdConversion, MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	opaque, AccountId, AuraId, Balance, BlockNumber, Hash, Index, Signature, EXISTENTIAL_DEPOSIT,
-	MICROUNIT, MILLIUNIT, UNIT,
+	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, ReserveIdentifier,
+	Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
+
+use currency::CurrencyId;
+use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::parameter_type_with_key;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -143,10 +148,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 2,
+	spec_version: 3,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 2,
+	transaction_version: 3,
 	state_version: 1,
 };
 
@@ -166,6 +171,7 @@ pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
+pub const BLOCKS_PER_YEAR: BlockNumber = DAYS * 36525 / 100;
 
 /// We assume that ~5% of the block weight is consumed by `on_initialize` handlers. This is
 /// used to limit the maximal weight of a single extrinsic.
@@ -224,6 +230,12 @@ impl Contains<Call> for BaseFilter {
 			Call::Vesting(pallet_vesting::Call::vested_transfer { .. }) => false,
 
 			// These modules are all allowed to be called by transactions:
+			Call::Bounties(_) |
+			Call::ChildBounties(_) |
+			Call::Treasury(_) |
+			Call::Tokens(_) |
+			Call::Currencies(_) |
+			Call::ParachainStaking(_) |
 			Call::Democracy(_) |
 			Call::Council(_) |
 			Call::TechnicalCommittee(_) |
@@ -341,7 +353,7 @@ impl pallet_balances::Config for Runtime {
 	type AccountStore = System;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type MaxReserves = MaxReserves;
-	type ReserveIdentifier = [u8; 8];
+	type ReserveIdentifier = ReserveIdentifier;
 }
 
 parameter_types! {
@@ -608,6 +620,172 @@ impl pallet_preimage::Config for Runtime {
 	type ByteDeposit = PreimageByteDeposit;
 }
 
+parameter_types! {
+	pub const ProposalBond: Permill = Permill::from_percent(5);
+	pub const ProposalBondMinimum: Balance = 10 * UNIT;
+	pub const SpendPeriod: BlockNumber = 7 * DAYS;
+	pub const Burn: Permill = Permill::from_percent(0);
+	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+	pub const MaxApprovals: u32 = 100;
+}
+
+type TreasuryApproveOrigin = EitherOfDiverse<
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
+>;
+
+type TreasuryRejectOrigin = EitherOfDiverse<
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
+>;
+
+impl pallet_treasury::Config for Runtime {
+	type PalletId = TreasuryPalletId;
+	type Currency = Balances;
+	type ApproveOrigin = TreasuryApproveOrigin;
+	type RejectOrigin = TreasuryRejectOrigin;
+	type Event = Event;
+	type OnSlash = Treasury;
+	type ProposalBond = ProposalBond;
+	type ProposalBondMinimum = ProposalBondMinimum;
+	type ProposalBondMaximum = ();
+	type SpendPeriod = SpendPeriod;
+	type Burn = Burn;
+	type BurnDestination = ();
+	type SpendFunds = Bounties;
+	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+	type MaxApprovals = MaxApprovals;
+	type SpendOrigin = frame_support::traits::NeverEnsureOrigin<u128>;
+}
+
+parameter_types! {
+	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
+	pub const BountyValueMinimum: Balance = 5 * UNIT;
+	pub const BountyDepositBase: Balance = 1 * UNIT;
+	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
+	pub const CuratorDepositMin: Balance = 1 * UNIT;
+	pub const CuratorDepositMax: Balance = 100 * UNIT;
+	pub const DataDepositPerByte: Balance = 30 * MILLIUNIT;
+	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
+	pub const BountyUpdatePeriod: BlockNumber = 20 * DAYS;
+	pub const MaximumReasonLength: u32 = 5000;
+}
+
+impl pallet_bounties::Config for Runtime {
+	type Event = Event;
+	type BountyDepositBase = BountyDepositBase;
+	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
+	type BountyUpdatePeriod = BountyUpdatePeriod;
+	type CuratorDepositMultiplier = CuratorDepositMultiplier;
+	type CuratorDepositMin = CuratorDepositMin;
+	type CuratorDepositMax = CuratorDepositMax;
+	type BountyValueMinimum = BountyValueMinimum;
+	type DataDepositPerByte = DataDepositPerByte;
+	type MaximumReasonLength = MaximumReasonLength;
+	type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
+	type ChildBountyManager = ChildBounties;
+}
+
+parameter_types! {
+	pub const ChildBountyValueMinimum: Balance = 1 * UNIT;
+}
+
+impl pallet_child_bounties::Config for Runtime {
+	type Event = Event;
+	type MaxActiveChildBountyCount = ConstU32<10>;
+	type ChildBountyValueMinimum = ChildBountyValueMinimum;
+	type WeightInfo = pallet_child_bounties::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_type_with_key! {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+		NANOUNIT
+	};
+}
+
+pub fn get_all_module_accounts() -> Vec<AccountId> {
+	vec![Treasury::account_id()]
+}
+
+pub struct DustRemovalWhitelist;
+impl Contains<AccountId> for DustRemovalWhitelist {
+	fn contains(a: &AccountId) -> bool {
+		get_all_module_accounts().contains(a)
+	}
+}
+
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = Amount;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_tokens::BurnDust<Runtime>;
+	type MaxLocks = ConstU32<50>;
+	type DustRemovalWhitelist = DustRemovalWhitelist;
+	type MaxReserves = ConstU32<0>;
+	type ReserveIdentifier = ReserveIdentifier;
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
+}
+
+parameter_types! {
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native;
+}
+
+impl orml_currencies::Config for Runtime {
+	type MultiCurrency = Tokens;
+	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+	type GetNativeCurrencyId = NativeCurrencyId;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const MinBlocksPerRound: BlockNumber = HOURS;
+	pub const DefaultBlocksPerRound: BlockNumber = 2 * HOURS;
+	pub const StakeDuration: BlockNumber = 7 * DAYS;
+	pub const ExitQueueDelay: u32 = 2;
+	pub const MinCollators: u32 = 8;
+	pub const MinRequiredCollators: u32 = 4;
+	pub const MaxDelegationsPerRound: u32 = 1;
+	#[derive(Debug, Eq, PartialEq)]
+	pub const MaxDelegatorsPerCollator: u32 = 40;
+	pub const MinCollatorStake: Balance = 10_000 * UNIT;
+	pub const MinDelegatorStake: Balance = 10 * UNIT;
+	#[derive(Debug, Eq, PartialEq)]
+	pub const MaxCollatorCandidates: u32 = 40;
+	pub const MaxUnstakeRequests: u32 = 10;
+	pub const NetworkRewardStart: BlockNumber = BlockNumber::MAX;
+	pub const NetworkRewardRate: Perquintill = Perquintill::from_percent(0);
+}
+
+impl parachain_staking::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type CurrencyBalance = Balance;
+
+	type MinBlocksPerRound = MinBlocksPerRound;
+	type DefaultBlocksPerRound = DefaultBlocksPerRound;
+	type StakeDuration = StakeDuration;
+	type ExitQueueDelay = ExitQueueDelay;
+	type MinCollators = MinCollators;
+	type MinRequiredCollators = MinRequiredCollators;
+	type MaxDelegationsPerRound = MaxDelegationsPerRound;
+	type MaxDelegatorsPerCollator = MaxDelegatorsPerCollator;
+	type MinCollatorStake = MinCollatorStake;
+	type MinCollatorCandidateStake = MinCollatorStake;
+	type MaxTopCandidates = MaxCollatorCandidates;
+	type MinDelegatorStake = MinDelegatorStake;
+	type MaxUnstakeRequests = MaxUnstakeRequests;
+	type NetworkRewardRate = NetworkRewardRate;
+	type NetworkRewardStart = NetworkRewardStart;
+	type NetworkRewardBeneficiary = Treasury;
+	type WeightInfo = parachain_staking::default_weights::SubstrateWeight<Runtime>;
+
+	const BLOCKS_PER_YEAR: BlockNumber = BLOCKS_PER_YEAR;
+}
+
 impl pallet_sudo::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
@@ -675,6 +853,9 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 16,
 		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 17,
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 18,
+		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>} = 19,
+		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 20,
+		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,
 
 		// Collator support. The order of these 4 are important and shall not change.
 		Authorship: pallet_authorship::{Pallet, Call, Storage} = 30,
@@ -682,6 +863,7 @@ construct_runtime!(
 		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 32,
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 33,
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 34,
+		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
 
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
@@ -692,6 +874,8 @@ construct_runtime!(
 		// Amendments
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>} = 50,
 		Utility: pallet_utility::{Pallet, Call, Event} = 51,
+		Currencies: orml_currencies::{Pallet, Call, Storage} = 52,
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 53,
 	}
 );
 

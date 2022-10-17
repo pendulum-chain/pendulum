@@ -46,10 +46,7 @@ fn annual_to_per_block(blocks_per_year: u64, rate: Perquintill) -> Perquintill {
 
 impl RewardRate {
 	pub fn new(blocks_per_year: u64, rate: Perquintill) -> Self {
-		RewardRate {
-			annual: rate,
-			per_block: annual_to_per_block(blocks_per_year, rate),
-		}
+		RewardRate { annual: rate, per_block: annual_to_per_block(blocks_per_year, rate) }
 	}
 }
 
@@ -71,11 +68,12 @@ impl MaxEncodedLen for StakingInfo {
 }
 
 impl StakingInfo {
-	pub fn new(blocks_per_year: u64, max_rate: Perquintill, annual_reward_rate: Perquintill) -> Self {
-		StakingInfo {
-			max_rate,
-			reward_rate: RewardRate::new(blocks_per_year, annual_reward_rate),
-		}
+	pub fn new(
+		blocks_per_year: u64,
+		max_rate: Perquintill,
+		annual_reward_rate: Perquintill,
+	) -> Self {
+		StakingInfo { max_rate, reward_rate: RewardRate::new(blocks_per_year, annual_reward_rate) }
 	}
 
 	/// Calculate newly minted rewards on coinbase, e.g.,
@@ -91,7 +89,10 @@ impl StakingInfo {
 	) -> BalanceOf<T> {
 		// Perquintill automatically bounds to [0, 100]% in case staking_rate is greater
 		// than self.max_rate
-		let reduction = Perquintill::from_rational(self.max_rate.deconstruct(), current_staking_rate.deconstruct());
+		let reduction = Perquintill::from_rational(
+			self.max_rate.deconstruct(),
+			current_staking_rate.deconstruct(),
+		);
 		// multiplication with perbill cannot overflow
 		let reward = (self.reward_rate.per_block * stake).saturating_mul(authors_per_round);
 		reduction * reward
@@ -134,15 +135,15 @@ impl InflationInfo {
 	/// Check whether the annual reward rate is approx. the per_block reward
 	/// rate multiplied with the number of blocks per year
 	pub fn is_valid(&self, blocks_per_year: u64) -> bool {
-		self.collator.reward_rate.annual
-			>= Perquintill::from_parts(
+		self.collator.reward_rate.annual >=
+			Perquintill::from_parts(
 				self.collator
 					.reward_rate
 					.per_block
 					.deconstruct()
 					.saturating_mul(blocks_per_year),
-			) && self.delegator.reward_rate.annual
-			>= Perquintill::from_parts(
+			) && self.delegator.reward_rate.annual >=
+			Perquintill::from_parts(
 				self.delegator
 					.reward_rate
 					.per_block
@@ -173,8 +174,8 @@ mod tests {
 		assert!(almost_equal(
 			rate * 10_000_000_000u128,
 			Perquintill::from_parts(
-				annual_to_per_block(<Test as Config>::BLOCKS_PER_YEAR, rate).deconstruct()
-					* <Test as Config>::BLOCKS_PER_YEAR
+				annual_to_per_block(<Test as Config>::BLOCKS_PER_YEAR, rate).deconstruct() *
+					<Test as Config>::BLOCKS_PER_YEAR
 			) * 10_000_000_000u128,
 			Perbill::from_perthousand(1)
 		));
@@ -189,9 +190,11 @@ mod tests {
 			Perquintill::from_percent(40),
 			Perquintill::from_percent(8),
 		);
-		let reward = inflation
-			.collator
-			.compute_reward::<Test>(MAX_COLLATOR_STAKE, Perquintill::from_percent(9), 2);
+		let reward = inflation.collator.compute_reward::<Test>(
+			MAX_COLLATOR_STAKE,
+			Perquintill::from_percent(9),
+			2,
+		);
 		let expected = <Test as Config>::CurrencyBalance::from(15210282150733u64);
 		assert!(
 			almost_equal(reward, expected, Perbill::from_perthousand(1)),
@@ -250,9 +253,11 @@ mod tests {
 				let authors_per_round = 1u128;
 				let mut current_staking_rate: Perquintill = inflation.collator.max_rate;
 				assert_eq!(
-					inflation
-						.collator
-						.compute_reward::<Test>(0, current_staking_rate, authors_per_round),
+					inflation.collator.compute_reward::<Test>(
+						0,
+						current_staking_rate,
+						authors_per_round
+					),
 					0
 				);
 				current_staking_rate = Perquintill::from_rational(5000u64, 100_000u64);
@@ -267,10 +272,11 @@ mod tests {
 						Perbill::from_percent(1)
 					),
 					"left = {:?}, right = {:?}",
-					inflation
-						.collator
-						.compute_reward::<Test>(5000 * DECIMALS, current_staking_rate, authors_per_round)
-						* years_u128,
+					inflation.collator.compute_reward::<Test>(
+						5000 * DECIMALS,
+						current_staking_rate,
+						authors_per_round
+					) * years_u128,
 					Perquintill::from_percent(15) * 5000 * DECIMALS,
 				);
 				// Check for max_rate which is 10%
@@ -318,9 +324,11 @@ mod tests {
 				// Check delegator reward computation
 				current_staking_rate = inflation.delegator.max_rate;
 				assert_eq!(
-					inflation
-						.delegator
-						.compute_reward::<Test>(0, current_staking_rate, authors_per_round),
+					inflation.delegator.compute_reward::<Test>(
+						0,
+						current_staking_rate,
+						authors_per_round
+					),
 					0
 				);
 				current_staking_rate = Perquintill::from_rational(5000u64, 100_000u64);

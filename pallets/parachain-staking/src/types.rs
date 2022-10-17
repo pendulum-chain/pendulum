@@ -56,10 +56,7 @@ where
 	B: Default + Eq + Ord,
 {
 	fn from(owner: A) -> Self {
-		Stake {
-			owner,
-			amount: B::default(),
-		}
+		Stake { owner, amount: B::default() }
 	}
 }
 
@@ -181,24 +178,22 @@ where
 	}
 
 	pub fn inc_delegator(&mut self, delegator: A, more: B) {
-		if let Ok(i) = self.delegators.linear_search(&Stake::<A, B> {
-			owner: delegator,
-			amount: B::zero(),
-		}) {
-			self.delegators
-				.mutate(|vec| vec[i].amount = vec[i].amount.saturating_add(more));
+		if let Ok(i) = self
+			.delegators
+			.linear_search(&Stake::<A, B> { owner: delegator, amount: B::zero() })
+		{
+			self.delegators.mutate(|vec| vec[i].amount = vec[i].amount.saturating_add(more));
 			self.total = self.total.saturating_add(more);
 			self.delegators.sort_greatest_to_lowest()
 		}
 	}
 
 	pub fn dec_delegator(&mut self, delegator: A, less: B) {
-		if let Ok(i) = self.delegators.linear_search(&Stake::<A, B> {
-			owner: delegator,
-			amount: B::zero(),
-		}) {
-			self.delegators
-				.mutate(|vec| vec[i].amount = vec[i].amount.saturating_sub(less));
+		if let Ok(i) = self
+			.delegators
+			.linear_search(&Stake::<A, B> { owner: delegator, amount: B::zero() })
+		{
+			self.delegators.mutate(|vec| vec[i].amount = vec[i].amount.saturating_sub(less));
 			self.total = self.total.saturating_sub(less);
 			self.delegators.sort_greatest_to_lowest()
 		}
@@ -213,7 +208,16 @@ pub type Delegator<AccountId, Balance> = Stake<Option<AccountId>, Balance>;
 impl<AccountId, Balance> Delegator<AccountId, Balance>
 where
 	AccountId: Eq + Ord + Clone + Debug,
-	Balance: Copy + Add<Output = Balance> + Saturating + PartialOrd + Eq + Ord + Debug + Zero + Default + CheckedSub,
+	Balance: Copy
+		+ Add<Output = Balance>
+		+ Saturating
+		+ PartialOrd
+		+ Eq
+		+ Ord
+		+ Debug
+		+ Zero
+		+ Default
+		+ CheckedSub,
 {
 	/// Adds a new delegation.
 	///
@@ -253,7 +257,11 @@ where
 
 	/// Returns Ok(Some(delegated_amount)) if successful, `Err` if delegation
 	/// was not found and Ok(None) if delegated stake would underflow.
-	pub fn dec_delegation(&mut self, collator: AccountId, less: Balance) -> Result<Option<Balance>, ()> {
+	pub fn dec_delegation(
+		&mut self,
+		collator: AccountId,
+		less: Balance,
+	) -> Result<Option<Balance>, ()> {
 		if self.owner == Some(collator) {
 			Ok(self.amount.checked_sub(&less).map(|new| {
 				self.amount = new;
@@ -332,4 +340,5 @@ pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 pub type CandidateOf<T, S> = Candidate<AccountIdOf<T>, BalanceOf<T>, S>;
 pub type StakeOf<T> = Stake<AccountIdOf<T>, BalanceOf<T>>;
-pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;
+pub type NegativeImbalanceOf<T> =
+	<<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;

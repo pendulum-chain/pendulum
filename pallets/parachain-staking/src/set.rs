@@ -30,7 +30,9 @@ use sp_std::{
 use sp_std::prelude::*;
 
 /// An ordered set backed by `BoundedVec`.
-#[derive(PartialEq, Eq, Encode, Decode, DefaultNoBound, Clone, TypeInfo, MaxEncodedLen, RuntimeDebug)]
+#[derive(
+	PartialEq, Eq, Encode, Decode, DefaultNoBound, Clone, TypeInfo, MaxEncodedLen, RuntimeDebug,
+)]
 #[scale_info(skip_type_params(S))]
 #[codec(mel_bound(T: MaxEncodedLen))]
 pub struct OrderedSet<T, S: Get<u32>>(BoundedVec<T, S>);
@@ -92,7 +94,7 @@ impl<T: Ord + Clone, S: Get<u32>> OrderedSet<T, S> {
 			Err(loc) => {
 				self.0.try_insert(loc, value).map_err(|_| loc)?;
 				Ok(true)
-			}
+			},
 		}
 	}
 
@@ -111,7 +113,7 @@ impl<T: Ord + Clone, S: Get<u32>> OrderedSet<T, S> {
 		// the highest allowed index
 		let highest_index: usize = S::get().saturating_sub(1).saturated_into();
 		if S::get().is_zero() {
-			return Err(true);
+			return Err(true)
 		}
 		match self.try_insert(value.clone()) {
 			Err(loc) if loc <= highest_index => {
@@ -123,7 +125,7 @@ impl<T: Ord + Clone, S: Get<u32>> OrderedSet<T, S> {
 				let old = sp_std::mem::replace(&mut self.0[last_idx], value);
 				self.sort_greatest_to_lowest();
 				Ok(Some(old))
-			}
+			},
 			Err(_) => Err(true),
 			Ok(false) => Err(false),
 			Ok(_) => Ok(None),
@@ -143,12 +145,12 @@ impl<T: Ord + Clone, S: Get<u32>> OrderedSet<T, S> {
 				let old = sp_std::mem::replace(&mut self.0[i], value);
 				self.sort_greatest_to_lowest();
 				Ok(Some(old))
-			}
+			},
 			Err(i) => {
 				// Delegator
 				self.0.try_insert(i, value)?;
 				Ok(None)
-			}
+			},
 		}
 	}
 
@@ -192,7 +194,7 @@ impl<T: Ord + Clone, S: Get<u32>> OrderedSet<T, S> {
 						// insert after current element
 						loc = i;
 						None
-					}
+					},
 					_ => None,
 				}
 			})
@@ -298,10 +300,7 @@ mod tests {
 	fn from() {
 		let v: BoundedVec<i32, Eight> = vec![4, 2, 3, 4, 3, 1].try_into().unwrap();
 		let set: OrderedSet<i32, Eight> = v.into();
-		assert_eq!(
-			set,
-			OrderedSet::<i32, Eight>::from(vec![1, 2, 3, 4].try_into().unwrap())
-		);
+		assert_eq!(set, OrderedSet::<i32, Eight>::from(vec![1, 2, 3, 4].try_into().unwrap()));
 	}
 
 	#[test]
@@ -324,13 +323,11 @@ mod tests {
 
 	#[test]
 	fn remove() {
-		let mut set: OrderedSet<i32, Eight> = OrderedSet::from(vec![1, 2, 3, 4].try_into().unwrap());
+		let mut set: OrderedSet<i32, Eight> =
+			OrderedSet::from(vec![1, 2, 3, 4].try_into().unwrap());
 
 		assert_eq!(set.remove(&5), None);
-		assert_eq!(
-			set,
-			OrderedSet::<i32, Eight>::from(vec![1, 2, 3, 4].try_into().unwrap())
-		);
+		assert_eq!(set, OrderedSet::<i32, Eight>::from(vec![1, 2, 3, 4].try_into().unwrap()));
 
 		assert_eq!(set.remove(&1), Some(1));
 		assert_eq!(set, OrderedSet::<i32, Eight>::from(vec![2, 3, 4].try_into().unwrap()));
@@ -361,7 +358,8 @@ mod tests {
 
 	#[test]
 	fn clear() {
-		let mut set: OrderedSet<i32, Eight> = OrderedSet::from(vec![1, 2, 3, 4].try_into().unwrap());
+		let mut set: OrderedSet<i32, Eight> =
+			OrderedSet::from(vec![1, 2, 3, 4].try_into().unwrap());
 		set.clear();
 		assert_eq!(set, OrderedSet::new());
 	}
@@ -411,38 +409,14 @@ mod tests {
 			.try_into()
 			.unwrap(),
 		);
-		assert_eq!(
-			set.try_insert_replace(StakeOf::<Test> { owner: 1, amount: 0 }),
-			Err(false)
-		);
-		assert_eq!(
-			set.try_insert_replace(StakeOf::<Test> { owner: 7, amount: 100 }),
-			Err(false)
-		);
-		assert_eq!(
-			set.try_insert_replace(StakeOf::<Test> { owner: 7, amount: 50 }),
-			Err(false)
-		);
-		assert_eq!(
-			set.try_insert_replace(StakeOf::<Test> { owner: 8, amount: 50 }),
-			Err(false)
-		);
-		assert_eq!(
-			set.try_insert_replace(StakeOf::<Test> { owner: 2, amount: 100 }),
-			Ok(None)
-		);
-		assert_eq!(
-			set.try_insert_replace(StakeOf::<Test> { owner: 2, amount: 90 }),
-			Err(false)
-		);
-		assert_eq!(
-			set.try_insert_replace(StakeOf::<Test> { owner: 10, amount: 65 }),
-			Ok(None)
-		);
-		assert_eq!(
-			set.try_insert_replace(StakeOf::<Test> { owner: 11, amount: 60 }),
-			Err(true)
-		);
+		assert_eq!(set.try_insert_replace(StakeOf::<Test> { owner: 1, amount: 0 }), Err(false));
+		assert_eq!(set.try_insert_replace(StakeOf::<Test> { owner: 7, amount: 100 }), Err(false));
+		assert_eq!(set.try_insert_replace(StakeOf::<Test> { owner: 7, amount: 50 }), Err(false));
+		assert_eq!(set.try_insert_replace(StakeOf::<Test> { owner: 8, amount: 50 }), Err(false));
+		assert_eq!(set.try_insert_replace(StakeOf::<Test> { owner: 2, amount: 100 }), Ok(None));
+		assert_eq!(set.try_insert_replace(StakeOf::<Test> { owner: 2, amount: 90 }), Err(false));
+		assert_eq!(set.try_insert_replace(StakeOf::<Test> { owner: 10, amount: 65 }), Ok(None));
+		assert_eq!(set.try_insert_replace(StakeOf::<Test> { owner: 11, amount: 60 }), Err(true));
 		assert_eq!(
 			set.try_insert_replace(StakeOf::<Test> { owner: 11, amount: 100 }),
 			Ok(Some(StakeOf::<Test> { owner: 9, amount: 60 }))
@@ -451,7 +425,8 @@ mod tests {
 
 	#[test]
 	fn exceeding_max_size_should_fail() {
-		let mut set: OrderedSet<i32, Five> = OrderedSet::from(vec![1, 2, 3, 4, 5].try_into().unwrap());
+		let mut set: OrderedSet<i32, Five> =
+			OrderedSet::from(vec![1, 2, 3, 4, 5].try_into().unwrap());
 		let inserted = set.try_insert(6);
 
 		assert!(inserted.is_err());

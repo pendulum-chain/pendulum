@@ -118,7 +118,6 @@ dependencies = [
  "pallet-balances",
  "pallet-bounties",
  "pallet-child-bounties",
- "pallet-collator-selection",
  "pallet-collective",
  "pallet-democracy",
  "pallet-multisig",

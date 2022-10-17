@@ -90,7 +90,6 @@ cumulus-pallet-xcmp-queue = {git = "https://github.com/paritytech/cumulus", defa
 cumulus-primitives-core = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.29"}
 cumulus-primitives-timestamp = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.29"}
 cumulus-primitives-utility = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.29"}
-pallet-collator-selection = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.29"}
 parachain-info = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.29"}
 
 [features]
@@ -122,7 +121,6 @@ std = [
   "pallet-balances/std",
   "pallet-bounties/std",
   "pallet-child-bounties/std",
-  "pallet-collator-selection/std",
   "pallet-collective/std",
   "pallet-democracy/std",
   "pallet-preimage/std",
@@ -165,7 +163,6 @@ runtime-benchmarks = [
   "frame-system-benchmarking",
   "frame-system/runtime-benchmarks",
   "pallet-balances/runtime-benchmarks",
-  "pallet-collator-selection/runtime-benchmarks",
   "pallet-timestamp/runtime-benchmarks",
   "pallet-xcm/runtime-benchmarks",
   "sp-runtime/runtime-benchmarks",

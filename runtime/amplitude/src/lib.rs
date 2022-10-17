@@ -711,7 +711,7 @@ parameter_types! {
 	pub const MaxDelegationsPerRound: u32 = 1;
 	#[derive(Debug, Eq, PartialEq)]
 	pub const MaxDelegatorsPerCollator: u32 = 40;
-	pub const MinCollatorStake: Balance = 10_000 * UNIT;
+	pub const MinCollatorStake: Balance = 5_000 * UNIT;
 	pub const MinDelegatorStake: Balance = 10 * UNIT;
 	#[derive(Debug, Eq, PartialEq)]
 	pub const MaxCollatorCandidates: u32 = 40;

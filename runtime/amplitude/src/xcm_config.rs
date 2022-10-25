@@ -45,21 +45,6 @@ pub type LocationToAccountId = (
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
 
-/// Means for transacting assets on this chain.
-// pub type LocalAssetTransactor = CurrencyAdapter<
-// 	// Use this currency:
-// 	Tokens,
-// 	// Use this currency when it is a fungible asset matching the given location or name:
-// 	IsConcrete<RelayLocation>,
-// 	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
-// 	LocationToAccountId,
-// 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
-// 	AccountId,
-// 	// We don't track any teleports.
-// 	(),
-// >;
-
-
 /// CurrencyIdConvert
 /// This type implements conversions from our `CurrencyId` type into `MultiLocation` and vice-versa.
 /// A currency locally is identified with a `CurrencyId` variant but in the network it is identified
@@ -230,17 +215,17 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
-// pub type Barrier = DenyThenTry<
-// 	DenyReserveTransferToRelayChain,
-// 	(
-// 		TakeWeightCredit,
-// 		AllowTopLevelPaidExecutionFrom<Everything>,
-// 		AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
-// 		// ^^^ Parent and its exec plurality get free execution
-// 	),
-// >;
+pub type Barrier = DenyThenTry<
+	DenyReserveTransferToRelayChain,
+	(
+		TakeWeightCredit,
+		AllowTopLevelPaidExecutionFrom<Everything>,
+		AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
+		// ^^^ Parent and its exec plurality get free execution
+	),
+>;
 
-pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
+// pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
@@ -301,19 +286,6 @@ parameter_type_with_key! {
 	};
 }
 
-// Min fee required when transferring asset back to reserve sibling chain
-// which use another asset(e.g Relaychain's asset) as fee
-// parameter_type_with_key! {
-//     pub ParachainMinFee: |location: MultiLocation| -> Option<u128> {
-//         #[allow(clippy::match_ref_pats)] // false positive
-//         match (location.parents, location.first_interior()) {
-//             (1, Some(Parachain(paras::statemint::ID))) => Some(XcmHelper::get_xcm_weight_fee_to_sibling(location.clone()).fee),//default fee should be enough even if not configured
-//             _ => None,
-//         }
-//     };
-// }
-
-
 impl orml_xtokens::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
@@ -333,13 +305,6 @@ impl orml_xtokens::Config for Runtime {
 
 pub struct AccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
-	// fn convert(account: AccountId) -> MultiLocation {
-	// 	X1(AccountId32 {
-	// 		network: NetworkId::Any,
-	// 		id: account.into(),
-	// 	})
-	// 	.into()
-	// }
 	fn convert(account: AccountId) -> MultiLocation {
         MultiLocation {
             parents: 0,
@@ -350,29 +315,6 @@ impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
         }
     }
 }
-
-
-// impl orml_xtokens::Config for Runtime {
-//     type Event = Event;
-//     type Balance = Balance;
-//     type CurrencyId = CurrencyId;
-//     type CurrencyIdConvert = CurrencyIdtoMultiLocation<
-//         CurrencyIdConvert,
-//         AsAssetType<CurrencyId, AssetType, AssetRegistry>,
-//     >;
-//     type AccountIdToMultiLocation = AccountIdToMultiLocation<AccountId>;
-//     type SelfLocation = SelfLocation;
-//     type XcmExecutor = XcmExecutor<XcmConfig>;
-//     type Weigher = FixedWeightBounds<BaseXcmWeight, Call, MaxInstructions>;
-//     type BaseXcmWeight = BaseXcmWeight;
-//     type LocationInverter = LocationInverter<Ancestry>;
-//     type MaxAssetsForTransfer = MaxAssetsForTransfer;
-//     type MinXcmFee = ParachainMinFee;
-//     type MultiLocationsFilter = Everything;
-//     type ReserveProvider = AbsoluteReserveProvider;
-// }
-
-
 
 impl cumulus_pallet_xcm::Config for Runtime {
 	type Event = Event;

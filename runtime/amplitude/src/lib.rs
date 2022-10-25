@@ -6,9 +6,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 mod currency;
 mod weights;
 pub mod xcm_config;

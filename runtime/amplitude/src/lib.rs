@@ -23,8 +23,6 @@ use sp_runtime::{
 	ApplyExtrinsicResult,
 };
 
-use orml_traits::parameter_type_with_key;
-
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -59,6 +57,7 @@ use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
 use currency::CurrencyId;
 use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::parameter_type_with_key;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;

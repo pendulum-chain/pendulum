@@ -293,7 +293,7 @@ fn amplitude_genesis(
 				.to_vec(),
 		},
 		balances: amplitude_runtime::BalancesConfig { balances },
-		orml_tokens: amplitude_runtime::TokensConfig { balances: vec![] },
+		tokens: amplitude_runtime::TokensConfig { balances: vec![] },
 		parachain_info: amplitude_runtime::ParachainInfoConfig { parachain_id: id },
 		collator_selection: amplitude_runtime::CollatorSelectionConfig {
 			invulnerables: invulnerables.clone(),

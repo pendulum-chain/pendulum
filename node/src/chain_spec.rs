@@ -316,7 +316,6 @@ fn amplitude_genesis(
 				.to_vec(),
 		},
 		balances: amplitude_runtime::BalancesConfig { balances },
-		tokens: amplitude_runtime::TokensConfig { balances: vec![] },
 		parachain_info: amplitude_runtime::ParachainInfoConfig { parachain_id: id },
 		parachain_staking: amplitude_runtime::ParachainStakingConfig {
 			stakers,

@@ -664,11 +664,11 @@ impl pallet_child_bounties::Config for Runtime {
 	type WeightInfo = pallet_child_bounties::weights::SubstrateWeight<Runtime>;
 }
 
-// parameter_type_with_key! {
-// 	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-// 		NANOUNIT
-// 	};
-// }
+parameter_type_with_key! {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+		NANOUNIT
+	};
+}
 
 pub fn get_all_module_accounts() -> Vec<AccountId> {
 	vec![Treasury::account_id()]
@@ -835,15 +835,6 @@ impl Default for CurrencyId {
 	fn default() -> Self {
 		CurrencyId::Native
 	}
-}
-
-parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
-		match currency_id {
-			CurrencyId::Native => ExistentialDeposit::get(),
-			_ => 0,
-		}
-	};
 }
 
 parameter_types! {

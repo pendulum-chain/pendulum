@@ -323,6 +323,7 @@ impl cumulus_pallet_xcm::Config for Runtime {
 
 
 /*
+//integration tests.
 use crate::xcm::kusama::test_net::Amplitude;
 #[test]
 fn transfer_ksm_from_relay_chain_to_amplitude() {

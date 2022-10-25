@@ -3,10 +3,14 @@
   "id": "amplitude",
   "chainType": "Live",
   "bootNodes": [
-    "/dns4/penboot-kus-00.pendulumchain.tech/tcp/30335/p2p/12D3KooWK9tH2RBW7eLZ8QU1s522oa5gNLdAqScSEMZdwPpGZ37c",
-    "/dns4/penboot-kus-01.pendulumchain.tech/tcp/30335/p2p/12D3KooWQ4AaE5tS2zLaESQ8i8gxyhzZVAvLez5ANbCKb8enAGPN",
-    "/dns4/pencol-kus-00.pendulumchain.tech/tcp/30335/p2p/12D3KooWMgV8XwABHVdzAU2131Q8aNhPi1S9GmzHLpNJXGU4uwEH",
-    "/dns4/pencol-kus-01.pendulumchain.tech/tcp/30335/p2p/12D3KooWDyN8khdReGiCUgnkxTMrJ87DLJgT6Evd3dSNwagBE7Cb"
+    "/dns4/pencol-kus-00.pendulumchain.tech/tcp/30335/p2p/12D3KooWAiVTi6V8m9DNEqmawmJsgYQiUchb1F7WGWw3zB8M1XEX",
+    "/dns4/pencol-kus-01.pendulumchain.tech/tcp/30335/p2p/12D3KooWCqEpS1S9BDee9d96qpG642kh1WZUSaW5YXenCYx1gNN2",
+    "/dns4/pencol-kus-02.pendulumchain.tech/tcp/30335/p2p/12D3KooWE1SuRaiQSZ2HS28Z1T2YxxZyJceVAX7a5R37eWMeLM9u",
+    "/dns4/pencol-kus-03.pendulumchain.tech/tcp/30335/p2p/12D3KooWNehq1jiJqxFFqbveoFxCbdAUbTBpthwXkD8fSo2gXH8S",
+    "/dns4/pencol-kus-04.pendulumchain.tech/tcp/30335/p2p/12D3KooWSFsvUNv3VNBg2Z49vGcx6DUrqremt9omEV3Hq46qRpMb",
+    "/dns4/pencol-kus-05.pendulumchain.tech/tcp/30335/p2p/12D3KooWBAbNcg5yAkioFVfTabLd99Yp8vcWx1XUsm4KUa8m1BPZ",
+    "/dns4/pencol-kus-06.pendulumchain.tech/tcp/30335/p2p/12D3KooWJNDkW44Tg3J4pW5wWAjZ7ZgY4e4rVCj7uGKXdTxh7FnD",
+    "/dns4/pencol-kus-07.pendulumchain.tech/tcp/30335/p2p/12D3KooWDdBrkDHJ89d6ove3JT2H3v64sdqSaJjTekGtDxSUrhgN"
   ],
   "telemetryEndpoints": null,
   "protocolId": "amplitude",

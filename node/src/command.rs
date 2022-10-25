@@ -22,8 +22,6 @@ use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 use std::net::SocketAddr;
 
-
-
 #[derive(PartialEq, Eq)]
 enum ChainIdentity {
 	Amplitude,

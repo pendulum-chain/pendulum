@@ -52,7 +52,7 @@ use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
-use currency::CurrencyId;
+use currency::{CurrencyId, ForeignCurrencyId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 
@@ -228,6 +228,7 @@ impl Contains<Call> for BaseFilter {
 			Call::Balances(pallet_balances::Call::transfer_keep_alive { .. }) |
 			Call::Vesting(pallet_vesting::Call::vested_transfer { .. }) => false,
 
+			
 			// These modules are all allowed to be called by transactions:
 			Call::Bounties(_) |
 			Call::ChildBounties(_) |
@@ -252,6 +253,7 @@ impl Contains<Call> for BaseFilter {
 			Call::DmpQueue(_) |
 			Call::Utility(_) |
 			Call::Vesting(_) |
+			Call::XTokens(_) |
 			Call::Multisig(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -382,6 +384,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
+	
 }
 
 parameter_types! {
@@ -835,6 +838,7 @@ construct_runtime!(
 		Utility: pallet_utility::{Pallet, Call, Event} = 51,
 		Currencies: orml_currencies::{Pallet, Call, Storage} = 52,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 53,
+		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 54
 	}
 );
 

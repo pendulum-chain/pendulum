@@ -24,6 +24,12 @@ pub enum CurrencyId {
 	XCM(ForeignCurrencyId),
 }
 
+impl Default for CurrencyId {
+	fn default() -> Self {
+		CurrencyId::Native
+	}
+}
+
 #[derive(
 	Encode,
 	Decode,

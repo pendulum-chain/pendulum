@@ -1,5 +1,5 @@
 use super::{
-	AccountId, CurrencyId, Balance, Balances, Tokens, Call, Event, Origin, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
+	AccountId, CurrencyId, ForeignCurrencyId, Balance, Balances, Tokens, Call, Event, Origin, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
 	WeightToFee, XcmpQueue,
 };
 use core::marker::PhantomData;
@@ -54,7 +54,12 @@ pub struct CurrencyIdConvert;
 impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
     fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		match id{
-			CurrencyId::KSM => Some(MultiLocation::parent()),
+			// CurrencyId::KSM => Some(MultiLocation::parent()),
+			CurrencyId::XCM(f) => 
+				match f{
+					ForeignCurrencyId::KSM => Some(MultiLocation::parent()),
+					_ => None,
+				}
 			_ => None,
 		}
 	}
@@ -66,7 +71,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			MultiLocation {
                 parents: 1,
                 interior: Here,
-            } => Some(CurrencyId::KSM),
+            } => Some(CurrencyId::XCM(ForeignCurrencyId::KSM)),
 			_ => None,
 		}
 	}
@@ -92,7 +97,7 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
 		if location == MultiLocation::parent() {
-			return Ok(CurrencyId::KSM);
+			return Ok(CurrencyId::XCM(ForeignCurrencyId::KSM));
 		}
 		Err(location.clone())
 	}

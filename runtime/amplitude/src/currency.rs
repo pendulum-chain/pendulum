@@ -21,8 +21,13 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
 	Native,
-	KSM,
 	XCM(ForeignCurrencyId),
+}
+
+impl Default for CurrencyId {
+	fn default() -> Self {
+		CurrencyId::Native
+	}
 }
 
 #[derive(

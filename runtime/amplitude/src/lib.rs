@@ -52,7 +52,7 @@ use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
-use currency::CurrencyId;
+use currency::{CurrencyId, ForeignCurrencyId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 
@@ -787,12 +787,6 @@ impl pallet_vesting::Config for Runtime {
 	type MinVestedTransfer = MinVestedTransfer;
 	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 	const MAX_VESTING_SCHEDULES: u32 = 10;
-}
-
-impl Default for CurrencyId {
-	fn default() -> Self {
-		CurrencyId::Native
-	}
 }
 
 parameter_types! {

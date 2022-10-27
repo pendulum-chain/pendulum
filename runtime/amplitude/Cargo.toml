@@ -119,6 +119,7 @@ std = [
   "orml-currencies/std",
   "orml-traits/std",
   "orml-tokens/std",
+  "orml-xtokens/std",
   "pallet-aura/std",
   "pallet-authorship/std",
   "pallet-balances/std",
@@ -156,9 +157,7 @@ std = [
   "sp-version/std",
   "xcm-builder/std",
   "xcm-executor/std",
-  "xcm/std",
-  "orml-tokens/std",
-  "orml-xtokens/std"
+  "xcm/std"
 ]
 
 runtime-benchmarks = [

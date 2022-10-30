@@ -232,6 +232,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 
 pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
+
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type Call = Call;

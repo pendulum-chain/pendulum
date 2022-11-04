@@ -24,7 +24,6 @@ const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 const AMPLITUDE_PARACHAIN_ID: u32 = 2124;
 
-const AMPLITUDE_INITIAL_ISSUANCE: Balance = 200_000_000 * UNIT;
 const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
 const INITIAL_COLLATOR_STAKING: Balance = 10_000 * UNIT;
 
@@ -55,7 +54,9 @@ pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pa
 }
 
 /// The extensions for the [`ChainSpec`].
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
+#[derive(
+	Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension,
+)]
 #[serde(deny_unknown_fields)]
 pub struct Extensions {
 	/// The relay chain of the Parachain.
@@ -117,11 +118,6 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
 
-	let sudo_account = pallet_multisig::Pallet::<amplitude_runtime::Runtime>::multi_account_id(
-		&signatories[..],
-		3,
-	);
-
 	AmplitudeChainSpec::from_genesis(
 		// Name
 		"Amplitude",
@@ -133,7 +129,6 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 				// initial collators.
 				invulnerables.clone(),
 				signatories.clone(),
-				sudo_account.clone(),
 				AMPLITUDE_PARACHAIN_ID.into(),
 			)
 		},
@@ -274,26 +269,14 @@ pub fn local_testnet_config() -> DevelopmentChainSpec {
 fn amplitude_genesis(
 	invulnerables: Vec<AccountId>,
 	signatories: Vec<AccountId>,
-	sudo_account: AccountId,
 	id: ParaId,
 ) -> amplitude_runtime::GenesisConfig {
-	let mut balances: Vec<_> = signatories
+	let balances: Vec<_> = signatories
 		.iter()
 		.cloned()
 		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY))
 		.chain(invulnerables.iter().cloned().map(|k| (k, INITIAL_COLLATOR_STAKING)))
 		.collect();
-
-	balances.push((
-		sudo_account.clone(),
-		AMPLITUDE_INITIAL_ISSUANCE
-			.saturating_sub(
-				INITIAL_ISSUANCE_PER_SIGNATORY.saturating_mul(balances.len().try_into().unwrap()),
-			)
-			.saturating_sub(
-				INITIAL_COLLATOR_STAKING.saturating_mul(invulnerables.len().try_into().unwrap()),
-			),
-	));
 
 	let stakers: Vec<_> = invulnerables
 		.iter()
@@ -347,9 +330,8 @@ fn amplitude_genesis(
 			..Default::default()
 		},
 		democracy: Default::default(),
-		sudo: amplitude_runtime::SudoConfig { key: Some(sudo_account) },
 		technical_committee: amplitude_runtime::TechnicalCommitteeConfig {
-			members: signatories.clone(),
+			members: signatories,
 			..Default::default()
 		},
 	}

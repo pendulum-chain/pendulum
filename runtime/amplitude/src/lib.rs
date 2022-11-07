@@ -147,10 +147,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 6,
+	spec_version: 7,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 6,
+	transaction_version: 7,
 	state_version: 1,
 };
 
@@ -223,12 +223,6 @@ pub struct BaseFilter;
 impl Contains<Call> for BaseFilter {
 	fn contains(call: &Call) -> bool {
 		match call {
-			Call::Balances(pallet_balances::Call::transfer { .. }) |
-			Call::Balances(pallet_balances::Call::transfer_all { .. }) |
-			Call::Balances(pallet_balances::Call::transfer_keep_alive { .. }) |
-			Call::Vesting(pallet_vesting::Call::vested_transfer { .. }) => false,
-
-			
 			// These modules are all allowed to be called by transactions:
 			Call::Bounties(_) |
 			Call::ChildBounties(_) |
@@ -247,7 +241,6 @@ impl Contains<Call> for BaseFilter {
 			Call::Authorship(_) |
 			Call::Session(_) |
 			Call::ParachainSystem(_) |
-			Call::Sudo(_) |
 			Call::XcmpQueue(_) |
 			Call::PolkadotXcm(_) |
 			Call::DmpQueue(_) |
@@ -322,7 +315,7 @@ impl pallet_timestamp::Config for Runtime {
 	type Moment = u64;
 	type OnTimestampSet = ();
 	type MinimumPeriod = MinimumPeriod;
-	type WeightInfo = ();
+	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -384,7 +377,6 @@ impl pallet_transaction_payment::Config for Runtime {
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
-	
 }
 
 parameter_types! {
@@ -416,7 +408,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-	type WeightInfo = ();
+	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -449,12 +441,12 @@ impl pallet_aura::Config for Runtime {
 }
 
 parameter_types! {
-	pub const LaunchPeriod: BlockNumber = 4 * DAYS;
-	pub const VotingPeriod: BlockNumber = 4 * DAYS;
+	pub const LaunchPeriod: BlockNumber = 5 * DAYS;
+	pub const VotingPeriod: BlockNumber = 5 * DAYS;
 	pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
-	pub const MinimumDeposit: Balance = 1 * UNIT;
-	pub const EnactmentPeriod: BlockNumber = 4 * DAYS;
-	pub const CooloffPeriod: BlockNumber = 4 * DAYS;
+	pub const MinimumDeposit: Balance = UNIT;
+	pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
+	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
 	pub const MaxProposals: u32 = 100;
 }
 
@@ -568,7 +560,7 @@ impl pallet_scheduler::Config for Runtime {
 
 parameter_types! {
 	pub const PreimageMaxSize: u32 = 4096 * 1024;
-	pub const PreimageBaseDeposit: Balance = 1 * UNIT;
+	pub const PreimageBaseDeposit: Balance = UNIT;
 	// One cent: $10,000 / MB
 	pub const PreimageByteDeposit: Balance = 10 * MILLIUNIT;
 }
@@ -624,9 +616,9 @@ impl pallet_treasury::Config for Runtime {
 parameter_types! {
 	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
 	pub const BountyValueMinimum: Balance = 5 * UNIT;
-	pub const BountyDepositBase: Balance = 1 * UNIT;
+	pub const BountyDepositBase: Balance = UNIT;
 	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
-	pub const CuratorDepositMin: Balance = 1 * UNIT;
+	pub const CuratorDepositMin: Balance = UNIT;
 	pub const CuratorDepositMax: Balance = 100 * UNIT;
 	pub const DataDepositPerByte: Balance = 30 * MILLIUNIT;
 	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
@@ -650,7 +642,7 @@ impl pallet_bounties::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ChildBountyValueMinimum: Balance = 1 * UNIT;
+	pub const ChildBountyValueMinimum: Balance = UNIT;
 }
 
 impl pallet_child_bounties::Config for Runtime {
@@ -749,11 +741,6 @@ impl parachain_staking::Config for Runtime {
 	const BLOCKS_PER_YEAR: BlockNumber = BLOCKS_PER_YEAR;
 }
 
-impl pallet_sudo::Config for Runtime {
-	type Event = Event;
-	type Call = Call;
-}
-
 parameter_types! {
 	pub const DepositBase: Balance = 300 * MILLIUNIT;
 	pub const DepositFactor: Balance = 50 * MILLIUNIT;
@@ -809,7 +796,6 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
 
 		// Governance
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 12,
 		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 13,
 		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Config<T>, Origin<T>, Event<T>} = 14,
 		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Config<T>, Origin<T>,  Event<T>} = 15,

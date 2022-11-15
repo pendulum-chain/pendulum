@@ -86,6 +86,7 @@ impl SubstrateCli for Cli {
 		env!("CARGO_PKG_AUTHORS").into()
 	}
 
+	// Review Comment: This should be https://github.com/pendulum-chain/pendulum/issues/new
 	fn support_url() -> String {
 		"https://github.com/paritytech/cumulus/issues/new".into()
 	}
@@ -127,6 +128,7 @@ impl SubstrateCli for RelayChainCli {
 		env!("CARGO_PKG_AUTHORS").into()
 	}
 
+	// Review Comment: This should be https://github.com/pendulum-chain/pendulum/issues/new
 	fn support_url() -> String {
 		"https://github.com/paritytech/cumulus/issues/new".into()
 	}

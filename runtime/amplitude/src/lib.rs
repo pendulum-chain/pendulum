@@ -10,6 +10,7 @@ mod currency;
 mod weights;
 pub mod xcm_config;
 
+// Review comment: Add here `pub use parachain_staking::InflationInfo;` so that we don't need to add dependency in `node/Cargo.toml`
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};

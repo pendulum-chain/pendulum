@@ -284,6 +284,9 @@ fn amplitude_genesis(
 		.map(|account_id| (account_id, None, INITIAL_COLLATOR_STAKING))
 		.collect();
 
+	// Review Comment: After adding `pub use parachain_staking::InflationInfo;` in `runtime/amplitude/lib.rs`
+	// We can remove `parachain-staking` from `Cargo.toml` and
+	// We can replace `parachain_staking::InflationInfo` with `amplitude_runtime::InflationInfo`
 	let inflation_config = parachain_staking::InflationInfo::new(
 		amplitude_runtime::BLOCKS_PER_YEAR.into(),
 		Perquintill::from_percent(10),

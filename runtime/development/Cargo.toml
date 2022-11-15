@@ -21,8 +21,8 @@ log = { version = "0.4.17", default-features = false }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 # Review Comment: Update to `1.0.144`
 serde = { version = "1.0.137", optional = true, features = ["derive"] }
-# Review Comment: Update to `1.6.1`
-smallvec = "1.9.0"
+# Review Comment: Update to `1.9.0`
+smallvec = "1.6.1"
 
 # Local
 runtime-common = { path = "../common", default-features = false }

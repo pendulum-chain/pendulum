@@ -19,6 +19,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
+use pallet_contracts::{migration, DefaultContractAccessWeight};
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -247,6 +248,7 @@ impl Contains<Call> for BaseFilter {
 			Call::Utility(_) |
 			Call::Vesting(_) |
 			Call::XTokens(_) |
+			Call::Contracts(_) |
 			Call::Multisig(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -776,6 +778,62 @@ impl pallet_vesting::Config for Runtime {
 	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
 
+impl pallet_randomness_collective_flip::Config for Runtime {}
+
+parameter_types! {
+	pub const DepositPerItem: Balance = deposit(1, 0);
+	pub const DepositPerByte: Balance = deposit(0, 1);
+	pub const DeletionQueueDepth: u32 = 128;
+	// The lazy deletion runs inside on_initialize.
+	pub DeletionWeightLimit: Weight = RuntimeBlockWeights::get()
+		.per_class
+		.get(DispatchClass::Normal)
+		.max_total
+		.unwrap_or(RuntimeBlockWeights::get().max_block);
+	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
+}
+
+const fn deposit(items: u32, bytes: u32) -> Balance {
+	(items as Balance * UNIT + (bytes as Balance) * (5 * MILLIUNIT / 100)) / 10
+}
+
+impl pallet_contracts::Config for Runtime {
+	type Time = Timestamp;
+	type Randomness = RandomnessCollectiveFlip;
+	type Currency = Balances;
+	type Event = Event;
+	type Call = Call;
+	/// The safest default is to allow no calls at all.
+	///
+	/// Runtimes should whitelist dispatchables that are allowed to be called from contracts
+	/// and make sure they are stable. Dispatchables exposed to contracts are not allowed to
+	/// change because that would break already deployed contracts. The `Call` structure itself
+	/// is not allowed to change the indices of existing pallets, too.
+	type CallFilter = frame_support::traits::Nothing;
+	type DepositPerItem = DepositPerItem;
+	type DepositPerByte = DepositPerByte;
+	type CallStack = [pallet_contracts::Frame<Self>; 31];
+	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
+	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
+	type ChainExtension = ();
+	type DeletionQueueDepth = DeletionQueueDepth;
+	type DeletionWeightLimit = DeletionWeightLimit;
+	type Schedule = Schedule;
+	type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
+	type ContractAccessWeight = DefaultContractAccessWeight<RuntimeBlockWeights>;
+	// This node is geared towards development and testing of contracts.
+	// We decided to increase the default allowed contract size for this
+	// reason (the default is `128 * 1024`).
+	//
+	// Our reasoning is that the error code `CodeTooLarge` is thrown
+	// if a too-large contract is uploaded. We noticed that it poses
+	// less friction during development when the requirement here is
+	// just more lax.
+	type MaxCodeLen = ConstU32<{ 256 * 1024 }>;
+	type RelaxedMaxCodeLen = ConstU32<{ 512 * 1024 }>;
+	type MaxStorageKeyLen = ConstU32<128>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -824,7 +882,10 @@ construct_runtime!(
 		Utility: pallet_utility::{Pallet, Call, Event} = 51,
 		Currencies: orml_currencies::{Pallet, Call, Storage} = 52,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 53,
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 54
+		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 54,
+
+		Contracts: pallet_contracts,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip,
 	}
 );
 

@@ -94,6 +94,13 @@ parachain-info = {git = "https://github.com/paritytech/cumulus", default-feature
 #orml
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.29" }
 
+# Contracts specific packages
+pallet-contracts = { git = "https://github.com/paritytech/substrate", package = "pallet-contracts", default-features = false, features = ["unstable-interface"], branch = "polkadot-v0.9.29" }
+pallet-contracts-primitives = { git = "https://github.com/paritytech/substrate", package = "pallet-contracts-primitives", default-features = false , branch = "polkadot-v0.9.29" }
+pallet-contracts-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", package = "pallet-contracts-rpc-runtime-api", default-features = false , branch = "polkadot-v0.9.29" }
+
+pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", package = "pallet-randomness-collective-flip", default-features = false , branch = "polkadot-v0.9.29" }
+
 [features]
 default = [
   "std",
@@ -155,7 +162,10 @@ std = [
   "sp-version/std",
   "xcm-builder/std",
   "xcm-executor/std",
-  "xcm/std"
+  "xcm/std",
+  "pallet-contracts/std",
+	"pallet-contracts-primitives/std",
+	"pallet-contracts-rpc-runtime-api/std",
 ]
 
 runtime-benchmarks = [

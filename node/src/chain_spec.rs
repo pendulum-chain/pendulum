@@ -334,6 +334,7 @@ fn amplitude_genesis(
 			members: signatories,
 			..Default::default()
 		},
+		assets: Default::default()
 	}
 }
 

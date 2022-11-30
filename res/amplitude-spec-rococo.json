@@ -1,10 +1,10 @@
 {
-  "name": "Amplitude",
+  "name": "Foucoco (Amplitude Testnet)",
   "id": "amplitude",
   "chainType": "Live",
   "bootNodes": [],
   "telemetryEndpoints": null,
-  "protocolId": "amplitude",
+  "protocolId": "foucoco",
   "properties": {
     "ss58Format": 57,
     "tokenDecimals": 12,

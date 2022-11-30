@@ -1,5 +1,5 @@
 {
-  "name": "Amplitude",
+  "name": "Foucoco (Amplitude Testnet)",
   "id": "amplitude",
   "chainType": "Live",
   "bootNodes": [
@@ -7,7 +7,7 @@
     "/dns4/penboot-roc-01.pendulumchain.tech/tcp/30335/p2p/12D3KooWERQvnnatnnBUqKf4Hsggm13Kfy8YbWZPsqNFfWJzFSyA"
   ],
   "telemetryEndpoints": null,
-  "protocolId": "amplitude",
+  "protocolId": "foucoco",
   "properties": {
     "ss58Format": 57,
     "tokenDecimals": 12,

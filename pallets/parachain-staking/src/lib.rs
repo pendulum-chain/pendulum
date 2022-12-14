@@ -139,7 +139,6 @@ pub mod pallet {
 	pub use crate::inflation::{InflationInfo, RewardRate, StakingInfo};
 
 	use frame_support::{
-		assert_ok,
 		pallet_prelude::*,
 		storage::bounded_btree_map::BoundedBTreeMap,
 		traits::{
@@ -148,6 +147,10 @@ pub mod pallet {
 		},
 		BoundedVec,
 	};
+
+	#[cfg(feature = "std")]
+	use frame_support::assert_ok;
+
 	use frame_system::pallet_prelude::*;
 	use pallet_balances::{BalanceLock, Locks};
 	use pallet_session::ShouldEndSession;
@@ -186,7 +189,7 @@ pub mod pallet {
 		frame_system::Config + pallet_balances::Config + pallet_session::Config
 	{
 		/// Overarching event type
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		// FIXME: Remove Currency and CurrencyBalance types. Problem: Need to restrict
 		// pallet_balances::Config::Balance with From<u64> for usage with Perquintill
 		// multiplication
@@ -695,13 +698,13 @@ pub mod pallet {
 				);
 				if let Some(delegated_val) = opt_val {
 					assert_ok!(<Pallet<T>>::join_delegators(
-						T::Origin::from(Some(actor.clone()).into()),
+						T::RuntimeOrigin::from(Some(actor.clone()).into()),
 						T::Lookup::unlookup(delegated_val.clone()),
 						balance,
 					));
 				} else {
 					assert_ok!(<Pallet<T>>::join_candidates(
-						T::Origin::from(Some(actor.clone()).into()),
+						T::RuntimeOrigin::from(Some(actor.clone()).into()),
 						balance
 					));
 				}

@@ -49,7 +49,7 @@ const INITIAL_AMPLITUDE_VALIDATORS: [&str; 8] = [
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-	TPublic::Pair::from_string(&format!("//{}", seed), None)
+	<TPublic::Pair as Pair>::from_string(&format!("//{}", seed), None)
 		.expect("static values are valid; qed")
 		.public()
 }
@@ -301,7 +301,7 @@ fn amplitude_genesis(
 		.map(|account_id| (account_id, None, INITIAL_COLLATOR_STAKING))
 		.collect();
 
-	let inflation_config = parachain_staking::InflationInfo::new(
+	let inflation_config = amplitude_runtime::InflationInfo::new(
 		amplitude_runtime::BLOCKS_PER_YEAR.into(),
 		Perquintill::from_percent(10),
 		Perquintill::from_percent(11),

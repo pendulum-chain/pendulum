@@ -23,6 +23,7 @@ use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::{
 	cmp::Ordering,
 	convert::TryInto,
+	fmt::Debug,
 	ops::{Index, Range, RangeFull},
 };
 
@@ -37,7 +38,7 @@ use sp_std::prelude::*;
 #[codec(mel_bound(T: MaxEncodedLen))]
 pub struct OrderedSet<T, S: Get<u32>>(BoundedVec<T, S>);
 
-impl<T: Ord + Clone, S: Get<u32>> OrderedSet<T, S> {
+impl<T: Ord + Clone + Debug, S: Get<u32>> OrderedSet<T, S> {
 	/// Create a new empty set.
 	pub fn new() -> Self {
 		Self(BoundedVec::default())
@@ -148,7 +149,7 @@ impl<T: Ord + Clone, S: Get<u32>> OrderedSet<T, S> {
 			},
 			Err(i) => {
 				// Delegator
-				self.0.try_insert(i, value)?;
+				self.0.try_insert(i, value).map_err(|_| ())?;
 				Ok(None)
 			},
 		}
@@ -232,9 +233,9 @@ impl<T: Ord + Clone, S: Get<u32>> OrderedSet<T, S> {
 	}
 }
 
-impl<T: Ord + Clone, S: Get<u32>> From<BoundedVec<T, S>> for OrderedSet<T, S> {
+impl<T: Ord + Clone + Debug, S: Get<u32>> From<BoundedVec<T, S>> for OrderedSet<T, S> {
 	fn from(bv: BoundedVec<T, S>) -> Self {
-		Self::from(bv)
+		OrderedSet::<T, S>::from(bv)
 	}
 }
 

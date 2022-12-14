@@ -76,16 +76,16 @@ parameter_types! {
 impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type DbWeight = ();
-	type Origin = Origin;
+	type RuntimeOrigin = RuntimeOrigin;
 	type Index = u64;
 	type BlockNumber = BlockNumber;
-	type Call = Call;
+	type RuntimeCall = RuntimeCall;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
@@ -108,7 +108,7 @@ impl pallet_balances::Config for Test {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type Balance = Balance;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
@@ -155,7 +155,7 @@ impl OnUnbalanced<NegativeImbalanceOf<Test>> for ToBeneficiary {
 }
 
 impl Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type CurrencyBalance = <Self as pallet_balances::Config>::Balance;
 	type MinBlocksPerRound = MinBlocksPerRound;
@@ -189,7 +189,7 @@ parameter_types! {
 }
 
 impl pallet_session::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ValidatorId = AccountId;
 	type ValidatorIdOf = ConvertInto;
 	type ShouldEndSession = StakePallet;
@@ -332,7 +332,7 @@ impl ExtBuilder {
 
 		if self.blocks_per_round != BLOCKS_PER_ROUND {
 			ext.execute_with(|| {
-				StakePallet::set_blocks_per_round(Origin::root(), self.blocks_per_round)
+				StakePallet::set_blocks_per_round(RuntimeOrigin::root(), self.blocks_per_round)
 					.expect("Ran into issues when setting blocks_per_round");
 			});
 		}
@@ -384,9 +384,9 @@ pub(crate) fn roll_to_claim_rewards(n: BlockNumber, authors: Vec<Option<AccountI
 		if let Some(Some(author)) = authors.get((System::block_number()) as usize) {
 			StakePallet::note_author(*author);
 			// author must convert RewardCount to Rewards before claiming
-			assert_ok!(StakePallet::increment_collator_rewards(Origin::signed(*author)));
+			assert_ok!(StakePallet::increment_collator_rewards(RuntimeOrigin::signed(*author)));
 			// author claims rewards
-			assert_ok!(StakePallet::claim_rewards(Origin::signed(*author)));
+			assert_ok!(StakePallet::claim_rewards(RuntimeOrigin::signed(*author)));
 
 			// claim rewards for delegators
 			let col_state =
@@ -394,7 +394,7 @@ pub(crate) fn roll_to_claim_rewards(n: BlockNumber, authors: Vec<Option<AccountI
 			for delegation in col_state.delegators {
 				// NOTE: cannot use assert_ok! as we sometimes expect zero rewards for
 				// delegators such that the claiming would throw
-				StakePallet::claim_rewards(Origin::signed(delegation.owner));
+				StakePallet::claim_rewards(RuntimeOrigin::signed(delegation.owner));
 			}
 		}
 		<AllPalletsReversedWithSystemFirst as OnFinalize<u64>>::on_finalize(System::block_number());
@@ -405,7 +405,7 @@ pub(crate) fn roll_to_claim_rewards(n: BlockNumber, authors: Vec<Option<AccountI
 	}
 }
 
-pub(crate) fn last_event() -> Event {
+pub(crate) fn last_event() -> RuntimeEvent {
 	System::events().pop().expect("Event expected").event
 }
 
@@ -413,6 +413,6 @@ pub(crate) fn events() -> Vec<pallet::Event<Test>> {
 	System::events()
 		.into_iter()
 		.map(|r| r.event)
-		.filter_map(|e| if let Event::StakePallet(inner) = e { Some(inner) } else { None })
+		.filter_map(|e| if let RuntimeEvent::StakePallet(inner) = e { Some(inner) } else { None })
 		.collect::<Vec<_>>()
 }

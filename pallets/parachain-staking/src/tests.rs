@@ -32,8 +32,8 @@ use sp_runtime::{traits::Zero, Perbill, Permill, Perquintill, SaturatedConversio
 use crate::{
 	mock::{
 		almost_equal, events, last_event, roll_to, roll_to_claim_rewards, AccountId, Balance,
-		Balances, BlockNumber, Event as MetaEvent, ExtBuilder, Origin, Session, StakePallet,
-		System, Test, BLOCKS_PER_ROUND, DECIMALS, TREASURY_ACC,
+		Balances, BlockNumber, ExtBuilder, RuntimeEvent as MetaEvent, RuntimeOrigin as Origin,
+		Session, StakePallet, System, Test, BLOCKS_PER_ROUND, DECIMALS, TREASURY_ACC,
 	},
 	runtime_api::StakingRates,
 	set::OrderedSet,

@@ -1,14 +1,10 @@
-use crate::{
-	chain_spec,
-	cli::{Cli, RelayChainCli, Subcommand},
-	service::{new_partial, AmplitudeRuntimeExecutor, DevelopmentRuntimeExecutor},
-};
-use amplitude_runtime::RuntimeApi;
+use std::net::SocketAddr;
+
 use codec::Encode;
 use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
-use log::info;
+use log::{info, warn};
 use runtime_common::opaque::Block;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
@@ -20,12 +16,16 @@ use sc_service::{
 };
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
-use std::net::SocketAddr;
+
+use crate::{
+	chain_spec,
+	cli::{Cli, RelayChainCli, Subcommand},
+	service::{new_partial, AmplitudeRuntimeExecutor, DevelopmentRuntimeExecutor},
+};
 
 #[derive(PartialEq, Eq)]
 enum ChainIdentity {
 	Amplitude,
-	// Pendulum,
 	Development,
 }
 
@@ -49,7 +49,7 @@ impl<T: sc_service::ChainSpec + 'static> IdentifyChain for T {
 	}
 }
 
-fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
+fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 	match id {
 		"amplitude" => Ok(Box::new(chain_spec::amplitude_config())),
 		"dev" => Ok(Box::new(chain_spec::development_config())),
@@ -75,11 +75,13 @@ impl SubstrateCli for Cli {
 	}
 
 	fn description() -> String {
-		"Pendulum Collator\n\nThe command-line arguments provided first will be \
+		format!(
+			"Pendulum Collator\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
-		pendulum-collator <parachain-args> -- <relay-chain-args>"
-			.into()
+		{} <parachain-args> -- <relay-chain-args>",
+			Self::executable_name()
+		)
 	}
 
 	fn author() -> String {
@@ -87,11 +89,11 @@ impl SubstrateCli for Cli {
 	}
 
 	fn support_url() -> String {
-		"https://github.com/paritytech/cumulus/issues/new".into()
+		"https://github.com/pendulum-chain/pendulum/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
-		2020
+		2022
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
@@ -116,11 +118,13 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn description() -> String {
-		"Pendulum Collatore\n\nThe command-line arguments provided first will be \
+		format!(
+			"Pendulum Collator\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
-		pendulum-collator <parachain-args> -- <relay-chain-args>"
-			.into()
+		{} <parachain-args> -- <relay-chain-args>",
+			Self::executable_name()
+		)
 	}
 
 	fn author() -> String {
@@ -128,11 +132,11 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn support_url() -> String {
-		"https://github.com/paritytech/cumulus/issues/new".into()
+		"https://github.com/pendulum-chain/pendulum/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
-		2020
+		2022
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
@@ -150,20 +154,14 @@ macro_rules! construct_async_run {
 		match runner.config().chain_spec.identify() {
 			ChainIdentity::Amplitude => {
 				runner.async_run(|$config| {
-					let $components = new_partial::<amplitude_runtime::RuntimeApi, AmplitudeRuntimeExecutor, _>(
-						&$config,
-						crate::service::amplitude_parachain_build_import_queue,
-					)?;
+					let $components = new_partial::<amplitude_runtime::RuntimeApi, AmplitudeRuntimeExecutor>(&$config)?;
 					let task_manager = $components.task_manager;
 					{ $( $code )* }.map(|v| (v, task_manager))
 				})
 			},
 			ChainIdentity::Development => {
 				runner.async_run(|$config| {
-					let $components = new_partial::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor, _>(
-						&$config,
-						crate::service::development_parachain_build_import_queue,
-					)?;
+					let $components = new_partial::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor>(&$config)?;
 					let task_manager = $components.task_manager;
 					{ $( $code )* }.map(|v| (v, task_manager))
 				})
@@ -179,14 +177,7 @@ pub fn run() -> Result<()> {
 	match &cli.subcommand {
 		Some(Subcommand::BuildSpec(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.sync_run(|config| {
-				if config.chain_spec.identify() == ChainIdentity::Amplitude {
-					sp_core::crypto::set_default_ss58_version(
-						amplitude_runtime::SS58Prefix::get().into(),
-					);
-				}
-				cmd.run(config.chain_spec, config.network)
-			})
+			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
 		},
 		Some(Subcommand::CheckBlock(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
@@ -208,6 +199,11 @@ pub fn run() -> Result<()> {
 				Ok(cmd.run(components.client, components.import_queue))
 			})
 		},
+		Some(Subcommand::Revert(cmd)) => {
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, components.backend, None))
+			})
+		},
 		Some(Subcommand::PurgeChain(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 
@@ -225,11 +221,6 @@ pub fn run() -> Result<()> {
 				.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
 				cmd.run(config, polkadot_config)
-			})
-		},
-		Some(Subcommand::Revert(cmd)) => {
-			construct_async_run!(|components, cli, cmd, config| {
-				Ok(cmd.run(components.client, components.backend, None))
 			})
 		},
 		Some(Subcommand::ExportGenesisState(cmd)) => {
@@ -259,18 +250,33 @@ pub fn run() -> Result<()> {
 					You can enable it with `--features runtime-benchmarks`."
 							.into())
 					},
-				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
-					let partials = new_partial::<RuntimeApi, AmplitudeRuntimeExecutor, _>(
-						&config,
-						crate::service::amplitude_parachain_build_import_queue,
-					)?;
-					cmd.run(partials.client)
-				}),
+				BenchmarkCmd::Block(cmd) => match runner.config().chain_spec.identify() {
+					ChainIdentity::Amplitude => runner.sync_run(|config| {
+						let partials = new_partial::<
+							amplitude_runtime::RuntimeApi,
+							AmplitudeRuntimeExecutor,
+						>(&config)?;
+						cmd.run(partials.client)
+					}),
+					ChainIdentity::Development => runner.sync_run(|config| {
+						let partials = new_partial::<
+							development_runtime::RuntimeApi,
+							DevelopmentRuntimeExecutor,
+						>(&config)?;
+						cmd.run(partials.client)
+					}),
+				},
+				#[cfg(not(feature = "runtime-benchmarks"))]
+				BenchmarkCmd::Storage(_) =>
+					return Err(sc_cli::Error::Input(
+						"Compile with --features=runtime-benchmarks \
+						to enable storage benchmarks."
+							.into(),
+					)
+					.into()),
+				#[cfg(feature = "runtime-benchmarks")]
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
-					let partials = new_partial::<RuntimeApi, AmplitudeRuntimeExecutor, _>(
-						&config,
-						crate::service::amplitude_parachain_build_import_queue,
-					)?;
+					let partials = new_partial(&config)?;
 					let db = partials.backend.expose_db();
 					let storage = partials.backend.expose_storage();
 
@@ -349,12 +355,16 @@ pub fn run() -> Result<()> {
 				info!("Parachain genesis state: {}", genesis_state);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
+				if collator_options.relay_chain_rpc_url.is_some() && cli.relay_chain_args.len() > 0 {
+					warn!("Detected relay chain node arguments together with --relay-chain-rpc-url. This command starts a minimal Polkadot node that only uses a network-related subset of all relay chain CLI options.");
+				}
+
 				match config.chain_spec.identify() {
 					ChainIdentity::Amplitude => {
 						sp_core::crypto::set_default_ss58_version(
 							amplitude_runtime::SS58Prefix::get().into(),
 						);
-						crate::service::start_amplitude_parachain_node(
+						crate::service::start_parachain_node::<amplitude_runtime::RuntimeApi, AmplitudeRuntimeExecutor>(
 							config,
 							polkadot_config,
 							collator_options,
@@ -366,7 +376,7 @@ pub fn run() -> Result<()> {
 						.map_err(Into::into)
 					},
 
-					ChainIdentity::Development => crate::service::start_development_parachain_node(
+					ChainIdentity::Development => crate::service::start_parachain_node::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor>(
 						config,
 						polkadot_config,
 						collator_options,
@@ -469,6 +479,10 @@ impl CliConfiguration<Self> for RelayChainCli {
 
 	fn transaction_pool(&self, is_dev: bool) -> Result<sc_service::config::TransactionPoolOptions> {
 		self.base.base.transaction_pool(is_dev)
+	}
+
+	fn trie_cache_maximum_size(&self) -> Result<Option<usize>> {
+		self.base.base.trie_cache_maximum_size()
 	}
 
 	fn rpc_methods(&self) -> Result<sc_service::config::RpcMethods> {

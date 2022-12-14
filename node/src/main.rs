@@ -1,4 +1,4 @@
-//! Collator Node CLI
+//! Substrate Parachain Node Template CLI
 
 #![warn(missing_docs)]
 

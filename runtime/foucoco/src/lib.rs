@@ -730,6 +730,7 @@ parameter_types! {
 	pub const MaxUnstakeRequests: u32 = 10;
 	pub const NetworkRewardStart: BlockNumber = BlockNumber::MAX;
 	pub const NetworkRewardRate: Perquintill = Perquintill::from_percent(0);
+	pub const CollatorRewardRateDecay: Perquintill = Perquintill::from_parts(936_879_853_200_000_000u64);
 }
 
 impl parachain_staking::Config for Runtime {
@@ -753,6 +754,7 @@ impl parachain_staking::Config for Runtime {
 	type NetworkRewardRate = NetworkRewardRate;
 	type NetworkRewardStart = NetworkRewardStart;
 	type NetworkRewardBeneficiary = Treasury;
+	type CollatorRewardRateDecay = CollatorRewardRateDecay;
 	type WeightInfo = parachain_staking::default_weights::SubstrateWeight<Runtime>;
 
 	const BLOCKS_PER_YEAR: BlockNumber = BLOCKS_PER_YEAR;

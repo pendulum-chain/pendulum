@@ -144,6 +144,7 @@ parameter_types! {
 	pub const MaxUnstakeRequests: u32 = 6;
 	pub const NetworkRewardRate: Perquintill = Perquintill::from_percent(10);
 	pub const NetworkRewardStart: BlockNumber = 5 * 5 * 60 * 24 * 36525 / 100;
+	pub const CollatorRewardRateDecay: Perquintill = Perquintill::from_percent(98);
 }
 
 pub struct ToBeneficiary();
@@ -174,6 +175,7 @@ impl Config for Test {
 	type NetworkRewardRate = NetworkRewardRate;
 	type NetworkRewardStart = NetworkRewardStart;
 	type NetworkRewardBeneficiary = ToBeneficiary;
+	type CollatorRewardRateDecay = CollatorRewardRateDecay;
 	type WeightInfo = ();
 	const BLOCKS_PER_YEAR: Self::BlockNumber = 5 * 60 * 24 * 36525 / 100;
 }

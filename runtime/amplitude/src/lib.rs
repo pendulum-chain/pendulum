@@ -32,8 +32,8 @@ use frame_support::{
 	dispatch::DispatchClass,
 	parameter_types,
 	traits::{
-		ConstU16, ConstU32, Contains, Currency, EitherOfDiverse, EqualPrivilegeOnly, Imbalance,
-		OnUnbalanced, WithdrawReasons,
+		ConstU32, Contains, Currency, EitherOfDiverse, EqualPrivilegeOnly, Imbalance, OnUnbalanced,
+		WithdrawReasons,
 	},
 	weights::{
 		constants::WEIGHT_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
@@ -776,7 +776,7 @@ impl pallet_multisig::Config for Runtime {
 	type Currency = Balances;
 	type DepositBase = DepositBase;
 	type DepositFactor = DepositFactor;
-	type MaxSignatories = ConstU16<20>;
+	type MaxSignatories = ConstU32<20>;
 	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
 }
 

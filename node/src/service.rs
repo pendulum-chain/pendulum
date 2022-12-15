@@ -9,7 +9,9 @@ use runtime_common::{opaque::Block, AccountId, Balance, Hash, Index as Nonce};
 
 // Cumulus Imports
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
-use cumulus_client_consensus_common::ParachainConsensus;
+use cumulus_client_consensus_common::{
+	ParachainBlockImport as TParachainBlockImport, ParachainConsensus,
+};
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
@@ -33,7 +35,7 @@ use substrate_prometheus_endpoint::Registry;
 
 use polkadot_service::CollatorPair;
 
-/// Native executor instance.
+/// Native executor type.
 pub struct AmplitudeRuntimeExecutor;
 
 impl sc_executor::NativeExecutionDispatch for AmplitudeRuntimeExecutor {
@@ -82,7 +84,13 @@ pub fn new_partial<RuntimeApi, Executor>(
 			Block,
 			TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
 		>,
-		(Option<Telemetry>, Option<TelemetryWorkerHandle>),
+		(
+			TParachainBlockImport<
+				Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+			>,
+			Option<Telemetry>,
+			Option<TelemetryWorkerHandle>,
+		),
 	>,
 	sc_service::Error,
 >
@@ -102,43 +110,9 @@ where
 		+ cumulus_primitives_core::CollectCollationInfo<Block>
 		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
 		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
-		+ AuraApi<Block, AuthorityId>
 		+ AuraApi<Block, AuthorityId>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
-	/* where
-	RuntimeApi: sp_api::ConstructRuntimeApi<
-		sp_runtime::generic::Block<
-			sp_runtime::generic::Header<u32, polkadot_service::BlakeTwo256>,
-			sp_runtime::OpaqueExtrinsic,
-		>,
-		sc_service::client::client::Client<
-			sc_client_db::Backend<
-				sp_runtime::generic::Block<
-					sp_runtime::generic::Header<u32, polkadot_service::BlakeTwo256>,
-					sp_runtime::OpaqueExtrinsic,
-				>,
-			>,
-			sc_service::LocalCallExecutor<
-				sp_runtime::generic::Block<
-					sp_runtime::generic::Header<u32, polkadot_service::BlakeTwo256>,
-					sp_runtime::OpaqueExtrinsic,
-				>,
-				sc_client_db::Backend<
-					sp_runtime::generic::Block<
-						sp_runtime::generic::Header<u32, polkadot_service::BlakeTwo256>,
-						sp_runtime::OpaqueExtrinsic,
-					>,
-				>,
-				sc_executor::NativeElseWasmExecutor<Executor>,
-			>,
-			sp_runtime::generic::Block<
-				sp_runtime::generic::Header<u32, polkadot_service::BlakeTwo256>,
-				sp_runtime::OpaqueExtrinsic,
-			>,
-			RuntimeApi,
-		>,
-	>, */
 {
 	let telemetry = config
 		.telemetry_endpoints
@@ -181,8 +155,13 @@ where
 		client.clone(),
 	);
 
+	let block_import = TParachainBlockImport::<
+		Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+	>::new(client.clone());
+
 	let import_queue = build_import_queue(
 		client.clone(),
+		block_import.clone(),
 		config,
 		telemetry.as_ref().map(|telemetry| telemetry.handle()),
 		&task_manager,
@@ -196,7 +175,7 @@ where
 		task_manager,
 		transaction_pool,
 		select_chain: (),
-		other: (telemetry, telemetry_worker_handle),
+		other: (block_import, telemetry, telemetry_worker_handle),
 	})
 }
 
@@ -257,8 +236,8 @@ where
 {
 	let parachain_config = prepare_node_config(parachain_config);
 
-	let params = new_partial::<RuntimeApi, Executor>(&parachain_config)?;
-	let (mut telemetry, telemetry_worker_handle) = params.other;
+	let params = new_partial(&parachain_config)?;
+	let (block_import, mut telemetry, telemetry_worker_handle) = params.other;
 
 	let client = params.client.clone();
 	let backend = params.backend.clone();
@@ -313,15 +292,6 @@ where
 		})
 	};
 
-	if parachain_config.offchain_worker.enabled {
-		sc_service::build_offchain_workers(
-			&parachain_config,
-			task_manager.spawn_handle(),
-			client.clone(),
-			network.clone(),
-		);
-	}
-
 	sc_service::spawn_tasks(sc_service::SpawnTasksParams {
 		rpc_builder,
 		client: client.clone(),
@@ -359,6 +329,7 @@ where
 	if validator {
 		let parachain_consensus = build_consensus(
 			client.clone(),
+			block_import,
 			prometheus_registry.as_ref(),
 			telemetry.as_ref().map(|t| t.handle()),
 			&task_manager,
@@ -408,6 +379,9 @@ where
 /// Build the import queue for the parachain runtime.
 fn build_import_queue<RuntimeApi, Executor>(
 	client: Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+	block_import: TParachainBlockImport<
+		Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+	>,
 	config: &Configuration,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
@@ -448,8 +422,8 @@ where
 		_,
 		_,
 	>(cumulus_client_consensus_aura::ImportQueueParams {
-		block_import: client.clone(),
-		client: client.clone(),
+		block_import,
+		client,
 		create_inherent_data_providers: move |_, _| async move {
 			let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
@@ -470,6 +444,9 @@ where
 
 fn build_consensus<RuntimeApi, Executor>(
 	client: Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+	block_import: TParachainBlockImport<
+		Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+	>,
 	prometheus_registry: Option<&Registry>,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
@@ -544,7 +521,7 @@ where
 				Ok((slot, timestamp, parachain_inherent))
 			}
 		},
-		block_import: client.clone(),
+		block_import,
 		para_client: client,
 		backoff_authoring_blocks: Option::<()>::None,
 		sync_oracle,

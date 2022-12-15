@@ -2617,7 +2617,7 @@ fn adjust_reward_rates() {
 			let inflation_1 = InflationInfo::new(
 				<Test as Config>::BLOCKS_PER_YEAR,
 				inflation_0.collator.max_rate,
-				Perquintill::from_parts(93687985320000000),
+				Perquintill::from_parts(98000000000000000),
 				inflation_0.delegator.max_rate,
 				Perquintill::from_percent(7),
 			);
@@ -2643,7 +2643,7 @@ fn adjust_reward_rates() {
 			let inflation_2 = InflationInfo::new(
 				<Test as Config>::BLOCKS_PER_YEAR,
 				inflation_0.collator.max_rate,
-				Perquintill::from_parts(87774385933205355),
+				Perquintill::from_parts(96040000000000000),
 				inflation_0.delegator.max_rate,
 				Perquintill::zero(),
 			);

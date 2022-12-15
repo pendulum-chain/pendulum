@@ -54,7 +54,7 @@ const INITIAL_AMPLITUDE_VALIDATORS: [&str; 8] = [
 
 const FOUCOCO_PARACHAIN_ID: u32 = 2124;
 
-const PENDULUM_PARACHAIN_ID: u32 = 2094;
+const PENDULUM_PARACHAIN_ID: u32 = 2000; // 2094; TODO
 const PENDULUM_INITIAL_ISSUANCE: Balance = 160_000_000 * UNIT;
 
 // TODO
@@ -278,7 +278,9 @@ pub fn pendulum_config() -> PendulumChainSpec {
 		move || {
 			pendulum_genesis(
 				// initial collators.
-				invulnerables.clone(),
+				// TODO
+				// invulnerables.clone(),
+				vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
 				signatories.clone(),
 				sudo_account.clone(),
 				PENDULUM_PARACHAIN_ID.into(),

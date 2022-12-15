@@ -1,4 +1,4 @@
-//! Substrate Parachain Node Template CLI
+//! Pendulum/Amplitude Collator CLI
 
 #![warn(missing_docs)]
 

@@ -6,5 +6,7 @@ members = [
 	"node",
 	"runtime/common",
 	"runtime/amplitude",
+	"runtime/foucoco",
+	"runtime/pendulum",
 	"runtime/development",
 ]

@@ -16,6 +16,12 @@ use sp_runtime::{
 pub type AmplitudeChainSpec =
 	sc_service::GenericChainSpec<amplitude_runtime::GenesisConfig, Extensions>;
 
+pub type FoucocoChainSpec =
+	sc_service::GenericChainSpec<foucoco_runtime::GenesisConfig, Extensions>;
+
+pub type PendulumChainSpec =
+	sc_service::GenericChainSpec<pendulum_runtime::GenesisConfig, Extensions>;
+
 pub type DevelopmentChainSpec =
 	sc_service::GenericChainSpec<development_runtime::GenesisConfig, Extensions>;
 
@@ -23,7 +29,6 @@ pub type DevelopmentChainSpec =
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 const AMPLITUDE_PARACHAIN_ID: u32 = 2124;
-
 const AMPLITUDE_INITIAL_ISSUANCE: Balance = 200_000_000 * UNIT;
 const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
 const INITIAL_COLLATOR_STAKING: Balance = 10_000 * UNIT;
@@ -37,6 +42,32 @@ const INITIAL_AMPLITUDE_SUDO_SIGNATORIES: [&str; 5] = [
 ];
 
 const INITIAL_AMPLITUDE_VALIDATORS: [&str; 8] = [
+	"6mTATq7Ug9RPk4s8aMv5H7WVZ7RvwrJ1JitbYMXWPhanzqiv",
+	"6n8WiWqjEB8nCNRo5mxXc89FqhuMd2dgXNSrzuPxoZSnatnL",
+	"6ic56zZmjqo746yifWzcNxxzxLe3pRo8WNitotniUQvgKnyU",
+	"6gvFApEyYj4EavJP26mwbVu7YxFBYZ9gaJFB7gv5gA6vNfze",
+	"6mz3ymVAsfHotEhHphVRvLLBhMZ2frnwbuvW5QZiMRwJghxE",
+	"6mpD3zcHcUBkxCjTsGg2tMTfmQZdXLVYZnk4UkN2XAUTLkRe",
+	"6mGcZntk59RK2JfxfdmprgDJeByVUgaffMQYkp1ZeoEKeBJA",
+	"6jq7obxC7AxhWeJNzopwYidKNNe48cLrbGSgB2zs2SuRTWGA",
+];
+
+const FOUCOCO_PARACHAIN_ID: u32 = 2124;
+
+const PENDULUM_PARACHAIN_ID: u32 = 2124;
+const PENDULUM_INITIAL_ISSUANCE: Balance = 160_000_000 * UNIT;
+
+// TODO
+const INITIAL_PENDULUM_SUDO_SIGNATORIES: [&str; 5] = [
+	"6nJwMD3gk36fe6pMRL2UpbwAEjDdjjxdngQGShe753pyAvCT",
+	"6i4xDEE1Q2Bv8tnJtgD4jse4YTAzzCwCJVUehRQ93hCqKp8f",
+	"6n62KZWvmZHgeyEXTvQFmoHRMqjKfFWvQVsApkePekuNfek5",
+	"6kwxQBRKMadrY9Lq3K8gZXkw1UkjacpqYhcqvX3AqmN9DofF",
+	"6kKHwcpCVC18KepwvdMSME8Q7ZTNr1RoRUrFDH9AdAmhL3Pt",
+];
+
+// TODO
+const INITIAL_PENDULUM_COLLATORS: [&str; 8] = [
 	"6mTATq7Ug9RPk4s8aMv5H7WVZ7RvwrJ1JitbYMXWPhanzqiv",
 	"6n8WiWqjEB8nCNRo5mxXc89FqhuMd2dgXNSrzuPxoZSnatnL",
 	"6ic56zZmjqo746yifWzcNxxzxLe3pRo8WNitotniUQvgKnyU",
@@ -95,6 +126,14 @@ pub fn get_amplitude_session_keys(keys: AuraId) -> amplitude_runtime::SessionKey
 	amplitude_runtime::SessionKeys { aura: keys }
 }
 
+pub fn get_foucoco_session_keys(keys: AuraId) -> foucoco_runtime::SessionKeys {
+	foucoco_runtime::SessionKeys { aura: keys }
+}
+
+pub fn get_pendulum_session_keys(keys: AuraId) -> pendulum_runtime::SessionKeys {
+	pendulum_runtime::SessionKeys { aura: keys }
+}
+
 pub fn get_development_session_keys(keys: AuraId) -> development_runtime::SessionKeys {
 	development_runtime::SessionKeys { aura: keys }
 }
@@ -151,6 +190,114 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 		Extensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
 			para_id: AMPLITUDE_PARACHAIN_ID,
+		},
+	)
+}
+
+pub fn foucoco_config() -> FoucocoChainSpec {
+	// Give your base currency a unit name and decimal places
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "AMPE".into());
+	properties.insert("tokenDecimals".into(), 12u32.into());
+	properties.insert("ss58Format".into(), foucoco_runtime::SS58Prefix::get().into());
+
+	let mut signatories: Vec<_> = INITIAL_AMPLITUDE_SUDO_SIGNATORIES
+		.iter()
+		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
+		.collect();
+	signatories.sort();
+
+	let invulnerables: Vec<_> = INITIAL_AMPLITUDE_VALIDATORS
+		.iter()
+		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
+		.collect();
+
+	let sudo_account =
+		pallet_multisig::Pallet::<foucoco_runtime::Runtime>::multi_account_id(&signatories[..], 3);
+
+	FoucocoChainSpec::from_genesis(
+		// Name
+		"Foucoco",
+		// ID
+		"foucoco",
+		ChainType::Live,
+		move || {
+			foucoco_genesis(
+				// initial collators.
+				invulnerables.clone(),
+				signatories.clone(),
+				sudo_account.clone(),
+				FOUCOCO_PARACHAIN_ID.into(),
+			)
+		},
+		// Bootnodes
+		Vec::new(),
+		// Telemetry
+		None,
+		// Protocol ID
+		Some("foucoco"),
+		// Fork ID
+		None,
+		// Properties
+		Some(properties),
+		// Extensions
+		Extensions {
+			relay_chain: "kusama".into(), // You MUST set this to the correct network!
+			para_id: FOUCOCO_PARACHAIN_ID,
+		},
+	)
+}
+
+pub fn pendulum_config() -> PendulumChainSpec {
+	// Give your base currency a unit name and decimal places
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "PEN".into());
+	properties.insert("tokenDecimals".into(), 12u32.into());
+	properties.insert("ss58Format".into(), pendulum_runtime::SS58Prefix::get().into());
+
+	let mut signatories: Vec<_> = INITIAL_PENDULUM_SUDO_SIGNATORIES
+		.iter()
+		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
+		.collect();
+	signatories.sort();
+
+	let invulnerables: Vec<_> = INITIAL_PENDULUM_COLLATORS
+		.iter()
+		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
+		.collect();
+
+	let sudo_account =
+		pallet_multisig::Pallet::<pendulum_runtime::Runtime>::multi_account_id(&signatories[..], 3);
+
+	PendulumChainSpec::from_genesis(
+		// Name
+		"Pendulum",
+		// ID
+		"pendulum",
+		ChainType::Live,
+		move || {
+			pendulum_genesis(
+				// initial collators.
+				invulnerables.clone(),
+				signatories.clone(),
+				sudo_account.clone(),
+				PENDULUM_PARACHAIN_ID.into(),
+			)
+		},
+		// Bootnodes
+		Vec::new(),
+		// Telemetry
+		None,
+		// Protocol ID
+		Some("pendulum"),
+		// Fork ID
+		None,
+		// Properties
+		Some(properties),
+		// Extensions
+		Extensions {
+			relay_chain: "polkadot".into(), // You MUST set this to the correct network!
+			para_id: PENDULUM_PARACHAIN_ID,
 		},
 	)
 }
@@ -349,6 +496,174 @@ fn amplitude_genesis(
 		democracy: Default::default(),
 		sudo: amplitude_runtime::SudoConfig { key: Some(sudo_account) },
 		technical_committee: amplitude_runtime::TechnicalCommitteeConfig {
+			members: signatories.clone(),
+			..Default::default()
+		},
+	}
+}
+
+fn foucoco_genesis(
+	invulnerables: Vec<AccountId>,
+	signatories: Vec<AccountId>,
+	sudo_account: AccountId,
+	id: ParaId,
+) -> foucoco_runtime::GenesisConfig {
+	let mut balances: Vec<_> = signatories
+		.iter()
+		.cloned()
+		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY))
+		.chain(invulnerables.iter().cloned().map(|k| (k, INITIAL_COLLATOR_STAKING)))
+		.collect();
+
+	balances.push((
+		sudo_account.clone(),
+		AMPLITUDE_INITIAL_ISSUANCE
+			.saturating_sub(
+				INITIAL_ISSUANCE_PER_SIGNATORY.saturating_mul(balances.len().try_into().unwrap()),
+			)
+			.saturating_sub(
+				INITIAL_COLLATOR_STAKING.saturating_mul(invulnerables.len().try_into().unwrap()),
+			),
+	));
+
+	let stakers: Vec<_> = invulnerables
+		.iter()
+		.cloned()
+		.map(|account_id| (account_id, None, INITIAL_COLLATOR_STAKING))
+		.collect();
+
+	let inflation_config = foucoco_runtime::InflationInfo::new(
+		foucoco_runtime::BLOCKS_PER_YEAR.into(),
+		Perquintill::from_percent(10),
+		Perquintill::from_percent(11),
+		Perquintill::from_percent(40),
+		Perquintill::from_percent(9),
+	);
+
+	foucoco_runtime::GenesisConfig {
+		system: foucoco_runtime::SystemConfig {
+			code: foucoco_runtime::WASM_BINARY
+				.expect("WASM binary was not build, please build it!")
+				.to_vec(),
+		},
+		balances: foucoco_runtime::BalancesConfig { balances },
+		parachain_info: foucoco_runtime::ParachainInfoConfig { parachain_id: id },
+		parachain_staking: foucoco_runtime::ParachainStakingConfig {
+			stakers,
+			inflation_config,
+			max_candidate_stake: 400_000 * UNIT,
+		},
+		session: foucoco_runtime::SessionConfig {
+			keys: invulnerables
+				.into_iter()
+				.map(|acc| {
+					(
+						acc.clone(),
+						acc.clone(),
+						get_foucoco_session_keys(Into::<[u8; 32]>::into(acc).unchecked_into()),
+					)
+				})
+				.collect(),
+		},
+		// no need to pass anything to aura, in fact it will panic if we do. Session will take care
+		// of this.
+		aura: Default::default(),
+		aura_ext: Default::default(),
+		parachain_system: Default::default(),
+		polkadot_xcm: foucoco_runtime::PolkadotXcmConfig {
+			safe_xcm_version: Some(SAFE_XCM_VERSION),
+		},
+		council: foucoco_runtime::CouncilConfig {
+			members: signatories.clone(),
+			..Default::default()
+		},
+		democracy: Default::default(),
+		sudo: foucoco_runtime::SudoConfig { key: Some(sudo_account) },
+		technical_committee: foucoco_runtime::TechnicalCommitteeConfig {
+			members: signatories.clone(),
+			..Default::default()
+		},
+	}
+}
+
+fn pendulum_genesis(
+	invulnerables: Vec<AccountId>,
+	signatories: Vec<AccountId>,
+	sudo_account: AccountId,
+	id: ParaId,
+) -> pendulum_runtime::GenesisConfig {
+	let mut balances: Vec<_> = signatories
+		.iter()
+		.cloned()
+		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY))
+		.chain(invulnerables.iter().cloned().map(|k| (k, INITIAL_COLLATOR_STAKING)))
+		.collect();
+
+	balances.push((
+		sudo_account.clone(),
+		PENDULUM_INITIAL_ISSUANCE
+			.saturating_sub(
+				INITIAL_ISSUANCE_PER_SIGNATORY.saturating_mul(balances.len().try_into().unwrap()),
+			)
+			.saturating_sub(
+				INITIAL_COLLATOR_STAKING.saturating_mul(invulnerables.len().try_into().unwrap()),
+			),
+	));
+
+	let stakers: Vec<_> = invulnerables
+		.iter()
+		.cloned()
+		.map(|account_id| (account_id, None, INITIAL_COLLATOR_STAKING))
+		.collect();
+
+	let inflation_config = pendulum_runtime::InflationInfo::new(
+		pendulum_runtime::BLOCKS_PER_YEAR.into(),
+		Perquintill::from_percent(10),
+		Perquintill::from_percent(11),
+		Perquintill::from_percent(40),
+		Perquintill::from_percent(9),
+	);
+
+	pendulum_runtime::GenesisConfig {
+		system: pendulum_runtime::SystemConfig {
+			code: pendulum_runtime::WASM_BINARY
+				.expect("WASM binary was not build, please build it!")
+				.to_vec(),
+		},
+		balances: pendulum_runtime::BalancesConfig { balances },
+		parachain_info: pendulum_runtime::ParachainInfoConfig { parachain_id: id },
+		parachain_staking: pendulum_runtime::ParachainStakingConfig {
+			stakers,
+			inflation_config,
+			max_candidate_stake: 400_000 * UNIT,
+		},
+		session: pendulum_runtime::SessionConfig {
+			keys: invulnerables
+				.into_iter()
+				.map(|acc| {
+					(
+						acc.clone(),
+						acc.clone(),
+						get_pendulum_session_keys(Into::<[u8; 32]>::into(acc).unchecked_into()),
+					)
+				})
+				.collect(),
+		},
+		// no need to pass anything to aura, in fact it will panic if we do. Session will take care
+		// of this.
+		aura: Default::default(),
+		aura_ext: Default::default(),
+		parachain_system: Default::default(),
+		polkadot_xcm: pendulum_runtime::PolkadotXcmConfig {
+			safe_xcm_version: Some(SAFE_XCM_VERSION),
+		},
+		council: pendulum_runtime::CouncilConfig {
+			members: signatories.clone(),
+			..Default::default()
+		},
+		democracy: Default::default(),
+		sudo: pendulum_runtime::SudoConfig { key: Some(sudo_account) },
+		technical_committee: pendulum_runtime::TechnicalCommitteeConfig {
 			members: signatories.clone(),
 			..Default::default()
 		},

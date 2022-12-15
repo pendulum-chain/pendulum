@@ -22,7 +22,7 @@ A successful build will create a binary under `./target/release/parachain-collat
 
 ### How to Generate Chain Spec
 
-There are 2 different [runtime](runtime)s currently in the repo; **amplitude** for the Amplitude parachain and **development** for the Pendulum parachain. Any of these runtimes are used depending on the config. The config is created by generating the chain spec:
+There are 4 different [runtime](runtime)s currently in the repo; **amplitude** for the Amplitude parachain, **foucoco** for the Foucoco testnet (running on Rococo), **pendulum** for the Pendulum parachain and **development** for the local development. Any of these runtimes are used depending on the config. The config is created by generating the chain spec:
 
 ```
 ./target/release/parachain-collator build-spec --disable-default-bootnode > local-parachain-plain.json

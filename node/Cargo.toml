@@ -17,6 +17,8 @@ jsonrpsee = { version = "0.15.1", features = ["server"] }
 
 # Local
 amplitude-runtime = {path = "../runtime/amplitude"}
+foucoco-runtime = {path = "../runtime/foucoco"}
+pendulum-runtime = {path = "../runtime/pendulum"}
 development-runtime = {path = "../runtime/development"}
 runtime-common = {path = "../runtime/common"}
 
@@ -81,7 +83,15 @@ substrate-build-script-utils = { git = "https://github.com/paritytech/substrate"
 default = []
 runtime-benchmarks = [
 	"amplitude-runtime/runtime-benchmarks",
+	"foucoco-runtime/runtime-benchmarks",
+	"pendulum-runtime/runtime-benchmarks",
+	"development-runtime/runtime-benchmarks",
   	"runtime-common/runtime-benchmarks",
 	"polkadot-cli/runtime-benchmarks",
 ]
-try-runtime = ["amplitude-runtime/try-runtime", "try-runtime-cli/try-runtime"]
+try-runtime = [
+	"amplitude-runtime/try-runtime",
+	"foucoco-runtime/try-runtime",
+	"pendulum-runtime/try-runtime",
+	"try-runtime-cli/try-runtime"
+]

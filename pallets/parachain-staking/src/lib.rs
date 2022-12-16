@@ -670,6 +670,7 @@ pub mod pallet {
 		pub stakers: GenesisStaker<T>,
 		pub inflation_config: InflationInfo,
 		pub max_candidate_stake: BalanceOf<T>,
+		pub max_selected_candidates: u32,
 	}
 
 	#[cfg(feature = "std")]
@@ -679,6 +680,7 @@ pub mod pallet {
 				stakers: Default::default(),
 				inflation_config: Default::default(),
 				max_candidate_stake: Default::default(),
+				max_selected_candidates: Default::default(),
 			}
 		}
 	}
@@ -714,7 +716,9 @@ pub mod pallet {
 				}
 			}
 			// Set total selected candidates to minimum config
-			MaxSelectedCandidates::<T>::put(T::MinCollators::get());
+			MaxSelectedCandidates::<T>::put(
+				self.max_selected_candidates.max(T::MinCollators::get()),
+			);
 
 			<Pallet<T>>::update_total_stake();
 

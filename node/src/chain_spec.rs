@@ -1,5 +1,7 @@
 use cumulus_primitives_core::ParaId;
-use runtime_common::{AccountId, AuraId, Balance, Signature, EXISTENTIAL_DEPOSIT, UNIT};
+use runtime_common::{
+	AccountId, AuraId, Balance, BlockNumber, Signature, EXISTENTIAL_DEPOSIT, UNIT,
+};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
@@ -11,6 +13,8 @@ use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	Perquintill,
 };
+
+use crate::constants::pendulum;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type AmplitudeChainSpec =
@@ -31,7 +35,7 @@ const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 const AMPLITUDE_PARACHAIN_ID: u32 = 2124;
 const AMPLITUDE_INITIAL_ISSUANCE: Balance = 200_000_000 * UNIT;
 const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
-const INITIAL_COLLATOR_STAKING: Balance = 10_000 * UNIT;
+const INITIAL_COLLATOR_STAKING: Balance = 10_010 * UNIT;
 
 const INITIAL_AMPLITUDE_SUDO_SIGNATORIES: [&str; 5] = [
 	"6nJwMD3gk36fe6pMRL2UpbwAEjDdjjxdngQGShe753pyAvCT",
@@ -54,35 +58,22 @@ const INITIAL_AMPLITUDE_VALIDATORS: [&str; 8] = [
 
 const FOUCOCO_PARACHAIN_ID: u32 = 2124;
 
-const PENDULUM_PARACHAIN_ID: u32 = 2000; // 2094; TODO
-const PENDULUM_INITIAL_ISSUANCE: Balance = 160_000_000 * UNIT;
-
-// TODO
-const INITIAL_PENDULUM_SUDO_SIGNATORIES: [&str; 5] = [
-	"6nJwMD3gk36fe6pMRL2UpbwAEjDdjjxdngQGShe753pyAvCT",
-	"6i4xDEE1Q2Bv8tnJtgD4jse4YTAzzCwCJVUehRQ93hCqKp8f",
-	"6n62KZWvmZHgeyEXTvQFmoHRMqjKfFWvQVsApkePekuNfek5",
-	"6kwxQBRKMadrY9Lq3K8gZXkw1UkjacpqYhcqvX3AqmN9DofF",
-	"6kKHwcpCVC18KepwvdMSME8Q7ZTNr1RoRUrFDH9AdAmhL3Pt",
-];
-
-// TODO
-const INITIAL_PENDULUM_COLLATORS: [&str; 8] = [
-	"6mTATq7Ug9RPk4s8aMv5H7WVZ7RvwrJ1JitbYMXWPhanzqiv",
-	"6n8WiWqjEB8nCNRo5mxXc89FqhuMd2dgXNSrzuPxoZSnatnL",
-	"6ic56zZmjqo746yifWzcNxxzxLe3pRo8WNitotniUQvgKnyU",
-	"6gvFApEyYj4EavJP26mwbVu7YxFBYZ9gaJFB7gv5gA6vNfze",
-	"6mz3ymVAsfHotEhHphVRvLLBhMZ2frnwbuvW5QZiMRwJghxE",
-	"6mpD3zcHcUBkxCjTsGg2tMTfmQZdXLVYZnk4UkN2XAUTLkRe",
-	"6mGcZntk59RK2JfxfdmprgDJeByVUgaffMQYkp1ZeoEKeBJA",
-	"6jq7obxC7AxhWeJNzopwYidKNNe48cLrbGSgB2zs2SuRTWGA",
-];
-
 /// Helper function to generate a crypto pair from seed
 pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
 	<TPublic::Pair as Pair>::from_string(&format!("//{}", seed), None)
 		.expect("static values are valid; qed")
 		.public()
+}
+
+pub fn create_pendulum_multisig_account(id: &str) -> AccountId {
+	let mut signatories: Vec<_> = pendulum::SUDO_SIGNATORIES
+		.iter()
+		.chain(vec![id].iter())
+		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
+		.collect();
+	signatories.sort();
+
+	pallet_multisig::Pallet::<pendulum_runtime::Runtime>::multi_account_id(&signatories[..], 4)
 }
 
 /// The extensions for the [`ChainSpec`].
@@ -250,24 +241,92 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 
 pub fn pendulum_config() -> PendulumChainSpec {
 	// Give your base currency a unit name and decimal places
+
+	sp_core::crypto::set_default_ss58_version(pendulum_runtime::SS58Prefix::get().into());
+
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "PEN".into());
 	properties.insert("tokenDecimals".into(), 12u32.into());
 	properties.insert("ss58Format".into(), pendulum_runtime::SS58Prefix::get().into());
 
-	let mut signatories: Vec<_> = INITIAL_PENDULUM_SUDO_SIGNATORIES
+	let multisig_genesis = create_pendulum_multisig_account(pendulum::MULTISIG_ID_GENESIS);
+	let multisig_cl_reserves = create_pendulum_multisig_account(pendulum::MULTISIG_ID_CL_RESERVES);
+	let multisig_incentives = create_pendulum_multisig_account(pendulum::MULTISIG_ID_INCENTIVES);
+	let multisig_marketing = create_pendulum_multisig_account(pendulum::MULTISIG_ID_MARKETING);
+
+	let collators: Vec<_> = pendulum::INITIAL_COLLATORS
 		.iter()
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
-	signatories.sort();
 
-	let invulnerables: Vec<_> = INITIAL_PENDULUM_COLLATORS
-		.iter()
-		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
-		.collect();
+	let mut vesting_schedules = vec![];
+	let mut balances = vec![];
+	let blocks_per_year = pendulum_runtime::BLOCKS_PER_YEAR;
 
-	let sudo_account =
-		pallet_multisig::Pallet::<pendulum_runtime::Runtime>::multi_account_id(&signatories[..], 3);
+	let treasury = pallet_treasury::Pallet::<pendulum_runtime::Runtime>::account_id();
+
+	for pendulum::Allocation { address, amount } in pendulum::ALLOCATIONS_10_24 {
+		let account_id = AccountId::from_ss58check(address).unwrap();
+		balances.push((account_id.clone(), amount * UNIT));
+		vesting_schedules.push((account_id, 0, blocks_per_year * 2, amount * UNIT / 10))
+	}
+
+	for pendulum::Allocation { address, amount } in pendulum::ALLOCATIONS_12_36 {
+		let account_id = AccountId::from_ss58check(address).unwrap();
+		balances.push((account_id.clone(), amount * UNIT));
+		vesting_schedules.push((account_id.clone(), blocks_per_year, 1, amount * UNIT * 2 / 3));
+		vesting_schedules.push((
+			account_id,
+			blocks_per_year,
+			blocks_per_year * 2,
+			amount * UNIT / 3,
+		));
+	}
+
+	for collator in collators.clone() {
+		balances
+			.push((collator, pendulum::INITIAL_COLLATOR_STAKING + pendulum::COLLATOR_ADDITIONAL));
+	}
+
+	balances.push((multisig_cl_reserves.clone(), pendulum::CL_RESERVES_ALLOCATION));
+	vesting_schedules.push((multisig_cl_reserves, 0, blocks_per_year * 22 / 12, 0));
+
+	balances.push((multisig_incentives.clone(), pendulum::INCENTIVES_ALLOCATION));
+	vesting_schedules.push((
+		multisig_incentives,
+		0,
+		blocks_per_year * 3,
+		pendulum::INCENTIVES_ALLOCATION * 30 / 100,
+	));
+
+	balances.push((multisig_marketing.clone(), pendulum::MARKETING_ALLOCATION));
+	vesting_schedules.push((
+		multisig_marketing,
+		0,
+		blocks_per_year * 3,
+		pendulum::MARKETING_ALLOCATION * 10 / 100,
+	));
+
+	balances.push((treasury.clone(), pendulum::TREASURY_ALLOCATION));
+	vesting_schedules.push((
+		treasury,
+		0,
+		blocks_per_year * 3,
+		pendulum::TREASURY_ALLOCATION * 20 / 100,
+	));
+
+	let multisig_identifiers = vec![
+		pendulum::MULTISIG_ID_GENESIS,
+		pendulum::MULTISIG_ID_TEAM,
+		pendulum::MULTISIG_ID_CL_RESERVES,
+		pendulum::MULTISIG_ID_INCENTIVES,
+		pendulum::MULTISIG_ID_MARKETING,
+	];
+
+	for signatory in pendulum::SUDO_SIGNATORIES.iter().chain(multisig_identifiers.iter()) {
+		let account_id = AccountId::from_ss58check(signatory).unwrap();
+		balances.push((account_id, pendulum::INITIAL_ISSUANCE_PER_SIGNATORY));
+	}
 
 	PendulumChainSpec::from_genesis(
 		// Name
@@ -278,12 +337,11 @@ pub fn pendulum_config() -> PendulumChainSpec {
 		move || {
 			pendulum_genesis(
 				// initial collators.
-				// TODO
-				// invulnerables.clone(),
-				vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
-				signatories.clone(),
-				sudo_account.clone(),
-				PENDULUM_PARACHAIN_ID.into(),
+				collators.clone(),
+				balances.clone(),
+				vesting_schedules.clone(),
+				multisig_genesis.clone(),
+				pendulum::PARACHAIN_ID.into(),
 			)
 		},
 		// Bootnodes
@@ -299,7 +357,7 @@ pub fn pendulum_config() -> PendulumChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "polkadot".into(), // You MUST set this to the correct network!
-			para_id: PENDULUM_PARACHAIN_ID,
+			para_id: pendulum::PARACHAIN_ID,
 		},
 	)
 }
@@ -470,6 +528,7 @@ fn amplitude_genesis(
 			stakers,
 			inflation_config,
 			max_candidate_stake: 400_000 * UNIT,
+			max_selected_candidates: 40,
 		},
 		session: amplitude_runtime::SessionConfig {
 			keys: invulnerables
@@ -554,6 +613,7 @@ fn foucoco_genesis(
 			stakers,
 			inflation_config,
 			max_candidate_stake: 400_000 * UNIT,
+			max_selected_candidates: 40,
 		},
 		session: foucoco_runtime::SessionConfig {
 			keys: invulnerables
@@ -589,42 +649,37 @@ fn foucoco_genesis(
 }
 
 fn pendulum_genesis(
-	invulnerables: Vec<AccountId>,
-	signatories: Vec<AccountId>,
+	collators: Vec<AccountId>,
+	mut balances: Vec<(AccountId, Balance)>,
+	vesting_schedules: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	sudo_account: AccountId,
 	id: ParaId,
 ) -> pendulum_runtime::GenesisConfig {
-	let mut balances: Vec<_> = signatories
+	let mut genesis_issuance = pendulum::TOTAL_INITIAL_ISSUANCE;
+	for balance in balances.clone() {
+		genesis_issuance -= balance.1;
+	}
+
+	balances.push((sudo_account.clone(), genesis_issuance));
+
+	let stakers: Vec<_> = collators
 		.iter()
 		.cloned()
-		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY))
-		.chain(invulnerables.iter().cloned().map(|k| (k, INITIAL_COLLATOR_STAKING)))
-		.collect();
-
-	balances.push((
-		sudo_account.clone(),
-		PENDULUM_INITIAL_ISSUANCE
-			.saturating_sub(
-				INITIAL_ISSUANCE_PER_SIGNATORY.saturating_mul(balances.len().try_into().unwrap()),
-			)
-			.saturating_sub(
-				INITIAL_COLLATOR_STAKING.saturating_mul(invulnerables.len().try_into().unwrap()),
-			),
-	));
-
-	let stakers: Vec<_> = invulnerables
-		.iter()
-		.cloned()
-		.map(|account_id| (account_id, None, INITIAL_COLLATOR_STAKING))
+		.map(|account_id| (account_id, None, pendulum::INITIAL_COLLATOR_STAKING))
 		.collect();
 
 	let inflation_config = pendulum_runtime::InflationInfo::new(
 		pendulum_runtime::BLOCKS_PER_YEAR.into(),
 		Perquintill::from_percent(10),
 		Perquintill::from_percent(11),
-		Perquintill::from_percent(40),
-		Perquintill::from_percent(9),
+		Perquintill::from_percent(30),
+		Perquintill::from_percent(8),
 	);
+
+	let council: Vec<_> = pendulum::SUDO_SIGNATORIES
+		.iter()
+		.map(|address| AccountId::from_ss58check(address).unwrap())
+		.collect();
 
 	pendulum_runtime::GenesisConfig {
 		system: pendulum_runtime::SystemConfig {
@@ -638,15 +693,16 @@ fn pendulum_genesis(
 			stakers,
 			inflation_config,
 			max_candidate_stake: 400_000 * UNIT,
+			max_selected_candidates: 40,
 		},
 		session: pendulum_runtime::SessionConfig {
-			keys: invulnerables
+			keys: collators
 				.into_iter()
-				.map(|acc| {
+				.map(|account| {
 					(
-						acc.clone(),
-						acc.clone(),
-						get_pendulum_session_keys(Into::<[u8; 32]>::into(acc).unchecked_into()),
+						account.clone(),
+						account.clone(),
+						get_pendulum_session_keys(Into::<[u8; 32]>::into(account).unchecked_into()),
 					)
 				})
 				.collect(),
@@ -659,16 +715,14 @@ fn pendulum_genesis(
 		polkadot_xcm: pendulum_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
 		},
-		council: pendulum_runtime::CouncilConfig {
-			members: signatories.clone(),
-			..Default::default()
-		},
+		council: pendulum_runtime::CouncilConfig { members: council.clone(), ..Default::default() },
 		democracy: Default::default(),
 		sudo: pendulum_runtime::SudoConfig { key: Some(sudo_account) },
 		technical_committee: pendulum_runtime::TechnicalCommitteeConfig {
-			members: signatories.clone(),
+			members: council,
 			..Default::default()
 		},
+		vesting: pendulum_runtime::VestingConfig { vesting: vesting_schedules },
 	}
 }
 

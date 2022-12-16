@@ -352,7 +352,7 @@ impl pallet_balances::Config for Runtime {
 	type Balance = Balance;
 	/// The ubiquitous event type.
 	type RuntimeEvent = RuntimeEvent;
-	type DustRemoval = ();
+	type DustRemoval = Treasury;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
@@ -452,12 +452,12 @@ impl pallet_aura::Config for Runtime {
 }
 
 parameter_types! {
-	pub const LaunchPeriod: BlockNumber = 4 * DAYS;
-	pub const VotingPeriod: BlockNumber = 4 * DAYS;
+	pub const LaunchPeriod: BlockNumber = 5 * DAYS;
+	pub const VotingPeriod: BlockNumber = 5 * DAYS;
 	pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
 	pub const MinimumDeposit: Balance = 1 * UNIT;
-	pub const EnactmentPeriod: BlockNumber = 4 * DAYS;
-	pub const CooloffPeriod: BlockNumber = 4 * DAYS;
+	pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
+	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
 	pub const MaxProposals: u32 = 100;
 }
 
@@ -728,11 +728,11 @@ parameter_types! {
 	pub const MinCollatorStake: Balance = 5_000 * UNIT;
 	pub const MinDelegatorStake: Balance = 10 * UNIT;
 	#[derive(Debug, Eq, PartialEq)]
-	pub const MaxCollatorCandidates: u32 = 40;
+	pub const MaxTopCandidates: u32 = 50;
 	pub const MaxUnstakeRequests: u32 = 10;
 	pub const NetworkRewardStart: BlockNumber = BlockNumber::MAX;
 	pub const NetworkRewardRate: Perquintill = Perquintill::from_percent(0);
-	pub const CollatorRewardRateDecay: Perquintill = Perquintill::from_parts(936_879_853_200_000_000u64);
+	pub const CollatorRewardRateDecay: Perquintill = Perquintill::from_percent(95);
 }
 
 impl parachain_staking::Config for Runtime {
@@ -750,7 +750,7 @@ impl parachain_staking::Config for Runtime {
 	type MaxDelegatorsPerCollator = MaxDelegatorsPerCollator;
 	type MinCollatorStake = MinCollatorStake;
 	type MinCollatorCandidateStake = MinCollatorStake;
-	type MaxTopCandidates = MaxCollatorCandidates;
+	type MaxTopCandidates = MaxTopCandidates;
 	type MinDelegatorStake = MinDelegatorStake;
 	type MaxUnstakeRequests = MaxUnstakeRequests;
 	type NetworkRewardRate = NetworkRewardRate;
@@ -850,7 +850,7 @@ construct_runtime!(
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
 
 		// Amendments
-		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>} = 50,
+		Vesting: pallet_vesting::{Pallet, Call, Config<T>, Storage, Event<T>} = 50,
 		Utility: pallet_utility::{Pallet, Call, Event} = 51,
 		Currencies: orml_currencies::{Pallet, Call, Storage} = 52,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 53,

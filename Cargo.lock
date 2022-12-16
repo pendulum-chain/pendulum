@@ -6300,6 +6300,7 @@ dependencies = [
  "log",
  "pallet-multisig",
  "pallet-transaction-payment-rpc",
+ "pallet-treasury",
  "parity-scale-codec",
  "pendulum-runtime",
  "polkadot-cli",

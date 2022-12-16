@@ -26,6 +26,7 @@ runtime-common = {path = "../runtime/common"}
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 pallet-multisig = {git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.33"}
+pallet-treasury = {git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.33"}
 pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 sc-basic-authorship = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }
 sc-chain-spec = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.33" }

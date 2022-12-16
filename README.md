@@ -18,38 +18,38 @@ To build the project, execute
 cargo build --release
 ```
 
-A successful build will create a binary under `./target/release/parachain-collator`.
+A successful build will create a binary under `./target/release/pendulum-node`.
 
 ### How to Generate Chain Spec
 
 There are 4 different [runtime](runtime)s currently in the repo; **amplitude** for the Amplitude parachain, **foucoco** for the Foucoco testnet (running on Rococo), **pendulum** for the Pendulum parachain and **development** for the local development. Any of these runtimes are used depending on the config. The config is created by generating the chain spec:
 
 ```
-./target/release/parachain-collator build-spec --disable-default-bootnode > local-parachain-plain.json
+./target/release/pendulum-node build-spec --disable-default-bootnode > local-parachain-plain.json
 ```
 
-To create the amplitude spec, the `--chain` must be provided:
+To create the amplitude spec, the `--chain` must be provided (similar for `pendulum` and `foucoco`):
 
 ```
-./target/release/parachain-collator build-spec --chain amplitude --disable-default-bootnode > local-parachain-plain.json
+./target/release/pendulum-node build-spec --chain amplitude --disable-default-bootnode > local-parachain-plain.json
 ```
 
 For the raw chain spec, just add the option `--raw` and the `--chain` should be the one you just generated:
 
 ```
-./target/release/parachain-collator build-spec --chain local-parachain-plain.json --raw --disable-default-bootnode > local-parachain-raw.json
+./target/release/pendulum-node build-spec --chain local-parachain-plain.json --raw --disable-default-bootnode > local-parachain-raw.json
 ```
 
 ### How to Generate Wasm:
 
 ```
-/target/release/parachain-collator export-genesis-wasm --chain local-parachain-raw.json > para-2000-wasm
+/target/release/pendulum-node export-genesis-wasm --chain local-parachain-raw.json > para-2000-wasm
 ```
 
 ### How to Generate Genesis State:
 
 ```
-./target/release/parachain-collator export-genesis-state --chain local-parachain-raw.json > para-2000-genesis
+./target/release/pendulum-node export-genesis-state --chain local-parachain-raw.json > para-2000-genesis
 ```
 
 Note: The amplitude chain specs, the wasm and the genesis state are already available in the [res](res) folder.
@@ -59,7 +59,7 @@ Note: The amplitude chain specs, the wasm and the genesis state are already avai
 To run the collator, execute:
 
 ```
-./target/release/parachain-collator
+./target/release/pendulum-node
 --collator \
 --allow-private-ipv4 \
 --unsafe-ws-external \
@@ -88,7 +88,7 @@ where:
 An example for Amplitude will look like this:
 
 ```
-./target/release/parachain-collator
+./target/release/pendulum-node
 --collator \
 --allow-private-ipv4 \
 --unsafe-ws-external \
@@ -110,7 +110,7 @@ You can find the kusama.json [here](https://github.com/paritytech/polkadot/blob/
 For local testing, you can replace `--name` with predefined keys like `--alice` or `--bob`. You also need to specify the `--bootnode`. Here's an example:
 
 ```
-./target/release/parachain-collator \
+./target/release/pendulum-node \
 --alice \
 --rpc-cors=all \
 --collator \

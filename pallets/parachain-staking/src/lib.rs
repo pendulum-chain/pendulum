@@ -274,6 +274,10 @@ pub mod pallet {
 		#[pallet::constant]
 		type MinDelegatorStake: Get<BalanceOf<Self>>;
 
+		/// The annual decay rate of the collator rewards
+		#[pallet::constant]
+		type CollatorRewardRateDecay: Get<Perquintill>;
+
 		/// Max number of concurrent active unstaking requests before
 		/// unlocking.
 		///
@@ -666,6 +670,7 @@ pub mod pallet {
 		pub stakers: GenesisStaker<T>,
 		pub inflation_config: InflationInfo,
 		pub max_candidate_stake: BalanceOf<T>,
+		pub max_selected_candidates: u32,
 	}
 
 	#[cfg(feature = "std")]
@@ -675,6 +680,7 @@ pub mod pallet {
 				stakers: Default::default(),
 				inflation_config: Default::default(),
 				max_candidate_stake: Default::default(),
+				max_selected_candidates: Default::default(),
 			}
 		}
 	}
@@ -710,7 +716,9 @@ pub mod pallet {
 				}
 			}
 			// Set total selected candidates to minimum config
-			MaxSelectedCandidates::<T>::put(T::MinCollators::get());
+			MaxSelectedCandidates::<T>::put(
+				self.max_selected_candidates.max(T::MinCollators::get()),
+			);
 
 			<Pallet<T>>::update_total_stake();
 
@@ -1762,10 +1770,9 @@ pub mod pallet {
 
 			// Calculate new inflation based on last year
 			let inflation = InflationConfig::<T>::get();
-			// collator reward rate decreases by 2% p.a. of the previous one
-			// Amplitude: the decay value differs from the original, it is now 6.312014681%
-			let c_reward_rate = inflation.collator.reward_rate.annual *
-				Perquintill::from_rational(9368798532u64, 10000000000u64);
+
+			let c_reward_rate =
+				inflation.collator.reward_rate.annual * T::CollatorRewardRateDecay::get();
 			// delegator reward rate should be 6% in 2nd year and 0% afterwards
 			let d_reward_rate = if year == T::BlockNumber::one() {
 				// Amplitude: this value differs from the original

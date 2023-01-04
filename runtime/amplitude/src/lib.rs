@@ -184,7 +184,9 @@ const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 /// We allow for 0.5 of a second of compute with a 12 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_div(2);
+const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND
+	.saturating_div(2)
+	.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64);
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -730,6 +732,7 @@ parameter_types! {
 	pub const MaxUnstakeRequests: u32 = 10;
 	pub const NetworkRewardStart: BlockNumber = BlockNumber::MAX;
 	pub const NetworkRewardRate: Perquintill = Perquintill::from_percent(0);
+	pub const CollatorRewardRateDecay: Perquintill = Perquintill::from_parts(936_879_853_200_000_000u64);
 }
 
 impl parachain_staking::Config for Runtime {
@@ -753,6 +756,7 @@ impl parachain_staking::Config for Runtime {
 	type NetworkRewardRate = NetworkRewardRate;
 	type NetworkRewardStart = NetworkRewardStart;
 	type NetworkRewardBeneficiary = Treasury;
+	type CollatorRewardRateDecay = CollatorRewardRateDecay;
 	type WeightInfo = parachain_staking::default_weights::SubstrateWeight<Runtime>;
 
 	const BLOCKS_PER_YEAR: BlockNumber = BLOCKS_PER_YEAR;

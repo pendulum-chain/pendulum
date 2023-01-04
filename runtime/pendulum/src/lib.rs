@@ -6,20 +6,23 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+mod currency;
 mod weights;
 pub mod xcm_config;
+
+pub use parachain_staking::InflationInfo;
 
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
 
-use sp_std::prelude::*;
+use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -28,7 +31,10 @@ use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
 	parameter_types,
-	traits::Everything,
+	traits::{
+		ConstU32, Contains, Currency, EitherOfDiverse, EqualPrivilegeOnly, Imbalance, OnUnbalanced,
+		WithdrawReasons,
+	},
 	weights::{
 		constants::WEIGHT_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
 		WeightToFeeCoefficients, WeightToFeePolynomial,
@@ -39,16 +45,20 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
-pub use sp_runtime::{MultiAddress, Perbill, Permill};
+pub use sp_runtime::{traits::AccountIdConversion, MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	opaque, AccountId, AuraId, Balance, BlockNumber, Hash, Index, Signature, EXISTENTIAL_DEPOSIT,
-	MICROUNIT, MILLIUNIT,
+	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, ReserveIdentifier,
+	Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
+
+use currency::{CurrencyId, ForeignCurrencyId};
+use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::{currency::MutationHooks, parameter_type_with_key};
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -59,7 +69,6 @@ use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 // XCM Imports
-use xcm::latest::prelude::BodyId;
 use xcm_executor::XcmExecutor;
 
 /// The address format for describing accounts.
@@ -119,8 +128,8 @@ pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
 	type Balance = Balance;
 	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-		let p = MILLIUNIT / 10;
-		let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
+		let p = MILLIUNIT;
+		let q = 10 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
 		smallvec![WeightToFeeCoefficient {
 			degree: 1,
 			negative: false,
@@ -138,8 +147,8 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("pendulum-development"),
-	impl_name: create_runtime_str!("pendulum-development"),
+	spec_name: create_runtime_str!("pendulum"),
+	impl_name: create_runtime_str!("pendulum"),
 	authoring_version: 1,
 	spec_version: 1,
 	impl_version: 0,
@@ -164,6 +173,7 @@ pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
+pub const BLOCKS_PER_YEAR: BlockNumber = DAYS * 36525 / 100;
 
 /// We assume that ~5% of the block weight is consumed by `on_initialize` handlers. This is
 /// used to limit the maximal weight of a single extrinsic.
@@ -211,7 +221,48 @@ parameter_types! {
 		})
 		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 		.build_or_panic();
-	pub const SS58Prefix: u16 = 42;
+	pub const SS58Prefix: u16 = 56;
+}
+
+pub struct BaseFilter;
+impl Contains<RuntimeCall> for BaseFilter {
+	fn contains(call: &RuntimeCall) -> bool {
+		match call {
+			RuntimeCall::Balances(pallet_balances::Call::transfer { .. }) |
+			RuntimeCall::Balances(pallet_balances::Call::transfer_all { .. }) |
+			RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive { .. }) |
+			RuntimeCall::Vesting(pallet_vesting::Call::vested_transfer { .. }) => false,
+
+			// These modules are all allowed to be called by transactions:
+			RuntimeCall::Bounties(_) |
+			RuntimeCall::ChildBounties(_) |
+			RuntimeCall::Treasury(_) |
+			RuntimeCall::Tokens(_) |
+			RuntimeCall::Currencies(_) |
+			RuntimeCall::ParachainStaking(_) |
+			RuntimeCall::Democracy(_) |
+			RuntimeCall::Council(_) |
+			RuntimeCall::TechnicalCommittee(_) |
+			RuntimeCall::System(_) |
+			RuntimeCall::Scheduler(_) |
+			RuntimeCall::Preimage(_) |
+			RuntimeCall::Timestamp(_) |
+			RuntimeCall::Balances(_) |
+			RuntimeCall::Authorship(_) |
+			RuntimeCall::Session(_) |
+			RuntimeCall::ParachainSystem(_) |
+			RuntimeCall::Sudo(_) |
+			RuntimeCall::XcmpQueue(_) |
+			RuntimeCall::PolkadotXcm(_) |
+			RuntimeCall::DmpQueue(_) |
+			RuntimeCall::Utility(_) |
+			RuntimeCall::Vesting(_) |
+			RuntimeCall::XTokens(_) |
+			RuntimeCall::Multisig(_) => true,
+			// All pallets are allowed, but exhaustive match is defensive
+			// in the case of adding new pallets.
+		}
+	}
 }
 
 // Configure FRAME pallets to include in runtime.
@@ -252,14 +303,14 @@ impl frame_system::Config for Runtime {
 	/// The weight of database operations that the runtime can invoke.
 	type DbWeight = RocksDbWeight;
 	/// The basic call filter to use in dispatchable.
-	type BaseCallFilter = Everything;
+	type BaseCallFilter = BaseFilter;
 	/// Weight information for the extrinsics of this pallet.
 	type SystemWeightInfo = ();
 	/// Block & extrinsics weights: base values and limits.
 	type BlockWeights = RuntimeBlockWeights;
 	/// The maximum length of a block (in bytes).
 	type BlockLength = RuntimeBlockLength;
-	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
+	/// This is used as an identifier of the chain. 56 is the prefix for Pendulum
 	type SS58Prefix = SS58Prefix;
 	/// The action to take on a Runtime Upgrade
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
@@ -279,14 +330,14 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const UncleGenerations: u32 = 0;
+	pub const UncleGenerations: u32 = 2;
 }
 
 impl pallet_authorship::Config for Runtime {
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
 	type UncleGenerations = UncleGenerations;
 	type FilterUncle = ();
-	type EventHandler = (CollatorSelection,);
+	type EventHandler = ParachainStaking;
 }
 
 parameter_types! {
@@ -301,12 +352,12 @@ impl pallet_balances::Config for Runtime {
 	type Balance = Balance;
 	/// The ubiquitous event type.
 	type RuntimeEvent = RuntimeEvent;
-	type DustRemoval = ();
+	type DustRemoval = Treasury;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type MaxReserves = MaxReserves;
-	type ReserveIdentifier = [u8; 8];
+	type ReserveIdentifier = ReserveIdentifier;
 }
 
 parameter_types! {
@@ -315,9 +366,24 @@ parameter_types! {
 	pub const OperationalFeeMultiplier: u8 = 5;
 }
 
+type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
+
+pub struct DealWithFees;
+impl OnUnbalanced<NegativeImbalance> for DealWithFees {
+	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
+		if let Some(mut fees) = fees_then_tips.next() {
+			if let Some(tips) = fees_then_tips.next() {
+				tips.merge_into(&mut fees);
+			}
+			// for fees and tips, 100% to treasury
+			Treasury::on_unbalanced(fees);
+		}
+	}
+}
+
 impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
 	type WeightToFee = WeightToFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
@@ -363,23 +429,20 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 }
 
 parameter_types! {
-	pub const Period: u32 = 6 * HOURS;
 	pub const Offset: u32 = 0;
-	pub const MaxAuthorities: u32 = 100_000;
+	pub const MaxAuthorities: u32 = 200;
 }
 
 impl pallet_session::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
-	// we don't have stash and controller, thus we don't need the convert as well.
-	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
-	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
-	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
-	type SessionManager = CollatorSelection;
-	// Essentially just Aura, but lets be pedantic.
+	type ValidatorIdOf = ConvertInto;
+	type ShouldEndSession = ParachainStaking;
+	type NextSessionRotation = ParachainStaking;
+	type SessionManager = ParachainStaking;
 	type SessionHandler = <SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
 	type Keys = SessionKeys;
-	type WeightInfo = ();
+	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_aura::Config for Runtime {
@@ -389,31 +452,357 @@ impl pallet_aura::Config for Runtime {
 }
 
 parameter_types! {
-	pub const PotId: PalletId = PalletId(*b"PotStake");
-	pub const MaxCandidates: u32 = 1000;
-	pub const MinCandidates: u32 = 5;
-	pub const SessionLength: BlockNumber = 6 * HOURS;
-	pub const MaxInvulnerables: u32 = 100;
-	pub const ExecutiveBody: BodyId = BodyId::Executive;
+	pub const LaunchPeriod: BlockNumber = 5 * DAYS;
+	pub const VotingPeriod: BlockNumber = 5 * DAYS;
+	pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
+	pub const MinimumDeposit: Balance = 1 * UNIT;
+	pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
+	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
+	pub const MaxProposals: u32 = 100;
 }
 
-// We allow root only to execute privileged collator selection operations.
-pub type CollatorSelectionUpdateOrigin = EnsureRoot<AccountId>;
-
-impl pallet_collator_selection::Config for Runtime {
+impl pallet_democracy::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
-	type UpdateOrigin = CollatorSelectionUpdateOrigin;
-	type PotId = PotId;
-	type MaxCandidates = MaxCandidates;
-	type MinCandidates = MinCandidates;
-	type MaxInvulnerables = MaxInvulnerables;
-	// should be a multiple of session or things will get inconsistent
-	type KickThreshold = Period;
-	type ValidatorId = <Self as frame_system::Config>::AccountId;
-	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
-	type ValidatorRegistration = Session;
+	type EnactmentPeriod = EnactmentPeriod;
+	type LaunchPeriod = LaunchPeriod;
+	type VotingPeriod = VotingPeriod;
+	type VoteLockingPeriod = EnactmentPeriod; // Same as EnactmentPeriod
+	type MinimumDeposit = MinimumDeposit;
+	/// A straight majority of the council can decide what their next motion is.
+	type ExternalOrigin =
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
+	/// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
+	type ExternalMajorityOrigin =
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
+	/// A unanimous council can have the next scheduled referendum be a straight default-carries
+	/// (NTB) vote.
+	type ExternalDefaultOrigin =
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 1>;
+	/// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
+	/// be tabled immediately and with a shorter voting/enactment period.
+	type FastTrackOrigin =
+		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>;
+	type InstantOrigin =
+		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>;
+	type InstantAllowed = frame_support::traits::ConstBool<true>;
+	type FastTrackVotingPeriod = FastTrackVotingPeriod;
+	// To cancel a proposal which has been passed, 2/3 of the council must agree to it.
+	type CancellationOrigin =
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
+	// To cancel a proposal before it has been passed, the technical committee must be unanimous or
+	// Root must agree.
+	type CancelProposalOrigin = EitherOfDiverse<
+		EnsureRoot<AccountId>,
+		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>,
+	>;
+	type BlacklistOrigin = EnsureRoot<AccountId>;
+	// Any single technical committee member may veto a coming council proposal, however they can
+	// only do it once and it lasts only for the cool-off period.
+	type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
+	type CooloffPeriod = CooloffPeriod;
+	type Slash = ();
+	type Scheduler = Scheduler;
+	type PalletsOrigin = OriginCaller;
+	type MaxVotes = ConstU32<100>;
+	type WeightInfo = pallet_democracy::weights::SubstrateWeight<Runtime>;
+	type MaxProposals = MaxProposals;
+	type Preimages = Preimage;
+	type MaxDeposits = ConstU32<100>;
+	type MaxBlacklisted = ConstU32<100>;
+}
+
+parameter_types! {
+	pub const CouncilMotionDuration: BlockNumber = 3 * DAYS;
+	pub const CouncilMaxProposals: u32 = 100;
+	pub const CouncilMaxMembers: u32 = 100;
+}
+
+type CouncilCollective = pallet_collective::Instance1;
+impl pallet_collective::Config<CouncilCollective> for Runtime {
+	type RuntimeOrigin = RuntimeOrigin;
+	type Proposal = RuntimeCall;
+	type RuntimeEvent = RuntimeEvent;
+	type MotionDuration = CouncilMotionDuration;
+	type MaxProposals = CouncilMaxProposals;
+	type MaxMembers = CouncilMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const TechnicalMotionDuration: BlockNumber = 3 * DAYS;
+	pub const TechnicalMaxProposals: u32 = 100;
+	pub const TechnicalMaxMembers: u32 = 100;
+}
+
+type TechnicalCollective = pallet_collective::Instance2;
+impl pallet_collective::Config<TechnicalCollective> for Runtime {
+	type RuntimeOrigin = RuntimeOrigin;
+	type Proposal = RuntimeCall;
+	type RuntimeEvent = RuntimeEvent;
+	type MotionDuration = TechnicalMotionDuration;
+	type MaxProposals = TechnicalMaxProposals;
+	type MaxMembers = TechnicalMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
+		RuntimeBlockWeights::get().max_block;
+}
+
+impl pallet_scheduler::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type PalletsOrigin = OriginCaller;
+	type RuntimeCall = RuntimeCall;
+	type MaximumWeight = MaximumSchedulerWeight;
+	type ScheduleOrigin = EnsureRoot<AccountId>;
+	type MaxScheduledPerBlock = ConstU32<50>;
+	type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
+	type OriginPrivilegeCmp = EqualPrivilegeOnly;
+	type Preimages = Preimage;
+}
+
+parameter_types! {
+	pub const PreimageMaxSize: u32 = 4096 * 1024;
+	pub const PreimageBaseDeposit: Balance = 1 * UNIT;
+	// One cent: $10,000 / MB
+	pub const PreimageByteDeposit: Balance = 10 * MILLIUNIT;
+}
+
+impl pallet_preimage::Config for Runtime {
+	type WeightInfo = pallet_preimage::weights::SubstrateWeight<Runtime>;
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type ManagerOrigin = EnsureRoot<AccountId>;
+	type BaseDeposit = PreimageBaseDeposit;
+	type ByteDeposit = PreimageByteDeposit;
+}
+
+parameter_types! {
+	pub const ProposalBond: Permill = Permill::from_percent(5);
+	pub const ProposalBondMinimum: Balance = 10 * UNIT;
+	pub const SpendPeriod: BlockNumber = 7 * DAYS;
+	pub const Burn: Permill = Permill::from_percent(0);
+	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+	pub const MaxApprovals: u32 = 100;
+}
+
+type TreasuryApproveOrigin = EitherOfDiverse<
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
+>;
+
+type TreasuryRejectOrigin = EitherOfDiverse<
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
+>;
+
+impl pallet_treasury::Config for Runtime {
+	type PalletId = TreasuryPalletId;
+	type Currency = Balances;
+	type ApproveOrigin = TreasuryApproveOrigin;
+	type RejectOrigin = TreasuryRejectOrigin;
+	type RuntimeEvent = RuntimeEvent;
+	type OnSlash = Treasury;
+	type ProposalBond = ProposalBond;
+	type ProposalBondMinimum = ProposalBondMinimum;
+	type ProposalBondMaximum = ();
+	type SpendPeriod = SpendPeriod;
+	type Burn = Burn;
+	type BurnDestination = ();
+	type SpendFunds = Bounties;
+	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+	type MaxApprovals = MaxApprovals;
+	type SpendOrigin = frame_support::traits::NeverEnsureOrigin<u128>;
+}
+
+parameter_types! {
+	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
+	pub const BountyValueMinimum: Balance = 5 * UNIT;
+	pub const BountyDepositBase: Balance = 1 * UNIT;
+	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
+	pub const CuratorDepositMin: Balance = 1 * UNIT;
+	pub const CuratorDepositMax: Balance = 100 * UNIT;
+	pub const DataDepositPerByte: Balance = 30 * MILLIUNIT;
+	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
+	pub const BountyUpdatePeriod: BlockNumber = 20 * DAYS;
+	pub const MaximumReasonLength: u32 = 5000;
+}
+
+impl pallet_bounties::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type BountyDepositBase = BountyDepositBase;
+	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
+	type BountyUpdatePeriod = BountyUpdatePeriod;
+	type CuratorDepositMultiplier = CuratorDepositMultiplier;
+	type CuratorDepositMin = CuratorDepositMin;
+	type CuratorDepositMax = CuratorDepositMax;
+	type BountyValueMinimum = BountyValueMinimum;
+	type DataDepositPerByte = DataDepositPerByte;
+	type MaximumReasonLength = MaximumReasonLength;
+	type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
+	type ChildBountyManager = ChildBounties;
+}
+
+parameter_types! {
+	pub const ChildBountyValueMinimum: Balance = 1 * UNIT;
+}
+
+impl pallet_child_bounties::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MaxActiveChildBountyCount = ConstU32<10>;
+	type ChildBountyValueMinimum = ChildBountyValueMinimum;
+	type WeightInfo = pallet_child_bounties::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_type_with_key! {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+		NANOUNIT
+	};
+}
+
+pub fn get_all_module_accounts() -> Vec<AccountId> {
+	vec![Treasury::account_id()]
+}
+
+pub struct DustRemovalWhitelist;
+impl Contains<AccountId> for DustRemovalWhitelist {
+	fn contains(a: &AccountId) -> bool {
+		get_all_module_accounts().contains(a)
+	}
+}
+
+pub struct CurrencyHooks<T>(PhantomData<T>);
+impl<T: orml_tokens::Config> MutationHooks<T::AccountId, T::CurrencyId, T::Balance>
+	for CurrencyHooks<T>
+{
+	type OnDust = orml_tokens::BurnDust<T>;
+	type OnSlash = ();
+	type PreDeposit = ();
+	type PostDeposit = ();
+	type PreTransfer = ();
+	type PostTransfer = ();
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
+}
+
+impl orml_tokens::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type Amount = Amount;
+	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type CurrencyHooks = CurrencyHooks<Runtime>;
+	type MaxLocks = ConstU32<50>;
+	type DustRemovalWhitelist = DustRemovalWhitelist;
+	type MaxReserves = ConstU32<0>;
+	type ReserveIdentifier = ReserveIdentifier;
+}
+
+parameter_types! {
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native;
+}
+
+impl orml_currencies::Config for Runtime {
+	type MultiCurrency = Tokens;
+	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+	type GetNativeCurrencyId = NativeCurrencyId;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const MinBlocksPerRound: BlockNumber = HOURS;
+	pub const DefaultBlocksPerRound: BlockNumber = 2 * HOURS;
+	pub const StakeDuration: BlockNumber = 7 * DAYS;
+	pub const ExitQueueDelay: u32 = 2;
+	pub const MinCollators: u32 = 8;
+	pub const MinRequiredCollators: u32 = 4;
+	pub const MaxDelegationsPerRound: u32 = 1;
+	#[derive(Debug, Eq, PartialEq)]
+	pub const MaxDelegatorsPerCollator: u32 = 40;
+	pub const MinCollatorStake: Balance = 5_000 * UNIT;
+	pub const MinDelegatorStake: Balance = 10 * UNIT;
+	#[derive(Debug, Eq, PartialEq)]
+	pub const MaxTopCandidates: u32 = 50;
+	pub const MaxUnstakeRequests: u32 = 10;
+	pub const NetworkRewardStart: BlockNumber = BlockNumber::MAX;
+	pub const NetworkRewardRate: Perquintill = Perquintill::from_percent(0);
+	pub const CollatorRewardRateDecay: Perquintill = Perquintill::from_percent(95);
+}
+
+impl parachain_staking::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type CurrencyBalance = Balance;
+
+	type MinBlocksPerRound = MinBlocksPerRound;
+	type DefaultBlocksPerRound = DefaultBlocksPerRound;
+	type StakeDuration = StakeDuration;
+	type ExitQueueDelay = ExitQueueDelay;
+	type MinCollators = MinCollators;
+	type MinRequiredCollators = MinRequiredCollators;
+	type MaxDelegationsPerRound = MaxDelegationsPerRound;
+	type MaxDelegatorsPerCollator = MaxDelegatorsPerCollator;
+	type MinCollatorStake = MinCollatorStake;
+	type MinCollatorCandidateStake = MinCollatorStake;
+	type MaxTopCandidates = MaxTopCandidates;
+	type MinDelegatorStake = MinDelegatorStake;
+	type MaxUnstakeRequests = MaxUnstakeRequests;
+	type NetworkRewardRate = NetworkRewardRate;
+	type NetworkRewardStart = NetworkRewardStart;
+	type NetworkRewardBeneficiary = Treasury;
+	type CollatorRewardRateDecay = CollatorRewardRateDecay;
+	type WeightInfo = parachain_staking::default_weights::SubstrateWeight<Runtime>;
+
+	const BLOCKS_PER_YEAR: BlockNumber = BLOCKS_PER_YEAR;
+}
+
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+}
+
+parameter_types! {
+	pub const DepositBase: Balance = 300 * MILLIUNIT;
+	pub const DepositFactor: Balance = 50 * MILLIUNIT;
+}
+
+impl pallet_multisig::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type Currency = Balances;
+	type DepositBase = DepositBase;
+	type DepositFactor = DepositFactor;
+	type MaxSignatories = ConstU32<20>;
+	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_utility::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type PalletsOrigin = OriginCaller;
+	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const MinVestedTransfer: Balance = 0;
+	pub UnvestedFundsAllowedWithdrawReasons: WithdrawReasons =
+		WithdrawReasons::except(WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE);
+}
+
+impl pallet_vesting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type BlockNumberToBalance = ConvertInto;
+	type MinVestedTransfer = MinVestedTransfer;
+	type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
+	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
+	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -435,18 +824,37 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
 
+		// Governance
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 12,
+		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 13,
+		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Config<T>, Origin<T>, Event<T>} = 14,
+		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Config<T>, Origin<T>,  Event<T>} = 15,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 16,
+		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 17,
+		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 18,
+		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>} = 19,
+		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 20,
+		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,
+
 		// Collator support. The order of these 4 are important and shall not change.
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
-		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
-		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
+		Authorship: pallet_authorship::{Pallet, Call, Storage} = 30,
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 32,
+		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 33,
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 34,
+		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
 
 		// XCM helpers.
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 30,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 31,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 32,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 41,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 42,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
+
+		// Amendments
+		Vesting: pallet_vesting::{Pallet, Call, Config<T>, Storage, Event<T>} = 50,
+		Utility: pallet_utility::{Pallet, Call, Event} = 51,
+		Currencies: orml_currencies::{Pallet, Call, Storage} = 52,
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 53,
+		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 54
 	}
 );
 
@@ -461,7 +869,6 @@ mod benches {
 		[pallet_balances, Balances]
 		[pallet_session, SessionBench::<Runtime>]
 		[pallet_timestamp, Timestamp]
-		[pallet_collator_selection, CollatorSelection]
 		[cumulus_pallet_xcmp_queue, XcmpQueue]
 	);
 }
@@ -573,10 +980,20 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl parachain_staking::runtime_api::ParachainStakingApi<Block, AccountId, Balance> for Runtime {
+		fn get_unclaimed_staking_rewards(account: &AccountId) -> Balance {
+			ParachainStaking::get_unclaimed_staking_rewards(account)
+		}
+
+		fn get_staking_rates() -> parachain_staking::runtime_api::StakingRates {
+			ParachainStaking::get_staking_rates()
+		}
+	}
+
 	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {
 		fn on_runtime_upgrade() -> (Weight, Weight) {
-			log::info!("try-runtime::on_runtime_upgrade pendulum-development.");
+			log::info!("try-runtime::on_runtime_upgrade pendulum.");
 			let weight = Executive::try_runtime_upgrade().unwrap();
 			(weight, RuntimeBlockWeights::get().max_block)
 		}

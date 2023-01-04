@@ -35,7 +35,7 @@ use substrate_prometheus_endpoint::Registry;
 
 use polkadot_service::CollatorPair;
 
-/// Native executor type.
+/// Amplitude executor type.
 pub struct AmplitudeRuntimeExecutor;
 
 impl sc_executor::NativeExecutionDispatch for AmplitudeRuntimeExecutor {
@@ -50,7 +50,37 @@ impl sc_executor::NativeExecutionDispatch for AmplitudeRuntimeExecutor {
 	}
 }
 
-/// Native executor instance.
+/// Foucoco executor type.
+pub struct FoucocoRuntimeExecutor;
+
+impl sc_executor::NativeExecutionDispatch for FoucocoRuntimeExecutor {
+	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+		foucoco_runtime::api::dispatch(method, data)
+	}
+
+	fn native_version() -> sc_executor::NativeVersion {
+		foucoco_runtime::native_version()
+	}
+}
+
+/// Pendulum executor type.
+pub struct PendulumRuntimeExecutor;
+
+impl sc_executor::NativeExecutionDispatch for PendulumRuntimeExecutor {
+	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+		pendulum_runtime::api::dispatch(method, data)
+	}
+
+	fn native_version() -> sc_executor::NativeVersion {
+		pendulum_runtime::native_version()
+	}
+}
+
+/// Development executor instance.
 pub struct DevelopmentRuntimeExecutor;
 
 impl sc_executor::NativeExecutionDispatch for DevelopmentRuntimeExecutor {

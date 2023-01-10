@@ -36,7 +36,7 @@ use frame_support::{
 		WithdrawReasons,
 	},
 	weights::{
-  		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
+		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
 		WeightToFeeCoefficients, WeightToFeePolynomial,
 	},
 	PalletId,
@@ -184,9 +184,9 @@ const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 /// We allow for 0.5 of a second of compute with a 12 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight =  Weight::from_ref_time(WEIGHT_REF_TIME_PER_SECOND
-	.saturating_div(2))
-	.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64);
+const MAXIMUM_BLOCK_WEIGHT: Weight =
+	Weight::from_ref_time(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2))
+		.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64);
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -804,6 +804,18 @@ impl pallet_vesting::Config for Runtime {
 	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
+
+// parameter_types! {
+// 	pub const VaultPalletId: PalletId = PalletId(*b"mod/vreg");
+// }
+//
+// impl vault_registry::Config for Runtime {
+// 	type PalletId = VaultPalletId;
+// 	type RuntimeEvent = RuntimeEvent;
+// 	type Balance = Balance;
+// 	type WeightInfo = ();
+// 	type GetGriefingCollateralCurrencyId = NativeCurrencyId;
+// }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(

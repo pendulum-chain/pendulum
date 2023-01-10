@@ -36,11 +36,10 @@ use substrate_prometheus_endpoint::Registry;
 use polkadot_service::CollatorPair;
 use sc_consensus::ImportQueue;
 
-
-type ParachainBlockImport<RuntimeApi,Executor> = TParachainBlockImport<
+type ParachainBlockImport<RuntimeApi, Executor> = TParachainBlockImport<
 	Block,
 	Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
-	TFullBackend<Block>
+	TFullBackend<Block>,
 >;
 /// Amplitude executor type.
 pub struct AmplitudeRuntimeExecutor;
@@ -122,7 +121,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 			TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
 		>,
 		(
-			ParachainBlockImport<RuntimeApi,Executor>,
+			ParachainBlockImport<RuntimeApi, Executor>,
 			Option<Telemetry>,
 			Option<TelemetryWorkerHandle>,
 		),
@@ -221,14 +220,19 @@ async fn build_relay_chain_interface(
 	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> RelayChainResult<(Arc<(dyn RelayChainInterface + 'static)>, Option<CollatorPair>)> {
 	if !collator_options.relay_chain_rpc_urls.is_empty() {
-		build_minimal_relay_chain_node(polkadot_config, task_manager, collator_options.relay_chain_rpc_urls).await
+		build_minimal_relay_chain_node(
+			polkadot_config,
+			task_manager,
+			collator_options.relay_chain_rpc_urls,
+		)
+		.await
 	} else {
 		build_inprocess_relay_chain(
 			polkadot_config,
 			parachain_config,
 			telemetry_worker_handle,
 			task_manager,
-			hwbench
+			hwbench,
 		)
 	}
 }
@@ -413,7 +417,7 @@ where
 /// Build the import queue for the parachain runtime.
 fn build_import_queue<RuntimeApi, Executor>(
 	client: Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
-	block_import: ParachainBlockImport<RuntimeApi,Executor>,
+	block_import: ParachainBlockImport<RuntimeApi, Executor>,
 	config: &Configuration,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
@@ -476,7 +480,7 @@ where
 
 fn build_consensus<RuntimeApi, Executor>(
 	client: Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
-	block_import: ParachainBlockImport<RuntimeApi,Executor>,
+	block_import: ParachainBlockImport<RuntimeApi, Executor>,
 	prometheus_registry: Option<&Registry>,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,

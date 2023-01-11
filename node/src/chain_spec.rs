@@ -6,13 +6,15 @@ use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{
+	bounded::BoundedVec,
 	crypto::{Ss58Codec, UncheckedInto},
 	sr25519, Pair, Public,
 };
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
-	Perquintill,
+	FixedPointNumber, FixedU128, Perquintill,
 };
+use spacewalk_primitives::{CurrencyId, CurrencyId::Token, VaultCurrencyPair, AMPE, DOT, KSM, PEN};
 
 use crate::constants::pendulum;
 
@@ -217,8 +219,10 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 				// initial collators.
 				invulnerables.clone(),
 				signatories.clone(),
+				vec![(sudo_account.clone(), "Sudo".as_bytes().to_vec())],
 				sudo_account.clone(),
 				FOUCOCO_PARACHAIN_ID.into(),
+				false,
 			)
 		},
 		// Bootnodes
@@ -566,9 +570,56 @@ fn amplitude_genesis(
 fn foucoco_genesis(
 	invulnerables: Vec<AccountId>,
 	signatories: Vec<AccountId>,
+	authorized_oracles: Vec<(AccountId, Vec<u8>)>,
 	sudo_account: AccountId,
 	id: ParaId,
+	start_shutdown: bool,
 ) -> foucoco_runtime::GenesisConfig {
+	fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
+		VaultCurrencyPair {
+			collateral: currency_id,
+			wrapped: foucoco_runtime::WrappedCurrencyId::get(),
+		}
+	}
+
+	// Used to create bounded vecs for genesis config
+	// Does not return a result but panics because the genesis config is hardcoded
+	fn create_bounded_vec(input: &str) -> BoundedVec<u8, foucoco_runtime::FieldLength> {
+		let bounded_vec =
+			BoundedVec::try_from(input.as_bytes().to_vec()).expect("Failed to create bounded vec");
+
+		bounded_vec
+	}
+
+	// Testnet organization
+	let organization_testnet_sdf =
+		foucoco_runtime::Organization { name: create_bounded_vec("sdftest"), id: 1u128 };
+	// Testnet validators
+	let validators = vec![
+		foucoco_runtime::Validator {
+			name: create_bounded_vec("$sdftest1"),
+			public_key: create_bounded_vec(
+				"GDKXE2OZMJIPOSLNA6N6F2BVCI3O777I2OOC4BV7VOYUEHYX7RTRYA7Y",
+			),
+			organization_id: organization_testnet_sdf.id,
+		},
+		foucoco_runtime::Validator {
+			name: create_bounded_vec("$sdftest2"),
+			public_key: create_bounded_vec(
+				"GCUCJTIYXSOXKBSNFGNFWW5MUQ54HKRPGJUTQFJ5RQXZXNOLNXYDHRAP",
+			),
+			organization_id: organization_testnet_sdf.id,
+		},
+		foucoco_runtime::Validator {
+			name: create_bounded_vec("$sdftest3"),
+			public_key: create_bounded_vec(
+				"GC2V2EFSXN6SQTWVYA5EPJPBWWIMSD2XQNKUOHGEKB535AQE2I6IXV2Z",
+			),
+			organization_id: organization_testnet_sdf.id,
+		},
+	];
+	let organizations = vec![organization_testnet_sdf];
+
 	let mut balances: Vec<_> = signatories
 		.iter()
 		.cloned()
@@ -586,6 +637,18 @@ fn foucoco_genesis(
 				INITIAL_COLLATOR_STAKING.saturating_mul(invulnerables.len().try_into().unwrap()),
 			),
 	));
+
+	let token_balances = balances
+		.iter()
+		.flat_map(|k| {
+			vec![
+				(k.0.clone(), Token(DOT), 1 << 60),
+				(k.0.clone(), Token(KSM), 1 << 60),
+				(k.0.clone(), Token(PEN), 1 << 60),
+				(k.0.clone(), Token(AMPE), 1 << 60),
+			]
+		})
+		.collect();
 
 	let stakers: Vec<_> = invulnerables
 		.iter()
@@ -640,11 +703,86 @@ fn foucoco_genesis(
 			..Default::default()
 		},
 		democracy: Default::default(),
-		sudo: foucoco_runtime::SudoConfig { key: Some(sudo_account) },
+		sudo: foucoco_runtime::SudoConfig { key: Some(sudo_account.clone()) },
 		technical_committee: foucoco_runtime::TechnicalCommitteeConfig {
 			members: signatories.clone(),
 			..Default::default()
 		},
+		tokens: foucoco_runtime::TokensConfig {
+			// Configure the initial token supply for the native currency and USDC asset
+			balances: token_balances,
+		},
+		issue: foucoco_runtime::IssueConfig {
+			issue_period: foucoco_runtime::DAYS,
+			issue_minimum_transfer_amount: 1000,
+			limit_volume_amount: None,
+			limit_volume_currency_id: Token(DOT),
+			current_volume_amount: 0u32.into(),
+			interval_length: (60u32 * 60 * 24).into(),
+			last_interval_index: 0u32.into(),
+		},
+		redeem: foucoco_runtime::RedeemConfig {
+			redeem_period: foucoco_runtime::DAYS,
+			redeem_minimum_transfer_amount: 100,
+			limit_volume_amount: None,
+			limit_volume_currency_id: Token(DOT),
+			current_volume_amount: 0u32.into(),
+			interval_length: (60u32 * 60 * 24).into(),
+			last_interval_index: 0u32.into(),
+		},
+		replace: foucoco_runtime::ReplaceConfig {
+			replace_period: foucoco_runtime::DAYS,
+			replace_minimum_transfer_amount: 1000,
+		},
+		security: foucoco_runtime::SecurityConfig {
+			initial_status: if start_shutdown {
+				foucoco_runtime::StatusCode::Shutdown
+			} else {
+				foucoco_runtime::StatusCode::Error
+			},
+		},
+		stellar_relay: foucoco_runtime::StellarRelayConfig {
+			old_validators: vec![],
+			old_organizations: vec![],
+			validators,
+			organizations,
+			enactment_block_height: 0,
+			is_public_network: false,
+			phantom: Default::default(),
+		},
+		oracle: foucoco_runtime::OracleConfig {
+			authorized_oracles,
+			max_delay: 3600000, // one hour
+		},
+		vault_registry: foucoco_runtime::VaultRegistryConfig {
+			minimum_collateral_vault: vec![(Token(DOT), 0), (Token(KSM), 0)],
+			punishment_delay: foucoco_runtime::DAYS,
+			secure_collateral_threshold: vec![
+				(default_pair(Token(DOT)), FixedU128::checked_from_rational(260, 100).unwrap()),
+				(default_pair(Token(KSM)), FixedU128::checked_from_rational(260, 100).unwrap()),
+			], /* 150% */
+			premium_redeem_threshold: vec![
+				(default_pair(Token(DOT)), FixedU128::checked_from_rational(200, 100).unwrap()),
+				(default_pair(Token(KSM)), FixedU128::checked_from_rational(200, 100).unwrap()),
+			], /* 135% */
+			liquidation_collateral_threshold: vec![
+				(default_pair(Token(DOT)), FixedU128::checked_from_rational(150, 100).unwrap()),
+				(default_pair(Token(KSM)), FixedU128::checked_from_rational(150, 100).unwrap()),
+			], /* 110% */
+			system_collateral_ceiling: vec![
+				(default_pair(Token(DOT)), 60_000 * DOT.one()),
+				(default_pair(Token(KSM)), 60_000 * KSM.one()),
+			],
+		},
+		fee: foucoco_runtime::FeeConfig {
+			issue_fee: FixedU128::checked_from_rational(15, 10000).unwrap(), // 0.15%
+			issue_griefing_collateral: FixedU128::checked_from_rational(5, 100000).unwrap(), // 0.005%
+			redeem_fee: FixedU128::checked_from_rational(5, 1000).unwrap(),  // 0.5%
+			premium_redeem_fee: FixedU128::checked_from_rational(5, 100).unwrap(), // 5%
+			punishment_fee: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
+			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
+		},
+		nomination: foucoco_runtime::NominationConfig { is_nomination_enabled: false },
 	}
 }
 

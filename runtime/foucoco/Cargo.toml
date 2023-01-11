@@ -25,6 +25,27 @@ smallvec = "1.9.0"
 # Local
 runtime-common = {path = "../common", default-features = false}
 
+# custom libraries from spacewalk
+currency = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+security = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+staking = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+oracle = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+stellar-relay = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+reward = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+fee = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+vault-registry = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+redeem = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+issue = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+nomination = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+replace = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+
+module-issue-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+
 # Substrate
 frame-benchmarking = {git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.37"}
 frame-executive = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
@@ -52,6 +73,9 @@ pallet-treasury = {git = "https://github.com/paritytech/substrate", default-feat
 pallet-utility = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 pallet-vesting = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 sp-api = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
+# for the currency pallet
+sp-arithmetic = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
+
 sp-block-builder = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 sp-consensus-aura = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 sp-core = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
@@ -144,6 +168,7 @@ std = [
   "polkadot-runtime-common/std",
   "runtime-common/std",
   "sp-api/std",
+  "sp-arithmetic/std",
   "sp-block-builder/std",
   "sp-consensus-aura/std",
   "sp-core/std",
@@ -157,7 +182,26 @@ std = [
   "sp-version/std",
   "xcm-builder/std",
   "xcm-executor/std",
-  "xcm/std"
+  "xcm/std",
+#	custom libraries from spacewalk
+  "currency/std",
+  "security/std",
+  "staking/std",
+  "oracle/std",
+  "stellar-relay/std",
+  "reward/std",
+  "fee/std",
+  "vault-registry/std",
+  "redeem/std",
+  "issue/std",
+  "nomination/std",
+  "replace/std",
+  "module-issue-rpc-runtime-api/std",
+  "module-oracle-rpc-runtime-api/std",
+  "module-redeem-rpc-runtime-api/std",
+  "module-replace-rpc-runtime-api/std",
+  "module-vault-registry-rpc-runtime-api/std",
+  "spacewalk-primitives/std"
 ]
 
 runtime-benchmarks = [

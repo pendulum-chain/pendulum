@@ -1,6 +1,6 @@
 use super::{
-	AccountId, Balance, Balances, CurrencyId, ForeignCurrencyId, ParachainInfo, ParachainSystem,
-	PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
+	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
+	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
 };
 use core::marker::PhantomData;
 use frame_support::{
@@ -12,6 +12,7 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use sp_runtime::traits::Convert;
+use spacewalk_primitives::TokenSymbol;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteAssetId, EnsureXcmOrigin,
@@ -52,14 +53,11 @@ pub struct CurrencyIdConvert;
 
 impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		match id {
-			// CurrencyId::KSM => Some(MultiLocation::parent()),
-			CurrencyId::XCM(f) => match f {
-				ForeignCurrencyId::KSM => Some(MultiLocation::parent()),
-				_ => None,
-			},
-			_ => None,
+		if let CurrencyId::Token(TokenSymbol::KSM) = id {
+			return Some(MultiLocation::parent())
 		}
+
+		None
 	}
 }
 
@@ -67,7 +65,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
 			MultiLocation { parents: 1, interior: Here } =>
-				Some(CurrencyId::XCM(ForeignCurrencyId::KSM)),
+				Some(CurrencyId::Token(TokenSymbol::KSM)),
 			_ => None,
 		}
 	}
@@ -89,7 +87,7 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
 		if location == MultiLocation::parent() {
-			return Ok(CurrencyId::XCM(ForeignCurrencyId::KSM))
+			return Ok(CurrencyId::Token(TokenSymbol::KSM))
 		}
 		Err(location.clone())
 	}

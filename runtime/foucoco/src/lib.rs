@@ -76,8 +76,8 @@ pub use module_oracle_rpc_runtime_api::BalanceWrapper;
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use spacewalk_primitives::{
-	self, AccountId, Balance, BlockNumber, CurrencyId, CurrencyId::Token, Hash, Signature,
-	SignedFixedPoint, SignedInner, TokenSymbol, UnsignedFixedPoint, UnsignedInner,
+	self as primitives, AccountId, Balance, BlockNumber, CurrencyId, CurrencyId::Token, Hash,
+	Signature, SignedFixedPoint, SignedInner, TokenSymbol, UnsignedFixedPoint, UnsignedInner,
 };
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
@@ -85,7 +85,7 @@ use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 // XCM Imports
 use xcm_executor::XcmExecutor;
 
-pub type VaultId = spacewalk_primitives::VaultId<AccountId, CurrencyId>;
+pub type VaultId = primitives::VaultId<AccountId, CurrencyId>;
 
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
@@ -736,7 +736,7 @@ impl<T: orml_tokens::Config> MutationHooks<T::AccountId, T::CurrencyId, T::Balan
 impl orml_tokens::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
-	type Amount = spacewalk_primitives::Amount;
+	type Amount = primitives::Amount;
 	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
@@ -754,8 +754,7 @@ parameter_types! {
 
 impl orml_currencies::Config for Runtime {
 	type MultiCurrency = Tokens;
-	type NativeCurrency =
-		BasicCurrencyAdapter<Runtime, Balances, spacewalk_primitives::Amount, BlockNumber>;
+	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, primitives::Amount, BlockNumber>;
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type WeightInfo = ();
 }
@@ -882,8 +881,8 @@ impl currency::Config for Runtime {
 	type Balance = Balance;
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type GetRelayChainCurrencyId = RelayChainCurrencyId;
-	type AssetConversion = spacewalk_primitives::AssetConversion;
-	type BalanceConversion = spacewalk_primitives::BalanceConversion;
+	type AssetConversion = primitives::AssetConversion;
+	type BalanceConversion = primitives::BalanceConversion;
 	type CurrencyConversion = CurrencyConvert;
 }
 

@@ -23,7 +23,7 @@ development-runtime = {path = "../runtime/development"}
 runtime-common = {path = "../runtime/common"}
 
 # Spacewalk
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk.git", branch = "update-orml-versions-to-0.9.36" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3" }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }

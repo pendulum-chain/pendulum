@@ -26,25 +26,25 @@ smallvec = "1.9.0"
 runtime-common = {path = "../common", default-features = false}
 
 # custom libraries from spacewalk
-currency = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-security = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-staking = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-oracle = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-stellar-relay = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-reward = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-fee = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-vault-registry = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-redeem = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-issue = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-nomination = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-replace = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+security = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+staking = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+oracle = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+stellar-relay = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+reward = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+fee = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+vault-registry = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+redeem = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+issue = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+nomination = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+replace = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
 
-module-issue-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
-module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk.git", default-features = false, branch = "update-orml-versions-to-0.9.36" }
+module-issue-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
 
 # Substrate
 frame-benchmarking = {git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.37"}

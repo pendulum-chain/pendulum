@@ -749,7 +749,7 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native;
-	pub const WrappedCurrencyId: CurrencyId = WRAPPED_CURRENCY_ID;
+	pub const DefaultWrappedCurrencyId: CurrencyId = WRAPPED_CURRENCY_ID;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -1328,7 +1328,7 @@ impl_runtime_apis! {
 		}
 
 		fn get_required_collateral_for_wrapped(amount_wrapped: BalanceWrapper<Balance>, currency_id: CurrencyId) -> Result<BalanceWrapper<Balance>, DispatchError> {
-			let amount_wrapped = Amount::new(amount_wrapped.amount, WrappedCurrencyId::get());
+			let amount_wrapped = Amount::new(amount_wrapped.amount, DefaultWrappedCurrencyId::get());
 			let result = VaultRegistry::get_required_collateral_for_wrapped(&amount_wrapped, currency_id)?;
 			Ok(BalanceWrapper{amount:result.amount()})
 		}

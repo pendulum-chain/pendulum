@@ -579,7 +579,7 @@ fn foucoco_genesis(
 	fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
 		VaultCurrencyPair {
 			collateral: currency_id,
-			wrapped: foucoco_runtime::WrappedCurrencyId::get(),
+			wrapped: foucoco_runtime::DefaultWrappedCurrencyId::get(),
 		}
 	}
 

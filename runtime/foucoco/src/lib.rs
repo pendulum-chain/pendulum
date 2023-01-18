@@ -76,8 +76,8 @@ pub use module_oracle_rpc_runtime_api::BalanceWrapper;
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use spacewalk_primitives::{
-	self as primitives, AccountId, Balance, BlockNumber, CurrencyId, CurrencyId::Token, Hash,
-	Signature, SignedFixedPoint, SignedInner, TokenSymbol, UnsignedFixedPoint, UnsignedInner,
+	self as primitives, AccountId, Balance, BlockNumber, CurrencyId, CurrencyId::XCM, Hash,
+	Signature, SignedFixedPoint, SignedInner, ForeignCurrencyId, UnsignedFixedPoint, UnsignedInner,
 };
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
@@ -872,7 +872,7 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 }
 
 parameter_types! {
-	pub const RelayChainCurrencyId: CurrencyId = Token(TokenSymbol::KSM);
+	pub const RelayChainCurrencyId: CurrencyId = XCM(ForeignCurrencyId::KSM);
 }
 impl currency::Config for Runtime {
 	type UnsignedFixedPoint = UnsignedFixedPoint;

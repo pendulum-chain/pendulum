@@ -14,7 +14,7 @@ use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	FixedPointNumber, FixedU128, Perquintill,
 };
-use spacewalk_primitives::{CurrencyId, CurrencyId::Token, VaultCurrencyPair, AMPE, DOT, KSM, PEN};
+use spacewalk_primitives::{CurrencyId, CurrencyId::XCM, VaultCurrencyPair, DOT, KSM};
 
 use crate::constants::pendulum;
 
@@ -134,7 +134,7 @@ pub fn get_development_session_keys(keys: AuraId) -> development_runtime::Sessio
 pub fn amplitude_config() -> AmplitudeChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "AMPE".into());
+	properties.insert("ForeignCurrencyId".into(), "AMPE".into());
 	properties.insert("tokenDecimals".into(), 12u32.into());
 	properties.insert("ss58Format".into(), amplitude_runtime::SS58Prefix::get().into());
 
@@ -190,7 +190,7 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 pub fn foucoco_config() -> FoucocoChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "AMPE".into());
+	properties.insert("ForeignCurrencyId".into(), "AMPE".into());
 	properties.insert("tokenDecimals".into(), 12u32.into());
 	properties.insert("ss58Format".into(), foucoco_runtime::SS58Prefix::get().into());
 
@@ -250,7 +250,7 @@ pub fn pendulum_config() -> PendulumChainSpec {
 	sp_core::crypto::set_default_ss58_version(pendulum_runtime::SS58Prefix::get().into());
 
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "PEN".into());
+	//properties.insert("ForeignCurrencyId".into(), "PEN".into());
 	properties.insert("tokenDecimals".into(), 12u32.into());
 	properties.insert("ss58Format".into(), pendulum_runtime::SS58Prefix::get().into());
 
@@ -370,7 +370,7 @@ pub fn pendulum_config() -> PendulumChainSpec {
 pub fn development_config() -> DevelopmentChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "UNIT".into());
+	properties.insert("ForeignCurrencyId".into(), "UNIT".into());
 	properties.insert("tokenDecimals".into(), 12.into());
 	properties.insert("ss58Format".into(), 42.into());
 
@@ -425,7 +425,7 @@ pub fn development_config() -> DevelopmentChainSpec {
 pub fn local_testnet_config() -> DevelopmentChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "UNIT".into());
+	properties.insert("ForeignCurrencyId".into(), "UNIT".into());
 	properties.insert("tokenDecimals".into(), 12.into());
 	properties.insert("ss58Format".into(), 42.into());
 
@@ -643,10 +643,10 @@ fn foucoco_genesis(
 		.iter()
 		.flat_map(|k| {
 			vec![
-				(k.0.clone(), Token(DOT), 1 << 60),
-				(k.0.clone(), Token(KSM), 1 << 60),
-				(k.0.clone(), Token(PEN), 1 << 60),
-				(k.0.clone(), Token(AMPE), 1 << 60),
+				(k.0.clone(), XCM(DOT), 1 << 60),
+				(k.0.clone(), XCM(KSM), 1 << 60),
+				// (k.0.clone(), XCM(PEN), 1 << 60),
+				// (k.0.clone(), XCM(AMPE), 1 << 60),
 			]
 		})
 		.collect();
@@ -717,7 +717,7 @@ fn foucoco_genesis(
 			issue_period: foucoco_runtime::DAYS,
 			issue_minimum_transfer_amount: 1000,
 			limit_volume_amount: None,
-			limit_volume_currency_id: Token(DOT),
+			limit_volume_currency_id: XCM(DOT),
 			current_volume_amount: 0u32.into(),
 			interval_length: (60u32 * 60 * 24).into(),
 			last_interval_index: 0u32.into(),
@@ -726,7 +726,7 @@ fn foucoco_genesis(
 			redeem_period: foucoco_runtime::DAYS,
 			redeem_minimum_transfer_amount: 100,
 			limit_volume_amount: None,
-			limit_volume_currency_id: Token(DOT),
+			limit_volume_currency_id: XCM(DOT),
 			current_volume_amount: 0u32.into(),
 			interval_length: (60u32 * 60 * 24).into(),
 			last_interval_index: 0u32.into(),
@@ -756,23 +756,23 @@ fn foucoco_genesis(
 			max_delay: 3600000, // one hour
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
-			minimum_collateral_vault: vec![(Token(DOT), 0), (Token(KSM), 0)],
+			minimum_collateral_vault: vec![(XCM(DOT), 0), (XCM(KSM), 0)],
 			punishment_delay: foucoco_runtime::DAYS,
 			secure_collateral_threshold: vec![
-				(default_pair(Token(DOT)), FixedU128::checked_from_rational(260, 100).unwrap()),
-				(default_pair(Token(KSM)), FixedU128::checked_from_rational(260, 100).unwrap()),
+				(default_pair(XCM(DOT)), FixedU128::checked_from_rational(260, 100).unwrap()),
+				(default_pair(XCM(KSM)), FixedU128::checked_from_rational(260, 100).unwrap()),
 			], /* 150% */
 			premium_redeem_threshold: vec![
-				(default_pair(Token(DOT)), FixedU128::checked_from_rational(200, 100).unwrap()),
-				(default_pair(Token(KSM)), FixedU128::checked_from_rational(200, 100).unwrap()),
+				(default_pair(XCM(DOT)), FixedU128::checked_from_rational(200, 100).unwrap()),
+				(default_pair(XCM(KSM)), FixedU128::checked_from_rational(200, 100).unwrap()),
 			], /* 135% */
 			liquidation_collateral_threshold: vec![
-				(default_pair(Token(DOT)), FixedU128::checked_from_rational(150, 100).unwrap()),
-				(default_pair(Token(KSM)), FixedU128::checked_from_rational(150, 100).unwrap()),
+				(default_pair(XCM(DOT)), FixedU128::checked_from_rational(150, 100).unwrap()),
+				(default_pair(XCM(KSM)), FixedU128::checked_from_rational(150, 100).unwrap()),
 			], /* 110% */
 			system_collateral_ceiling: vec![
-				(default_pair(Token(DOT)), 60_000 * DOT.one()),
-				(default_pair(Token(KSM)), 60_000 * KSM.one()),
+				(default_pair(XCM(DOT)), 60_000 * DOT.one()),
+				(default_pair(XCM(KSM)), 60_000 * KSM.one()),
 			],
 		},
 		fee: foucoco_runtime::FeeConfig {

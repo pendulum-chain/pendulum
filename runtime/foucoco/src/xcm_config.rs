@@ -12,7 +12,7 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use sp_runtime::traits::Convert;
-use spacewalk_primitives::TokenSymbol;
+use spacewalk_primitives::ForeignCurrencyId;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteAssetId, EnsureXcmOrigin,
@@ -53,8 +53,8 @@ pub struct CurrencyIdConvert;
 
 impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		if let CurrencyId::Token(TokenSymbol::KSM) = id {
-			return Some(MultiLocation::parent())
+		if let CurrencyId::XCM(ForeignCurrencyId::KSM) = id {
+			return Some(MultiLocation::parent());
 		}
 
 		None
@@ -65,7 +65,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
 			MultiLocation { parents: 1, interior: Here } =>
-				Some(CurrencyId::Token(TokenSymbol::KSM)),
+				Some(CurrencyId::XCM(ForeignCurrencyId::KSM)),
 			_ => None,
 		}
 	}
@@ -87,7 +87,7 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
 		if location == MultiLocation::parent() {
-			return Ok(CurrencyId::Token(TokenSymbol::KSM))
+			return Ok(CurrencyId::XCM(ForeignCurrencyId::KSM))
 		}
 		Err(location.clone())
 	}

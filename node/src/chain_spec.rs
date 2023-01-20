@@ -134,7 +134,7 @@ pub fn get_development_session_keys(keys: AuraId) -> development_runtime::Sessio
 pub fn amplitude_config() -> AmplitudeChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("ForeignCurrencyId".into(), "AMPE".into());
+	properties.insert("tokenSymbol".into(), "AMPE".into());
 	properties.insert("tokenDecimals".into(), 12u32.into());
 	properties.insert("ss58Format".into(), amplitude_runtime::SS58Prefix::get().into());
 
@@ -190,7 +190,7 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 pub fn foucoco_config() -> FoucocoChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("ForeignCurrencyId".into(), "AMPE".into());
+	properties.insert("tokenSymbol".into(), "AMPE".into());
 	properties.insert("tokenDecimals".into(), 12u32.into());
 	properties.insert("ss58Format".into(), foucoco_runtime::SS58Prefix::get().into());
 
@@ -219,7 +219,7 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 				// initial collators.
 				invulnerables.clone(),
 				signatories.clone(),
-				//todo: is it okay that only sudo is authorized?
+				//todo: is it okay that only sudo is authorized? wait for the DIA Oracle impl
 				vec![(sudo_account.clone(), "Sudo".as_bytes().to_vec())],
 				sudo_account.clone(),
 				FOUCOCO_PARACHAIN_ID.into(),
@@ -250,7 +250,7 @@ pub fn pendulum_config() -> PendulumChainSpec {
 	sp_core::crypto::set_default_ss58_version(pendulum_runtime::SS58Prefix::get().into());
 
 	let mut properties = sc_chain_spec::Properties::new();
-	//properties.insert("ForeignCurrencyId".into(), "PEN".into());
+	//properties.insert("tokenSymbol".into(), "PEN".into());
 	properties.insert("tokenDecimals".into(), 12u32.into());
 	properties.insert("ss58Format".into(), pendulum_runtime::SS58Prefix::get().into());
 
@@ -370,7 +370,7 @@ pub fn pendulum_config() -> PendulumChainSpec {
 pub fn development_config() -> DevelopmentChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("ForeignCurrencyId".into(), "UNIT".into());
+	properties.insert("tokenSymbol".into(), "UNIT".into());
 	properties.insert("tokenDecimals".into(), 12.into());
 	properties.insert("ss58Format".into(), 42.into());
 
@@ -425,7 +425,7 @@ pub fn development_config() -> DevelopmentChainSpec {
 pub fn local_testnet_config() -> DevelopmentChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("ForeignCurrencyId".into(), "UNIT".into());
+	properties.insert("tokenSymbol".into(), "UNIT".into());
 	properties.insert("tokenDecimals".into(), 12.into());
 	properties.insert("ss58Format".into(), 42.into());
 
@@ -761,15 +761,15 @@ fn foucoco_genesis(
 			secure_collateral_threshold: vec![
 				(default_pair(XCM(DOT)), FixedU128::checked_from_rational(260, 100).unwrap()),
 				(default_pair(XCM(KSM)), FixedU128::checked_from_rational(260, 100).unwrap()),
-			], /* 150% */
+			], /* 260% */
 			premium_redeem_threshold: vec![
 				(default_pair(XCM(DOT)), FixedU128::checked_from_rational(200, 100).unwrap()),
 				(default_pair(XCM(KSM)), FixedU128::checked_from_rational(200, 100).unwrap()),
-			], /* 135% */
+			], /* 200% */
 			liquidation_collateral_threshold: vec![
 				(default_pair(XCM(DOT)), FixedU128::checked_from_rational(150, 100).unwrap()),
 				(default_pair(XCM(KSM)), FixedU128::checked_from_rational(150, 100).unwrap()),
-			], /* 110% */
+			], /* 150% */
 			system_collateral_ceiling: vec![
 				(default_pair(XCM(DOT)), 60_000 * DOT.one()),
 				(default_pair(XCM(KSM)), 60_000 * KSM.one()),

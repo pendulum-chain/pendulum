@@ -76,8 +76,9 @@ pub use module_oracle_rpc_runtime_api::BalanceWrapper;
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use spacewalk_primitives::{
-	self as primitives, AccountId, Balance, BlockNumber, CurrencyId, CurrencyId::XCM, Hash,
-	Signature, SignedFixedPoint, SignedInner, ForeignCurrencyId, UnsignedFixedPoint, UnsignedInner,
+	self as primitives, AccountId, Balance, BlockNumber, CurrencyId, CurrencyId::XCM,
+	ForeignCurrencyId, Hash, Signature, SignedFixedPoint, SignedInner, UnsignedFixedPoint,
+	UnsignedInner,
 };
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
@@ -204,6 +205,7 @@ const MAXIMUM_BLOCK_WEIGHT: Weight =
 	Weight::from_ref_time(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2))
 		.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64);
 
+// todo: https://github.com/pendulum-chain/pendulum/pull/91#discussion_r1073402063
 // For mainnet USDC issued by centre.io
 // const WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4 {
 // 	code: *b"USDC",

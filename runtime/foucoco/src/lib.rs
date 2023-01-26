@@ -6,7 +6,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-mod default_currency;
 mod weights;
 pub mod xcm_config;
 
@@ -850,18 +849,6 @@ impl pallet_vesting::Config for Runtime {
 	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
-
-// parameter_types! {
-// 	pub const VaultPalletId: PalletId = PalletId(*b"mod/vreg");
-// }
-//
-// impl vault_registry::Config for Runtime {
-// 	type PalletId = VaultPalletId;
-// 	type RuntimeEvent = RuntimeEvent;
-// 	type Balance = Balance;
-// 	type WeightInfo = ();
-// 	type GetGriefingCollateralCurrencyId = NativeCurrencyId;
-// }
 
 pub struct CurrencyConvert;
 impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for CurrencyConvert {

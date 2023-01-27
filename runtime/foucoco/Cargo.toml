@@ -73,9 +73,6 @@ pallet-treasury = {git = "https://github.com/paritytech/substrate", default-feat
 pallet-utility = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 pallet-vesting = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 sp-api = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
-# for the currency pallet
-#sp-arithmetic = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
-
 sp-block-builder = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 sp-consensus-aura = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 sp-core = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
@@ -170,7 +167,6 @@ std = [
   "polkadot-runtime-common/std",
   "runtime-common/std",
   "sp-api/std",
-#  "sp-arithmetic/std",
   "sp-block-builder/std",
   "sp-consensus-aura/std",
   "sp-core/std",

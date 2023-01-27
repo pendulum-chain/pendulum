@@ -9,6 +9,8 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod weights;
 pub mod xcm_config;
 
+use codec::Encode;
+pub use dia_oracle::dia::*;
 pub use parachain_staking::InflationInfo;
 
 use smallvec::smallvec;
@@ -16,9 +18,11 @@ use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H256};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto},
+	traits::{
+		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
+	},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, FixedPointNumber,
+	ApplyExtrinsicResult, DispatchError, FixedPointNumber, SaturatedConversion,
 };
 
 use sp_std::{marker::PhantomData, prelude::*};
@@ -44,7 +48,7 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
-pub use sp_runtime::{traits::AccountIdConversion, MultiAddress, Perbill, Permill, Perquintill};
+pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
 	opaque, AuraId, Index, ReserveIdentifier, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT,
@@ -70,13 +74,14 @@ pub use security::StatusCode;
 pub use stellar_relay::traits::{FieldLength, Organization, Validator};
 
 pub use module_oracle_rpc_runtime_api::BalanceWrapper;
+use oracle::dia::DiaOracleAdapter;
 
 // Polkadot imports
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use spacewalk_primitives::{
 	self as primitives, AccountId, Balance, BlockNumber, CurrencyId, CurrencyId::XCM,
-	ForeignCurrencyId, Hash, Signature, SignedFixedPoint, SignedInner, UnsignedFixedPoint,
+	ForeignCurrencyId, Hash, Moment, Signature, SignedFixedPoint, SignedInner, UnsignedFixedPoint,
 	UnsignedInner,
 };
 
@@ -99,12 +104,13 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 /// A Block signed with a Justification
 pub type SignedBlock = generic::SignedBlock<Block>;
 
+pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
+
 /// BlockId type as expected by this runtime.
 pub type BlockId = generic::BlockId<Block>;
 
 /// The SignedExtension to the basic transaction logic.
 pub type SignedExtra = (
-	frame_system::CheckNonZeroSender<Runtime>,
 	frame_system::CheckSpecVersion<Runtime>,
 	frame_system::CheckTxVersion<Runtime>,
 	frame_system::CheckGenesis<Runtime>,
@@ -129,6 +135,68 @@ pub type Executive = frame_executive::Executive<
 	Runtime,
 	AllPalletsWithSystem,
 >;
+
+type DataProviderImpl = DiaOracleAdapter<
+	DiaOracle,
+	UnsignedFixedPoint,
+	Moment,
+	primitives::DiaOracleKeyConvertor,
+	ConvertPrice,
+	ConvertMoment,
+>;
+
+pub struct ConvertPrice;
+impl Convert<u128, Option<UnsignedFixedPoint>> for ConvertPrice {
+	fn convert(price: u128) -> Option<UnsignedFixedPoint> {
+		Some(UnsignedFixedPoint::from_inner(price))
+	}
+}
+
+pub struct ConvertMoment;
+impl Convert<u64, Option<Moment>> for ConvertMoment {
+	fn convert(moment: u64) -> Option<Moment> {
+		Some(moment)
+	}
+}
+
+impl frame_system::offchain::SigningTypes for Runtime {
+	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
+	type Signature = Signature;
+}
+
+impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
+where
+	RuntimeCall: From<LocalCall>,
+{
+	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
+		call: RuntimeCall,
+		public: <Signature as sp_runtime::traits::Verify>::Signer,
+		account: AccountId,
+		index: Index,
+	) -> Option<(
+		RuntimeCall,
+		<UncheckedExtrinsic as sp_runtime::traits::Extrinsic>::SignaturePayload,
+	)> {
+		let period = BlockHashCount::get() as u64;
+		let current_block = System::block_number().saturated_into::<u64>().saturating_sub(1);
+		let tip = 0;
+		let extra: SignedExtra = (
+			frame_system::CheckSpecVersion::<Runtime>::new(),
+			frame_system::CheckTxVersion::<Runtime>::new(),
+			frame_system::CheckGenesis::<Runtime>::new(),
+			frame_system::CheckEra::<Runtime>::from(generic::Era::mortal(period, current_block)),
+			frame_system::CheckNonce::<Runtime>::from(index),
+			frame_system::CheckWeight::<Runtime>::new(),
+			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+		);
+
+		let raw_payload = SignedPayload::new(call, extra).ok()?;
+		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
+		let address = account;
+		let (call, extra, _) = raw_payload.deconstruct();
+		Some((call, (sp_runtime::MultiAddress::Id(address), signature.into(), extra)))
+	}
+}
 
 /// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
 /// node's balance type.
@@ -302,7 +370,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Redeem(_) |
 			RuntimeCall::Issue(_) |
 			RuntimeCall::Nomination(_) |
-			RuntimeCall::Replace(_) => true,
+			RuntimeCall::Replace(_) |
+			RuntimeCall::DiaOracle(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -891,6 +960,7 @@ impl staking::Config for Runtime {
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
+	type DataProvider = DataProviderImpl;
 }
 
 parameter_types! {
@@ -935,14 +1005,6 @@ impl fee::Config for Runtime {
 	type MaxExpectedValue = MaxExpectedValue;
 }
 
-impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
-where
-	RuntimeCall: From<C>,
-{
-	type OverarchingCall = RuntimeCall;
-	type Extrinsic = UncheckedExtrinsic;
-}
-
 impl vault_registry::Config for Runtime {
 	type PalletId = VaultRegistryPalletId;
 	type RuntimeEvent = RuntimeEvent;
@@ -978,6 +1040,21 @@ impl nomination::Config for Runtime {
 impl replace::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = replace::SubstrateWeight<Runtime>;
+}
+
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
+	RuntimeCall: From<C>,
+{
+	type Extrinsic = UncheckedExtrinsic;
+	type OverarchingCall = RuntimeCall;
+}
+
+impl dia_oracle::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type AuthorityId = dia_oracle::crypto::DiaAuthId;
+	type WeightInfo = dia_oracle::weights::DiaWeightInfo<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -1033,7 +1110,7 @@ construct_runtime!(
 
 		Security: security::{Pallet, Call, Config, Storage, Event<T>} = 55,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 56,
-		Oracle: oracle::{Pallet, Call, Config<T>, Storage, Event<T>} = 57,
+		Oracle: oracle::{Pallet, Call, Config, Storage, Event<T>} = 57,
 		Currency: currency::{Pallet} = 58,
 		StellarRelay: stellar_relay::{Pallet, Call, Config<T>, Storage, Event<T>} = 59,
 		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 60,
@@ -1042,7 +1119,8 @@ construct_runtime!(
 		Redeem: redeem::{Pallet, Call, Config<T>, Storage, Event<T>} = 63,
 		Issue: issue::{Pallet, Call, Config<T>, Storage, Event<T>} = 64,
 		Nomination: nomination::{Pallet, Call, Config, Storage, Event<T>} = 65,
-		Replace: replace::{Pallet, Call, Config<T>, Storage, Event<T>} = 66,
+		DiaOracle: dia_oracle::{Pallet, Call, Config<T>, Storage, Event<T>} = 66,
+		Replace: replace::{Pallet, Call, Config<T>, Storage, Event<T>} = 67,
 	}
 );
 

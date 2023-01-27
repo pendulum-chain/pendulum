@@ -74,7 +74,7 @@ pallet-utility = {git = "https://github.com/paritytech/substrate", default-featu
 pallet-vesting = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 sp-api = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 # for the currency pallet
-sp-arithmetic = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
+#sp-arithmetic = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 
 sp-block-builder = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 sp-consensus-aura = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
@@ -118,6 +118,8 @@ parachain-info = {git = "https://github.com/paritytech/cumulus", default-feature
 
 #orml
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.37" }
+
+dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", branch = "polkadot-v0.9.37", default-features = false }
 
 [features]
 default = [
@@ -168,7 +170,7 @@ std = [
   "polkadot-runtime-common/std",
   "runtime-common/std",
   "sp-api/std",
-  "sp-arithmetic/std",
+#  "sp-arithmetic/std",
   "sp-block-builder/std",
   "sp-consensus-aura/std",
   "sp-core/std",
@@ -201,7 +203,9 @@ std = [
   "module-redeem-rpc-runtime-api/std",
   "module-replace-rpc-runtime-api/std",
   "module-vault-registry-rpc-runtime-api/std",
-  "spacewalk-primitives/std"
+  "spacewalk-primitives/std",
+
+  "dia-oracle/std"
 ]
 
 runtime-benchmarks = [

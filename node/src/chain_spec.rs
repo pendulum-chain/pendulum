@@ -14,7 +14,9 @@ use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	FixedPointNumber, FixedU128, Perquintill,
 };
-use spacewalk_primitives::{CurrencyId, CurrencyId::XCM, VaultCurrencyPair, DOT, KSM};
+use spacewalk_primitives::{
+	oracle::Key, CurrencyId, CurrencyId::XCM, ForeignCurrencyId, VaultCurrencyPair, DOT, KSM,
+};
 
 use crate::constants::pendulum;
 
@@ -220,7 +222,7 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 				invulnerables.clone(),
 				signatories.clone(),
 				//todo: is it okay that only sudo is authorized? wait for the DIA Oracle impl
-				vec![(sudo_account.clone(), "Sudo".as_bytes().to_vec())],
+				vec![sudo_account.clone()],
 				sudo_account.clone(),
 				FOUCOCO_PARACHAIN_ID.into(),
 				false,
@@ -571,7 +573,7 @@ fn amplitude_genesis(
 fn foucoco_genesis(
 	invulnerables: Vec<AccountId>,
 	signatories: Vec<AccountId>,
-	authorized_oracles: Vec<(AccountId, Vec<u8>)>,
+	authorized_oracles: Vec<AccountId>,
 	sudo_account: AccountId,
 	id: ParaId,
 	start_shutdown: bool,
@@ -752,8 +754,18 @@ fn foucoco_genesis(
 			phantom: Default::default(),
 		},
 		oracle: foucoco_runtime::OracleConfig {
-			authorized_oracles,
-			max_delay: 3600000, // one hour
+			max_delay: u32::MAX,
+			oracle_keys: vec![
+				Key::ExchangeRate(CurrencyId::XCM(ForeignCurrencyId::DOT)),
+				Key::ExchangeRate(CurrencyId::AlphaNum4 {
+					code: *b"USDC",
+					issuer: [
+						20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226,
+						102, 231, 46, 199, 108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
+					],
+				}),
+				Key::FeeEstimation,
+			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
 			minimum_collateral_vault: vec![(XCM(DOT), 0), (XCM(KSM), 0)],
@@ -784,6 +796,15 @@ fn foucoco_genesis(
 			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 		},
 		nomination: foucoco_runtime::NominationConfig { is_nomination_enabled: false },
+		dia_oracle: foucoco_runtime::DiaOracleConfig {
+			authorized_accounts: authorized_oracles,
+			supported_currencies: vec![foucoco_runtime::AssetId::new(
+				b"Polkadot".to_vec(),
+				b"DOT".to_vec(),
+			)],
+			batching_api: b"http://localhost:8070/currencies".to_vec(),
+			coin_infos_map: vec![],
+		},
 	}
 }
 

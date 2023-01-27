@@ -221,7 +221,6 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 				// initial collators.
 				invulnerables.clone(),
 				signatories.clone(),
-				//todo: is it okay that only sudo is authorized? wait for the DIA Oracle impl
 				vec![sudo_account.clone()],
 				sudo_account.clone(),
 				FOUCOCO_PARACHAIN_ID.into(),

@@ -75,6 +75,7 @@ orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-lib
 
 # KILT
 parachain-staking = {path = "../../pallets/parachain-staking", default-features = false}
+orml-tokens-allowance = {path = "../../pallets/orml-tokens-allowance", default-features = false}
 
 # DIA
 dia-oracle = {git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.37"}

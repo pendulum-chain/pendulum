@@ -1,4 +1,3 @@
-
 // #![deny(warnings)]
 #![cfg_attr(test, feature(proc_macro_hygiene))]
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -9,7 +8,7 @@ extern crate mocktopus;
 use codec::Encode;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
-	transactional,
+	ensure, transactional,
 };
 #[cfg(test)]
 use mocktopus::macros::mockable;
@@ -18,8 +17,7 @@ use sp_core::{H256, U256};
 use sp_runtime::{traits::*, ArithmeticError};
 use sp_std::{collections::btree_set::BTreeSet, convert::TryInto, prelude::*, vec};
 
-// pub use pallet::*;
-
+pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -40,13 +38,23 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		// RecoverFromErrors { new_status: StatusCode, cleared_errors: Vec<ErrorCode> },
-		UpdateActiveBlock { block_number: T::BlockNumber },
+		UpdateActiveBlock {
+			block_number: T::BlockNumber,
+		},
+		/// (Additional) funds have been approved for transfer to a destination account.
+		ApprovedTransfer {
+			currency_id: T::CurrencyId,
+			source: T::AccountId,
+			delegate: T::AccountId,
+			amount: T::Balance,
+		},
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Parachain is not running.
 		ParachainNotRunning,
+		CurrencyNotLive,
 	}
 
 	#[pallet::storage]
@@ -64,32 +72,28 @@ pub mod pallet {
 
 	#[pallet::storage]
 	/// Currencies that can be used to give approval
-	pub(super) type AllowedCurrencies<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		T::CurrencyId,
-		bool,
-	>;
+	pub(super) type AllowedCurrencies<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::CurrencyId, bool>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig<T : Config> {
-		pub allowed_currencies : Vec<T::CurrencyId>
+	pub struct GenesisConfig<T: Config> {
+		pub allowed_currencies: Vec<T::CurrencyId>,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { allowed_currencies : vec![] }
+			Self { allowed_currencies: vec![] }
 		}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			for i in &self.allowed_currencies.clone(){
+			for i in &self.allowed_currencies.clone() {
 				AllowedCurrencies::<T>::insert(i, true);
 			}
 		}
@@ -101,7 +105,42 @@ pub mod pallet {
 
 	// The pallet's dispatchable functions.
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
-		
+	impl<T: Config> Pallet<T> {}
+}
+
+#[allow(clippy::forget_non_drop, clippy::swap_ptr_to_ref, clippy::forget_ref, clippy::forget_copy)]
+#[cfg_attr(test, mockable)]
+impl<T: Config> Pallet<T> {
+	/// Creates an approval from `owner` to spend `amount` of asset `id` tokens by 'delegate'
+	/// while reserving `T::ApprovalDeposit` from owner
+	///
+	/// If an approval already exists, the new amount is added to such existing approval
+	pub fn do_approve_transfer(
+		id: T::CurrencyId,
+		owner: &T::AccountId,
+		delegate: &T::AccountId,
+		amount: T::Balance,
+	) -> DispatchResult {
+		ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
+		Approvals::<T>::try_mutate((id, &owner, &delegate), |maybe_approved| -> DispatchResult {
+			let mut approved = match maybe_approved.take() {
+				// an approval already exists and is being updated
+				Some(a) => a,
+				// a new approval is created
+				None => Default::default(),
+			};
+
+			approved = approved.saturating_add(amount);
+			*maybe_approved = Some(approved);
+			Ok(())
+		})?;
+		Self::deposit_event(Event::ApprovedTransfer {
+			currency_id: id,
+			source: owner.clone(),
+			delegate: delegate.clone(),
+			amount,
+		});
+
+		Ok(())
 	}
 }

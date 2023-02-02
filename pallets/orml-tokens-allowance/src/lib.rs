@@ -31,11 +31,9 @@ pub mod pallet {
 	/// ## Configuration
 	/// The pallet's configuration trait.
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + orml_tokens::Config {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
-		
 	}
 
 	#[pallet::event]

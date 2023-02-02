@@ -725,7 +725,7 @@ parameter_types! {
 	pub const StakeDuration: BlockNumber = 7 * DAYS;
 	pub const ExitQueueDelay: u32 = 2;
 	pub const MinCollators: u32 = 8;
-	pub const MinRequiredCollators: u32 = 4;
+	pub const MinRequiredCollators: u32 = 2;
 	pub const MaxDelegationsPerRound: u32 = 1;
 	#[derive(Debug, Eq, PartialEq)]
 	pub const MaxDelegatorsPerCollator: u32 = 40;

@@ -62,23 +62,36 @@ pub mod pallet {
 		T::Balance,
 	>;
 
+	#[pallet::storage]
+	/// Currencies that can be used to give approval
+	pub(super) type AllowedCurrencies<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::CurrencyId,
+		bool,
+	>;
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::genesis_config]
-	pub struct GenesisConfig {
+	pub struct GenesisConfig<T : Config> {
+		pub allowed_currencies : Vec<T::CurrencyId>
 	}
 
 	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
+	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self {  }
+			Self { allowed_currencies : vec![] }
 		}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
+			for i in &self.allowed_currencies.clone(){
+				AllowedCurrencies::<T>::insert(i, true);
+			}
 		}
 	}
 

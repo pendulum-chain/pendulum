@@ -165,6 +165,8 @@ dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
+ "dia-oracle",
+ "dia-oracle-runtime-api",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
@@ -184,12 +186,15 @@ dependencies = [
  "pallet-bounties",
  "pallet-child-bounties",
  "pallet-collective",
+ "pallet-contracts",
+ "pallet-contracts-primitives",
  "pallet-democracy",
+ "pallet-identity",
  "pallet-multisig",
  "pallet-preimage",
+ "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
- "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
@@ -2085,7 +2090,7 @@ dependencies = [
  "convert_case",
  "proc-macro2",
  "quote",
- "rustc_version",
+ "rustc_version 0.4.0",
  "syn",
 ]
 
@@ -2145,6 +2150,35 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+]
+
+[[package]]
+name = "dia-oracle"
+version = "0.1.0"
+source = "git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v0.9.37#825c33715902450398b9c704ea678cf4478c22e9"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "dia-oracle-runtime-api"
+version = "0.1.0"
+source = "git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v0.9.37#825c33715902450398b9c704ea678cf4478c22e9"
+dependencies = [
+ "dia-oracle",
+ "frame-support",
+ "sp-api",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -2662,6 +2696,8 @@ dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
+ "dia-oracle",
+ "dia-oracle-runtime-api",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
@@ -2681,9 +2717,13 @@ dependencies = [
  "pallet-bounties",
  "pallet-child-bounties",
  "pallet-collective",
+ "pallet-contracts",
+ "pallet-contracts-primitives",
  "pallet-democracy",
+ "pallet-identity",
  "pallet-multisig",
  "pallet-preimage",
+ "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",
@@ -3636,6 +3676,12 @@ dependencies = [
  "hashbrown",
  "serde",
 ]
+
+[[package]]
+name = "indexmap-nostd"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e04e2fd2b8188ea827b32ef11de88377086d690286ab35747ef7f9bf3ccb590"
 
 [[package]]
 name = "instant"
@@ -5651,6 +5697,56 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-contracts"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.37#946507ba9ef13e263534176b7b74e26fc56efbd4"
+dependencies = [
+ "bitflags",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples",
+ "log",
+ "pallet-contracts-primitives",
+ "pallet-contracts-proc-macro",
+ "parity-scale-codec",
+ "rand 0.8.5",
+ "scale-info",
+ "serde",
+ "smallvec",
+ "sp-api",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "wasm-instrument 0.4.0",
+ "wasmi 0.20.0",
+ "wasmparser-nostd",
+]
+
+[[package]]
+name = "pallet-contracts-primitives"
+version = "7.0.0"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.37#946507ba9ef13e263534176b7b74e26fc56efbd4"
+dependencies = [
+ "bitflags",
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+ "sp-weights",
+]
+
+[[package]]
+name = "pallet-contracts-proc-macro"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.37#946507ba9ef13e263534176b7b74e26fc56efbd4"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "pallet-conviction-voting"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.37#946507ba9ef13e263534176b7b74e26fc56efbd4"
@@ -6014,6 +6110,20 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-randomness-collective-flip"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.37#946507ba9ef13e263534176b7b74e26fc56efbd4"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "safe-mix",
+ "scale-info",
  "sp-runtime",
  "sp-std",
 ]
@@ -8587,7 +8697,7 @@ dependencies = [
  "cc",
  "libc",
  "once_cell",
- "spin",
+ "spin 0.5.2",
  "untrusted",
  "web-sys",
  "winapi",
@@ -8793,6 +8903,15 @@ checksum = "3e75f6a532d0fd9f7f13144f392b6ad56a32696bfcd9c78f797f16bbb6f072d6"
 
 [[package]]
 name = "rustc_version"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
+dependencies = [
+ "semver 0.9.0",
+]
+
+[[package]]
+name = "rustc_version"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfa0f585226d2e68097d4f95d113b15b83a82e819ab25717ec0590d9584ef366"
@@ -8905,6 +9024,15 @@ name = "ryu"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4501abdff3ae82a1c1b477a17252eb69cee9e66eb915c1abaa4f44d873df9f09"
+
+[[package]]
+name = "safe-mix"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d3d055a2582e6b00ed7a31c1524040aa391092bf636328350813f3a0605215c"
+dependencies = [
+ "rustc_version 0.2.3",
+]
 
 [[package]]
 name = "same-file"
@@ -9280,7 +9408,7 @@ dependencies = [
  "sp-version",
  "sp-wasm-interface",
  "tracing",
- "wasmi",
+ "wasmi 0.13.2",
 ]
 
 [[package]]
@@ -9292,8 +9420,8 @@ dependencies = [
  "sp-maybe-compressed-blob",
  "sp-wasm-interface",
  "thiserror",
- "wasm-instrument",
- "wasmi",
+ "wasm-instrument 0.3.0",
+ "wasmi 0.13.2",
 ]
 
 [[package]]
@@ -9306,7 +9434,7 @@ dependencies = [
  "sc-executor-common",
  "sp-runtime-interface",
  "sp-wasm-interface",
- "wasmi",
+ "wasmi 0.13.2",
 ]
 
 [[package]]
@@ -10136,6 +10264,15 @@ dependencies = [
 
 [[package]]
 name = "semver"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
+dependencies = [
+ "semver-parser",
+]
+
+[[package]]
+name = "semver"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e25dfac463d778e353db5be2449d1cce89bd6fd23c9f1ea21310ce6e5a1b29c4"
@@ -10356,7 +10493,7 @@ dependencies = [
  "curve25519-dalek 4.0.0-pre.5",
  "rand_core 0.6.4",
  "ring",
- "rustc_version",
+ "rustc_version 0.4.0",
  "sha2 0.10.6",
  "subtle",
 ]
@@ -11082,7 +11219,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "sp-std",
- "wasmi",
+ "wasmi 0.13.2",
  "wasmtime",
 ]
 
@@ -11106,6 +11243,12 @@ name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "spin"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f6002a767bff9e83f8eeecf883ecb8011875a21ae8da43bffb817a57e78cc09"
 
 [[package]]
 name = "spki"
@@ -12250,6 +12393,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasm-instrument"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a47ecb37b9734d1085eaa5ae1a81e60801fd8c28d4cabdd8aedb982021918bc"
+dependencies = [
+ "parity-wasm",
+]
+
+[[package]]
 name = "wasm-opt"
 version = "0.110.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12313,7 +12465,19 @@ checksum = "06c326c93fbf86419608361a2c925a31754cf109da1b8b55737070b4d6669422"
 dependencies = [
  "parity-wasm",
  "wasmi-validation",
- "wasmi_core",
+ "wasmi_core 0.2.1",
+]
+
+[[package]]
+name = "wasmi"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01bf50edb2ea9d922aa75a7bf3c15e26a6c9e2d18c56e862b49737a582901729"
+dependencies = [
+ "spin 0.9.4",
+ "wasmi_arena",
+ "wasmi_core 0.5.0",
+ "wasmparser-nostd",
 ]
 
 [[package]]
@@ -12324,6 +12488,12 @@ checksum = "91ff416ad1ff0c42e5a926ed5d5fab74c0f098749aa0ad8b2a34b982ce0e867b"
 dependencies = [
  "parity-wasm",
 ]
+
+[[package]]
+name = "wasmi_arena"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1ea379cbb0b41f3a9f0bf7b47036d036aae7f43383d8cc487d4deccf40dee0a"
 
 [[package]]
 name = "wasmi_core"
@@ -12339,12 +12509,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasmi_core"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5bf998ab792be85e20e771fe14182b4295571ad1d4f89d3da521c1bef5f597a"
+dependencies = [
+ "downcast-rs",
+ "libm 0.2.6",
+ "num-traits",
+]
+
+[[package]]
 name = "wasmparser"
 version = "0.89.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab5d3e08b13876f96dd55608d03cd4883a0545884932d5adf11925876c96daef"
 dependencies = [
  "indexmap",
+]
+
+[[package]]
+name = "wasmparser-nostd"
+version = "0.91.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c37f310b5a62bfd5ae7c0f1d8e6f98af16a5d6d84ba764e9c36439ec14e318b"
+dependencies = [
+ "indexmap-nostd",
 ]
 
 [[package]]

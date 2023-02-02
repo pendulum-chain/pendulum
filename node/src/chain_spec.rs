@@ -555,7 +555,6 @@ fn amplitude_genesis(
 			..Default::default()
 		},
 		democracy: Default::default(),
-		sudo: amplitude_runtime::SudoConfig { key: Some(sudo_account) },
 		technical_committee: amplitude_runtime::TechnicalCommitteeConfig {
 			members: signatories.clone(),
 			..Default::default()

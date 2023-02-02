@@ -49,6 +49,19 @@ pub mod pallet {
 		ParachainNotRunning,
 	}
 
+	#[pallet::storage]
+	/// Approved balance transfers. Balance is the amount approved for transfer.
+	/// First key is the asset ID, second key is the owner and third key is the delegate.
+	pub(super) type Approvals<T: Config> = StorageNMap<
+		_,
+		(
+			NMapKey<Blake2_128Concat, T::CurrencyId>,
+			NMapKey<Blake2_128Concat, T::AccountId>, // owner
+			NMapKey<Blake2_128Concat, T::AccountId>, // delegate
+		),
+		T::Balance,
+	>;
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 

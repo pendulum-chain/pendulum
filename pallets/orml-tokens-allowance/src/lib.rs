@@ -8,7 +8,9 @@ extern crate mocktopus;
 use codec::Encode;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
-	ensure, transactional,
+	ensure,
+	traits::fungibles,
+	transactional,
 };
 #[cfg(test)]
 use mocktopus::macros::mockable;
@@ -53,6 +55,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Parachain is not running.
+		Unapproved,
 		ParachainNotRunning,
 		CurrencyNotLive,
 	}
@@ -141,6 +144,43 @@ impl<T: Config> Pallet<T> {
 			amount,
 		});
 
+		Ok(())
+	}
+
+	/// Reduces the asset `id` balance of `owner` by some `amount` and increases the balance of
+	/// `dest` by (similar) amount, checking that 'delegate' has an existing approval from `owner`
+	/// to spend`amount`.
+	///
+	/// Will fail if `amount` is greater than the approval from `owner` to 'delegate'
+	/// Will unreserve the deposit from `owner` if the entire approved `amount` is spent by
+	/// 'delegate'
+	pub fn do_transfer_approved(
+		id: T::CurrencyId,
+		owner: &T::AccountId,
+		delegate: &T::AccountId,
+		destination: &T::AccountId,
+		amount: T::Balance,
+	) -> DispatchResult {
+		ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
+		Approvals::<T>::try_mutate_exists(
+			(id, &owner, delegate),
+			|maybe_approved| -> DispatchResult {
+				let mut approved = maybe_approved.take().ok_or(Error::<T>::Unapproved)?;
+				let remaining = approved.checked_sub(&amount).ok_or(Error::<T>::Unapproved)?;
+
+				let b = <orml_tokens::Pallet<T> as frame_support::traits::fungibles::Transfer<
+					<T as frame_system::Config>::AccountId,
+				>>::transfer(id, owner, destination, amount, false)?;
+
+				if remaining.is_zero() {
+					*maybe_approved = None;
+				} else {
+					approved = remaining;
+					*maybe_approved = Some(approved);
+				}
+				Ok(())
+			},
+		)?;
 		Ok(())
 	}
 }

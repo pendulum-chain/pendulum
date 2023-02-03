@@ -9,6 +9,8 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod currency;
 mod weights;
 pub mod xcm_config;
+pub mod zenlink;
+use xcm::v1::MultiLocation;
 
 pub use parachain_staking::InflationInfo;
 
@@ -262,6 +264,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Multisig(_) |
 			RuntimeCall::Identity(_) |
 			RuntimeCall::Contracts(_) |
+			RuntimeCall::ZenlinkProtocol(_) |
 			RuntimeCall::DiaOracleModule(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -988,6 +991,8 @@ construct_runtime!(
 		Contracts: pallet_contracts::{Pallet, Storage, Call, Event<T>} = 56,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 57,
 		DiaOracleModule: dia_oracle::{Pallet, Storage, Call, Event<T>} = 58,
+
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
 	}
 );
 

@@ -131,13 +131,80 @@ impl TryFrom<CurrencyId> for ZenlinkAssetId {
 	type Error = ();
 
 	fn try_from(currency_id: CurrencyId) -> Result<Self, Self::Error> {
-		todo!()
+		let para_chain_id: u32 = ParachainInfo::parachain_id().into();
+		match currency_id {
+			CurrencyId::Native =>
+				Ok(ZenlinkAssetId { chain_id: para_chain_id, asset_type: NATIVE, asset_index: 0 }),
+			CurrencyId::XCM(xcm) => Ok(ZenlinkAssetId {
+				chain_id: para_chain_id,
+				asset_type: LOCAL,
+				asset_index: xcm.into(),
+			}),
+		}
 	}
 }
 
 impl TryFrom<ZenlinkAssetId> for CurrencyId {
 	type Error = ();
 	fn try_from(asset_id: ZenlinkAssetId) -> Result<Self, Self::Error> {
-		todo!()
+		let para_chain_id: u32 = ParachainInfo::parachain_id().into();
+		if asset_id.chain_id != para_chain_id {
+			return Err(())
+		}
+
+		match asset_id.asset_type {
+			NATIVE => Ok(CurrencyId::Native),
+			LOCAL => Ok(CurrencyId::XCM(asset_id.asset_index.into())),
+			_ => Err(()),
+		}
+	}
+}
+
+impl From<ForeignCurrencyId> for u64 {
+	fn from(currency_id: ForeignCurrencyId) -> Self {
+		match currency_id {
+			ForeignCurrencyId::KSM => 0,
+			ForeignCurrencyId::KAR => 1,
+			ForeignCurrencyId::AUSD => 2,
+			ForeignCurrencyId::BNC => 3,
+			ForeignCurrencyId::VsKSM => 4,
+			ForeignCurrencyId::HKO => 5,
+			ForeignCurrencyId::MOVR => 6,
+			ForeignCurrencyId::SDN => 7,
+			ForeignCurrencyId::KINT => 8,
+			ForeignCurrencyId::KBTC => 9,
+			ForeignCurrencyId::GENS => 10,
+			ForeignCurrencyId::XOR => 11,
+			ForeignCurrencyId::TEER => 12,
+			ForeignCurrencyId::KILT => 13,
+			ForeignCurrencyId::PHA => 14,
+			ForeignCurrencyId::ZTG => 15,
+			ForeignCurrencyId::USD => 16,
+		}
+	}
+}
+
+impl From<u64> for ForeignCurrencyId {
+	fn from(num: u64) -> Self {
+		match num {
+			0 => ForeignCurrencyId::KSM,
+			1 => ForeignCurrencyId::KAR,
+			2 => ForeignCurrencyId::AUSD,
+			3 => ForeignCurrencyId::BNC,
+			4 => ForeignCurrencyId::VsKSM,
+			5 => ForeignCurrencyId::HKO,
+			6 => ForeignCurrencyId::MOVR,
+			7 => ForeignCurrencyId::SDN,
+			8 => ForeignCurrencyId::KINT,
+			9 => ForeignCurrencyId::KBTC,
+			10 => ForeignCurrencyId::GENS,
+			11 => ForeignCurrencyId::XOR,
+			12 => ForeignCurrencyId::TEER,
+			13 => ForeignCurrencyId::KILT,
+			14 => ForeignCurrencyId::PHA,
+			15 => ForeignCurrencyId::ZTG,
+			16 => ForeignCurrencyId::USD,
+			_ => panic!("Unknown ForeignCurrencyId"),
+		}
 	}
 }

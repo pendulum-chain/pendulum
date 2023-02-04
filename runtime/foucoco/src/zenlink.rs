@@ -204,7 +204,6 @@ impl From<u64> for ForeignCurrencyId {
 			14 => ForeignCurrencyId::PHA,
 			15 => ForeignCurrencyId::ZTG,
 			16 => ForeignCurrencyId::USD,
-			_ => panic!("Unknown ForeignCurrencyId"),
 		}
 	}
 }

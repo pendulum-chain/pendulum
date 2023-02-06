@@ -2760,6 +2760,7 @@ dependencies = [
  "xcm-builder",
  "xcm-executor",
  "zenlink-protocol",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
@@ -13494,6 +13495,17 @@ dependencies = [
  "sp-std",
  "xcm",
  "xcm-executor",
+]
+
+[[package]]
+name = "zenlink-protocol-runtime-api"
+version = "0.4.4"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=master#fe1f603b615a3ae418e7278baafda31a67e442e0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
+ "sp-std",
+ "zenlink-protocol",
 ]
 
 [[package]]

@@ -6,7 +6,6 @@ use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{
-	bounded::BoundedVec,
 	crypto::{Ss58Codec, UncheckedInto},
 	sr25519, Pair, Public,
 };
@@ -251,7 +250,7 @@ pub fn pendulum_config() -> PendulumChainSpec {
 	sp_core::crypto::set_default_ss58_version(pendulum_runtime::SS58Prefix::get().into());
 
 	let mut properties = sc_chain_spec::Properties::new();
-	//properties.insert("tokenSymbol".into(), "PEN".into());
+	properties.insert("tokenSymbol".into(), "PEN".into());
 	properties.insert("tokenDecimals".into(), 12u32.into());
 	properties.insert("ss58Format".into(), pendulum_runtime::SS58Prefix::get().into());
 
@@ -604,14 +603,7 @@ fn foucoco_genesis(
 
 	let token_balances = balances
 		.iter()
-		.flat_map(|k| {
-			vec![
-				(k.0.clone(), XCM(DOT), 1 << 60),
-				(k.0.clone(), XCM(KSM), 1 << 60),
-				// (k.0.clone(), XCM(PEN), 1 << 60),
-				// (k.0.clone(), XCM(AMPE), 1 << 60),
-			]
-		})
+		.flat_map(|k| vec![(k.0.clone(), XCM(DOT), 1 << 60), (k.0.clone(), XCM(KSM), 1 << 60)])
 		.collect();
 
 	let stakers: Vec<_> = invulnerables

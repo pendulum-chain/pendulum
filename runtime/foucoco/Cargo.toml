@@ -104,6 +104,7 @@ parachain-info = {git = "https://github.com/paritytech/cumulus", default-feature
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.37" }
 
 zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "master" }
+zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "master" }
 
 [features]
 default = [
@@ -174,7 +175,8 @@ std = [
   "xcm-builder/std",
   "xcm-executor/std",
   "xcm/std",
-  "zenlink-protocol/std"
+  "zenlink-protocol/std",
+  "zenlink-protocol-runtime-api/std"
 ]
 
 runtime-benchmarks = [

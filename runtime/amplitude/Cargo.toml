@@ -25,6 +25,27 @@ smallvec = "1.9.0"
 # Local
 runtime-common = {path = "../common", default-features = false}
 
+# custom libraries from spacewalk
+currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+security = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+staking = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+oracle = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+stellar-relay = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+reward = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+fee = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+vault-registry = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+redeem = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+issue = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+nomination = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+replace = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+
+module-issue-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+
 # Substrate
 frame-benchmarking = {git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.37"}
 frame-executive = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
@@ -69,6 +90,8 @@ orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module
 orml-traits = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
 orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
 
+dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", branch = "polkadot-v0.9.37", default-features = false }
+
 # KILT
 parachain-staking = {path = "../../pallets/parachain-staking", default-features = false}
 
@@ -97,85 +120,105 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 
 [features]
 default = [
-  "std",
+	"std",
 ]
 std = [
-  "codec/std",
-  "log/std",
-  "scale-info/std",
-  "serde",
-  "cumulus-pallet-aura-ext/std",
-  "cumulus-pallet-dmp-queue/std",
-  "cumulus-pallet-parachain-system/std",
-  "cumulus-pallet-xcm/std",
-  "cumulus-pallet-xcmp-queue/std",
-  "cumulus-primitives-core/std",
-  "cumulus-primitives-timestamp/std",
-  "cumulus-primitives-utility/std",
-  "frame-executive/std",
-  "frame-support/std",
-  "frame-system-rpc-runtime-api/std",
-  "frame-system/std",
-  "orml-currencies/std",
-  "orml-traits/std",
-  "orml-tokens/std",
-  "orml-xtokens/std",
-  "pallet-aura/std",
-  "pallet-authorship/std",
-  "pallet-balances/std",
-  "pallet-bounties/std",
-  "pallet-child-bounties/std",
-  "pallet-collective/std",
-  "pallet-democracy/std",
-  "pallet-preimage/std",
-  "pallet-scheduler/std",
-  "pallet-session/std",
-  "pallet-sudo/std",
-  "pallet-timestamp/std",
-  "pallet-transaction-payment-rpc-runtime-api/std",
-  "pallet-transaction-payment/std",
-  "pallet-treasury/std",
-  "pallet-utility/std",
-  "pallet-vesting/std",
-  "pallet-xcm/std",
-  "parachain-info/std",
-  "parachain-staking/std",
-  "polkadot-parachain/std",
-  "polkadot-runtime-common/std",
-  "runtime-common/std",
-  "sp-api/std",
-  "sp-block-builder/std",
-  "sp-consensus-aura/std",
-  "sp-core/std",
-  "sp-inherents/std",
-  "sp-io/std",
-  "sp-offchain/std",
-  "sp-runtime/std",
-  "sp-session/std",
-  "sp-std/std",
-  "sp-transaction-pool/std",
-  "sp-version/std",
-  "xcm-builder/std",
-  "xcm-executor/std",
-  "xcm/std"
+	"codec/std",
+	"log/std",
+	"scale-info/std",
+	"serde",
+	"cumulus-pallet-aura-ext/std",
+	"cumulus-pallet-dmp-queue/std",
+	"cumulus-pallet-parachain-system/std",
+	"cumulus-pallet-xcm/std",
+	"cumulus-pallet-xcmp-queue/std",
+	"cumulus-primitives-core/std",
+	"cumulus-primitives-timestamp/std",
+	"cumulus-primitives-utility/std",
+	"frame-executive/std",
+	"frame-support/std",
+	"frame-system-rpc-runtime-api/std",
+	"frame-system/std",
+	"orml-currencies/std",
+	"orml-traits/std",
+	"orml-tokens/std",
+	"orml-xtokens/std",
+	"pallet-aura/std",
+	"pallet-authorship/std",
+	"pallet-balances/std",
+	"pallet-bounties/std",
+	"pallet-child-bounties/std",
+	"pallet-collective/std",
+	"pallet-democracy/std",
+	"pallet-preimage/std",
+	"pallet-scheduler/std",
+	"pallet-session/std",
+	"pallet-sudo/std",
+	"pallet-timestamp/std",
+	"pallet-transaction-payment-rpc-runtime-api/std",
+	"pallet-transaction-payment/std",
+	"pallet-treasury/std",
+	"pallet-utility/std",
+	"pallet-vesting/std",
+	"pallet-xcm/std",
+	"parachain-info/std",
+	"parachain-staking/std",
+	"polkadot-parachain/std",
+	"polkadot-runtime-common/std",
+	"runtime-common/std",
+	"sp-api/std",
+	"sp-block-builder/std",
+	"sp-consensus-aura/std",
+	"sp-core/std",
+	"sp-inherents/std",
+	"sp-io/std",
+	"sp-offchain/std",
+	"sp-runtime/std",
+	"sp-session/std",
+	"sp-std/std",
+	"sp-transaction-pool/std",
+	"sp-version/std",
+	"xcm-builder/std",
+	"xcm-executor/std",
+	"xcm/std",
+	#	custom libraries from spacewalk
+	"currency/std",
+	"security/std",
+	"staking/std",
+	"oracle/std",
+	"stellar-relay/std",
+	"reward/std",
+	"fee/std",
+	"vault-registry/std",
+	"redeem/std",
+	"issue/std",
+	"nomination/std",
+	"replace/std",
+	"module-issue-rpc-runtime-api/std",
+	"module-oracle-rpc-runtime-api/std",
+	"module-redeem-rpc-runtime-api/std",
+	"module-replace-rpc-runtime-api/std",
+	"module-vault-registry-rpc-runtime-api/std",
+	"spacewalk-primitives/std",
+	"dia-oracle/std"
 ]
 
-runtime-benchmarks = [
-  "hex-literal",
-  "frame-benchmarking/runtime-benchmarks",
-  "frame-support/runtime-benchmarks",
-  "frame-system-benchmarking",
-  "frame-system/runtime-benchmarks",
-  "pallet-balances/runtime-benchmarks",
-  "pallet-timestamp/runtime-benchmarks",
-  "pallet-xcm/runtime-benchmarks",
-  "sp-runtime/runtime-benchmarks",
-  "xcm-builder/runtime-benchmarks",
-  "cumulus-pallet-session-benchmarking/runtime-benchmarks",
-  "cumulus-pallet-xcmp-queue/runtime-benchmarks",
-]
+	runtime-benchmarks = [
+		"hex-literal",
+		"frame-benchmarking/runtime-benchmarks",
+		"frame-support/runtime-benchmarks",
+		"frame-system-benchmarking",
+		"frame-system/runtime-benchmarks",
+		"pallet-balances/runtime-benchmarks",
+		"pallet-timestamp/runtime-benchmarks",
+		"pallet-xcm/runtime-benchmarks",
+		"sp-runtime/runtime-benchmarks",
+		"xcm-builder/runtime-benchmarks",
+		"cumulus-pallet-session-benchmarking/runtime-benchmarks",
+		"cumulus-pallet-xcmp-queue/runtime-benchmarks",
+	]
 
-try-runtime = [
-  "frame-executive/try-runtime",
-  "frame-try-runtime/try-runtime",
-]
+	try-runtime = [
+		"frame-executive/try-runtime",
+		"frame-try-runtime/try-runtime",
+	]

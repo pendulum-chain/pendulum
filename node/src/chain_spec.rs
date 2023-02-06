@@ -486,6 +486,7 @@ pub fn local_testnet_config() -> DevelopmentChainSpec {
 fn amplitude_genesis(
 	invulnerables: Vec<AccountId>,
 	signatories: Vec<AccountId>,
+	authorized_oracles: Vec<AccountId>,
 	sudo_account: AccountId,
 	id: ParaId,
 ) -> amplitude_runtime::GenesisConfig {

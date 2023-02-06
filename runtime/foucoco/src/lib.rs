@@ -272,23 +272,23 @@ const MAXIMUM_BLOCK_WEIGHT: Weight =
 	Weight::from_ref_time(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2))
 		.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64);
 
-// todo: https://github.com/pendulum-chain/pendulum/pull/91#discussion_r1073402063
 // For mainnet USDC issued by centre.io
+pub const WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4 {
+	code: *b"USDC",
+	issuer: [
+		59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
+		190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
+	],
+};
+
+// For Testnet USDC issued by
 // const WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4 {
 // 	code: *b"USDC",
 // 	issuer: [
-// 		59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
-// 		190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
+// 		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
+// 		108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
 // 	],
 // };
-// For Testnet USDC issued by
-const WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4 {
-	code: *b"USDC",
-	issuer: [
-		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
-		108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
-	],
-};
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]

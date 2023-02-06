@@ -584,44 +584,6 @@ fn foucoco_genesis(
 		}
 	}
 
-	// Used to create bounded vecs for genesis config
-	// Does not return a result but panics because the genesis config is hardcoded
-	fn create_bounded_vec(input: &str) -> BoundedVec<u8, foucoco_runtime::FieldLength> {
-		let bounded_vec =
-			BoundedVec::try_from(input.as_bytes().to_vec()).expect("Failed to create bounded vec");
-
-		bounded_vec
-	}
-
-	// Testnet organization
-	let organization_testnet_sdf =
-		foucoco_runtime::Organization { name: create_bounded_vec("sdftest"), id: 1u128 };
-	// Testnet validators
-	let validators = vec![
-		foucoco_runtime::Validator {
-			name: create_bounded_vec("$sdftest1"),
-			public_key: create_bounded_vec(
-				"GDKXE2OZMJIPOSLNA6N6F2BVCI3O777I2OOC4BV7VOYUEHYX7RTRYA7Y",
-			),
-			organization_id: organization_testnet_sdf.id,
-		},
-		foucoco_runtime::Validator {
-			name: create_bounded_vec("$sdftest2"),
-			public_key: create_bounded_vec(
-				"GCUCJTIYXSOXKBSNFGNFWW5MUQ54HKRPGJUTQFJ5RQXZXNOLNXYDHRAP",
-			),
-			organization_id: organization_testnet_sdf.id,
-		},
-		foucoco_runtime::Validator {
-			name: create_bounded_vec("$sdftest3"),
-			public_key: create_bounded_vec(
-				"GC2V2EFSXN6SQTWVYA5EPJPBWWIMSD2XQNKUOHGEKB535AQE2I6IXV2Z",
-			),
-			organization_id: organization_testnet_sdf.id,
-		},
-	];
-	let organizations = vec![organization_testnet_sdf];
-
 	let mut balances: Vec<_> = signatories
 		.iter()
 		.cloned()
@@ -725,7 +687,7 @@ fn foucoco_genesis(
 		},
 		redeem: foucoco_runtime::RedeemConfig {
 			redeem_period: foucoco_runtime::DAYS,
-			redeem_minimum_transfer_amount: 100,
+			redeem_minimum_transfer_amount: 1000,
 			limit_volume_amount: None,
 			limit_volume_currency_id: XCM(DOT),
 			current_volume_amount: 0u32.into(),
@@ -743,48 +705,34 @@ fn foucoco_genesis(
 				foucoco_runtime::StatusCode::Error
 			},
 		},
-		stellar_relay: foucoco_runtime::StellarRelayConfig {
-			old_validators: vec![],
-			old_organizations: vec![],
-			validators,
-			organizations,
-			enactment_block_height: 0,
-			is_public_network: false,
-			phantom: Default::default(),
-		},
 		oracle: foucoco_runtime::OracleConfig {
 			max_delay: u32::MAX,
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(ForeignCurrencyId::DOT)),
-				Key::ExchangeRate(CurrencyId::AlphaNum4 {
-					code: *b"USDC",
-					issuer: [
-						20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226,
-						102, 231, 46, 199, 108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
-					],
-				}),
+				Key::ExchangeRate(foucoco_runtime::WRAPPED_CURRENCY_ID),
 			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
 			minimum_collateral_vault: vec![(XCM(DOT), 0), (XCM(KSM), 0)],
 			punishment_delay: foucoco_runtime::DAYS,
 			secure_collateral_threshold: vec![
-				(default_pair(XCM(DOT)), FixedU128::checked_from_rational(260, 100).unwrap()),
-				(default_pair(XCM(KSM)), FixedU128::checked_from_rational(260, 100).unwrap()),
-			], /* 260% */
-			premium_redeem_threshold: vec![
-				(default_pair(XCM(DOT)), FixedU128::checked_from_rational(200, 100).unwrap()),
-				(default_pair(XCM(KSM)), FixedU128::checked_from_rational(200, 100).unwrap()),
-			], /* 200% */
-			liquidation_collateral_threshold: vec![
 				(default_pair(XCM(DOT)), FixedU128::checked_from_rational(150, 100).unwrap()),
 				(default_pair(XCM(KSM)), FixedU128::checked_from_rational(150, 100).unwrap()),
 			], /* 150% */
+			premium_redeem_threshold: vec![
+				(default_pair(XCM(DOT)), FixedU128::checked_from_rational(130, 100).unwrap()),
+				(default_pair(XCM(KSM)), FixedU128::checked_from_rational(130, 100).unwrap()),
+			], /* 130% */
+			liquidation_collateral_threshold: vec![
+				(default_pair(XCM(DOT)), FixedU128::checked_from_rational(120, 100).unwrap()),
+				(default_pair(XCM(KSM)), FixedU128::checked_from_rational(120, 100).unwrap()),
+			], /* 120% */
 			system_collateral_ceiling: vec![
 				(default_pair(XCM(DOT)), 60_000 * DOT.one()),
 				(default_pair(XCM(KSM)), 60_000 * KSM.one()),
 			],
 		},
+		stellar_relay: foucoco_runtime::StellarRelayConfig::default(),
 		fee: foucoco_runtime::FeeConfig {
 			issue_fee: FixedU128::checked_from_rational(15, 10000).unwrap(), // 0.15%
 			issue_griefing_collateral: FixedU128::checked_from_rational(5, 100000).unwrap(), // 0.005%

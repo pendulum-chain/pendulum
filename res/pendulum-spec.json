@@ -2,7 +2,16 @@
   "name": "Pendulum",
   "id": "pendulum",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootNodes": [
+    "/dns4/penawsuse-collator-00.prd.pendulumchain.tech/tcp/30335/p2p/12D3KooWPfFVdVqSb8vaZLvkWCDxkuvhLu3S9cX8soQpQNzUyLD9",
+    "/dns4/penawsuse-collator-01.prd.pendulumchain.tech/tcp/30335/p2p/12D3KooWNWauGnqHbFxfAg7Z9e8Zr1apnp5CacRAL9MG9Fin9PxG",
+    "/dns4/penawsuse-collator-02.prd.pendulumchain.tech/tcp/30335/p2p/12D3KooWJ9LpJLXbtTVzoFDa92x4szwcUCHZAj7EFzm7tVEv6jX9",
+    "/dns4/penawsuse-collator-03.prd.pendulumchain.tech/tcp/30335/p2p/12D3KooWQ4ZVdm5mxQz6ubH2mwZHmEahy3dP6tVZWmJzUmFnZc2H",
+    "/dns4/penctbsyd-collator-00.prd.pendulumchain.tech/tcp/30335/p2p/12D3KooWDMRjvK63jat9r8fe1mLmXcCKwH3zw2oGZyJfCNFFmDor",
+    "/dns4/penctbsin-collator-00.prd.pendulumchain.tech/tcp/30335/p2p/12D3KooWAqbWpvqjP5XqhN5X34y2URWa925EaZRaukxDpfokYa4G",
+    "/dns4/penctbusw-collator-00.prd.pendulumchain.tech/tcp/30335/p2p/12D3KooWFN9eu5r5RRA9v2AA9NJnwLU4akX9i1pw41ni6835feDf",
+    "/dns4/penctbeur-collator-00.prd.pendulumchain.tech/tcp/30335/p2p/12D3KooWBVtsdFV8cLG7o2mVXNRMcRVrW463aCVQYU6v1atQNPwt"
+  ],
   "telemetryEndpoints": null,
   "protocolId": "pendulum",
   "properties": {

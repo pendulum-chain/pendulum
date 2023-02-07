@@ -20,7 +20,7 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, FixedPointNumber, SaturatedConversion
+	ApplyExtrinsicResult, DispatchError, FixedPointNumber, SaturatedConversion,
 };
 
 use sp_std::{marker::PhantomData, prelude::*};
@@ -33,8 +33,8 @@ use frame_support::{
 	dispatch::DispatchClass,
 	parameter_types,
 	traits::{
-		ConstU32, Contains, Currency as FrameCurrency, EitherOfDiverse, EqualPrivilegeOnly, Imbalance, OnUnbalanced,
-		WithdrawReasons,
+		ConstU32, Contains, Currency as FrameCurrency, EitherOfDiverse, EqualPrivilegeOnly,
+		Imbalance, OnUnbalanced, WithdrawReasons,
 	},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
@@ -49,7 +49,8 @@ use frame_system::{
 pub use sp_runtime::{traits::AccountIdConversion, MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	opaque, AuraId, Index, ReserveIdentifier, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
+	opaque, AuraId, Index, ReserveIdentifier, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT,
+	UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -64,13 +65,13 @@ use orml_traits::{currency::MutationHooks, parameter_type_with_key};
 pub use sp_runtime::BuildStorage;
 
 pub use issue::{Event as IssueEvent, IssueRequest};
+pub use module_oracle_rpc_runtime_api::BalanceWrapper;
 pub use nomination::Event as NominationEvent;
+use oracle::dia::DiaOracleAdapter;
 pub use redeem::{Event as RedeemEvent, RedeemRequest};
 pub use replace::{Event as ReplaceEvent, ReplaceRequest};
 pub use security::StatusCode;
 pub use stellar_relay::traits::{FieldLength, Organization, Validator};
-pub use module_oracle_rpc_runtime_api::BalanceWrapper;
-use oracle::dia::DiaOracleAdapter;
 
 // Polkadot imports
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
@@ -157,8 +158,8 @@ impl frame_system::offchain::SigningTypes for Runtime {
 	type Signature = Signature;
 }
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
-	where
-		RuntimeCall: From<LocalCall>,
+where
+	RuntimeCall: From<LocalCall>,
 {
 	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
 		call: RuntimeCall,
@@ -1015,8 +1016,8 @@ impl replace::Config for Runtime {
 	type WeightInfo = replace::SubstrateWeight<Runtime>;
 }
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
-	where
-		RuntimeCall: From<C>,
+where
+	RuntimeCall: From<C>,
 {
 	type Extrinsic = UncheckedExtrinsic;
 	type OverarchingCall = RuntimeCall;

@@ -169,7 +169,7 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 				vec![sudo_account.clone()],
 				sudo_account.clone(),
 				AMPLITUDE_PARACHAIN_ID.into(),
-				false
+				false,
 			)
 		},
 		// Bootnodes
@@ -491,7 +491,7 @@ fn amplitude_genesis(
 	authorized_oracles: Vec<AccountId>,
 	sudo_account: AccountId,
 	id: ParaId,
-	start_shutdown: bool
+	start_shutdown: bool,
 ) -> amplitude_runtime::GenesisConfig {
 	fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
 		VaultCurrencyPair {
@@ -520,12 +520,7 @@ fn amplitude_genesis(
 
 	let token_balances = balances
 		.iter()
-		.flat_map(|k| {
-			vec![
-				(k.0.clone(), XCM(DOT), 1 << 60),
-				(k.0.clone(), XCM(KSM), 1 << 60),
-			]
-		})
+		.flat_map(|k| vec![(k.0.clone(), XCM(DOT), 1 << 60), (k.0.clone(), XCM(KSM), 1 << 60)])
 		.collect();
 
 	let stakers: Vec<_> = invulnerables

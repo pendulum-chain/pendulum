@@ -138,7 +138,7 @@ impl TryFrom<CurrencyId> for ZenlinkAssetId {
 			CurrencyId::XCM(xcm) => Ok(ZenlinkAssetId {
 				chain_id: para_chain_id,
 				asset_type: LOCAL,
-				asset_index: xcm.into(),
+				asset_index: xcm as u64,
 			}),
 		}
 	}
@@ -156,30 +156,6 @@ impl TryFrom<ZenlinkAssetId> for CurrencyId {
 			NATIVE => Ok(CurrencyId::Native),
 			LOCAL => Ok(CurrencyId::XCM(asset_id.asset_index.into())),
 			_ => Err(()),
-		}
-	}
-}
-
-impl From<ForeignCurrencyId> for u64 {
-	fn from(currency_id: ForeignCurrencyId) -> Self {
-		match currency_id {
-			ForeignCurrencyId::KSM => 0,
-			ForeignCurrencyId::KAR => 1,
-			ForeignCurrencyId::AUSD => 2,
-			ForeignCurrencyId::BNC => 3,
-			ForeignCurrencyId::VsKSM => 4,
-			ForeignCurrencyId::HKO => 5,
-			ForeignCurrencyId::MOVR => 6,
-			ForeignCurrencyId::SDN => 7,
-			ForeignCurrencyId::KINT => 8,
-			ForeignCurrencyId::KBTC => 9,
-			ForeignCurrencyId::GENS => 10,
-			ForeignCurrencyId::XOR => 11,
-			ForeignCurrencyId::TEER => 12,
-			ForeignCurrencyId::KILT => 13,
-			ForeignCurrencyId::PHA => 14,
-			ForeignCurrencyId::ZTG => 15,
-			ForeignCurrencyId::USD => 16,
 		}
 	}
 }

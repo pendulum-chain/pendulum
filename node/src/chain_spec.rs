@@ -657,7 +657,7 @@ fn amplitude_genesis(
 				b"Polkadot".to_vec(),
 				b"DOT".to_vec(),
 			)],
-			batching_api: b"http://localhost:8070/currencies".to_vec(),
+			batching_api: vec![],
 			coin_infos_map: vec![],
 		},
 	}

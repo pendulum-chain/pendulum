@@ -10,7 +10,9 @@ mod currency;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
+use crate::zenlink::*;
 use xcm::v1::MultiLocation;
+use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
 
@@ -26,12 +28,10 @@ use sp_runtime::{
 	ApplyExtrinsicResult, SaturatedConversion,
 };
 
-use crate::zenlink::*;
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 use frame_support::{
 	construct_runtime,

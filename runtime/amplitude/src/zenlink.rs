@@ -6,18 +6,19 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::marker::PhantomData;
 
-use zenlink_protocol::*;
-pub type ZenlinkAssetId = zenlink_protocol::AssetId;
+use zenlink_protocol::{
+	AssetId, AssetIdConverter, Config as ZenlinkConfig, LocalAssetHandler, PairLpGenerate,
+	ZenlinkMultiAssets, LOCAL, NATIVE,
+};
+pub type ZenlinkAssetId = AssetId;
 
 parameter_types! {
 	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
-	pub ZenlinkRegisteredParaChains: Vec<(MultiLocation, u128)> = vec![
-		// (make_x2_location(2001), 10_000_000_000),
-	];
+	pub ZenlinkRegisteredParaChains: Vec<(MultiLocation, u128)> = vec![];
 }
 
-impl zenlink_protocol::Config for Runtime {
+impl ZenlinkConfig for Runtime {
 	type RuntimeEvent = super::RuntimeEvent;
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;

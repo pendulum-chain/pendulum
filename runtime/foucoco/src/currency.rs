@@ -44,7 +44,7 @@ impl Default for CurrencyId {
 	TypeInfo,
 )]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-
+#[repr(u64)]
 pub enum ForeignCurrencyId {
 	KSM,   // Kusama relay chain
 	KAR,   // Karura

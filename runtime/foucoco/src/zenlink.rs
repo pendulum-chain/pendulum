@@ -151,33 +151,40 @@ impl TryFrom<ZenlinkAssetId> for CurrencyId {
 
 		match asset_id.asset_type {
 			NATIVE => Ok(CurrencyId::Native),
-			LOCAL => Ok(CurrencyId::XCM(asset_id.asset_index.into())),
+			LOCAL => {
+				let foreign_currency_id_option = asset_id.asset_index.try_into();
+				match foreign_currency_id_option {
+					Ok(foreign_currency_id) => Ok(CurrencyId::XCM(foreign_currency_id)),
+					Err(e) => Err(e),
+				}
+			},
 			_ => Err(()),
 		}
 	}
 }
 
-impl From<u64> for ForeignCurrencyId {
-	fn from(num: u64) -> Self {
+impl TryFrom<u64> for ForeignCurrencyId {
+	type Error = ();
+	fn try_from(num: u64) -> Result<Self, Self::Error> {
 		match num {
-			0 => ForeignCurrencyId::KSM,
-			1 => ForeignCurrencyId::KAR,
-			2 => ForeignCurrencyId::AUSD,
-			3 => ForeignCurrencyId::BNC,
-			4 => ForeignCurrencyId::VsKSM,
-			5 => ForeignCurrencyId::HKO,
-			6 => ForeignCurrencyId::MOVR,
-			7 => ForeignCurrencyId::SDN,
-			8 => ForeignCurrencyId::KINT,
-			9 => ForeignCurrencyId::KBTC,
-			10 => ForeignCurrencyId::GENS,
-			11 => ForeignCurrencyId::XOR,
-			12 => ForeignCurrencyId::TEER,
-			13 => ForeignCurrencyId::KILT,
-			14 => ForeignCurrencyId::PHA,
-			15 => ForeignCurrencyId::ZTG,
-			16 => ForeignCurrencyId::USD,
-			_ => panic!("Unknown ForeignCurrencyId"),
+			0 => Ok(ForeignCurrencyId::KSM),
+			1 => Ok(ForeignCurrencyId::KAR),
+			2 => Ok(ForeignCurrencyId::AUSD),
+			3 => Ok(ForeignCurrencyId::BNC),
+			4 => Ok(ForeignCurrencyId::VsKSM),
+			5 => Ok(ForeignCurrencyId::HKO),
+			6 => Ok(ForeignCurrencyId::MOVR),
+			7 => Ok(ForeignCurrencyId::SDN),
+			8 => Ok(ForeignCurrencyId::KINT),
+			9 => Ok(ForeignCurrencyId::KBTC),
+			10 => Ok(ForeignCurrencyId::GENS),
+			11 => Ok(ForeignCurrencyId::XOR),
+			12 => Ok(ForeignCurrencyId::TEER),
+			13 => Ok(ForeignCurrencyId::KILT),
+			14 => Ok(ForeignCurrencyId::PHA),
+			15 => Ok(ForeignCurrencyId::ZTG),
+			16 => Ok(ForeignCurrencyId::USD),
+			_ => Err(()),
 		}
 	}
 }

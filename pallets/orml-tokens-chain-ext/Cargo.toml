@@ -11,7 +11,8 @@ scale-info = { version = "2", default-features = false, features = ["derive"] }
 obce = { git = "https://github.com/727-Ventures/obce", branch = "polkadot-v0.9.37", default-features = false }
 
 # Substrate deps
-pallet-assets = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false, optional = true }
+orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, optional = true, branch = "polkadot-v0.9.37" }
+orml-tokens-allowance = {path = "../../pallets/orml-tokens-allowance", default-features = false}
 
 # Ink deps
 ink = {  git = "https://github.com/paritytech/ink", rev ="4655a8b4413cb50cbc38d1b7c173ad426ab06cde", default-features = false, optional = true }
@@ -20,7 +21,7 @@ ink = {  git = "https://github.com/paritytech/ink", rev ="4655a8b4413cb50cbc38d1
 default = ["std"]
 substrate = [
 	"obce/substrate",
-	"pallet-assets",
+	"orml-tokens",
 ]
 ink-lang = [
 	"obce/ink",
@@ -29,12 +30,13 @@ ink-lang = [
 std = [
 	"scale-info/std",
 	"scale/std",
+  	"orml-tokens/std",
 ]
 substrate-std = [
 	"std",
 	"substrate",
 	"obce/substrate-std",
-	"pallet-assets/std",
+	"orml-tokens/std",
 ]
 ink-std = [
 	"std",
@@ -44,5 +46,5 @@ ink-std = [
 ]
 runtime-benchmarks = [
 	"obce/runtime-benchmarks",
-	"pallet-assets/runtime-benchmarks",
+	"orml-tokens/runtime-benchmarks",
 ]

@@ -63,7 +63,7 @@ pub mod pallet {
 	#[pallet::storage]
 	/// Approved balance transfers. Balance is the amount approved for transfer.
 	/// First key is the asset ID, second key is the owner and third key is the delegate.
-	pub(super) type Approvals<T: Config> = StorageNMap<
+	pub type Approvals<T: Config> = StorageNMap<
 		_,
 		(
 			NMapKey<Blake2_128Concat, T::CurrencyId>,
@@ -114,6 +114,16 @@ pub mod pallet {
 #[allow(clippy::forget_non_drop, clippy::swap_ptr_to_ref, clippy::forget_ref, clippy::forget_copy)]
 #[cfg_attr(test, mockable)]
 impl<T: Config> Pallet<T> {
+
+	// Check the amount approved to be spent by an owner to a delegate
+	pub fn allowance(
+		asset: T::CurrencyId,
+		owner: &T::AccountId,
+		delegate: &T::AccountId,
+	) -> T::Balance {
+		Approvals::<T>::get((asset, &owner, &delegate)).unwrap_or_else(Zero::zero)
+	}
+
 	/// Creates an approval from `owner` to spend `amount` of asset `id` tokens by 'delegate'
 	/// while reserving `T::ApprovalDeposit` from owner
 	///

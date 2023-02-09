@@ -262,7 +262,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Multisig(_) |
 			RuntimeCall::Identity(_) |
 			RuntimeCall::Contracts(_) |
-			RuntimeCall::DiaOracleModule(_) => true,
+			RuntimeCall::DiaOracleModule(_) |
+			RuntimeCall::TokenAllowance(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -850,6 +851,11 @@ impl pallet_contracts::Config for Runtime {
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
+impl orml_tokens_allowance::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+}
+
+
 parameter_types! {
 	pub const BasicDeposit: Balance = 10 * UNIT;       // 258 bytes on-chain
 	pub const FieldDeposit: Balance = 25 * MILLIUNIT;  // 66 bytes on-chain
@@ -988,6 +994,7 @@ construct_runtime!(
 		Contracts: pallet_contracts::{Pallet, Storage, Call, Event<T>} = 56,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 57,
 		DiaOracleModule: dia_oracle::{Pallet, Storage, Call, Event<T>} = 58,
+		TokenAllowance: orml_tokens_allowance::{Pallet, Storage, Call, Event<T>} = 59,
 	}
 );
 

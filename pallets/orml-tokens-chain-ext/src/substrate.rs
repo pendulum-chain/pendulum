@@ -28,12 +28,13 @@ use crate::traits::{
     Origin,
 };
 use obce::substrate::{
-    frame_support::traits::fungibles::{
+    frame_support::traits::{fungibles::{
         approvals,
         Inspect,
         InspectMetadata,
-    },
+    }, tokens::AssetId},
     frame_system::{
+        ensure_signed,
         Config as SysConfig,
         RawOrigin,
     },
@@ -45,90 +46,64 @@ use obce::substrate::{
     sp_std::vec::Vec,
     ExtensionContext,
 };
-use pallet_assets::Config as AssetConfig;
+use orml_tokens::Config as AssetConfig;
+use orml_tokens_allowance::Config as AllowanceConfig;
+use orml_tokens_allowance::Approvals;
 
 #[derive(Default)]
 pub struct AssetsExtension;
 
 impl<T: SysConfig + AssetConfig + ContractConfig> AssetsEnvironment for T {
     type AccountId = <T as SysConfig>::AccountId;
-    type AssetId = <T as AssetConfig>::AssetId;
+    type AssetId = <T as AssetConfig>::CurrencyId;
     type Balance = <T as AssetConfig>::Balance;
 }
 
 #[obce::implementation]
 impl<'a, 'b, E, T> PalletAssets<T> for ExtensionContext<'a, 'b, E, T, AssetsExtension>
 where
-    T: SysConfig + AssetConfig + ContractConfig,
+    T: SysConfig + AssetConfig + ContractConfig + AllowanceConfig,
     <<T as SysConfig>::Lookup as StaticLookup>::Source: From<<T as SysConfig>::AccountId>,
     E: Ext<T = T>,
 {
-    fn create(&mut self, id: T::AssetId, admin: T::AccountId, min_balance: T::Balance) -> Result<(), Error<T>> {
-        // The contract should have money for the deposit
-        Ok(pallet_assets::Pallet::<T>::create(
-            self.origin(),
-            id.into(),
-            admin.into(),
-            min_balance,
-        )?)
+    fn balance_of(&self, id: T::CurrencyId, owner: T::AccountId) -> T::Balance {
+        <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::balance(id.into(), &owner)
     }
 
-    fn mint(&mut self, id: T::AssetId, who: T::AccountId, amount: T::Balance) -> Result<(), Error<T>> {
-        // Only origin with `issuer` right can do mint
-        Ok(pallet_assets::Pallet::<T>::mint(self.origin(), id.into(), who.into(), amount)?)
+    fn total_supply(&self, id: T::CurrencyId) -> T::Balance {
+        <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::total_issuance(id)
     }
 
-    fn burn(&mut self, id: T::AssetId, who: T::AccountId, amount: T::Balance) -> Result<(), Error<T>> {
-        // Only origin with `admin` right can do burn
-        Ok(pallet_assets::Pallet::<T>::burn(self.origin(), id.into(), who.into(), amount)?)
-    }
-
-    fn balance_of(&self, id: T::AssetId, owner: T::AccountId) -> T::Balance {
-        <pallet_assets::Pallet<T> as Inspect<T::AccountId>>::balance(id.into(), &owner)
-    }
-
-    fn total_supply(&self, id: T::AssetId) -> T::Balance {
-        <pallet_assets::Pallet<T> as Inspect<T::AccountId>>::total_issuance(id)
-    }
-
-    fn allowance(&self, id: T::AssetId, owner: T::AccountId, spender: T::AccountId) -> T::Balance {
-        <pallet_assets::Pallet<T> as approvals::Inspect<T::AccountId>>::allowance(id.into(), &owner, &spender)
+    fn allowance(&self, id: T::CurrencyId, owner: T::AccountId, spender: T::AccountId) -> T::Balance {
+        orml_tokens_allowance::Pallet::<T>::allowance(id.into(), &owner, &spender)
     }
 
     fn approve_transfer(
         &mut self,
         origin: Origin,
-        id: T::AssetId,
+        id: T::CurrencyId,
         target: T::AccountId,
         amount: T::Balance,
     ) -> Result<(), Error<T>> {
-        Ok(pallet_assets::Pallet::<T>::approve_transfer(
-            self.select_origin(origin)?,
+        Ok(orml_tokens_allowance::Pallet::<T>::do_approve_transfer(
             id.into(),
-            target.into(),
+            &ensure_signed(self.select_origin(origin)?)?,
+            &target.into(),
             amount,
-        )?)
-    }
-
-    fn cancel_approval(&mut self, origin: Origin, id: T::AssetId, target: T::AccountId) -> Result<(), Error<T>> {
-        Ok(pallet_assets::Pallet::<T>::cancel_approval(
-            self.select_origin(origin)?,
-            id.into(),
-            target.into(),
         )?)
     }
 
     fn transfer(
         &mut self,
         origin: Origin,
-        id: T::AssetId,
+        id: T::CurrencyId,
         target: T::AccountId,
         amount: T::Balance,
     ) -> Result<(), Error<T>> {
-        Ok(pallet_assets::Pallet::<T>::transfer(
+        Ok(orml_tokens::Pallet::<T>::transfer(
             self.select_origin(origin)?,
-            id.into(),
             target.into(),
+            id.into(),
             amount,
         )?)
     }
@@ -136,41 +111,31 @@ where
     fn transfer_approved(
         &mut self,
         origin: Origin,
-        id: T::AssetId,
+        id: T::CurrencyId,
         owner: T::AccountId,
         target: T::AccountId,
         amount: T::Balance,
     ) -> Result<(), Error<T>> {
-        Ok(pallet_assets::Pallet::<T>::transfer_approved(
-            self.select_origin(origin)?,
+        Ok(orml_tokens_allowance::Pallet::<T>::do_transfer_approved(
             id.into(),
-            owner.into(),
-            target.into(),
+            &ensure_signed(self.select_origin(origin)?)?,
+            &owner.into(),
+            &target.into(),
             amount,
         )?)
     }
 
-    fn set_metadata(&mut self, id: T::AssetId, name: Vec<u8>, symbol: Vec<u8>, decimals: u8) -> Result<(), Error<T>> {
-        Ok(pallet_assets::Pallet::<T>::set_metadata(
-            self.origin(),
-            id.into(),
-            name,
-            symbol,
-            decimals,
-        )?)
-    }
+    // fn metadata_name(&self, id: T::CurrencyId) -> Vec<u8> {
+    //     <orml_tokens::Pallet<T> as InspectMetadata<T::AccountId>>::name(&id)
+    // }
 
-    fn metadata_name(&self, id: T::AssetId) -> Vec<u8> {
-        <pallet_assets::Pallet<T> as InspectMetadata<T::AccountId>>::name(&id)
-    }
+    // fn metadata_symbol(&self, id: T::CurrencyId) -> Vec<u8> {
+    //     <orml_tokens::Pallet<T> as InspectMetadata<T::AccountId>>::symbol(&id)
+    // }
 
-    fn metadata_symbol(&self, id: T::AssetId) -> Vec<u8> {
-        <pallet_assets::Pallet<T> as InspectMetadata<T::AccountId>>::symbol(&id)
-    }
-
-    fn metadata_decimals(&self, id: T::AssetId) -> u8 {
-        <pallet_assets::Pallet<T> as InspectMetadata<T::AccountId>>::decimals(&id)
-    }
+    // fn metadata_decimals(&self, id: T::CurrencyId) -> u8 {
+    //     <orml_tokens::Pallet<T> as InspectMetadata<T::AccountId>>::decimals(&id)
+    // }
 }
 
 /// Trait with additional helpers functions.

@@ -30,7 +30,8 @@ use obce::substrate::{
     SupportCriticalError,
 };
 #[cfg(feature = "substrate")]
-use pallet_assets::Error as AssetError;
+use orml_tokens::Error as AssetError;
+use obce::substrate::frame_support::error::BadOrigin;
 
 /// The origin of the call. The smart contract can execute methods on behalf of the `caller` or itself.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, scale::Encode, scale::Decode)]
@@ -58,28 +59,22 @@ pub trait Environment {
 // TODO: Add comments
 #[obce::definition(id = "pallet-assets-chain-extension@v0.1")]
 pub trait PalletAssets<T: Environment> {
-    fn create(&mut self, id: T::AssetId, admin: T::AccountId, min_balance: T::Balance) -> Result<(), Error<T>>;
+    // //ERC20: name
+    // fn metadata_name(&self, id: T::AssetId) -> Vec<u8>;
 
-    fn mint(&mut self, id: T::AssetId, who: T::AccountId, amount: T::Balance) -> Result<(), Error<T>>;
+    // //ERC20: symbol
+    // fn metadata_symbol(&self, id: T::AssetId) -> Vec<u8>;
 
-    fn burn(&mut self, id: T::AssetId, who: T::AccountId, amount: T::Balance) -> Result<(), Error<T>>;
+    // //ERC20: decimals
+    // fn metadata_decimals(&self, id: T::AssetId) -> u8;
 
-    fn balance_of(&self, id: T::AssetId, owner: T::AccountId) -> T::Balance;
-
+    //ERC20: total_supply
     fn total_supply(&self, id: T::AssetId) -> T::Balance;
 
-    fn allowance(&self, id: T::AssetId, owner: T::AccountId, spender: T::AccountId) -> T::Balance;
+    //ERC20: balance_of
+    fn balance_of(&self, id: T::AssetId, owner: T::AccountId) -> T::Balance;
 
-    fn approve_transfer(
-        &mut self,
-        origin: Origin,
-        id: T::AssetId,
-        target: T::AccountId,
-        amount: T::Balance,
-    ) -> Result<(), Error<T>>;
-
-    fn cancel_approval(&mut self, origin: Origin, id: T::AssetId, target: T::AccountId) -> Result<(), Error<T>>;
-
+    //ERC20: transfer
     fn transfer(
         &mut self,
         origin: Origin,
@@ -88,6 +83,7 @@ pub trait PalletAssets<T: Environment> {
         amount: T::Balance,
     ) -> Result<(), Error<T>>;
 
+    //ERC20: transferFrom
     fn transfer_approved(
         &mut self,
         origin: Origin,
@@ -97,15 +93,22 @@ pub trait PalletAssets<T: Environment> {
         amount: T::Balance,
     ) -> Result<(), Error<T>>;
 
-    // Metadata section
+    //ERC20: approve
+    fn approve_transfer(
+        &mut self,
+        origin: Origin,
+        id: T::AssetId,
+        target: T::AccountId,
+        amount: T::Balance,
+    ) -> Result<(), Error<T>>;
 
-    fn set_metadata(&mut self, id: T::AssetId, name: Vec<u8>, symbol: Vec<u8>, decimals: u8) -> Result<(), Error<T>>;
+    //ERC20: allowance
+    fn allowance(&self, id: T::AssetId, owner: T::AccountId, spender: T::AccountId) -> T::Balance;
 
-    fn metadata_name(&self, id: T::AssetId) -> Vec<u8>;
+    //Price Feed Oracle?
+    //fn get_price()
+    //...
 
-    fn metadata_symbol(&self, id: T::AssetId) -> Vec<u8>;
-
-    fn metadata_decimals(&self, id: T::AssetId) -> u8;
 }
 
 /// The common errors that can be emitted by the `pallet-asset`.
@@ -116,41 +119,28 @@ pub enum Error<T> {
     /// Only the admin can execute methods on behalf of the `caller`.
     ContractIsNotAdmin,
 
-    // Asset pallet errors
-    /// Account balance must be greater than or equal to the transfer amount.
-    BalanceLow,
-    /// The account to alter does not exist.
-    NoAccount,
-    /// The signing account has no permission to do the operation.
-    NoPermission,
-    /// The given asset ID is unknown.
-    Unknown,
-    /// The origin account is frozen.
-    Frozen,
-    /// The asset ID is already taken.
-    InUse,
-    /// Invalid witness data given.
-    BadWitness,
-    /// Minimum balance should be non-zero.
-    MinBalanceZero,
-    /// Unable to increment the consumer reference counters on the account. Either no provider
-    /// reference exists to allow a non-zero balance of a non-self-sufficient asset, or the
-    /// maximum number of consumers has been reached.
-    NoProvider,
-    /// Invalid metadata given.
-    BadMetadata,
-    /// No approval exists that would allow the transfer.
-    Unapproved,
-    /// The source account would not survive the transfer and it needs to stay alive.
-    WouldDie,
-    /// The asset-account already exists.
-    AlreadyExists,
-    /// The asset-account doesn't have an associated deposit.
-    NoDeposit,
-    /// The operation would result in funds being burned.
-    WouldBurn,
-    /// Unknown internal asset pallet error.
-    AssetPalletInternal,
+    /// Bad Origin
+    BadOrigin,
+
+    // orml_tokens errors
+    /// The balance is too low
+    BalanceTooLow,
+    /// Cannot convert Amount into Balance type
+    AmountIntoBalanceFailed,
+    /// Failed because liquidity restrictions due to locking
+    LiquidityRestrictions,
+    /// Failed because the maximum locks was exceeded
+    MaxLocksExceeded,
+    /// Transfer/payment would kill account
+    KeepAlive,
+    /// Value too low to create account due to existential deposit
+    ExistentialDeposit,
+    /// Beneficiary account must pre-exist
+    DeadAccount,
+    // Number of named reserves exceed `T::MaxReserves`
+    TooManyReserves,
+    /// Unknown internal orml tokens error.
+    OrmlTokensInternal,
 
     // Substrate errors
     #[cfg(feature = "substrate")]
@@ -163,11 +153,11 @@ pub enum Error<T> {
 }
 
 #[cfg(feature = "substrate")]
-impl<T: pallet_assets::Config> From<CriticalError> for Error<T> {
+impl<T: orml_tokens::Config> From<CriticalError> for Error<T> {
     fn from(dispatch: CriticalError) -> Self {
-        let asset_module = <pallet_assets::Pallet<T> as PalletInfoAccess>::index() as u8;
+        let asset_module = <orml_tokens::Pallet<T> as PalletInfoAccess>::index() as u8;
 
-        // If error from the `pallet_assets` module, map it into ink! error
+        // If error from the `orml_tokens` module, map it into ink! error
         if let CriticalError::Module(module) = dispatch {
             if module.index == asset_module {
                 let mut input = module.error.as_slice();
@@ -185,22 +175,15 @@ impl<T: pallet_assets::Config> From<CriticalError> for Error<T> {
 impl<T> From<AssetError<T>> for Error<T> {
     fn from(asset: AssetError<T>) -> Self {
         match asset {
-            AssetError::<T>::BalanceLow => Error::<T>::BalanceLow,
-            AssetError::<T>::NoAccount => Error::<T>::NoAccount,
-            AssetError::<T>::NoPermission => Error::<T>::NoPermission,
-            AssetError::<T>::Unknown => Error::<T>::Unknown,
-            AssetError::<T>::Frozen => Error::<T>::Frozen,
-            AssetError::<T>::InUse => Error::<T>::InUse,
-            AssetError::<T>::BadWitness => Error::<T>::BadWitness,
-            AssetError::<T>::MinBalanceZero => Error::<T>::MinBalanceZero,
-            AssetError::<T>::NoProvider => Error::<T>::NoProvider,
-            AssetError::<T>::BadMetadata => Error::<T>::BadMetadata,
-            AssetError::<T>::Unapproved => Error::<T>::Unapproved,
-            AssetError::<T>::WouldDie => Error::<T>::WouldDie,
-            AssetError::<T>::AlreadyExists => Error::<T>::AlreadyExists,
-            AssetError::<T>::NoDeposit => Error::<T>::NoDeposit,
-            AssetError::<T>::WouldBurn => Error::<T>::WouldBurn,
-            _ => Error::<T>::AssetPalletInternal,
+            AssetError::<T>::BalanceTooLow => Error::<T>::BalanceTooLow,
+            AssetError::<T>::AmountIntoBalanceFailed => Error::<T>::AmountIntoBalanceFailed,
+            AssetError::<T>::LiquidityRestrictions => Error::<T>::LiquidityRestrictions,
+            AssetError::<T>::MaxLocksExceeded => Error::<T>::MaxLocksExceeded,
+            AssetError::<T>::KeepAlive => Error::<T>::KeepAlive,
+            AssetError::<T>::ExistentialDeposit => Error::<T>::ExistentialDeposit,
+            AssetError::<T>::DeadAccount => Error::<T>::DeadAccount,
+            AssetError::<T>::TooManyReserves => Error::<T>::TooManyReserves,
+            _ => Error::<T>::OrmlTokensInternal,
         }
     }
 }
@@ -212,5 +195,12 @@ impl<T> SupportCriticalError for Error<T> {
             Error::<T>::Critical(error) => Ok(error),
             _ => Err(self),
         }
+    }
+}
+
+#[cfg(feature = "substrate")]
+impl<T> From<BadOrigin> for Error<T> {
+    fn from(err: BadOrigin) -> Self {
+        Error::<T>::BadOrigin
     }
 }

@@ -1180,18 +1180,19 @@ construct_runtime!(
 
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
 
-		Security: security::{Pallet, Call, Config, Storage, Event<T>} = 60,
-		VaultStaking: staking::{Pallet, Storage, Event<T>} = 61,
-		Oracle: oracle::{Pallet, Call, Config, Storage, Event<T>} = 62,
-		Currency: currency::{Pallet} = 63,
-		StellarRelay: stellar_relay::{Pallet, Call, Config<T>, Storage, Event<T>} = 64,
-		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 65,
-		Fee: fee::{Pallet, Call, Config<T>, Storage} = 66,
-		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 67,
-		Redeem: redeem::{Pallet, Call, Config<T>, Storage, Event<T>} = 68,
-		Issue: issue::{Pallet, Call, Config<T>, Storage, Event<T>} = 69,
-		Nomination: nomination::{Pallet, Call, Config, Storage, Event<T>} = 70,
-		Replace: replace::{Pallet, Call, Config<T>, Storage, Event<T>} = 71,
+		// Spacewalk pallets
+		Currency: currency::{Pallet} = 60,
+		Fee: fee::{Pallet, Call, Config<T>, Storage} = 61,
+		Issue: issue::{Pallet, Call, Config<T>, Storage, Event<T>} = 62,
+		Nomination: nomination::{Pallet, Call, Config, Storage, Event<T>} = 63,
+		Oracle: oracle::{Pallet, Call, Config, Storage, Event<T>} = 64,
+		Redeem: redeem::{Pallet, Call, Config<T>, Storage, Event<T>} = 65,
+		Replace: replace::{Pallet, Call, Config<T>, Storage, Event<T>} = 66,
+		Security: security::{Pallet, Call, Config, Storage, Event<T>} = 67,
+		StellarRelay: stellar_relay::{Pallet, Call, Config<T>, Storage, Event<T>} = 68,
+		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 69,
+		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 70,
+		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
 	}
 );
 

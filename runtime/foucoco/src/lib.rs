@@ -1399,14 +1399,6 @@ impl_runtime_apis! {
 				amount_1_min
 			)
 		}
-
-		fn calculate_remove_liquidity(
-			asset_0: ZenlinkAssetId,
-			asset_1: ZenlinkAssetId,
-			amount: AssetBalance,
-		) -> Option<(AssetBalance, AssetBalance)> {
-			None
-		}
 	}
 
 	#[cfg(feature = "try-runtime")]

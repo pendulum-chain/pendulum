@@ -1400,8 +1400,12 @@ impl_runtime_apis! {
 			)
 		}
 
-		fn calculate_remove_liquidity(pool_id: PoolId, amount: Balance)->Vec<Balance> {
-			Default::default()
+		fn calculate_remove_liquidity(
+			asset_0: ZenlinkAssetId,
+			asset_1: ZenlinkAssetId,
+			amount: AssetBalance,
+		) -> Option<(AssetBalance, AssetBalance)> {
+			None
 		}
 	}
 

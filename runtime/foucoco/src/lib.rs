@@ -1208,14 +1208,15 @@ mod benches {
 		[pallet_session, SessionBench::<Runtime>]
 		[pallet_timestamp, Timestamp]
 		[cumulus_pallet_xcmp_queue, XcmpQueue]
-		[oracle, Oracle]
-		[stellar_relay, StellarRelay]
+
 		[fee, Fee]
-		[vault_registry, VaultRegistry]
-		[redeem, Redeem]
 		[issue, Issue]
 		[nomination, Nomination]
+		[oracle, Oracle]
+		[redeem, Redeem]
 		[replace, Replace]
+		[stellar_relay, StellarRelay]
+		[vault_registry, VaultRegistry]
 	);
 }
 

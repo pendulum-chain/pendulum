@@ -25,6 +25,27 @@ smallvec = "1.9.0"
 # Local
 runtime-common = {path = "../common", default-features = false}
 
+# custom libraries from spacewalk
+currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+security = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+staking = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+oracle = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+stellar-relay = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+reward = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+fee = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+vault-registry = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+redeem = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+issue = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+nomination = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+replace = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+
+module-issue-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
+
 # Substrate
 frame-benchmarking = {git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.37"}
 frame-executive = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
@@ -103,8 +124,8 @@ parachain-info = {git = "https://github.com/paritytech/cumulus", default-feature
 #orml
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.37" }
 
-zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "master" }
-zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "master" }
+zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.37" }
+zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.37" }
 
 [features]
 default = [
@@ -176,7 +197,27 @@ std = [
   "xcm-executor/std",
   "xcm/std",
   "zenlink-protocol/std",
-  "zenlink-protocol-runtime-api/std"
+  "zenlink-protocol-runtime-api/std",
+	#	custom libraries from spacewalk
+"currency/std",
+"security/std",
+"staking/std",
+"oracle/std",
+"stellar-relay/std",
+"reward/std",
+"fee/std",
+"vault-registry/std",
+"redeem/std",
+"issue/std",
+"nomination/std",
+"replace/std",
+"module-issue-rpc-runtime-api/std",
+"module-oracle-rpc-runtime-api/std",
+"module-redeem-rpc-runtime-api/std",
+"module-replace-rpc-runtime-api/std",
+"module-vault-registry-rpc-runtime-api/std",
+"spacewalk-primitives/std",
+
 ]
 
 runtime-benchmarks = [

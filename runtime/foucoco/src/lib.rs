@@ -925,7 +925,7 @@ use sp_core::crypto::UncheckedFrom;
 use sp_runtime::TokenError;
 use sp_runtime::ArithmeticError;
 #[derive(Default)]
-pub struct Psp22AssetExtension;
+pub struct Psp22Extension;
 
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode,  MaxEncodedLen)]
@@ -1050,7 +1050,7 @@ impl From<TokenError> for PalletAssetTokenErr {
 
 type PSP22Result = Result::<(),PalletAssetErr>;
 
-impl<T> ChainExtension<T> for Psp22AssetExtension
+impl<T> ChainExtension<T> for Psp22Extension
  where
  	T: SysConfig + orml_tokens::Config + pallet_contracts::Config + orml_tokens_allowance::Config,
  	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
@@ -1368,8 +1368,8 @@ impl pallet_contracts::Config for Runtime {
 	type CallStack = [pallet_contracts::Frame<Self>; 31];
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-	type ChainExtension = ();
-	// type ChainExtension = orml_tokens_chain_ext::substrate::AssetsExtension;
+	// type ChainExtension = ();
+	type ChainExtension = Psp22Extension;
 	type DeletionQueueDepth = DeletionQueueDepth;
 	type DeletionWeightLimit = DeletionWeightLimit;
 	type Schedule = Schedule;

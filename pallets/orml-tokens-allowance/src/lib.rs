@@ -45,7 +45,7 @@ pub mod pallet {
 		},
 		/// (Additional) funds have been approved for transfer to a destination account.
 		ApprovedTransfer {
-			currency_id: T::CurrencyId,
+			currency_id: <T as orml_tokens::Config>::CurrencyId,
 			source: T::AccountId,
 			delegate: T::AccountId,
 			amount: T::Balance,
@@ -66,7 +66,7 @@ pub mod pallet {
 	pub type Approvals<T: Config> = StorageNMap<
 		_,
 		(
-			NMapKey<Blake2_128Concat, T::CurrencyId>,
+			NMapKey<Blake2_128Concat, <T as orml_tokens::Config>::CurrencyId>,
 			NMapKey<Blake2_128Concat, T::AccountId>, // owner
 			NMapKey<Blake2_128Concat, T::AccountId>, // delegate
 		),
@@ -76,14 +76,14 @@ pub mod pallet {
 	#[pallet::storage]
 	/// Currencies that can be used to give approval
 	pub(super) type AllowedCurrencies<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::CurrencyId, bool>;
+		StorageMap<_, Blake2_128Concat, <T as orml_tokens::Config>::CurrencyId, bool>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub allowed_currencies: Vec<T::CurrencyId>,
+		pub allowed_currencies: Vec<<T as orml_tokens::Config>::CurrencyId>,
 	}
 
 	#[cfg(feature = "std")]
@@ -117,7 +117,7 @@ impl<T: Config> Pallet<T> {
 
 	// Check the amount approved to be spent by an owner to a delegate
 	pub fn allowance(
-		asset: T::CurrencyId,
+		asset: <T as orml_tokens::Config>::CurrencyId,
 		owner: &T::AccountId,
 		delegate: &T::AccountId,
 	) -> T::Balance {
@@ -129,7 +129,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// If an approval already exists, the new amount is added to such existing approval
 	pub fn do_approve_transfer(
-		id: T::CurrencyId,
+		id: <T as orml_tokens::Config>::CurrencyId,
 		owner: &T::AccountId,
 		delegate: &T::AccountId,
 		amount: T::Balance,
@@ -165,7 +165,7 @@ impl<T: Config> Pallet<T> {
 	/// Will unreserve the deposit from `owner` if the entire approved `amount` is spent by
 	/// 'delegate'
 	pub fn do_transfer_approved(
-		id: T::CurrencyId,
+		id: <T as orml_tokens::Config>::CurrencyId,
 		owner: &T::AccountId,
 		delegate: &T::AccountId,
 		destination: &T::AccountId,

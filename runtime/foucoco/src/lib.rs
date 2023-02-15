@@ -1052,7 +1052,7 @@ type PSP22Result = Result::<(),PalletAssetErr>;
 
 impl<T> ChainExtension<T> for Psp22Extension
  where
- 	T: SysConfig + orml_tokens::Config + pallet_contracts::Config + orml_tokens_allowance::Config,
+ 	T: SysConfig + orml_tokens::Config<CurrencyId = CurrencyId> + pallet_contracts::Config + orml_tokens_allowance::Config,
  	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
  {
  	fn call<E: Ext>(&mut self, mut env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
@@ -1102,7 +1102,7 @@ impl<T> ChainExtension<T> for Psp22Extension
                 let mut env = env.buf_in_buf_out();
 				let create_asset: (u32, T::AccountId) = env.read_as()?;
 				let (asset_id, account_id) = create_asset;
-				let balance = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::balance(CurrencyId::Native, &account_id);
+				let balance = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::balance(CurrencyId::XCM(ForeignCurrencyId::KSM), &account_id);
 				// let balance = <pallet_assets::Pallet<T> as Inspect<T::AccountId>>::
 				// 		balance(asset_id, &account_id);
 

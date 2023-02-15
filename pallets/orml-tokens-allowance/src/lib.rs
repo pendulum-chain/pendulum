@@ -21,6 +21,13 @@ use sp_std::{collections::btree_set::BTreeSet, convert::TryInto, prelude::*, vec
 
 pub use pallet::*;
 
+
+pub(crate) type BalanceOf<T> =
+		<<T as orml_currencies::Config>::MultiCurrency as orml_traits::MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+
+pub(crate) type CurrencyOf<T> =
+	<<T as orml_currencies::Config>::MultiCurrency as orml_traits::MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
@@ -31,7 +38,7 @@ pub mod pallet {
 	/// ## Configuration
 	/// The pallet's configuration trait.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + orml_tokens::Config {
+	pub trait Config: frame_system::Config + orml_tokens::Config + orml_currencies::Config {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 	}

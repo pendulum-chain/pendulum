@@ -6,6 +6,8 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use orml_traits::MultiCurrency;
+
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
@@ -15,6 +17,7 @@ use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
 
+use frame_system::Origin;
 use codec::Encode;
 
 use smallvec::smallvec;
@@ -1052,8 +1055,8 @@ type PSP22Result = Result::<(),PalletAssetErr>;
 
 impl<T> ChainExtension<T> for Psp22Extension
  where
- 	T: SysConfig + orml_tokens::Config<CurrencyId = CurrencyId> + pallet_contracts::Config + orml_tokens_allowance::Config,
- 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
+ 	T: SysConfig + orml_tokens::Config<CurrencyId = CurrencyId> + orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId> + pallet_contracts::Config + orml_tokens_allowance::Config,
+	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>, 
  {
  	fn call<E: Ext>(&mut self, mut env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
  	where
@@ -1067,34 +1070,36 @@ impl<T> ChainExtension<T> for Psp22Extension
         match func_id {
 
 			//transfer
-			// 1105 => {
+			1105 => {
+				let ext = env.ext();
+				let address = ext.address().clone();
+				let caller = ext.caller().clone();
+                let mut env = env.buf_in_buf_out();
+                let create_asset: (OriginType, _, T::AccountId, T::Balance) = env.read_as()?;
+                ///let create_asset: (OriginType, T::AssetId, T::AccountId, T::Balance) = env.read_as()?;
+				let (origin_id, asset_id, account_id, balance) = create_asset;
 
-			// 	let ext = env.ext();
-			// 	let address = ext.address().clone();
-			// 	let caller = ext.caller().clone();
-            //     let mut env = env.buf_in_buf_out();
-            //     let create_asset: (OriginType, T::AssetId, T::AccountId, T::Balance) = env.read_as()?;
-			// 	let (origin_id, asset_id, account_id, balance) = create_asset;
+				let address_account;
+				if origin_id == OriginType::Caller
+				{
+					address_account = caller;
+				}
+				else{
+					address_account = address;
+				}
 
-			// 	let address_account;
-			// 	if origin_id == OriginType::Caller
-			// 	{
-			// 		address_account = caller;
-			// 	}
-			// 	else{
-			// 		address_account = address;
-			// 	}
-
-			// 	error!("asset_id : {:#?}", asset_id);
-			// 	error!("address_account : {:#?}", address_account);
-			// 	error!("account_id : {:#?}", account_id);
-			// 	error!("balance : {:#?}", balance);
+				error!("asset_id : {:#?}", asset_id);
+				error!("address_account : {:#?}", address_account);
+				error!("account_id : {:#?}", account_id);
+				error!("balance : {:#?}", balance);
 				
-			// 	let result = <pallet_assets::Pallet<T> as Transfer<T::AccountId>>::
-			// 		transfer(asset_id, &address_account, &account_id, balance, true);
+				let result = orml_currencies::Pallet::<T>::transfer( &address_account, account_id, CurrencyId::Native, balance); 
 
-			// 	error!("result : {:#?}", result);
-            // }
+				// let result = <pallet_assets::Pallet<T> as Transfer<T::AccountId>>::
+				// 	transfer(asset_id, &address_account, &account_id, balance, true);
+
+				error!("result : {:#?}", result);
+            }
 			
 			//balance
 			1106 => {
@@ -1102,7 +1107,10 @@ impl<T> ChainExtension<T> for Psp22Extension
                 let mut env = env.buf_in_buf_out();
 				let create_asset: (u32, T::AccountId) = env.read_as()?;
 				let (asset_id, account_id) = create_asset;
-				let balance = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::balance(CurrencyId::Native, &account_id);
+
+				let balance = <orml_currencies::Pallet<T>>::free_balance(CurrencyId::Native, &account_id);
+				//let balance = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::balance(CurrencyId::Native, &account_id);
+				
 				// let balance = <pallet_assets::Pallet<T> as Inspect<T::AccountId>>::
 				// 		balance(asset_id, &account_id);
 
@@ -1120,7 +1128,7 @@ impl<T> ChainExtension<T> for Psp22Extension
 			1107 => {
                 let mut env = env.buf_in_buf_out();
                 let asset_id: u32 = env.read_as()?;
-				let total_supply = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::total_issuance(CurrencyId::Native);
+				let total_supply = <orml_currencies::Pallet<T>>::total_issuance(CurrencyId::Native);
                 env.write(&total_supply.encode(), false, None).map_err(|_| {
                     DispatchError::Other("ChainExtension failed to call total_supply")
                 })?;

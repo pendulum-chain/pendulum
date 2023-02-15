@@ -1,0 +1,23 @@
+[relaychain]
+default_command = "../../polkadot/target/release/polkadot"
+default_args = [ "-lparachain=debug" ]
+chain = "rococo-local"
+
+  [[relaychain.nodes]]
+  name = "alice"
+
+  [[relaychain.nodes]]
+  name = "bob"
+
+[[parachains]]
+id = 1000
+cumulus_based = true
+chain = "foucoco" # "pendulum"/"amplitude"/"dev"/"local"
+
+  [parachains.collator]
+  name = "alice"
+  command = "../target/release/pendulum-node"
+
+  # build polkadot and pendulum with -> cargo build --release
+  # ./zombienet-macos spawn --provider native config.toml
+  

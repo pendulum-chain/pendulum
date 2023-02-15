@@ -50,6 +50,12 @@ use orml_tokens::Config as AssetConfig;
 use orml_tokens_allowance::Config as AllowanceConfig;
 use orml_tokens_allowance::Approvals;
 
+use dia_oracle::{
+    Config as DiaConfig,
+    CoinInfo,
+    DiaOracle
+};
+
 #[derive(Default)]
 pub struct AssetsExtension;
 
@@ -62,7 +68,7 @@ impl<T: SysConfig + AssetConfig + ContractConfig> AssetsEnvironment for T {
 #[obce::implementation]
 impl<'a, 'b, E, T> PalletAssets<T> for ExtensionContext<'a, 'b, E, T, AssetsExtension>
 where
-    T: SysConfig + AssetConfig + ContractConfig + AllowanceConfig,
+    T: SysConfig + AssetConfig + ContractConfig + AllowanceConfig + DiaConfig,
     <<T as SysConfig>::Lookup as StaticLookup>::Source: From<<T as SysConfig>::AccountId>,
     E: Ext<T = T>,
 {
@@ -124,6 +130,14 @@ where
             amount,
         )?)
     }
+
+    fn price_feed(&self, blockchain: Vec<u8>, symbol: Vec<u8>) -> Result<CoinInfo, Error<T>> {
+        match <dia_oracle::Pallet::<T> as DiaOracle>::get_coin_info(blockchain, symbol) {
+            Ok(ok) => Ok(ok),
+            Err(_) => Err(Error::CoinInfoUnavailable),
+        }
+    }
+
 
     // fn metadata_name(&self, id: T::CurrencyId) -> Vec<u8> {
     //     <orml_tokens::Pallet<T> as InspectMetadata<T::AccountId>>::name(&id)

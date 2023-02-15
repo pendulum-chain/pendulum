@@ -59,6 +59,9 @@ pub trait Environment {
 // TODO: Add comments
 #[obce::definition(id = "pallet-assets-chain-extension@v0.1")]
 pub trait PalletAssets<T: Environment> {
+
+    // The chain doesn't necessarily have metadata for all on chain assets. 
+    // However, the metadata can be hardcoded in the wrapper contract anyways.
     // //ERC20: name
     // fn metadata_name(&self, id: T::AssetId) -> Vec<u8>;
 
@@ -105,9 +108,8 @@ pub trait PalletAssets<T: Environment> {
     //ERC20: allowance
     fn allowance(&self, id: T::AssetId, owner: T::AccountId, spender: T::AccountId) -> T::Balance;
 
-    //Price Feed Oracle?
-    //fn get_price()
-    //...
+    //price_feed takes a blockchain and token symbol and returns the coin info (which includes price and timestamp)
+    fn price_feed(&self, blockchain: Vec<u8>, symbol: Vec<u8>) -> Result<dia_oracle::CoinInfo, Error<T>>;
 
 }
 
@@ -115,6 +117,10 @@ pub trait PalletAssets<T: Environment> {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum Error<T> {
+    // dia_oracle errors
+    /// CoinInfo unavailable
+    CoinInfoUnavailable,
+
     // Errors of chain extension
     /// Only the admin can execute methods on behalf of the `caller`.
     ContractIsNotAdmin,

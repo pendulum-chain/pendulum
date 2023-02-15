@@ -1117,14 +1117,14 @@ impl<T> ChainExtension<T> for Psp22AssetExtension
 
 			
 			//total_supply
-			// 1107 => {
-            //     let mut env = env.buf_in_buf_out();
-            //     let asset_id: T::AssetId = env.read_as()?;
-			// 	let total_supply : T::Balance = pallet_assets::Pallet::<T>::total_supply(asset_id);
-            //     env.write(&total_supply.encode(), false, None).map_err(|_| {
-            //         DispatchError::Other("ChainExtension failed to call total_supply")
-            //     })?;
-			// }
+			1107 => {
+                let mut env = env.buf_in_buf_out();
+                let asset_id: T::CurrencyId = env.read_as()?;
+				let total_supply = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::total_issuance(asset_id);
+                env.write(&total_supply.encode(), false, None).map_err(|_| {
+                    DispatchError::Other("ChainExtension failed to call total_supply")
+                })?;
+			}
 
 			/*
 

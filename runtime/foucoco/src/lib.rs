@@ -1100,9 +1100,9 @@ impl<T> ChainExtension<T> for Psp22Extension
 			1106 => {
 				let ext = env.ext();
                 let mut env = env.buf_in_buf_out();
-				let create_asset: (T::CurrencyId, T::AccountId) = env.read_as()?;
+				let create_asset: (u32, T::AccountId) = env.read_as()?;
 				let (asset_id, account_id) = create_asset;
-				let balance = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::balance(asset_id.into(), &account_id);
+				let balance = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::balance(CurrencyId::Native, &account_id);
 				// let balance = <pallet_assets::Pallet<T> as Inspect<T::AccountId>>::
 				// 		balance(asset_id, &account_id);
 
@@ -1119,8 +1119,8 @@ impl<T> ChainExtension<T> for Psp22Extension
 			//total_supply
 			1107 => {
                 let mut env = env.buf_in_buf_out();
-                let asset_id: T::CurrencyId = env.read_as()?;
-				let total_supply = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::total_issuance(asset_id);
+                let asset_id: u32 = env.read_as()?;
+				let total_supply = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::total_issuance(CurrencyId::Native);
                 env.write(&total_supply.encode(), false, None).map_err(|_| {
                     DispatchError::Other("ChainExtension failed to call total_supply")
                 })?;
@@ -1134,7 +1134,7 @@ impl<T> ChainExtension<T> for Psp22Extension
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
                 let mut env = env.buf_in_buf_out();
-                let create_asset: (OriginType, T::CurrencyId, T::AccountId, T::Balance) = env.read_as()?;
+                let create_asset: (OriginType, u32, T::AccountId, T::Balance) = env.read_as()?;
 				let (origin_type, asset, to, amount) = create_asset;
 
 				let from;
@@ -1159,7 +1159,7 @@ impl<T> ChainExtension<T> for Psp22Extension
 				// 					approve(asset, &from, &to, amount);
 
 				let result = orml_tokens_allowance::Pallet::<T>::do_approve_transfer(
-					asset,
+					CurrencyId::Native,
 					&from,
 					&to,
 					amount,
@@ -1186,7 +1186,7 @@ impl<T> ChainExtension<T> for Psp22Extension
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
                 let mut env = env.buf_in_buf_out();
-                let create_asset: (T::AccountId, (OriginType, T::CurrencyId, T::AccountId, T::Balance)) = env.read_as()?;
+                let create_asset: (T::AccountId, (OriginType, u32, T::AccountId, T::Balance)) = env.read_as()?;
 				let owner = create_asset.0;
 				let (origin_type, asset, to, amount) = create_asset.1;
 
@@ -1210,7 +1210,7 @@ impl<T> ChainExtension<T> for Psp22Extension
 				// 	transfer_from(asset, &owner, &from, &to, amount);
 
 				let result = orml_tokens_allowance::Pallet::<T>::do_transfer_approved(
-					asset, &owner, &from, &to, amount
+					CurrencyId::Native, &owner, &from, &to, amount
 				);
 
 				error!("transfer_from : {:#?}", result);
@@ -1230,7 +1230,7 @@ impl<T> ChainExtension<T> for Psp22Extension
 			//allowance
 			1110 => {
                 let mut env = env.buf_in_buf_out();
-                let allowance_request: (T::CurrencyId, T::AccountId, T::AccountId) = env.read_as()?;
+                let allowance_request: (u32, T::AccountId, T::AccountId) = env.read_as()?;
 
 				// let allowance = <pallet_assets::Pallet<T> as AllowanceInspect<T::AccountId>>
 				// 	::allowance(allowance_request.0, &allowance_request.1, &allowance_request.2);

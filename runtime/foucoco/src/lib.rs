@@ -1181,47 +1181,51 @@ impl<T> ChainExtension<T> for Psp22AssetExtension
             }
 
 			// //transfer_approved
-			// 1109 => {
-			// 	let ext = env.ext();
-			// 	let address = ext.address().clone();
-			// 	let caller = ext.caller().clone();
-            //     let mut env = env.buf_in_buf_out();
-            //     let create_asset: (T::AccountId, (OriginType, T::AssetId, T::AccountId, T::Balance)) = env.read_as()?;
-			// 	let owner = create_asset.0;
-			// 	let (origin_type, asset, to, amount) = create_asset.1;
+			1109 => {
+				let ext = env.ext();
+				let address = ext.address().clone();
+				let caller = ext.caller().clone();
+                let mut env = env.buf_in_buf_out();
+                let create_asset: (T::AccountId, (OriginType, T::CurrencyId, T::AccountId, T::Balance)) = env.read_as()?;
+				let owner = create_asset.0;
+				let (origin_type, asset, to, amount) = create_asset.1;
 
-			// 	let from;
-			// 	if origin_type == OriginType::Caller
-			// 	{
-			// 		from = caller;
-			// 		// let a = AccountId::decode(&mut ext.address().as_ref()).unwrap();
-			// 		// pallet_assets::Pallet::<Runtime>::transfer_ownership(Origin::signed(a.clone()), asset_id, MultiAddress::Id(a.clone()))?;
-			// 	}
-			// 	else{
-			// 		from = address;
-			// 	}
+				let from;
+				if origin_type == OriginType::Caller
+				{
+					from = caller;
+					// let a = AccountId::decode(&mut ext.address().as_ref()).unwrap();
+					// pallet_assets::Pallet::<Runtime>::transfer_ownership(Origin::signed(a.clone()), asset_id, MultiAddress::Id(a.clone()))?;
+				}
+				else{
+					from = address;
+				}
 
-			// 	error!("from : {:#?}", from);
-			// 	error!("owner : {:#?}", owner);
-			// 	error!("origin_type : {:#?}", origin_type);
-			// 	error!("to : {:#?}", to);
-			// 	error!("amount : {:#?}", amount);
-			// 	let result = <pallet_assets::Pallet::<T> as AllowanceMutate<T::AccountId>>::
-			// 		transfer_from(asset, &owner, &from, &to, amount);
+				error!("from : {:#?}", from);
+				error!("owner : {:#?}", owner);
+				error!("origin_type : {:#?}", origin_type);
+				error!("to : {:#?}", to);
+				error!("amount : {:#?}", amount);
+				// let result = <pallet_assets::Pallet::<T> as AllowanceMutate<T::AccountId>>::
+				// 	transfer_from(asset, &owner, &from, &to, amount);
 
-			// 	error!("transfer_from : {:#?}", result);
+				let result = orml_tokens_allowance::Pallet::<T>::do_transfer_approved(
+					asset, &owner, &from, &to, amount
+				);
 
-			// 	match result {
-			// 		DispatchResult::Ok(_) => {
-			// 		}
-			// 		DispatchResult::Err(e) => {
-			// 			let err = Result::<(),PalletAssetErr>::Err(PalletAssetErr::from(e));
-			// 			env.write(&err.encode(), false, None).map_err(|_| {
-			// 				DispatchError::Other("ChainExtension failed to call 'approved transfer'")
-			// 			})?;
-			// 		}
-			// 	}
-            // }
+				error!("transfer_from : {:#?}", result);
+
+				match result {
+					DispatchResult::Ok(_) => {
+					}
+					DispatchResult::Err(e) => {
+						let err = Result::<(),PalletAssetErr>::Err(PalletAssetErr::from(e));
+						env.write(&err.encode(), false, None).map_err(|_| {
+							DispatchError::Other("ChainExtension failed to call 'approved transfer'")
+						})?;
+					}
+				}
+            }
 
 			//allowance
 			1110 => {

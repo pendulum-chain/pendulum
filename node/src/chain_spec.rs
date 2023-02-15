@@ -701,11 +701,6 @@ fn foucoco_genesis(
 			),
 	));
 
-	let token_balances = balances
-		.iter()
-		.flat_map(|k| vec![(k.0.clone(), XCM(DOT), 1 << 60), (k.0.clone(), XCM(KSM), 1 << 60)])
-		.collect();
-
 	let stakers: Vec<_> = invulnerables
 		.iter()
 		.cloned()
@@ -766,7 +761,7 @@ fn foucoco_genesis(
 		},
 		tokens: foucoco_runtime::TokensConfig {
 			// Configure the initial token supply for the native currency and USDC asset
-			balances: token_balances,
+			balances: vec![],
 		},
 		issue: foucoco_runtime::IssueConfig {
 			issue_period: foucoco_runtime::DAYS,

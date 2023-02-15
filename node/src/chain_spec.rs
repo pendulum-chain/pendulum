@@ -520,7 +520,7 @@ fn amplitude_genesis(
 
 	let token_balances = balances
 		.iter()
-		.flat_map(|k| vec![(k.0.clone(), XCM(DOT), 1 << 60), (k.0.clone(), XCM(KSM), 1 << 60)])
+		.flat_map(|k| vec![(k.0.clone(), XCM(DOT), 0), (k.0.clone(), XCM(KSM), 0)])
 		.collect();
 
 	let stakers: Vec<_> = invulnerables
@@ -536,6 +536,12 @@ fn amplitude_genesis(
 		Perquintill::from_percent(40),
 		Perquintill::from_percent(9),
 	);
+
+	let limit_volume_currency_id = amplitude_runtime::WRAPPED_USDC_CURRENCY;
+	let limit_volume_amount = match &limit_volume_currency_id {
+		CurrencyId::Stellar(asset) => Some(asset.one().saturating_mul(900)),
+		_ => None,
+	};
 
 	amplitude_runtime::GenesisConfig {
 		system: amplitude_runtime::SystemConfig {
@@ -581,14 +587,14 @@ fn amplitude_genesis(
 			..Default::default()
 		},
 		tokens: amplitude_runtime::TokensConfig {
-			// Configure the initial token supply for the native currency and USDC asset
+			// Configure the initial token supply
 			balances: token_balances,
 		},
 		issue: amplitude_runtime::IssueConfig {
 			issue_period: amplitude_runtime::DAYS,
 			issue_minimum_transfer_amount: 1000,
-			limit_volume_amount: None,
-			limit_volume_currency_id: XCM(DOT),
+			limit_volume_amount,
+			limit_volume_currency_id,
 			current_volume_amount: 0u32.into(),
 			interval_length: (60u32 * 60 * 24).into(),
 			last_interval_index: 0u32.into(),
@@ -596,8 +602,8 @@ fn amplitude_genesis(
 		redeem: amplitude_runtime::RedeemConfig {
 			redeem_period: foucoco_runtime::DAYS,
 			redeem_minimum_transfer_amount: 1000,
-			limit_volume_amount: None,
-			limit_volume_currency_id: XCM(DOT),
+			limit_volume_amount,
+			limit_volume_currency_id,
 			current_volume_amount: 0u32.into(),
 			interval_length: (60u32 * 60 * 24).into(),
 			last_interval_index: 0u32.into(),
@@ -616,8 +622,7 @@ fn amplitude_genesis(
 		oracle: amplitude_runtime::OracleConfig {
 			max_delay: u32::MAX,
 			oracle_keys: vec![
-				Key::ExchangeRate(XCM(ForeignCurrencyId::DOT)),
-				Key::ExchangeRate(amplitude_runtime::WRAPPED_CURRENCY_ID),
+				Key::ExchangeRate(amplitude_runtime::DefaultWrappedCurrencyId::get()),
 			],
 		},
 		vault_registry: amplitude_runtime::VaultRegistryConfig {
@@ -795,7 +800,7 @@ fn foucoco_genesis(
 			max_delay: u32::MAX,
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(ForeignCurrencyId::DOT)),
-				Key::ExchangeRate(foucoco_runtime::WRAPPED_CURRENCY_ID),
+				Key::ExchangeRate(foucoco_runtime::WRAPPED_USDC_CURRENCY),
 			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {

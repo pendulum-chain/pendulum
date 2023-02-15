@@ -700,7 +700,7 @@ fn foucoco_genesis(
 			max_delay: u32::MAX,
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(ForeignCurrencyId::DOT)),
-				Key::ExchangeRate(foucoco_runtime::WRAPPED_CURRENCY_ID),
+				Key::ExchangeRate(foucoco_runtime::WRAPPED_USDC_CURRENCY),
 			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
@@ -739,7 +739,7 @@ fn foucoco_genesis(
 				b"Polkadot".to_vec(),
 				b"DOT".to_vec(),
 			)],
-			batching_api: vec![],
+			batching_api: b"https://3.120.18.17:8070/currencies".to_vec(),
 			coin_infos_map: vec![],
 		},
 	}

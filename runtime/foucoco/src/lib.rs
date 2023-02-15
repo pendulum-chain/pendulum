@@ -1235,7 +1235,7 @@ impl<T> ChainExtension<T> for Psp22Extension
 				// let allowance = <pallet_assets::Pallet<T> as AllowanceInspect<T::AccountId>>
 				// 	::allowance(allowance_request.0, &allowance_request.1, &allowance_request.2);
 
-				let allowance = orml_tokens_allowance::Pallet::<T>::allowance(allowance_request.0, &allowance_request.1, &allowance_request.2);
+				let allowance = orml_tokens_allowance::Pallet::<T>::allowance(CurrencyId::Native, &allowance_request.1, &allowance_request.2);
 				error!("allowance_request : {:#?}", allowance_request);
 				error!("allowance : {:#?}", allowance);
 

@@ -1102,7 +1102,7 @@ impl<T> ChainExtension<T> for Psp22Extension
                 let mut env = env.buf_in_buf_out();
 				let create_asset: (u32, T::AccountId) = env.read_as()?;
 				let (asset_id, account_id) = create_asset;
-				let balance = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::balance(CurrencyId::XCM(ForeignCurrencyId::KSM), &account_id);
+				let balance = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::balance(CurrencyId::Native, &account_id);
 				// let balance = <pallet_assets::Pallet<T> as Inspect<T::AccountId>>::
 				// 		balance(asset_id, &account_id);
 

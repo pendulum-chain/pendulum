@@ -622,6 +622,7 @@ fn amplitude_genesis(
 		oracle: amplitude_runtime::OracleConfig {
 			max_delay: u32::MAX,
 			oracle_keys: vec![
+				Key::ExchangeRate(CurrencyId::XCM(ForeignCurrencyId::DOT)),
 				Key::ExchangeRate(amplitude_runtime::DefaultWrappedCurrencyId::get()),
 			],
 		},

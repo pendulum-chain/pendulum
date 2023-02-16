@@ -14,6 +14,7 @@ use frame_support::{
 };
 #[cfg(test)]
 use mocktopus::macros::mockable;
+use orml_traits::MultiCurrency;
 use sha2::{Digest, Sha256};
 use sp_core::{H256, U256};
 use sp_runtime::{traits::*, ArithmeticError};
@@ -55,10 +56,10 @@ pub mod pallet {
 		},
 		/// (Additional) funds have been approved for transfer to a destination account.
 		ApprovedTransfer {
-			currency_id: <T as orml_tokens::Config>::CurrencyId,
+			currency_id: CurrencyOf<T>,
 			source: T::AccountId,
 			delegate: T::AccountId,
-			amount: T::Balance,
+			amount: BalanceOf<T>,
 		},
 	}
 
@@ -76,24 +77,24 @@ pub mod pallet {
 	pub type Approvals<T: Config> = StorageNMap<
 		_,
 		(
-			NMapKey<Blake2_128Concat, <T as orml_tokens::Config>::CurrencyId>,
+			NMapKey<Blake2_128Concat, CurrencyOf<T>>,
 			NMapKey<Blake2_128Concat, T::AccountId>, // owner
 			NMapKey<Blake2_128Concat, T::AccountId>, // delegate
 		),
-		T::Balance,
+		BalanceOf<T>,
 	>;
 
 	#[pallet::storage]
 	/// Currencies that can be used to give approval
 	pub(super) type AllowedCurrencies<T: Config> =
-		StorageMap<_, Blake2_128Concat, <T as orml_tokens::Config>::CurrencyId, bool>;
+		StorageMap<_, Blake2_128Concat, CurrencyOf<T>, bool>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub allowed_currencies: Vec<<T as orml_tokens::Config>::CurrencyId>,
+		pub allowed_currencies: Vec<CurrencyOf<T>>,
 	}
 
 	#[cfg(feature = "std")]
@@ -126,10 +127,10 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	// Check the amount approved to be spent by an owner to a delegate
 	pub fn allowance(
-		asset: <T as orml_tokens::Config>::CurrencyId,
+		asset: CurrencyOf<T>,
 		owner: &T::AccountId,
 		delegate: &T::AccountId,
-	) -> T::Balance {
+	) -> BalanceOf<T> {
 		Approvals::<T>::get((asset, &owner, &delegate)).unwrap_or_else(Zero::zero)
 	}
 
@@ -138,10 +139,10 @@ impl<T: Config> Pallet<T> {
 	///
 	/// If an approval already exists, the new amount is added to such existing approval
 	pub fn do_approve_transfer(
-		id: <T as orml_tokens::Config>::CurrencyId,
+		id: CurrencyOf<T>,
 		owner: &T::AccountId,
 		delegate: &T::AccountId,
-		amount: T::Balance,
+		amount: BalanceOf<T>,
 	) -> DispatchResult {
 		ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
 		Approvals::<T>::try_mutate((id, &owner, &delegate), |maybe_approved| -> DispatchResult {
@@ -174,11 +175,11 @@ impl<T: Config> Pallet<T> {
 	/// Will unreserve the deposit from `owner` if the entire approved `amount` is spent by
 	/// 'delegate'
 	pub fn do_transfer_approved(
-		id: <T as orml_tokens::Config>::CurrencyId,
+		id: CurrencyOf<T>,
 		owner: &T::AccountId,
 		delegate: &T::AccountId,
 		destination: &T::AccountId,
-		amount: T::Balance,
+		amount: BalanceOf<T>,
 	) -> DispatchResult {
 		ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
 		Approvals::<T>::try_mutate_exists(
@@ -187,9 +188,16 @@ impl<T: Config> Pallet<T> {
 				let mut approved = maybe_approved.take().ok_or(Error::<T>::Unapproved)?;
 				let remaining = approved.checked_sub(&amount).ok_or(Error::<T>::Unapproved)?;
 
-				let b = <orml_tokens::Pallet<T> as frame_support::traits::fungibles::Transfer<
-					<T as frame_system::Config>::AccountId,
-				>>::transfer(id, owner, destination, amount, false)?;
+				// let b = <orml_tokens::Pallet<T> as frame_support::traits::fungibles::Transfer<
+				// 	<T as frame_system::Config>::AccountId,
+				// >>::transfer(id, owner, destination, amount, false)?;
+
+				<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
+					id,
+					&owner,
+					&destination,
+					amount,
+				)?;
 
 				if remaining.is_zero() {
 					*maybe_approved = None;

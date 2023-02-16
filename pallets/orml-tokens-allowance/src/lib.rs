@@ -21,6 +21,16 @@ use sp_std::{collections::btree_set::BTreeSet, convert::TryInto, prelude::*, vec
 
 pub use pallet::*;
 
+pub(crate) type BalanceOf<T> =
+	<<T as orml_currencies::Config>::MultiCurrency as orml_traits::MultiCurrency<
+		<T as frame_system::Config>::AccountId,
+	>>::Balance;
+
+pub(crate) type CurrencyOf<T> =
+	<<T as orml_currencies::Config>::MultiCurrency as orml_traits::MultiCurrency<
+		<T as frame_system::Config>::AccountId,
+	>>::CurrencyId;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
@@ -31,7 +41,7 @@ pub mod pallet {
 	/// ## Configuration
 	/// The pallet's configuration trait.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + orml_tokens::Config {
+	pub trait Config: frame_system::Config + orml_tokens::Config + orml_currencies::Config {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 	}
@@ -45,7 +55,7 @@ pub mod pallet {
 		},
 		/// (Additional) funds have been approved for transfer to a destination account.
 		ApprovedTransfer {
-			currency_id: T::CurrencyId,
+			currency_id: <T as orml_tokens::Config>::CurrencyId,
 			source: T::AccountId,
 			delegate: T::AccountId,
 			amount: T::Balance,
@@ -66,7 +76,7 @@ pub mod pallet {
 	pub type Approvals<T: Config> = StorageNMap<
 		_,
 		(
-			NMapKey<Blake2_128Concat, T::CurrencyId>,
+			NMapKey<Blake2_128Concat, <T as orml_tokens::Config>::CurrencyId>,
 			NMapKey<Blake2_128Concat, T::AccountId>, // owner
 			NMapKey<Blake2_128Concat, T::AccountId>, // delegate
 		),
@@ -76,14 +86,14 @@ pub mod pallet {
 	#[pallet::storage]
 	/// Currencies that can be used to give approval
 	pub(super) type AllowedCurrencies<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::CurrencyId, bool>;
+		StorageMap<_, Blake2_128Concat, <T as orml_tokens::Config>::CurrencyId, bool>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub allowed_currencies: Vec<T::CurrencyId>,
+		pub allowed_currencies: Vec<<T as orml_tokens::Config>::CurrencyId>,
 	}
 
 	#[cfg(feature = "std")]
@@ -114,10 +124,9 @@ pub mod pallet {
 #[allow(clippy::forget_non_drop, clippy::swap_ptr_to_ref, clippy::forget_ref, clippy::forget_copy)]
 #[cfg_attr(test, mockable)]
 impl<T: Config> Pallet<T> {
-
 	// Check the amount approved to be spent by an owner to a delegate
 	pub fn allowance(
-		asset: T::CurrencyId,
+		asset: <T as orml_tokens::Config>::CurrencyId,
 		owner: &T::AccountId,
 		delegate: &T::AccountId,
 	) -> T::Balance {
@@ -129,7 +138,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// If an approval already exists, the new amount is added to such existing approval
 	pub fn do_approve_transfer(
-		id: T::CurrencyId,
+		id: <T as orml_tokens::Config>::CurrencyId,
 		owner: &T::AccountId,
 		delegate: &T::AccountId,
 		amount: T::Balance,
@@ -165,7 +174,7 @@ impl<T: Config> Pallet<T> {
 	/// Will unreserve the deposit from `owner` if the entire approved `amount` is spent by
 	/// 'delegate'
 	pub fn do_transfer_approved(
-		id: T::CurrencyId,
+		id: <T as orml_tokens::Config>::CurrencyId,
 		owner: &T::AccountId,
 		delegate: &T::AccountId,
 		destination: &T::AccountId,

@@ -97,7 +97,7 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 
 # Chain extension
 orml-tokens-allowance = {path = "../../pallets/orml-tokens-allowance", default-features = false}
-orml-tokens-chain-ext = {path = "../../pallets/orml-tokens-chain-ext", features = ["substrate"], default-features = false}
+# orml-tokens-chain-ext = {path = "../../pallets/orml-tokens-chain-ext", features = ["substrate"], default-features = false}
 
 # KILT
 parachain-staking = {path = "../../pallets/parachain-staking", default-features = false}
@@ -220,7 +220,7 @@ std = [
 "module-vault-registry-rpc-runtime-api/std",
 "spacewalk-primitives/std",
 
-	"orml-tokens-chain-ext/substrate-std",
+	# "orml-tokens-chain-ext/substrate-std",
 ]
 
 runtime-benchmarks = [

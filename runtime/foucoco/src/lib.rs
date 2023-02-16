@@ -1054,7 +1054,7 @@ where
 	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
-		+ orml_currencies::Config<MultiCurrency = Tokens, GetNativeCurrencyId = NativeCurrencyId>
+		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId> 
 		+ orml_tokens_allowance::Config,
 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 {

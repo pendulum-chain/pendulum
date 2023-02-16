@@ -17,8 +17,8 @@ use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
 
-use frame_system::Origin;
 use codec::Encode;
+use frame_system::Origin;
 
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -249,9 +249,9 @@ const MAXIMUM_BLOCK_WEIGHT: Weight =
 		.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64);
 
 // For mainnet USDC issued by centre.io
-pub const WRAPPED_USDC_CURRENCY: CurrencyId = CurrencyId::AlphaNum4{
-	code : *b"USDC",
-	issuer : [
+pub const WRAPPED_USDC_CURRENCY: CurrencyId = CurrencyId::AlphaNum4 {
+	code: *b"USDC",
+	issuer: [
 		59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
 		190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
 	],
@@ -1054,6 +1054,7 @@ where
 	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
+		+ orml_currencies::Config<MultiCurrency = Tokens, GetNativeCurrencyId = NativeCurrencyId>
 		+ orml_tokens_allowance::Config,
 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 {
@@ -1088,13 +1089,21 @@ where
 				error!("account_id : {:#?}", account_id);
 				error!("balance : {:#?}", balance);
 
-				let result = <orml_tokens::Pallet<T> as Transfer<T::AccountId>>::transfer(
+				// let result = <orml_tokens::Pallet<T> as Transfer<T::AccountId>>::transfer(
+				// 	CurrencyId::StellarNative,
+				// 	&address_account,
+				// 	&account_id,
+				// 	balance,
+				// 	true,
+				// );
+
+				let result = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 					CurrencyId::StellarNative,
 					&address_account,
 					&account_id,
 					balance,
-					true,
 				);
+
 				error!("result : {:#?}", result);
 			},
 
@@ -1104,10 +1113,14 @@ where
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (u32, T::AccountId) = env.read_as()?;
 				let (asset_id, account_id) = create_asset;
-				let balance = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::balance(
-					CurrencyId::StellarNative,
-					&account_id,
-				);
+
+				// let balance = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::balance(
+				// 	CurrencyId::StellarNative,
+				// 	&account_id,
+				// );
+
+				let balance = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(CurrencyId::StellarNative,
+					&account_id);
 
 				error!("asset_id : {:#?}", asset_id);
 				error!("account_id : {:#?}", account_id);
@@ -1121,10 +1134,14 @@ where
 			1107 => {
 				let mut env = env.buf_in_buf_out();
 				let asset_id: u32 = env.read_as()?;
-				let total_supply =
-					<orml_tokens::Pallet<T> as Inspect<T::AccountId>>::total_issuance(
-						CurrencyId::StellarNative,
-					);
+				// let total_supply =
+				// 	<orml_tokens::Pallet<T> as Inspect<T::AccountId>>::total_issuance(
+				// 		CurrencyId::StellarNative,
+				// 	);
+
+				let total_supply = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(CurrencyId::StellarNative,
+					&account_id);
+
 				env.write(&total_supply.encode(), false, None).map_err(|_| {
 					DispatchError::Other("ChainExtension failed to call total_supply")
 				})?;

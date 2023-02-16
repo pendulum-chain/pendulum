@@ -1139,8 +1139,7 @@ where
 				// 		CurrencyId::StellarNative,
 				// 	);
 
-				let total_supply = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(CurrencyId::StellarNative,
-					&account_id);
+				let total_supply = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(CurrencyId::StellarNative);
 
 				env.write(&total_supply.encode(), false, None).map_err(|_| {
 					DispatchError::Other("ChainExtension failed to call total_supply")

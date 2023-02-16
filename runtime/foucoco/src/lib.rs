@@ -1049,12 +1049,17 @@ impl From<TokenError> for PalletAssetTokenErr {
 	}
 }
 
+pub(crate) type BalanceOfForChainExt<T> =
+	<<T as orml_currencies::Config>::MultiCurrency as orml_traits::MultiCurrency<
+		<T as frame_system::Config>::AccountId,
+	>>::Balance;
+
 impl<T> ChainExtension<T> for Psp22Extension
 where
 	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
-		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId> 
+		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_tokens_allowance::Config,
 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 {
@@ -1074,7 +1079,8 @@ where
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (OriginType, u32, T::AccountId, u128) = env.read_as()?;
+				let create_asset: (OriginType, u32, T::AccountId, BalanceOfForChainExt<T>) =
+					env.read_as()?;
 				let (origin_id, asset_id, account_id, balance) = create_asset;
 
 				let address_account;
@@ -1119,8 +1125,11 @@ where
 				// 	&account_id,
 				// );
 
-				let balance = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(CurrencyId::StellarNative,
-					&account_id);
+				let balance =
+					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
+						CurrencyId::StellarNative,
+						&account_id,
+					);
 
 				error!("asset_id : {:#?}", asset_id);
 				error!("account_id : {:#?}", account_id);
@@ -1140,7 +1149,10 @@ where
 				// 		CurrencyId::StellarNative,
 				// 	);
 
-				let total_supply = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(CurrencyId::StellarNative);
+				let total_supply =
+					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(
+						CurrencyId::StellarNative,
+					);
 
 				env.write(&total_supply.encode(), false, None).map_err(|_| {
 					DispatchError::Other("ChainExtension failed to call total_supply")
@@ -1153,7 +1165,8 @@ where
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (OriginType, u32, T::AccountId, T::Balance) = env.read_as()?;
+				let create_asset: (OriginType, u32, T::AccountId, BalanceOfForChainExt<T>) =
+					env.read_as()?;
 				let (origin_type, asset, to, amount) = create_asset;
 
 				let from;
@@ -1197,8 +1210,10 @@ where
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (T::AccountId, (OriginType, u32, T::AccountId, T::Balance)) =
-					env.read_as()?;
+				let create_asset: (
+					T::AccountId,
+					(OriginType, u32, T::AccountId, BalanceOfForChainExt<T>),
+				) = env.read_as()?;
 				let owner = create_asset.0;
 				let (origin_type, asset, to, amount) = create_asset.1;
 

@@ -249,13 +249,13 @@ const MAXIMUM_BLOCK_WEIGHT: Weight =
 		.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64);
 
 // For mainnet USDC issued by centre.io
-pub const WRAPPED_USDC_CURRENCY: CurrencyId = CurrencyId::AlphaNum4(
-	*b"USDC",
-	[
+pub const WRAPPED_USDC_CURRENCY: CurrencyId = CurrencyId::AlphaNum4{
+	code : *b"USDC",
+	issuer : [
 		59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
 		190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
 	],
-);
+};
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]

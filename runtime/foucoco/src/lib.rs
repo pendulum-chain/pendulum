@@ -1049,6 +1049,42 @@ impl From<TokenError> for PalletAssetTokenErr {
 	}
 }
 
+fn try_from(type_id: u8, code: [u8; 12], issuer: [u8; 32]) -> Result<CurrencyId, ()> {
+	match type_id {
+		0 => {
+			let foreign_currency_id = code[0];
+			match foreign_currency_id {
+				0 => Ok(CurrencyId::XCM(ForeignCurrencyId::KSM)),
+				1 => Ok(CurrencyId::XCM(ForeignCurrencyId::KAR)),
+				2 => Ok(CurrencyId::XCM(ForeignCurrencyId::AUSD)),
+				3 => Ok(CurrencyId::XCM(ForeignCurrencyId::BNC)),
+				4 => Ok(CurrencyId::XCM(ForeignCurrencyId::VsKSM)),
+				5 => Ok(CurrencyId::XCM(ForeignCurrencyId::HKO)),
+				6 => Ok(CurrencyId::XCM(ForeignCurrencyId::MOVR)),
+				7 => Ok(CurrencyId::XCM(ForeignCurrencyId::SDN)),
+				8 => Ok(CurrencyId::XCM(ForeignCurrencyId::KINT)),
+				9 => Ok(CurrencyId::XCM(ForeignCurrencyId::KBTC)),
+				10 => Ok(CurrencyId::XCM(ForeignCurrencyId::GENS)),
+				11 => Ok(CurrencyId::XCM(ForeignCurrencyId::XOR)),
+				12 => Ok(CurrencyId::XCM(ForeignCurrencyId::TEER)),
+				13 => Ok(CurrencyId::XCM(ForeignCurrencyId::KILT)),
+				14 => Ok(CurrencyId::XCM(ForeignCurrencyId::PHA)),
+				15 => Ok(CurrencyId::XCM(ForeignCurrencyId::ZTG)),
+				16 => Ok(CurrencyId::XCM(ForeignCurrencyId::USD)),
+				_ => Err(()),
+			}
+		},
+		1 => Ok(CurrencyId::Native),
+		2 => Ok(CurrencyId::StellarNative),
+		3 => {
+			let code = [code[0], code[1], code[2], code[3]];
+			Ok(CurrencyId::AlphaNum4 { code, issuer })
+		},
+		4 => Ok(CurrencyId::AlphaNum12 { code, issuer }),
+		_ => Err(()),
+	}
+}
+
 pub(crate) type BalanceOfForChainExt<T> =
 	<<T as orml_currencies::Config>::MultiCurrency as orml_traits::MultiCurrency<
 		<T as frame_system::Config>::AccountId,

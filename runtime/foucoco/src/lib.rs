@@ -1133,7 +1133,7 @@ where
 			//total_supply
 			1107 => {
 				let mut env = env.buf_in_buf_out();
-				let asset_id: u32 = env.read_as()?;
+				let (asset_id, account_id) = env.read_as()?;
 				// let total_supply =
 				// 	<orml_tokens::Pallet<T> as Inspect<T::AccountId>>::total_issuance(
 				// 		CurrencyId::StellarNative,

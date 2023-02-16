@@ -6,6 +6,8 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use orml_traits::MultiCurrency;
+
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
@@ -15,6 +17,7 @@ use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
 
+use frame_system::Origin;
 use codec::Encode;
 
 use smallvec::smallvec;

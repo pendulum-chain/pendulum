@@ -1096,7 +1096,7 @@ where
 				error!("balance : {:#?}", balance);
 
 				// let result = <orml_tokens::Pallet<T> as Transfer<T::AccountId>>::transfer(
-				// 	CurrencyId::StellarNative,
+				// 	CurrencyId::Native,
 				// 	&address_account,
 				// 	&account_id,
 				// 	balance,
@@ -1104,7 +1104,7 @@ where
 				// );
 
 				let result = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
-					CurrencyId::StellarNative,
+					CurrencyId::Native,
 					&address_account,
 					&account_id,
 					balance,
@@ -1121,13 +1121,13 @@ where
 				let (asset_id, account_id) = create_asset;
 
 				// let balance = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::balance(
-				// 	CurrencyId::StellarNative,
+				// 	CurrencyId::Native,
 				// 	&account_id,
 				// );
 
 				let balance =
 					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
-						CurrencyId::StellarNative,
+						CurrencyId::Native,
 						&account_id,
 					);
 
@@ -1146,12 +1146,12 @@ where
 				let (asset_id, account_id) = create_asset;
 				// let total_supply =
 				// 	<orml_tokens::Pallet<T> as Inspect<T::AccountId>>::total_issuance(
-				// 		CurrencyId::StellarNative,
+				// 		CurrencyId::Native,
 				// 	);
 
 				let total_supply =
 					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(
-						CurrencyId::StellarNative,
+						CurrencyId::Native,
 					);
 
 				env.write(&total_supply.encode(), false, None).map_err(|_| {
@@ -1184,7 +1184,7 @@ where
 				error!("amount : {:#?}", amount);
 
 				let result = orml_tokens_allowance::Pallet::<T>::do_approve_transfer(
-					CurrencyId::StellarNative,
+					CurrencyId::Native,
 					&from,
 					&to,
 					amount,
@@ -1231,7 +1231,7 @@ where
 				error!("amount : {:#?}", amount);
 
 				let result = orml_tokens_allowance::Pallet::<T>::do_transfer_approved(
-					CurrencyId::StellarNative,
+					CurrencyId::Native,
 					&owner,
 					&from,
 					&to,
@@ -1259,7 +1259,7 @@ where
 				let allowance_request: (u32, T::AccountId, T::AccountId) = env.read_as()?;
 
 				let allowance = orml_tokens_allowance::Pallet::<T>::allowance(
-					CurrencyId::StellarNative,
+					CurrencyId::Native,
 					&allowance_request.1,
 					&allowance_request.2,
 				);

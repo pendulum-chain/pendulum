@@ -5,6 +5,9 @@
 #[cfg(test)]
 extern crate mocktopus;
 
+use orml_traits::MultiCurrency;
+use spacewalk_primitives::CurrencyId;
+
 use codec::Encode;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
@@ -187,9 +190,12 @@ impl<T: Config> Pallet<T> {
 				let mut approved = maybe_approved.take().ok_or(Error::<T>::Unapproved)?;
 				let remaining = approved.checked_sub(&amount).ok_or(Error::<T>::Unapproved)?;
 
-				let b = <orml_tokens::Pallet<T> as frame_support::traits::fungibles::Transfer<
-					<T as frame_system::Config>::AccountId,
-				>>::transfer(id, owner, destination, amount, false)?;
+				let result = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
+                    CurrencyId::StellarNative,
+                    &owner,
+                    &destination,
+                    amount,
+                );
 
 				if remaining.is_zero() {
 					*maybe_approved = None;

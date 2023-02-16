@@ -5698,6 +5698,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "spacewalk-primitives",
 ]
 
 [[package]]

@@ -1054,7 +1054,7 @@ where
 	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
-		+ orml_currencies::Config<MultiCurrency = Tokens, GetNativeCurrencyId = NativeCurrencyId>
+		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId> 
 		+ orml_tokens_allowance::Config,
 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 {
@@ -1074,7 +1074,7 @@ where
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (OriginType, u32, T::AccountId, T::Balance) = env.read_as()?;
+				let create_asset: (OriginType, u32, T::AccountId, u128) = env.read_as()?;
 				let (origin_id, asset_id, account_id, balance) = create_asset;
 
 				let address_account;
@@ -1133,7 +1133,8 @@ where
 			//total_supply
 			1107 => {
 				let mut env = env.buf_in_buf_out();
-				let asset_id: u32 = env.read_as()?;
+				let create_asset: (u32, T::AccountId) = env.read_as()?;
+				let (asset_id, account_id) = create_asset;
 				// let total_supply =
 				// 	<orml_tokens::Pallet<T> as Inspect<T::AccountId>>::total_issuance(
 				// 		CurrencyId::StellarNative,

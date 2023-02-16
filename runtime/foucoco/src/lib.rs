@@ -1131,14 +1131,6 @@ where
 				error!("account_id : {:#?}", account_id);
 				error!("balance : {:#?}", balance);
 
-				// let result = <orml_tokens::Pallet<T> as Transfer<T::AccountId>>::transfer(
-				// 	CurrencyId::Native,
-				// 	&address_account,
-				// 	&account_id,
-				// 	balance,
-				// 	true,
-				// );
-
 				let result = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 					CurrencyId::Native,
 					&address_account,
@@ -1155,11 +1147,6 @@ where
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (u32, T::AccountId) = env.read_as()?;
 				let (asset_id, account_id) = create_asset;
-
-				// let balance = <orml_tokens::Pallet<T> as Inspect<T::AccountId>>::balance(
-				// 	CurrencyId::Native,
-				// 	&account_id,
-				// );
 
 				let balance =
 					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
@@ -1180,10 +1167,6 @@ where
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (u32, T::AccountId) = env.read_as()?;
 				let (asset_id, account_id) = create_asset;
-				// let total_supply =
-				// 	<orml_tokens::Pallet<T> as Inspect<T::AccountId>>::total_issuance(
-				// 		CurrencyId::Native,
-				// 	);
 
 				let total_supply =
 					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(

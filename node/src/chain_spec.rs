@@ -739,7 +739,7 @@ fn foucoco_genesis(
 				foucoco_runtime::AssetId::new(b"Kusama".to_vec(), b"KSM".to_vec()),
 				foucoco_runtime::AssetId::new(b"FIAT".to_vec(), b"USD".to_vec()),
 			],
-			batching_api: b"https://3.120.18.17:8070/currencies".to_vec(),
+			batching_api: vec![],
 			coin_infos_map: vec![],
 		},
 	}

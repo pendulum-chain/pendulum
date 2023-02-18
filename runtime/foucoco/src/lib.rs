@@ -206,10 +206,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 7,
+	spec_version: 8,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 7,
+	transaction_version: 8,
 	state_version: 1,
 };
 
@@ -1115,9 +1115,15 @@ where
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (OriginType, u32, T::AccountId, BalanceOfForChainExt<T>) =
-					env.read_as()?;
-				let (origin_id, asset_id, account_id, balance) = create_asset;
+				let create_asset: (
+					OriginType,
+					u8,
+					[u8; 12],
+					[u8; 32],
+					T::AccountId,
+					BalanceOfForChainExt<T>,
+				) = env.read_as()?;
+				let (origin_id, type_id, code, issuer, account_id, balance) = create_asset;
 
 				let address_account;
 				if origin_id == OriginType::Caller {
@@ -1126,13 +1132,14 @@ where
 					address_account = address;
 				}
 
-				error!("asset_id : {:#?}", asset_id);
+				error!("asset_id : {:#?}", type_id);
 				error!("address_account : {:#?}", address_account);
 				error!("account_id : {:#?}", account_id);
 				error!("balance : {:#?}", balance);
 
+				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
 				let result = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
-					CurrencyId::Native,
+					currency_id,
 					&address_account,
 					&account_id,
 					balance,
@@ -1145,16 +1152,17 @@ where
 			1106 => {
 				let ext = env.ext();
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (u32, T::AccountId) = env.read_as()?;
-				let (asset_id, account_id) = create_asset;
+				let create_asset: (u8, [u8; 12], [u8; 32], T::AccountId) = env.read_as()?;
+				let (type_id, code, issuer, account_id) = create_asset;
 
+				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
 				let balance =
 					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
-						CurrencyId::Native,
+						currency_id,
 						&account_id,
 					);
 
-				error!("asset_id : {:#?}", asset_id);
+				error!("asset_id : {:#?}", type_id);
 				error!("account_id : {:#?}", account_id);
 				error!("balance : {:#?}", balance);
 
@@ -1165,12 +1173,14 @@ where
 			//total_supply
 			1107 => {
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (u32, T::AccountId) = env.read_as()?;
-				let (asset_id, account_id) = create_asset;
+				let create_asset: (u8, [u8; 12], [u8; 32], T::AccountId) = env.read_as()?;
+				let (type_id, code, issuer, account_id) = create_asset;
+
+				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
 
 				let total_supply =
 					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(
-						CurrencyId::Native,
+						currency_id,
 					);
 
 				env.write(&total_supply.encode(), false, None).map_err(|_| {
@@ -1184,9 +1194,15 @@ where
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (OriginType, u32, T::AccountId, BalanceOfForChainExt<T>) =
-					env.read_as()?;
-				let (origin_type, asset, to, amount) = create_asset;
+				let create_asset: (
+					OriginType,
+					u8,
+					[u8; 12],
+					[u8; 32],
+					T::AccountId,
+					BalanceOfForChainExt<T>,
+				) = env.read_as()?;
+				let (origin_type, type_id, code, issuer, to, amount) = create_asset;
 
 				let from;
 				if origin_type == OriginType::Caller {
@@ -1202,8 +1218,10 @@ where
 				error!("to : {:#?}", to);
 				error!("amount : {:#?}", amount);
 
+				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+
 				let result = orml_tokens_allowance::Pallet::<T>::do_approve_transfer(
-					CurrencyId::Native,
+					currency_id,
 					&from,
 					&to,
 					amount,
@@ -1231,10 +1249,10 @@ where
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (
 					T::AccountId,
-					(OriginType, u32, T::AccountId, BalanceOfForChainExt<T>),
+					(OriginType, u8, [u8; 12], [u8; 32], T::AccountId, BalanceOfForChainExt<T>),
 				) = env.read_as()?;
 				let owner = create_asset.0;
-				let (origin_type, asset, to, amount) = create_asset.1;
+				let (origin_type, type_id, code, issuer, to, amount) = create_asset.1;
 
 				let from;
 				if origin_type == OriginType::Caller {
@@ -1249,8 +1267,10 @@ where
 				error!("to : {:#?}", to);
 				error!("amount : {:#?}", amount);
 
+				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+
 				let result = orml_tokens_allowance::Pallet::<T>::do_transfer_approved(
-					CurrencyId::Native,
+					currency_id,
 					&owner,
 					&from,
 					&to,
@@ -1275,12 +1295,17 @@ where
 			//allowance
 			1110 => {
 				let mut env = env.buf_in_buf_out();
-				let allowance_request: (u32, T::AccountId, T::AccountId) = env.read_as()?;
+				let allowance_request: (u8, [u8; 12], [u8; 32], T::AccountId, T::AccountId) =
+					env.read_as()?;
+
+				let currency_id =
+					try_from(allowance_request.0, allowance_request.1, allowance_request.2)
+						.unwrap_or(CurrencyId::Native);
 
 				let allowance = orml_tokens_allowance::Pallet::<T>::allowance(
-					CurrencyId::Native,
-					&allowance_request.1,
-					&allowance_request.2,
+					currency_id,
+					&allowance_request.3,
+					&allowance_request.4,
 				);
 				error!("allowance_request : {:#?}", allowance_request);
 				error!("allowance : {:#?}", allowance);

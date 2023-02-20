@@ -18,7 +18,6 @@ use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 pub use parachain_staking::InflationInfo;
 
 use codec::Encode;
-use frame_system::Origin;
 
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -902,13 +901,8 @@ parameter_types! {
 }
 
 use frame_support::{
-	log::{error, trace},
+	log::{error},
 	pallet_prelude::*,
-	traits::fungibles::{
-		approvals::{Inspect as AllowanceInspect, Mutate as AllowanceMutate},
-		metadata::{Inspect as OtherInspectMetadata, Mutate as MetadataMutate},
-		Create, Inspect, InspectMetadata, Mutate, MutateHold, Transfer,
-	},
 };
 use sp_std::vec::Vec;
 
@@ -1029,7 +1023,6 @@ impl From<ArithmeticError> for PalletAssetArithmeticErr {
 			ArithmeticError::Underflow => PalletAssetArithmeticErr::Underflow,
 			ArithmeticError::Overflow => PalletAssetArithmeticErr::Overflow,
 			ArithmeticError::DivisionByZero => PalletAssetArithmeticErr::DivisionByZero,
-			_ => PalletAssetArithmeticErr::Unknown,
 		}
 	}
 }
@@ -1044,7 +1037,6 @@ impl From<TokenError> for PalletAssetTokenErr {
 			TokenError::UnknownAsset => PalletAssetTokenErr::UnknownAsset,
 			TokenError::Frozen => PalletAssetTokenErr::Frozen,
 			TokenError::Unsupported => PalletAssetTokenErr::Unsupported,
-			_ => PalletAssetTokenErr::Unknown,
 		}
 	}
 }
@@ -1150,7 +1142,6 @@ where
 
 			//balance
 			1106 => {
-				let ext = env.ext();
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (u8, [u8; 12], [u8; 32], T::AccountId) = env.read_as()?;
 				let (type_id, code, issuer, account_id) = create_asset;
@@ -1174,7 +1165,7 @@ where
 			1107 => {
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (u8, [u8; 12], [u8; 32], T::AccountId) = env.read_as()?;
-				let (type_id, code, issuer, account_id) = create_asset;
+				let (type_id, code, issuer, _account_id) = create_asset;
 
 				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
 

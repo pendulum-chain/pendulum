@@ -96,7 +96,7 @@ orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-lib
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.37" }
 
 # Chain extension
-orml-tokens-allowance = {path = "../../pallets/orml-tokens-allowance", default-features = false}
+orml-currencies-allowance-ext = {path = "../../pallets/orml-currencies-allowance-ext", default-features = false}
 # orml-tokens-chain-ext = {path = "../../pallets/orml-tokens-chain-ext", features = ["substrate"], default-features = false}
 
 # KILT
@@ -221,6 +221,7 @@ std = [
 "spacewalk-primitives/std",
 
 	# "orml-tokens-chain-ext/substrate-std",
+  "orml-currencies-allowance-ext/std"
 ]
 
 runtime-benchmarks = [

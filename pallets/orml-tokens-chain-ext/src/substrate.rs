@@ -47,8 +47,8 @@ use obce::substrate::{
     ExtensionContext,
 };
 use orml_tokens::Config as AssetConfig;
-use orml_tokens_allowance::Config as AllowanceConfig;
-use orml_tokens_allowance::Approvals;
+use orml_currencies_allowance_ext::Config as AllowanceConfig;
+use orml_currencies_allowance_ext::Approvals;
 
 use dia_oracle::{
     Config as DiaConfig,
@@ -81,7 +81,7 @@ where
     }
 
     fn allowance(&self, id: T::CurrencyId, owner: T::AccountId, spender: T::AccountId) -> T::Balance {
-        orml_tokens_allowance::Pallet::<T>::allowance(id.into(), &owner, &spender)
+        orml_currencies_allowance_ext::Pallet::<T>::allowance(id.into(), &owner, &spender)
     }
 
     fn approve_transfer(
@@ -91,7 +91,7 @@ where
         target: T::AccountId,
         amount: T::Balance,
     ) -> Result<(), Error<T>> {
-        Ok(orml_tokens_allowance::Pallet::<T>::do_approve_transfer(
+        Ok(orml_currencies_allowance_ext::Pallet::<T>::do_approve_transfer(
             id.into(),
             &ensure_signed(self.select_origin(origin)?)?,
             &target.into(),
@@ -122,7 +122,7 @@ where
         target: T::AccountId,
         amount: T::Balance,
     ) -> Result<(), Error<T>> {
-        Ok(orml_tokens_allowance::Pallet::<T>::do_transfer_approved(
+        Ok(orml_currencies_allowance_ext::Pallet::<T>::do_transfer_approved(
             id.into(),
             &ensure_signed(self.select_origin(origin)?)?,
             &owner.into(),

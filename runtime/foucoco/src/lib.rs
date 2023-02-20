@@ -1088,7 +1088,7 @@ where
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
-		+ orml_tokens_allowance::Config,
+		+ orml_currencies_allowance_ext::Config,
 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 {
 	fn call<E: Ext>(&mut self, mut env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
@@ -1211,7 +1211,7 @@ where
 
 				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
 
-				let result = orml_tokens_allowance::Pallet::<T>::do_approve_transfer(
+				let result = orml_currencies_allowance_ext::Pallet::<T>::do_approve_transfer(
 					currency_id,
 					&from,
 					&to,
@@ -1260,7 +1260,7 @@ where
 
 				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
 
-				let result = orml_tokens_allowance::Pallet::<T>::do_transfer_approved(
+				let result = orml_currencies_allowance_ext::Pallet::<T>::do_transfer_approved(
 					currency_id,
 					&owner,
 					&from,
@@ -1293,7 +1293,7 @@ where
 					try_from(allowance_request.0, allowance_request.1, allowance_request.2)
 						.unwrap_or(CurrencyId::Native);
 
-				let allowance = orml_tokens_allowance::Pallet::<T>::allowance(
+				let allowance = orml_currencies_allowance_ext::Pallet::<T>::allowance(
 					currency_id,
 					&allowance_request.3,
 					&allowance_request.4,
@@ -1437,7 +1437,7 @@ impl pallet_contracts::Config for Runtime {
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
-impl orml_tokens_allowance::Config for Runtime {
+impl orml_currencies_allowance_ext::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
@@ -1718,7 +1718,7 @@ construct_runtime!(
 		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 69,
 		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 70,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
-		TokenAllowance: orml_tokens_allowance::{Pallet, Storage, Call, Event<T>} = 72,
+		TokenAllowance: orml_currencies_allowance_ext::{Pallet, Storage, Call, Event<T>} = 72,
 	}
 );
 

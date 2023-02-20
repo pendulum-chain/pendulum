@@ -27,7 +27,7 @@ version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a76fd60b23679b7d19bd066031410fb7e458ccc5e958eb5c325888ce4baedc97"
 dependencies = [
- "gimli 0.27.1",
+ "gimli 0.27.2",
 ]
 
 [[package]]
@@ -313,7 +313,7 @@ dependencies = [
  "num-traits",
  "rusticata-macros",
  "thiserror",
- "time 0.3.17",
+ "time 0.3.19",
 ]
 
 [[package]]
@@ -329,7 +329,7 @@ dependencies = [
  "num-traits",
  "rusticata-macros",
  "thiserror",
- "time 0.3.17",
+ "time 0.3.19",
 ]
 
 [[package]]
@@ -970,9 +970,9 @@ dependencies = [
 
 [[package]]
 name = "clang-sys"
-version = "1.4.0"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa2e27ae6ab525c3d369ded447057bca5438d86dc3a68f6faafb8269ba82ebf3"
+checksum = "77ed9a53e5d4d9c573ae844bfac6872b159cb1d1585a83b29e7a64b7eef7332a"
 dependencies = [
  "glob",
  "libc",
@@ -981,9 +981,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.1.4"
+version = "4.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f13b9c79b5d1dd500d20ef541215a6423c75829ef43117e1b4d17fd8af0b5d76"
+checksum = "ec0b0588d44d4d63a87dbd75c136c166bbfd9a86a31cb89e09906521c7d3f5e3"
 dependencies = [
  "bitflags",
  "clap_derive",
@@ -1868,7 +1868,7 @@ dependencies = [
 [[package]]
 name = "currency"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -1925,9 +1925,9 @@ dependencies = [
 
 [[package]]
 name = "cxx"
-version = "1.0.90"
+version = "1.0.91"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90d59d9acd2a682b4e40605a242f6670eaa58c5957471cbf85e8aa6a0b97a5e8"
+checksum = "86d3488e7665a7a483b57e25bdd90d0aeb2bc7608c8d0346acf2ad3f1caf1d62"
 dependencies = [
  "cc",
  "cxxbridge-flags",
@@ -1937,9 +1937,9 @@ dependencies = [
 
 [[package]]
 name = "cxx-build"
-version = "1.0.90"
+version = "1.0.91"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ebfa40bda659dd5c864e65f4c9a2b0aff19bea56b017b9b77c73d3766a453a38"
+checksum = "48fcaf066a053a41a81dfb14d57d99738b767febb8b735c3016e469fac5da690"
 dependencies = [
  "cc",
  "codespan-reporting",
@@ -1952,15 +1952,15 @@ dependencies = [
 
 [[package]]
 name = "cxxbridge-flags"
-version = "1.0.90"
+version = "1.0.91"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "457ce6757c5c70dc6ecdbda6925b958aae7f959bda7d8fb9bde889e34a09dc03"
+checksum = "a2ef98b8b717a829ca5603af80e1f9e2e48013ab227b68ef37872ef84ee479bf"
 
 [[package]]
 name = "cxxbridge-macro"
-version = "1.0.90"
+version = "1.0.91"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ebf883b7aacd7b2aeb2a7b338648ee19f57c140d4ee8e52c68979c6b2f7f2263"
+checksum = "086c685979a698443656e5cf7856c95c642295a38599f12fb1ff76fb28d19892"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2183,7 +2183,7 @@ dependencies = [
 [[package]]
 name = "dia-oracle"
 version = "0.1.0"
-source = "git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v0.9.37#825c33715902450398b9c704ea678cf4478c22e9"
+source = "git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v0.9.37#b8c5bd0f0e756d83868f1dd982d45792a662bfd7"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2201,7 +2201,7 @@ dependencies = [
 [[package]]
 name = "dia-oracle-runtime-api"
 version = "0.1.0"
-source = "git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v0.9.37#825c33715902450398b9c704ea678cf4478c22e9"
+source = "git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v0.9.37#b8c5bd0f0e756d83868f1dd982d45792a662bfd7"
 dependencies = [
  "dia-oracle",
  "frame-support",
@@ -2612,7 +2612,7 @@ dependencies = [
 [[package]]
 name = "fee"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "currency",
  "frame-benchmarking",
@@ -2792,8 +2792,8 @@ dependencies = [
  "nomination",
  "oracle",
  "orml-currencies",
+ "orml-currencies-allowance-ext",
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-tokens-allowance",
  "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "orml-xtokens",
  "pallet-aura",
@@ -3364,9 +3364,9 @@ dependencies = [
 
 [[package]]
 name = "gimli"
-version = "0.27.1"
+version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "221996f774192f0f718773def8201c4ae31f02616a54ccfc2d358bb0e5cefdec"
+checksum = "ad0a93d233ebf96623465aad4046a8d3aa4da22d4f4beba5388838c8a434bbb4"
 
 [[package]]
 name = "glob"
@@ -3569,9 +3569,9 @@ dependencies = [
 
 [[package]]
 name = "http"
-version = "0.2.8"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75f43d41e26995c17e71ee126451dd3941010b0514a81a9d11f3b341debc2399"
+checksum = "bd6effc99afb63425aff9b05836f029929e345a6148a14b7ecd5ab67af944482"
 dependencies = [
  "bytes",
  "fnv",
@@ -3882,7 +3882,7 @@ dependencies = [
 [[package]]
 name = "issue"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "base64 0.13.1",
  "currency",
@@ -4923,9 +4923,9 @@ dependencies = [
 
 [[package]]
 name = "memmap2"
-version = "0.5.8"
+version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b182332558b18d807c4ce1ca8ca983b34c3ee32765e47b3f0f69b90355cc1dc"
+checksum = "2af2c65375e552a67fe3829ca63e8a7c27a378a62824594f43b2851d682b5ec2"
 dependencies = [
  "libc",
 ]
@@ -5099,7 +5099,7 @@ dependencies = [
 [[package]]
 name = "module-issue-rpc-runtime-api"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5110,7 +5110,7 @@ dependencies = [
 [[package]]
 name = "module-oracle-rpc-runtime-api"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5122,7 +5122,7 @@ dependencies = [
 [[package]]
 name = "module-redeem-rpc-runtime-api"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5133,7 +5133,7 @@ dependencies = [
 [[package]]
 name = "module-replace-rpc-runtime-api"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5144,7 +5144,7 @@ dependencies = [
 [[package]]
 name = "module-vault-registry-rpc-runtime-api"
 version = "0.3.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "frame-support",
  "module-oracle-rpc-runtime-api",
@@ -5383,7 +5383,7 @@ dependencies = [
 [[package]]
 name = "nomination"
 version = "0.5.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "currency",
  "fee",
@@ -5528,9 +5528,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.17.0"
+version = "1.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f61fba1741ea2b3d6a1e3178721804bb716a68a6aeba1149b5d52e3d464ea66"
+checksum = "b7e5500299e16ebb147ae15a00a942af264cf3688f47923b8fc2cd5858f23ad3"
 
 [[package]]
 name = "opaque-debug"
@@ -5553,7 +5553,7 @@ checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 [[package]]
 name = "oracle"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "currency",
  "dia-oracle",
@@ -5633,6 +5633,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-currencies-allowance-ext"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "mocktopus",
+ "orml-currencies",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sha2 0.8.2",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "orml-oracle"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
@@ -5676,26 +5696,6 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "orml-tokens-allowance"
-version = "1.0.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "mocktopus",
- "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sha2 0.8.2",
- "sp-core",
- "sp-io",
  "sp-runtime",
  "sp-std",
 ]
@@ -8909,7 +8909,7 @@ checksum = "6413f3de1edee53342e6138e75b56d32e7bc6e332b3bd62d497b1929d4cfbcdd"
 dependencies = [
  "pem",
  "ring",
- "time 0.3.17",
+ "time 0.3.19",
  "x509-parser 0.13.2",
  "yasna",
 ]
@@ -8922,14 +8922,14 @@ checksum = "ffbe84efe2f38dea12e9bfc1f65377fdf03e53a18cb3b995faedf7934c7e785b"
 dependencies = [
  "pem",
  "ring",
- "time 0.3.17",
+ "time 0.3.19",
  "yasna",
 ]
 
 [[package]]
 name = "redeem"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "currency",
  "fee",
@@ -9058,7 +9058,7 @@ dependencies = [
 [[package]]
 name = "replace"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "currency",
  "fee",
@@ -9098,7 +9098,7 @@ dependencies = [
 [[package]]
 name = "reward"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -10669,7 +10669,7 @@ dependencies = [
 [[package]]
 name = "security"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -10876,9 +10876,9 @@ dependencies = [
 
 [[package]]
 name = "slab"
-version = "0.4.7"
+version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4614a76b2a8be0058caa9dbbaf66d988527d86d003c11a94fbd335d7661edcef"
+checksum = "6528351c9bc8ab22353f9d776db39a20288e8d6c37ef8cfe3317cf875eecfc2d"
 dependencies = [
  "autocfg",
 ]
@@ -11691,7 +11691,7 @@ dependencies = [
 [[package]]
 name = "spacewalk-primitives"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "bstringify",
  "frame-support",
@@ -11750,7 +11750,7 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 [[package]]
 name = "staking"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -11843,7 +11843,7 @@ dependencies = [
 [[package]]
 name = "stellar-relay"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "base64 0.13.1",
  "currency",
@@ -12217,9 +12217,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.17"
+version = "0.3.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a561bf4617eebd33bca6434b988f39ed798e527f51a1e797d0ee4f61c0a38376"
+checksum = "53250a3b3fed8ff8fd988587d8925d26a83ac3845d9e03b220b37f34c2b8d6c2"
 dependencies = [
  "itoa",
  "serde",
@@ -12235,9 +12235,9 @@ checksum = "2e153e1f1acaef8acc537e68b44906d2db6436e2b35ac2c6b42640fff91f00fd"
 
 [[package]]
 name = "time-macros"
-version = "0.2.6"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d967f99f534ca7e495c575c62638eebc2898a8c84c119b89e250477bc4ba16b2"
+checksum = "a460aeb8de6dcb0f381e1ee05f1cd56fcf5a5f6eb8187ff3d8f0b11078d38b7c"
 dependencies = [
  "time-core",
 ]
@@ -12330,9 +12330,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-stream"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d660770404473ccd7bc9f8b28494a811bc18542b915c0855c51e8f419d5223ce"
+checksum = "8fb52b74f05dbf495a8fba459fdc331812b96aa086d9eb78101fa0d4569c3313"
 dependencies = [
  "futures-core",
  "pin-project-lite 0.2.9",
@@ -12789,7 +12789,7 @@ checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
 [[package]]
 name = "vault-registry"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#e4d8dcacd54efbc7433a0b2be6d3d130f35222bd"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#fc3308d495eb2be64d0b7ff676052b44cf070164"
 dependencies = [
  "currency",
  "fee",
@@ -13344,7 +13344,7 @@ dependencies = [
  "sha2 0.10.6",
  "stun",
  "thiserror",
- "time 0.3.17",
+ "time 0.3.19",
  "tokio",
  "turn",
  "url",
@@ -13914,7 +13914,7 @@ dependencies = [
  "ring",
  "rusticata-macros",
  "thiserror",
- "time 0.3.17",
+ "time 0.3.19",
 ]
 
 [[package]]
@@ -13932,7 +13932,7 @@ dependencies = [
  "oid-registry 0.6.1",
  "rusticata-macros",
  "thiserror",
- "time 0.3.17",
+ "time 0.3.19",
 ]
 
 [[package]]
@@ -14018,7 +14018,7 @@ version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aed2e7a52e3744ab4d0c05c20aa065258e84c49fd4226f5191b2ed29712710b4"
 dependencies = [
- "time 0.3.17",
+ "time 0.3.19",
 ]
 
 [[package]]

@@ -12,7 +12,7 @@ obce = { git = "https://github.com/727-Ventures/obce", branch = "polkadot-v0.9.3
 
 # Substrate deps
 orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, optional = true, branch = "polkadot-v0.9.37" }
-orml-tokens-allowance = {path = "../../pallets/orml-tokens-allowance", default-features = false}
+orml_currencies_allowance_ext = {path = "../../pallets/orml_currencies_allowance_ext", default-features = false}
 dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", branch = "polkadot-v0.9.37", default-features = false }
 
 # Ink deps

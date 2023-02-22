@@ -144,11 +144,22 @@ pub type Executive = frame_executive::Executive<
 	AllPalletsWithSystem,
 >;
 
+pub struct SpacewalkNativeCurrency;
+impl oracle::dia::NativeCurrencyKey for SpacewalkNativeCurrency {
+	fn native_symbol() -> Vec<u8> {
+		"AMPE".as_bytes().to_vec()
+	}
+
+	fn native_chain() -> Vec<u8> {
+		"AMPLITUDE".as_bytes().to_vec()
+	}
+}
+
 type DataProviderImpl = DiaOracleAdapter<
 	DiaOracleModule,
 	UnsignedFixedPoint,
 	Moment,
-	primitives::DiaOracleKeyConvertor,
+	oracle::dia::DiaOracleKeyConvertor<SpacewalkNativeCurrency>,
 	ConvertPrice,
 	ConvertMoment,
 >;

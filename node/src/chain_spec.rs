@@ -699,8 +699,8 @@ fn foucoco_genesis(
 		oracle: foucoco_runtime::OracleConfig {
 			max_delay: u32::MAX,
 			oracle_keys: vec![
-				Key::ExchangeRate(CurrencyId::XCM(ForeignCurrencyId::DOT)),
-				Key::ExchangeRate(foucoco_runtime::WRAPPED_CURRENCY_ID),
+				Key::ExchangeRate(CurrencyId::XCM(ForeignCurrencyId::KSM)),
+				Key::ExchangeRate(foucoco_runtime::WRAPPED_USDC_CURRENCY),
 			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
@@ -735,10 +735,10 @@ fn foucoco_genesis(
 		nomination: foucoco_runtime::NominationConfig { is_nomination_enabled: false },
 		dia_oracle_module: foucoco_runtime::DiaOracleModuleConfig {
 			authorized_accounts: authorized_oracles,
-			supported_currencies: vec![foucoco_runtime::AssetId::new(
-				b"Polkadot".to_vec(),
-				b"DOT".to_vec(),
-			)],
+			supported_currencies: vec![
+				foucoco_runtime::AssetId::new(b"Kusama".to_vec(), b"KSM".to_vec()),
+				foucoco_runtime::AssetId::new(b"FIAT".to_vec(), b"USD".to_vec()),
+			],
 			batching_api: vec![],
 			coin_infos_map: vec![],
 		},

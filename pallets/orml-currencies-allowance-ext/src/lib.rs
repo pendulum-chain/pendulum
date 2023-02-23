@@ -1,17 +1,15 @@
-// #![deny(warnings)]
+#![deny(warnings)]
 #![cfg_attr(test, feature(proc_macro_hygiene))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(test)]
 extern crate mocktopus;
 
-use frame_support::{
-	dispatch::{DispatchResult},
-};
+use frame_support::{dispatch::DispatchResult, ensure};
 #[cfg(test)]
 use mocktopus::macros::mockable;
 use orml_traits::MultiCurrency;
-use sp_runtime::{traits::*};
+use sp_runtime::traits::*;
 use sp_std::{convert::TryInto, prelude::*, vec};
 
 pub use pallet::*;
@@ -28,7 +26,8 @@ pub(crate) type CurrencyOf<T> =
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet_prelude::*;
+	use frame_support::{pallet_prelude::*, transactional};
+	use frame_system::{ensure_root, pallet_prelude::OriginFor};
 
 	use super::*;
 
@@ -43,9 +42,11 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		// RecoverFromErrors { new_status: StatusCode, cleared_errors: Vec<ErrorCode> },
-		UpdateActiveBlock {
-			block_number: T::BlockNumber,
+		AddedAllowedCurrencies {
+			currencies: Vec<CurrencyOf<T>>,
+		},
+		DeletedAllowedCurrencies {
+			currencies: Vec<CurrencyOf<T>>,
 		},
 		/// (Additional) funds have been approved for transfer to a destination account.
 		ApprovedTransfer {
@@ -64,9 +65,9 @@ pub mod pallet {
 		CurrencyNotLive,
 	}
 
-	#[pallet::storage]
 	/// Approved balance transfers. Balance is the amount approved for transfer.
-	/// First key is the asset ID, second key is the owner and third key is the delegate.
+	/// First key is the currency ID, second key is the owner and third key is the delegate.
+	#[pallet::storage]
 	pub type Approvals<T: Config> = StorageNMap<
 		_,
 		(
@@ -77,8 +78,8 @@ pub mod pallet {
 		BalanceOf<T>,
 	>;
 
+	/// Currencies that can be used in chain extension
 	#[pallet::storage]
-	/// Currencies that can be used to give approval
 	pub(super) type AllowedCurrencies<T: Config> =
 		StorageMap<_, Blake2_128Concat, CurrencyOf<T>, bool>;
 
@@ -112,7 +113,47 @@ pub mod pallet {
 
 	// The pallet's dispatchable functions.
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {}
+	impl<T: Config> Pallet<T> {
+		/// Added allowed currencies that possible to use chain extension
+		///
+		/// # Arguments
+		/// * `currencies` - list of currency id allowed to use in chain extension
+		#[pallet::call_index(1)]
+		#[pallet::weight(10000)]
+		#[transactional]
+		pub fn add_allowed_currencies(
+			origin: OriginFor<T>,
+			currencies: Vec<CurrencyOf<T>>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			for i in currencies.clone() {
+				AllowedCurrencies::<T>::insert(i, true);
+			}
+
+			Self::deposit_event(Event::AddedAllowedCurrencies { currencies });
+			Ok(())
+		}
+
+		/// Remove allowed currencies that possible to use chain extension
+		///
+		/// # Arguments
+		/// * `currencies` - list of currency id allowed to use in chain extension
+		#[pallet::call_index(2)]
+		#[pallet::weight(10000)]
+		#[transactional]
+		pub fn remove_allowed_currencies(
+			origin: OriginFor<T>,
+			currencies: Vec<CurrencyOf<T>>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			for i in currencies.clone() {
+				AllowedCurrencies::<T>::remove(i);
+			}
+
+			Self::deposit_event(Event::DeletedAllowedCurrencies { currencies });
+			Ok(())
+		}
+	}
 }
 
 #[allow(clippy::forget_non_drop, clippy::swap_ptr_to_ref, clippy::forget_ref, clippy::forget_copy)]
@@ -137,8 +178,7 @@ impl<T: Config> Pallet<T> {
 		delegate: &T::AccountId,
 		amount: BalanceOf<T>,
 	) -> DispatchResult {
-		//TODO ensure for production!!!
-		// ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
+		ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
 		Approvals::<T>::try_mutate((id, &owner, &delegate), |maybe_approved| -> DispatchResult {
 			let mut approved = match maybe_approved.take() {
 				// an approval already exists and is being updated
@@ -175,16 +215,12 @@ impl<T: Config> Pallet<T> {
 		destination: &T::AccountId,
 		amount: BalanceOf<T>,
 	) -> DispatchResult {
-		// ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
+		ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
 		Approvals::<T>::try_mutate_exists(
 			(id, &owner, delegate),
 			|maybe_approved| -> DispatchResult {
 				let mut approved = maybe_approved.take().ok_or(Error::<T>::Unapproved)?;
 				let remaining = approved.checked_sub(&amount).ok_or(Error::<T>::Unapproved)?;
-
-				// let b = <orml_tokens::Pallet<T> as frame_support::traits::fungibles::Transfer<
-				// 	<T as frame_system::Config>::AccountId,
-				// >>::transfer(id, owner, destination, amount, false)?;
 
 				<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 					id,

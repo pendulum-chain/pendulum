@@ -7,6 +7,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use orml_traits::MultiCurrency;
+use primitives::Asset;
 
 mod weights;
 pub mod xcm_config;
@@ -1077,9 +1078,9 @@ fn try_from(type_id: u8, code: [u8; 12], issuer: [u8; 32]) -> Result<CurrencyId,
 		2 => Ok(CurrencyId::StellarNative),
 		3 => {
 			let code = [code[0], code[1], code[2], code[3]];
-			Ok(CurrencyId::AlphaNum4 { code, issuer })
+			Ok(CurrencyId::Stellar(Asset::AlphaNum4 { code, issuer }))
 		},
-		4 => Ok(CurrencyId::AlphaNum12 { code, issuer }),
+		4 => Ok(CurrencyId::Stellar(Asset::AlphaNum12 { code, issuer })),
 		_ => Err(()),
 	}
 }

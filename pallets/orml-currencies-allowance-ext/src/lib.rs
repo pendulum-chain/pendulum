@@ -160,6 +160,11 @@ pub mod pallet {
 #[cfg_attr(test, mockable)]
 impl<T: Config> Pallet<T> {
 	// Check the amount approved to be spent by an owner to a delegate
+	pub fn is_allowed_currency(asset: CurrencyOf<T>) -> bool {
+		return AllowedCurrencies::<T>::get(asset) == Some(())
+	}
+
+	// Check the amount approved to be spent by an owner to a delegate
 	pub fn allowance(
 		asset: CurrencyOf<T>,
 		owner: &T::AccountId,

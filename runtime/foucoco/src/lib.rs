@@ -912,7 +912,10 @@ parameter_types! {
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 }
 
-use frame_support::{log::error, pallet_prelude::*};
+use frame_support::{
+	log::{error, warn},
+	pallet_prelude::*,
+};
 use sp_std::vec::Vec;
 
 use pallet_contracts::chain_extension::{
@@ -1106,7 +1109,7 @@ where
 	{
 		let func_id = env.func_id();
 
-		error!("func_id : {}", func_id);
+		warn!("func_id : {}", func_id);
 
 		match func_id {
 			//transfer
@@ -1132,10 +1135,10 @@ where
 					address_account = address;
 				}
 
-				error!("asset_id : {:#?}", type_id);
-				error!("address_account : {:#?}", address_account);
-				error!("account_id : {:#?}", account_id);
-				error!("balance : {:#?}", balance);
+				warn!("asset_id : {:#?}", type_id);
+				warn!("address_account : {:#?}", address_account);
+				warn!("account_id : {:#?}", account_id);
+				warn!("balance : {:#?}", balance);
 
 				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
 
@@ -1154,7 +1157,7 @@ where
 					balance,
 				);
 
-				error!("result : {:#?}", result);
+				warn!("result : {:#?}", result);
 			},
 
 			//balance
@@ -1179,9 +1182,9 @@ where
 						&account_id,
 					);
 
-				error!("asset_id : {:#?}", type_id);
-				error!("account_id : {:#?}", account_id);
-				error!("balance : {:#?}", balance);
+				warn!("asset_id : {:#?}", type_id);
+				warn!("account_id : {:#?}", account_id);
+				warn!("balance : {:#?}", balance);
 
 				env.write(&balance.encode(), false, None)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
@@ -1238,10 +1241,10 @@ where
 					from = address;
 				}
 
-				error!("from : {:#?}", from);
-				error!("origin_type : {:#?}", origin_type);
-				error!("to : {:#?}", to);
-				error!("amount : {:#?}", amount);
+				warn!("from : {:#?}", from);
+				warn!("origin_type : {:#?}", origin_type);
+				warn!("to : {:#?}", to);
+				warn!("amount : {:#?}", amount);
 
 				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
 
@@ -1260,7 +1263,7 @@ where
 					amount,
 				);
 
-				error!("result : {:#?}", result);
+				warn!("result : {:#?}", result);
 
 				match result {
 					DispatchResult::Ok(_) => {},
@@ -1294,11 +1297,11 @@ where
 					from = address;
 				}
 
-				error!("from : {:#?}", from);
-				error!("owner : {:#?}", owner);
-				error!("origin_type : {:#?}", origin_type);
-				error!("to : {:#?}", to);
-				error!("amount : {:#?}", amount);
+				warn!("from : {:#?}", from);
+				warn!("owner : {:#?}", owner);
+				warn!("origin_type : {:#?}", origin_type);
+				warn!("to : {:#?}", to);
+				warn!("amount : {:#?}", amount);
 
 				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
 
@@ -1318,7 +1321,7 @@ where
 					amount,
 				);
 
-				error!("transfer_from : {:#?}", result);
+				warn!("transfer_from : {:#?}", result);
 
 				match result {
 					DispatchResult::Ok(_) => {},
@@ -1356,8 +1359,8 @@ where
 					&allowance_request.3,
 					&allowance_request.4,
 				);
-				error!("allowance_request : {:#?}", allowance_request);
-				error!("allowance : {:#?}", allowance);
+				warn!("allowance_request : {:#?}", allowance_request);
+				warn!("allowance : {:#?}", allowance);
 
 				env.write(&allowance.encode(), false, None)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;

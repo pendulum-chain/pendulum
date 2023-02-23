@@ -1,17 +1,15 @@
-// #![deny(warnings)]
+#![deny(warnings)]
 #![cfg_attr(test, feature(proc_macro_hygiene))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(test)]
 extern crate mocktopus;
 
-use frame_support::{
-	dispatch::{DispatchResult},
-};
+use frame_support::dispatch::DispatchResult;
 #[cfg(test)]
 use mocktopus::macros::mockable;
 use orml_traits::MultiCurrency;
-use sp_runtime::{traits::*};
+use sp_runtime::traits::*;
 use sp_std::{convert::TryInto, prelude::*, vec};
 
 pub use pallet::*;
@@ -43,10 +41,6 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		// RecoverFromErrors { new_status: StatusCode, cleared_errors: Vec<ErrorCode> },
-		UpdateActiveBlock {
-			block_number: T::BlockNumber,
-		},
 		/// (Additional) funds have been approved for transfer to a destination account.
 		ApprovedTransfer {
 			currency_id: CurrencyOf<T>,
@@ -64,9 +58,9 @@ pub mod pallet {
 		CurrencyNotLive,
 	}
 
-	#[pallet::storage]
 	/// Approved balance transfers. Balance is the amount approved for transfer.
-	/// First key is the asset ID, second key is the owner and third key is the delegate.
+	/// First key is the currency ID, second key is the owner and third key is the delegate.
+	#[pallet::storage]
 	pub type Approvals<T: Config> = StorageNMap<
 		_,
 		(
@@ -77,8 +71,8 @@ pub mod pallet {
 		BalanceOf<T>,
 	>;
 
+	/// Currencies that can be used in chain extension
 	#[pallet::storage]
-	/// Currencies that can be used to give approval
 	pub(super) type AllowedCurrencies<T: Config> =
 		StorageMap<_, Blake2_128Concat, CurrencyOf<T>, bool>;
 
@@ -181,10 +175,6 @@ impl<T: Config> Pallet<T> {
 			|maybe_approved| -> DispatchResult {
 				let mut approved = maybe_approved.take().ok_or(Error::<T>::Unapproved)?;
 				let remaining = approved.checked_sub(&amount).ok_or(Error::<T>::Unapproved)?;
-
-				// let b = <orml_tokens::Pallet<T> as frame_support::traits::fungibles::Transfer<
-				// 	<T as frame_system::Config>::AccountId,
-				// >>::transfer(id, owner, destination, amount, false)?;
 
 				<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 					id,

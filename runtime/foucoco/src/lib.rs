@@ -911,10 +911,7 @@ parameter_types! {
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 }
 
-use frame_support::{
-	log::{error},
-	pallet_prelude::*,
-};
+use frame_support::{log::error, pallet_prelude::*};
 use sp_std::vec::Vec;
 
 use pallet_contracts::chain_extension::{
@@ -928,7 +925,6 @@ use pallet_contracts::chain_extension::{
 };
 use sp_core::crypto::UncheckedFrom;
 
-// use sp_runtime::DispatchError;
 use sp_runtime::{ArithmeticError, TokenError};
 #[derive(Default)]
 pub struct Psp22Extension;
@@ -954,7 +950,7 @@ struct PalletAssetBalanceRequest {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
-pub enum ChainExnensionErr {
+pub enum ChainExtensionErr {
 	/// Some error occurred.
 	Other,
 	/// Failed to lookup some data.
@@ -1009,21 +1005,21 @@ pub enum PalletAssetTokenErr {
 	Unknown,
 }
 
-impl From<DispatchError> for ChainExnensionErr {
+impl From<DispatchError> for ChainExtensionErr {
 	fn from(e: DispatchError) -> Self {
 		match e {
-			DispatchError::Other(_) => ChainExnensionErr::Other,
-			DispatchError::CannotLookup => ChainExnensionErr::CannotLookup,
-			DispatchError::BadOrigin => ChainExnensionErr::BadOrigin,
-			DispatchError::Module(_) => ChainExnensionErr::Module,
-			DispatchError::ConsumerRemaining => ChainExnensionErr::ConsumerRemaining,
-			DispatchError::NoProviders => ChainExnensionErr::NoProviders,
-			DispatchError::TooManyConsumers => ChainExnensionErr::TooManyConsumers,
+			DispatchError::Other(_) => ChainExtensionErr::Other,
+			DispatchError::CannotLookup => ChainExtensionErr::CannotLookup,
+			DispatchError::BadOrigin => ChainExtensionErr::BadOrigin,
+			DispatchError::Module(_) => ChainExtensionErr::Module,
+			DispatchError::ConsumerRemaining => ChainExtensionErr::ConsumerRemaining,
+			DispatchError::NoProviders => ChainExtensionErr::NoProviders,
+			DispatchError::TooManyConsumers => ChainExtensionErr::TooManyConsumers,
 			DispatchError::Token(token_err) =>
-				ChainExnensionErr::Token(PalletAssetTokenErr::from(token_err)),
+				ChainExtensionErr::Token(PalletAssetTokenErr::from(token_err)),
 			DispatchError::Arithmetic(arithmetic_error) =>
-				ChainExnensionErr::Arithmetic(PalletAssetArithmeticErr::from(arithmetic_error)),
-			_ => ChainExnensionErr::Unknown,
+				ChainExtensionErr::Arithmetic(PalletAssetArithmeticErr::from(arithmetic_error)),
+			_ => ChainExtensionErr::Unknown,
 		}
 	}
 }
@@ -1234,7 +1230,7 @@ where
 				match result {
 					DispatchResult::Ok(_) => {},
 					DispatchResult::Err(e) => {
-						let err = Result::<(), ChainExnensionErr>::Err(ChainExnensionErr::from(e));
+						let err = Result::<(), ChainExtensionErr>::Err(ChainExtensionErr::from(e));
 						env.write(&err.encode(), false, None).map_err(|_| {
 							error!("ChainExtension failed to call 'approve'");
 							DispatchError::Other("ChainExtension failed to call 'approve'")
@@ -1284,7 +1280,7 @@ where
 				match result {
 					DispatchResult::Ok(_) => {},
 					DispatchResult::Err(e) => {
-						let err = Result::<(), ChainExnensionErr>::Err(ChainExnensionErr::from(e));
+						let err = Result::<(), ChainExtensionErr>::Err(ChainExtensionErr::from(e));
 						env.write(&err.encode(), false, None).map_err(|_| {
 							DispatchError::Other(
 								"ChainExtension failed to call 'approved transfer'",
@@ -1316,69 +1312,6 @@ where
 					.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
 			},
 
-			//TODO perhaps we need this functionality. if not. will remove it.
-			//increase_allowance/decrease_allowance
-			// 1111 => {
-			// 	use frame_support::dispatch::DispatchResult;
-			//     let mut env = env.buf_in_buf_out();
-			//     let request: (u32, [u8; 32], [u8; 32], u128, bool) = env.read_as()?;
-			// 	let (asset_id, owner, delegate, amount, is_increase) = request;
-			// 	let mut vec = &owner.to_vec()[..];
-			// 	let owner_address = AccountId::decode(&mut vec).unwrap();
-			// 	let mut vec = &delegate.to_vec()[..];
-			// 	let delegate_address = AccountId::decode(&mut vec).unwrap();
-
-			// 	use crate::sp_api_hidden_includes_construct_runtime::hidden_include::traits::fungibles::approvals::Inspect;
-			//     let allowance :u128 = Assets::allowance(asset_id, &owner_address, &delegate_address);
-			// 	let new_allowance =
-			// 	if is_increase {allowance + amount}
-			// 	else {
-			// 		if allowance < amount  { 0 }
-			// 		else {allowance - amount}
-			// 	};
-			// 	let cancel_approval_result = pallet_assets::Pallet::<Runtime>::
-			// 	cancel_approval(Origin::signed(owner_address.clone()),
-			// 	asset_id,
-			// 	MultiAddress::Id(delegate_address.clone()));
-			// 	match cancel_approval_result {
-			// 		DispatchResult::Ok(_) => {
-			// 			error!("OK cancel_approval")
-			// 		}
-			// 		DispatchResult::Err(e) => {
-			// 			error!("ERROR cancel_approval");
-			// 			error!("{:#?}", e);
-			// 			let err = Result::<(),PalletAssetErr>::Err(PalletAssetErr::from(e));
-			// 			env.write(&err.encode(), false, None).map_err(|_| {
-			// 				DispatchError::Other("ChainExtension failed to call 'approve transfer'")
-			// 			})?;
-			// 		}
-			// 	}
-			// 	if cancel_approval_result.is_ok(){
-			// 		let approve_transfer_result = pallet_assets::Pallet::<Runtime>::
-			// 		approve_transfer(Origin::signed(owner_address),
-			// 		asset_id,
-			// 		MultiAddress::Id(delegate_address),
-			// 		new_allowance);
-			// 		error!("old allowance {}", allowance);
-			// 		error!("new allowance {}", new_allowance);
-			// 		error!("increase_allowance input {:#?}", request);
-			// 		error!("increase_allowance output {:#?}", approve_transfer_result);
-			// 		match approve_transfer_result {
-			// 			DispatchResult::Ok(_) => {
-			// 				error!("OK increase_allowance")
-			// 			}
-			// 			DispatchResult::Err(e) => {
-			// 				error!("ERROR increase_allowance");
-			// 				error!("{:#?}", e);
-			// 				let err = Result::<(),PalletAssetErr>::Err(PalletAssetErr::from(e));
-			// 				env.write(&err.encode(), false, None).map_err(|_| {
-			// 					DispatchError::Other("ChainExtension failed to call 'approve transfer'")
-			// 				})?;
-			// 			}
-			// 		}
-			// 	}
-			// }
-
 			//TODO
 			7777 => {
 				error!("Called an dia oracle `func_id`: {:}", func_id);
@@ -1397,30 +1330,6 @@ where
 		true
 	}
 }
-
-/*
-		#[ink(message,selector = 0x70a08231)]
-		pub fn balance(&self, account : AccountId) -> [u128; 2] {
-			let b = self.balance_of(account);
-			use ethnum::U256;
-			let balance_u256: U256 = U256::try_from(b).unwrap();
-			balance_u256.0
-		}
-		#[ink(message,selector = 0x23b872dd)]
-		pub fn transfertransferfrom(&mut self, from : AccountId, to : AccountId, amount : [u128; 2]) {
-			use ethnum::U256;
-			let amount : u128 = U256(amount).try_into().unwrap();
-			self.transfer_from(from, to, amount, Vec::<u8>::new()).expect("should transfer from");
-		}
-		#[ink(message,selector = 0xa9059cbb)]
-		pub fn transfertransfer(&mut self, to : AccountId, amount : [u128; 2]) {
-			use ethnum::U256;
-			let amount : u128 = U256(amount).try_into().unwrap();
-			self.transfer(to, amount, Vec::<u8>::new()).expect("should transfer");
-		}
-*/
-
-/*____________________________________________________________________________________________________*/
 
 impl pallet_contracts::Config for Runtime {
 	type Time = Timestamp;

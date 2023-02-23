@@ -1138,6 +1138,15 @@ where
 				error!("balance : {:#?}", balance);
 
 				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+
+				let is_allowed_currency =
+					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+				if !is_allowed_currency {
+					return Err(DispatchError::Other(
+						"Currency id is not allowed for chain extension",
+					))
+				}
+
 				let result = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 					currency_id,
 					&address_account,
@@ -1155,6 +1164,15 @@ where
 				let (type_id, code, issuer, account_id) = create_asset;
 
 				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+
+				let is_allowed_currency =
+					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+				if !is_allowed_currency {
+					return Err(DispatchError::Other(
+						"Currency id is not allowed for chain extension",
+					))
+				}
+
 				let balance =
 					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
 						currency_id,
@@ -1176,6 +1194,14 @@ where
 				let (type_id, code, issuer, _account_id) = create_asset;
 
 				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+
+				let is_allowed_currency =
+					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+				if !is_allowed_currency {
+					return Err(DispatchError::Other(
+						"Currency id is not allowed for chain extension",
+					))
+				}
 
 				let total_supply =
 					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(
@@ -1218,6 +1244,14 @@ where
 				error!("amount : {:#?}", amount);
 
 				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+
+				let is_allowed_currency =
+					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+				if !is_allowed_currency {
+					return Err(DispatchError::Other(
+						"Currency id is not allowed for chain extension",
+					))
+				}
 
 				let result = orml_currencies_allowance_ext::Pallet::<T>::do_approve_transfer(
 					currency_id,
@@ -1268,6 +1302,14 @@ where
 
 				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
 
+				let is_allowed_currency =
+					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+				if !is_allowed_currency {
+					return Err(DispatchError::Other(
+						"Currency id is not allowed for chain extension",
+					))
+				}
+
 				let result = orml_currencies_allowance_ext::Pallet::<T>::do_transfer_approved(
 					currency_id,
 					&owner,
@@ -1300,6 +1342,14 @@ where
 				let currency_id =
 					try_from(allowance_request.0, allowance_request.1, allowance_request.2)
 						.unwrap_or(CurrencyId::Native);
+
+				let is_allowed_currency =
+					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+				if !is_allowed_currency {
+					return Err(DispatchError::Other(
+						"Currency id is not allowed for chain extension",
+					))
+				}
 
 				let allowance = orml_currencies_allowance_ext::Pallet::<T>::allowance(
 					currency_id,

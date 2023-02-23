@@ -81,7 +81,7 @@ pub mod pallet {
 	/// Currencies that can be used in chain extension
 	#[pallet::storage]
 	pub(super) type AllowedCurrencies<T: Config> =
-		StorageMap<_, Blake2_128Concat, CurrencyOf<T>, bool>;
+		StorageMap<_, Blake2_128Concat, CurrencyOf<T>, ()>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
@@ -102,7 +102,7 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			for i in &self.allowed_currencies.clone() {
-				AllowedCurrencies::<T>::insert(i, true);
+				AllowedCurrencies::<T>::insert(i, ());
 			}
 		}
 	}
@@ -127,7 +127,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			for i in currencies.clone() {
-				AllowedCurrencies::<T>::insert(i, true);
+				AllowedCurrencies::<T>::insert(i, ());
 			}
 
 			Self::deposit_event(Event::AddedAllowedCurrencies { currencies });
@@ -160,6 +160,11 @@ pub mod pallet {
 #[cfg_attr(test, mockable)]
 impl<T: Config> Pallet<T> {
 	// Check the amount approved to be spent by an owner to a delegate
+	pub fn is_allowed_currency(asset: CurrencyOf<T>) -> bool {
+		return AllowedCurrencies::<T>::get(asset) == Some(())
+	}
+
+	// Check the amount approved to be spent by an owner to a delegate
 	pub fn allowance(
 		asset: CurrencyOf<T>,
 		owner: &T::AccountId,
@@ -178,7 +183,7 @@ impl<T: Config> Pallet<T> {
 		delegate: &T::AccountId,
 		amount: BalanceOf<T>,
 	) -> DispatchResult {
-		ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
+		ensure!(AllowedCurrencies::<T>::get(id) == Some(()), Error::<T>::CurrencyNotLive);
 		Approvals::<T>::try_mutate((id, &owner, &delegate), |maybe_approved| -> DispatchResult {
 			let mut approved = match maybe_approved.take() {
 				// an approval already exists and is being updated
@@ -215,7 +220,7 @@ impl<T: Config> Pallet<T> {
 		destination: &T::AccountId,
 		amount: BalanceOf<T>,
 	) -> DispatchResult {
-		ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
+		ensure!(AllowedCurrencies::<T>::get(id) == Some(()), Error::<T>::CurrencyNotLive);
 		Approvals::<T>::try_mutate_exists(
 			(id, &owner, delegate),
 			|maybe_approved| -> DispatchResult {

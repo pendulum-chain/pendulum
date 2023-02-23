@@ -5,7 +5,7 @@
 #[cfg(test)]
 extern crate mocktopus;
 
-use frame_support::dispatch::DispatchResult;
+use frame_support::{dispatch::DispatchResult, ensure};
 #[cfg(test)]
 use mocktopus::macros::mockable;
 use orml_traits::MultiCurrency;
@@ -26,7 +26,8 @@ pub(crate) type CurrencyOf<T> =
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet_prelude::*;
+	use frame_support::{pallet_prelude::*, transactional};
+	use frame_system::{ensure_root, pallet_prelude::OriginFor};
 
 	use super::*;
 
@@ -41,6 +42,12 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		AddedAllowedCurrencies {
+			currencies: Vec<CurrencyOf<T>>,
+		},
+		DeletedAllowedCurrencies {
+			currencies: Vec<CurrencyOf<T>>,
+		},
 		/// (Additional) funds have been approved for transfer to a destination account.
 		ApprovedTransfer {
 			currency_id: CurrencyOf<T>,
@@ -106,7 +113,47 @@ pub mod pallet {
 
 	// The pallet's dispatchable functions.
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {}
+	impl<T: Config> Pallet<T> {
+		/// Added allowed currencies that possible to use chain extension
+		///
+		/// # Arguments
+		/// * `currencies` - list of currency id allowed to use in chain extension
+		#[pallet::call_index(1)]
+		#[pallet::weight(10000)]
+		#[transactional]
+		pub fn add_allowed_currencies(
+			origin: OriginFor<T>,
+			currencies: Vec<CurrencyOf<T>>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			for i in currencies.clone() {
+				AllowedCurrencies::<T>::insert(i, true);
+			}
+
+			Self::deposit_event(Event::AddedAllowedCurrencies { currencies });
+			Ok(())
+		}
+
+		/// Remove allowed currencies that possible to use chain extension
+		///
+		/// # Arguments
+		/// * `currencies` - list of currency id allowed to use in chain extension
+		#[pallet::call_index(2)]
+		#[pallet::weight(10000)]
+		#[transactional]
+		pub fn remove_allowed_currencies(
+			origin: OriginFor<T>,
+			currencies: Vec<CurrencyOf<T>>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			for i in currencies.clone() {
+				AllowedCurrencies::<T>::remove(i);
+			}
+
+			Self::deposit_event(Event::DeletedAllowedCurrencies { currencies });
+			Ok(())
+		}
+	}
 }
 
 #[allow(clippy::forget_non_drop, clippy::swap_ptr_to_ref, clippy::forget_ref, clippy::forget_copy)]
@@ -131,8 +178,7 @@ impl<T: Config> Pallet<T> {
 		delegate: &T::AccountId,
 		amount: BalanceOf<T>,
 	) -> DispatchResult {
-		//TODO ensure for production!!!
-		// ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
+		ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
 		Approvals::<T>::try_mutate((id, &owner, &delegate), |maybe_approved| -> DispatchResult {
 			let mut approved = match maybe_approved.take() {
 				// an approval already exists and is being updated
@@ -169,7 +215,7 @@ impl<T: Config> Pallet<T> {
 		destination: &T::AccountId,
 		amount: BalanceOf<T>,
 	) -> DispatchResult {
-		// ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
+		ensure!(AllowedCurrencies::<T>::get(id) == Some(true), Error::<T>::CurrencyNotLive);
 		Approvals::<T>::try_mutate_exists(
 			(id, &owner, delegate),
 			|maybe_approved| -> DispatchResult {

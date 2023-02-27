@@ -1121,7 +1121,7 @@ where
 				}
 			},
 
-			// //transfer_approved
+			//transfer_approved
 			1109 => {
 				let ext = env.ext();
 				let address = ext.address().clone();
@@ -1536,7 +1536,8 @@ construct_runtime!(
 		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 69,
 		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 70,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
-		TokenAllowance: orml_currencies_allowance_ext::{Pallet, Storage, Call, Event<T>} = 72,
+
+		TokenAllowance: orml_currencies_allowance_ext::{Pallet, Storage, Call, Event<T>} = 80,
 	}
 );
 

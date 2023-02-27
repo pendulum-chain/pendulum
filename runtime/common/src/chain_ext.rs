@@ -42,7 +42,7 @@ pub enum ChainExtensionErr {
 	Token(PalletAssetTokenErr),
 	/// An arithmetic error.
 	Arithmetic(PalletAssetArithmeticErr),
-	//unknown error
+	/// Unknown error
 	Unknown,
 }
 
@@ -54,7 +54,7 @@ pub enum PalletAssetArithmeticErr {
 	Overflow,
 	/// Division by zero.
 	DivisionByZero,
-	//unknown error
+	/// Unknown error
 	Unknown,
 }
 
@@ -74,7 +74,7 @@ pub enum PalletAssetTokenErr {
 	Frozen,
 	/// Operation is not supported by the asset.
 	Unsupported,
-	//unknown error
+	/// Unknown error
 	Unknown,
 }
 

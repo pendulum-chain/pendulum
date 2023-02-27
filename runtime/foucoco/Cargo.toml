@@ -93,6 +93,10 @@ sp-version = {git = "https://github.com/paritytech/substrate", default-features 
 orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
 orml-traits = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
 orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
+orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.37" }
+
+# Chain extension
+orml-currencies-allowance-ext = {path = "../../pallets/orml-currencies-allowance-ext", default-features = false}
 
 # KILT
 parachain-staking = {path = "../../pallets/parachain-staking", default-features = false}
@@ -120,9 +124,6 @@ cumulus-primitives-core = {git = "https://github.com/paritytech/cumulus", defaul
 cumulus-primitives-timestamp = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.37"}
 cumulus-primitives-utility = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.37"}
 parachain-info = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.37"}
-
-#orml
-orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.37" }
 
 zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.37" }
 zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.37" }
@@ -217,7 +218,7 @@ std = [
 "module-replace-rpc-runtime-api/std",
 "module-vault-registry-rpc-runtime-api/std",
 "spacewalk-primitives/std",
-
+"orml-currencies-allowance-ext/std"
 ]
 
 runtime-benchmarks = [

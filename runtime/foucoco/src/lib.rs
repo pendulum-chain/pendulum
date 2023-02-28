@@ -943,7 +943,8 @@ where
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
-		+ orml_currencies_allowance_ext::Config,
+		+ orml_currencies_allowance_ext::Config
+		+ dia_oracle::Config,
 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 {
 	fn call<E: Ext>(&mut self, mut env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
@@ -1210,10 +1211,21 @@ where
 					.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
 			},
 
-			//TODO
+			//dia price feed
 			7777 => {
-				error!("Called an dia oracle `func_id`: {:}", func_id);
-				return Err(DispatchError::Other("Unimplemented dia oracle func_id"))
+				let mut env = env.buf_in_buf_out();
+				let price_feed_request: ([u8; 32], [u8; 32]) =
+					env.read_as()?;
+
+				let blockchain = price_feed_request.0; 
+				let symbol = price_feed_request.1;
+				let price_feed = <dia_oracle::Pallet::<T> as DiaOracle>::get_coin_info(blockchain.to_vec(), symbol.to_vec());
+
+				warn!("price_feed_request : {:#?}", price_feed_request);
+				warn!("price_feed : {:#?}", price_feed);
+
+				env.write(&price_feed.encode(), false, None)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to call price feed"))?;
 			},
 			_ => {
 				error!("Called an unregistered `func_id`: {:}", func_id);

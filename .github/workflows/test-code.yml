@@ -27,14 +27,8 @@ jobs:
         key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Install toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: nightly-2022-08-08
-        components: rustfmt, clippy
-        target: wasm32-unknown-unknown
-        override: true
-        default: true
+      # Call `rustup show` as a hack so that the toolchain defined in rust-toolchain.toml is installed
+      run: rustup show
 
     # Enable this for clippy linting.
     # - name: Check and Lint Code

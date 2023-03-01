@@ -73,35 +73,35 @@ mod my_psp22_pallet_asset {
 		}
 
 		#[ink(message, selector = 0x70a08231)]
-		pub fn balance_x(&self, account: AccountId) -> [u128; 2] {
-			let b = self.balance_of(account);
+		pub fn balance(&self, account: AccountId) -> [u128; 2] {
+			let b = self._balance_of(account);
 			use ethnum::U256;
 			let balance_u256: U256 = U256::try_from(b).unwrap();
 			balance_u256.0
 		}
 
 		#[ink(message, selector = 0x23b872dd)]
-		pub fn transfer_from_x(&mut self, from: AccountId, to: AccountId, amount: [u128; 2]) {
+		pub fn transfer_from(&mut self, from: AccountId, to: AccountId, amount: [u128; 2]) {
 			use ethnum::U256;
 			let amount: u128 = U256(amount).try_into().unwrap();
-			self.transfer_from(from, to, amount, Vec::<u8>::new())
+			self._transfer_from(from, to, amount, Vec::<u8>::new())
 				.expect("should transfer from");
 		}
 
 		#[ink(message, selector = 0xa9059cbb)]
-		pub fn transfer_x(&mut self, to: AccountId, amount: [u128; 2]) {
+		pub fn transfer(&mut self, to: AccountId, amount: [u128; 2]) {
 			use ethnum::U256;
 			let amount: u128 = U256(amount).try_into().unwrap();
-			self.transfer(to, amount, Vec::<u8>::new()).expect("should transfer");
+			self._transfer(to, amount, Vec::<u8>::new()).expect("should transfer");
 		}
 	}
 
 	impl MyPSP22 {
-		fn balance_of(&self, owner: AccountId) -> Balance {
+		fn _balance_of(&self, owner: AccountId) -> Balance {
 			psp_pendulum_lib::PendulumChainExt::balance(self.asset_id, *owner.as_ref()).unwrap()
 		}
 
-		fn allowance(&self, owner: AccountId, spender: AccountId) -> Balance {
+		fn _allowance(&self, owner: AccountId, spender: AccountId) -> Balance {
 			psp_pendulum_lib::PendulumChainExt::allowance(
 				self.asset_id,
 				*owner.as_ref(),
@@ -110,7 +110,7 @@ mod my_psp22_pallet_asset {
 			.unwrap()
 		}
 
-		fn transfer(
+		fn _transfer(
 			&mut self,
 			to: AccountId,
 			value: Balance,
@@ -131,7 +131,7 @@ mod my_psp22_pallet_asset {
 			}
 		}
 
-		fn transfer_from(
+		fn _transfer_from(
 			&mut self,
 			from: AccountId,
 			to: AccountId,
@@ -154,7 +154,7 @@ mod my_psp22_pallet_asset {
 			}
 		}
 
-		fn approve(&mut self, spender: AccountId, value: Balance) -> Result<(), PSP22Error> {
+		fn _approve(&mut self, spender: AccountId, value: Balance) -> Result<(), PSP22Error> {
 			let origin: psp_pendulum_lib::OriginType = self.origin_type.into();
 			let approve_transfer_result = psp_pendulum_lib::PendulumChainExt::approve_transfer(
 				origin,
@@ -170,7 +170,7 @@ mod my_psp22_pallet_asset {
 			}
 		}
 
-		fn increase_allowance(
+		fn _increase_allowance(
 			&mut self,
 			spender: AccountId,
 			delta_value: Balance,
@@ -192,7 +192,7 @@ mod my_psp22_pallet_asset {
 			}
 		}
 
-		fn decrease_allowance(
+		fn _decrease_allowance(
 			&mut self,
 			spender: AccountId,
 			delta_value: Balance,

@@ -13,10 +13,12 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-      - name: Checkout Code
+      - name: Freeing up more disk space
         run: |
           sudo rm -rf /usr/local/lib/android # will release about 10 GB if you don't need Android
           sudo rm -rf /usr/share/dotnet # will release about 20GB if you don't need .NET
+
+      - name: Checkout Code
         uses: actions/checkout@v2
 
         # Steps taken from https://github.com/actions/cache/blob/master/examples.md#rust---cargo

@@ -3,44 +3,47 @@ name: Test Code
 on:
   pull_request:
     branches:
-    - main
+      - main
   push:
     branches:
-    - main
+      - main
 
 jobs:
   test-code:
     runs-on: ubuntu-20.04
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v2
+      - name: Checkout Code
+        run: |
+          sudo rm -rf /usr/local/lib/android # will release about 10 GB if you don't need Android
+          sudo rm -rf /usr/share/dotnet # will release about 20GB if you don't need .NET
+        uses: actions/checkout@v2
 
-      # Steps taken from https://github.com/actions/cache/blob/master/examples.md#rust---cargo
-    - name: Cache cargo registry
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        # Steps taken from https://github.com/actions/cache/blob/master/examples.md#rust---cargo
+      - name: Cache cargo registry
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Install toolchain
-      # Call `rustup show` as a hack so that the toolchain defined in rust-toolchain.toml is installed
-      run: rustup show
+      - name: Install toolchain
+        # Call `rustup show` as a hack so that the toolchain defined in rust-toolchain.toml is installed
+        run: rustup show
 
-    # Enable this for clippy linting.
-    # - name: Check and Lint Code
-    #   run: cargo +nightly-2021-12-01 clippy -- -D warnings
+      # Enable this for clippy linting.
+      # - name: Check and Lint Code
+      #   run: cargo +nightly-2021-12-01 clippy -- -D warnings
 
-    - name: Install Protoc
-      uses: arduino/setup-protoc@v1
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Check Code
-      run: cargo check
+      - name: Check Code
+        run: cargo check
 
-    - name: Test Code
-      run: cargo test
+      - name: Test Code
+        run: cargo test

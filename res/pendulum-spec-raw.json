@@ -2,7 +2,9 @@
   "name": "Pendulum",
   "id": "pendulum",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootNodes": [
+      "/dns4/penctbeur-collator-00.prd.pendulumchain.tech/tcp/30335/p2p/12D3KooWBVtsdFV8cLG7o2mVXNRMcRVrW463aCVQYU6v1atQNPwt"
+  ],
   "telemetryEndpoints": null,
   "protocolId": "pendulum",
   "properties": {

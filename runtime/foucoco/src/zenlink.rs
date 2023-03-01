@@ -7,7 +7,7 @@ use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::marker::PhantomData;
 
 use zenlink_protocol::{
-	AssetId, AssetIdConverter, Config as ZenlinkConfig, LocalAssetHandler, PairLpGenerate,
+	AssetId, AssetIdConverter, LocalAssetHandler, PairLpGenerate,
 	ZenlinkMultiAssets, LOCAL, NATIVE,
 };
 pub type ZenlinkAssetId = zenlink_protocol::AssetId;

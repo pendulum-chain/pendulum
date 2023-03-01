@@ -131,4 +131,4 @@ For local testing, you can replace `--name` with predefined keys like `--alice` 
 where `ALICE_NODE_ID` is the peer id of Alice.
 You can find the rococo-custom-2-raw.json [here](https://github.com/substrate-developer-hub/substrate-docs/blob/314e9cd3bd0ca9426bbfd381b79c3ef4d06b49c2/static/assets/tutorials/cumulus/chain-specs/rococo-custom-2-raw.json).
 
-There are prerequisites in running the collator with a local relay chain. Refer to [how to run Pendulum locally](https://pendulum.gitbook.io/pendulum-docs/build/running-pendulum-locally).
+There are prerequisites in running the collator with a local relay chain. Refer to [how to run Pendulum locally](https://pendulum.gitbook.io/pendulum-docs/build/build-environment/local-pendulum-chain-setup).

@@ -150,10 +150,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("pendulum"),
 	impl_name: create_runtime_str!("pendulum"),
 	authoring_version: 1,
-	spec_version: 1,
+	spec_version: 2,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 1,
+	transaction_version: 2,
 	state_version: 1,
 };
 
@@ -258,7 +258,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Utility(_) |
 			RuntimeCall::Vesting(_) |
 			RuntimeCall::XTokens(_) |
-			RuntimeCall::Multisig(_) => true,
+			RuntimeCall::Multisig(_) |
+			RuntimeCall::VestingManager(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -805,6 +806,11 @@ impl pallet_vesting::Config for Runtime {
 	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
 
+impl vesting_manager::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type VestingSchedule = Vesting;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -854,7 +860,9 @@ construct_runtime!(
 		Utility: pallet_utility::{Pallet, Call, Event} = 51,
 		Currencies: orml_currencies::{Pallet, Call, Storage} = 52,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 53,
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 54
+		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 54,
+
+		VestingManager: vesting_manager::{Pallet, Call, Event<T>} = 100
 	}
 );
 

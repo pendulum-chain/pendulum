@@ -6828,6 +6828,8 @@ dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
+ "dia-oracle",
+ "dia-oracle-runtime-api",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
@@ -6847,9 +6849,13 @@ dependencies = [
  "pallet-bounties",
  "pallet-child-bounties",
  "pallet-collective",
+ "pallet-contracts",
+ "pallet-contracts-primitives",
  "pallet-democracy",
+ "pallet-identity",
  "pallet-multisig",
  "pallet-preimage",
+ "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",
@@ -6886,6 +6892,8 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+ "zenlink-protocol",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]

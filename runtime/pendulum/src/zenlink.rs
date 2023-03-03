@@ -10,7 +10,7 @@ use zenlink_protocol::{
 	AssetId, AssetIdConverter, Config as ZenlinkConfig, LocalAssetHandler, PairLpGenerate,
 	ZenlinkMultiAssets, LOCAL, NATIVE,
 };
-pub type ZenlinkAssetId = zenlink_protocol::AssetId;
+pub type ZenlinkAssetId = AssetId;
 
 parameter_types! {
 	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
@@ -156,35 +156,9 @@ impl TryFrom<ZenlinkAssetId> for CurrencyId {
 				let foreign_currency_id_option = asset_id.asset_index.try_into();
 				match foreign_currency_id_option {
 					Ok(foreign_currency_id) => Ok(CurrencyId::XCM(foreign_currency_id)),
-					Err(e) => Err(e),
+					Err(_) => Err(()),
 				}
 			},
-			_ => Err(()),
-		}
-	}
-}
-
-impl TryFrom<u64> for ForeignCurrencyId {
-	type Error = ();
-	fn try_from(num: u64) -> Result<Self, Self::Error> {
-		match num {
-			0 => Ok(ForeignCurrencyId::KSM),
-			1 => Ok(ForeignCurrencyId::KAR),
-			2 => Ok(ForeignCurrencyId::AUSD),
-			3 => Ok(ForeignCurrencyId::BNC),
-			4 => Ok(ForeignCurrencyId::VsKSM),
-			5 => Ok(ForeignCurrencyId::HKO),
-			6 => Ok(ForeignCurrencyId::MOVR),
-			7 => Ok(ForeignCurrencyId::SDN),
-			8 => Ok(ForeignCurrencyId::KINT),
-			9 => Ok(ForeignCurrencyId::KBTC),
-			10 => Ok(ForeignCurrencyId::GENS),
-			11 => Ok(ForeignCurrencyId::XOR),
-			12 => Ok(ForeignCurrencyId::TEER),
-			13 => Ok(ForeignCurrencyId::KILT),
-			14 => Ok(ForeignCurrencyId::PHA),
-			15 => Ok(ForeignCurrencyId::ZTG),
-			16 => Ok(ForeignCurrencyId::USD),
 			_ => Err(()),
 		}
 	}

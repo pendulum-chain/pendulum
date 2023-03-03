@@ -1,6 +1,6 @@
 use super::{
-	AccountId, Balance, Balances, CurrencyId, ForeignCurrencyId, ParachainInfo, ParachainSystem,
-	PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
+	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
+	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
 };
 use core::marker::PhantomData;
 use frame_support::{
@@ -11,6 +11,7 @@ use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
+use runtime_common::parachains::polkadot::statemint;
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
@@ -23,6 +24,9 @@ use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
+
+const XCM_ASSET_RELAY_DOT: u8 = 0;
+const XCM_ASSET_STATEMINT_USDT: u8 = 1;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -55,7 +59,15 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 		match id {
 			// CurrencyId::KSM => Some(MultiLocation::parent()),
 			CurrencyId::XCM(f) => match f {
-				ForeignCurrencyId::KSM => Some(MultiLocation::parent()),
+				XCM_ASSET_RELAY_DOT => Some(MultiLocation::parent()),
+				XCM_ASSET_STATEMINT_USDT => Some(MultiLocation::new(
+					1,
+					X3(
+						Parachain(statemint::PARA_ID),
+						PalletInstance(statemint::ASSET_PALLET_ID),
+						GeneralIndex(statemint::USDT_ASSET_ID),
+					),
+				)),
 				_ => None,
 			},
 			_ => None,
@@ -67,7 +79,16 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
 			MultiLocation { parents: 1, interior: Here } =>
-				Some(CurrencyId::XCM(ForeignCurrencyId::KSM)),
+				Some(CurrencyId::XCM(XCM_ASSET_RELAY_DOT)),
+			MultiLocation {
+				parents: 1,
+				interior:
+					X3(
+						Parachain(statemint::PARA_ID),
+						PalletInstance(statemint::ASSET_PALLET_ID),
+						GeneralIndex(statemint::USDT_ASSET_ID),
+					),
+			} => Some(CurrencyId::XCM(XCM_ASSET_STATEMINT_USDT)),
 			_ => None,
 		}
 	}
@@ -88,10 +109,8 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 /// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		if location == MultiLocation::parent() {
-			return Ok(CurrencyId::XCM(ForeignCurrencyId::KSM))
-		}
-		Err(location.clone())
+		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location.clone())
+			.ok_or(location)
 	}
 }
 

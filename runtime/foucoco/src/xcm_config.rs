@@ -1,5 +1,5 @@
 use super::{
-	AccountId, Balance, Balances, CurrencyId, ForeignCurrencyId, ParachainInfo, ParachainSystem,
+	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem,
 	PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
 };
 use core::marker::PhantomData;
@@ -55,7 +55,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 		match id {
 			// CurrencyId::KSM => Some(MultiLocation::parent()),
 			CurrencyId::XCM(f) => match f {
-				ForeignCurrencyId::KSM => Some(MultiLocation::parent()),
+				0 => Some(MultiLocation::parent()),
 				_ => None,
 			},
 			_ => None,

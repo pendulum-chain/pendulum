@@ -81,14 +81,14 @@ pub use security::StatusCode;
 pub use stellar_relay::traits::{FieldLength, Organization, Validator};
 
 pub use module_oracle_rpc_runtime_api::BalanceWrapper;
-use oracle::dia::DiaOracleAdapter;
+use oracle::dia::{DiaOracleAdapter, XCMCurrencyConversion};
 
 // Polkadot imports
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use spacewalk_primitives::{
 	self as primitives, AccountId, Balance, BlockNumber, CurrencyId, CurrencyId::XCM,
-	ForeignCurrencyId, Hash, Moment, Signature, SignedFixedPoint, SignedInner, UnsignedFixedPoint,
+	Hash, Moment, Signature, SignedFixedPoint, SignedInner, UnsignedFixedPoint,
 	UnsignedInner,
 };
 
@@ -152,6 +152,22 @@ impl oracle::dia::NativeCurrencyKey for SpacewalkNativeCurrency {
 
 	fn native_chain() -> Vec<u8> {
 		"AMPLITUDE".as_bytes().to_vec()
+	}
+}
+
+impl XCMCurrencyConversion for SpacewalkNativeCurrency {
+	fn convert_to_dia_currency_id(token_symbol: u8) -> Option<(Vec<u8>, Vec<u8>)> {
+		match token_symbol {
+			0 => Some((b"Kusama".to_vec(), b"KSM".to_vec())),
+			_ => None,
+		}
+	}
+
+	fn convert_from_dia_currency_id(blockchain: Vec<u8>, symbol: Vec<u8>) -> Option<u8> {
+		match (blockchain.as_slice(), symbol.as_slice()) {
+			(b"Kusama", b"KSM") => Some(0),
+			_ => None,
+		}
 	}
 }
 

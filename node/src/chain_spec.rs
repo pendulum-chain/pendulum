@@ -699,7 +699,7 @@ fn foucoco_genesis(
 		oracle: foucoco_runtime::OracleConfig {
 			max_delay: u32::MAX,
 			oracle_keys: vec![
-				Key::ExchangeRate(CurrencyId::XCM(ForeignCurrencyId::KSM)),
+				Key::ExchangeRate(CurrencyId::XCM(0)),
 				Key::ExchangeRate(foucoco_runtime::WRAPPED_USDC_CURRENCY),
 			],
 		},

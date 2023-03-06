@@ -1016,7 +1016,7 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 }
 
 parameter_types! {
-	pub const RelayChainCurrencyId: CurrencyId = XCM(ForeignCurrencyId::KSM);
+	pub const RelayChainCurrencyId: CurrencyId = XCM(0);
 }
 impl currency::Config for Runtime {
 	type UnsignedFixedPoint = UnsignedFixedPoint;

@@ -146,7 +146,7 @@ pub type Executive = frame_executive::Executive<
 	AllPalletsWithSystem,
 >;
 
-struct AmplitudeDiaOracleKeyConverter;
+pub struct AmplitudeDiaOracleKeyConverter;
 
 impl NativeCurrencyKey for AmplitudeDiaOracleKeyConverter {
 	fn native_symbol() -> Vec<u8> {

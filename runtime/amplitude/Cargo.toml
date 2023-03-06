@@ -25,7 +25,7 @@ smallvec = "1.9.0"
 # Local
 runtime-common = {path = "../common", default-features = false}
 
-# custom libraries from spacewalk
+# Custom libraries for Spacewalk
 currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
 security = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
 staking = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
@@ -91,6 +91,7 @@ sp-version = {git = "https://github.com/paritytech/substrate", default-features 
 orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
 orml-traits = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
 orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
+orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.37" }
 
 # KILT
 parachain-staking = {path = "../../pallets/parachain-staking", default-features = false}
@@ -119,9 +120,7 @@ cumulus-primitives-timestamp = {git = "https://github.com/paritytech/cumulus", d
 cumulus-primitives-utility = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.37"}
 parachain-info = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.37"}
 
-#orml
-orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.37" }
-
+# Zenlink
 zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.37" }
 zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.37" }
 
@@ -143,7 +142,7 @@ std = [
   "cumulus-primitives-timestamp/std",
   "cumulus-primitives-utility/std",
   "dia-oracle/std",
-  'dia-oracle-runtime-api/std',
+  "dia-oracle-runtime-api/std",
   "frame-executive/std",
   "frame-support/std",
   "frame-system-rpc-runtime-api/std",

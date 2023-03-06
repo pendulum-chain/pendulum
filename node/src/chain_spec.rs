@@ -14,7 +14,7 @@ use sp_runtime::{
 	FixedPointNumber, FixedU128, Perquintill,
 };
 use spacewalk_primitives::{
-	oracle::Key, CurrencyId, CurrencyId::XCM, ForeignCurrencyId, VaultCurrencyPair, DOT, KSM,
+	oracle::Key, CurrencyId, CurrencyId::XCM, VaultCurrencyPair, DOT, KSM,
 };
 
 use crate::constants::pendulum;

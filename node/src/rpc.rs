@@ -16,6 +16,13 @@ use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 
+use spacewalk_primitives::{
+	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest,
+	BlockNumber, CurrencyId, Hash, VaultId,
+};
+use sp_core::H256;
+use sp_arithmetic::FixedU128;
+
 /// A type representing all RPC extensions.
 pub type RpcExtension = jsonrpsee::RpcModule<()>;
 
@@ -43,6 +50,14 @@ where
 		+ 'static,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+	C::Api: module_vault_registry_rpc::VaultRegistryRuntimeApi<
+		Block,
+		VaultId<AccountId, CurrencyId>,
+		Balance,
+		FixedU128,
+		CurrencyId,
+		AccountId,
+	>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {

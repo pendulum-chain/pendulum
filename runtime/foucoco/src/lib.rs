@@ -1360,6 +1360,7 @@ impl_runtime_apis! {
 		}
 	}
 
+	
 	// zenlink runtime outer apis
 	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId, ZenlinkAssetId> for Runtime {
 

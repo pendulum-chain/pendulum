@@ -9,6 +9,7 @@ use sp_std::marker::PhantomData;
 use zenlink_protocol::{
 	AssetId, AssetIdConverter, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets, LOCAL, NATIVE,
 };
+
 pub type ZenlinkAssetId = AssetId;
 
 parameter_types! {
@@ -133,7 +134,7 @@ fn zenlink_id_to_currency_id(asset_id: ZenlinkAssetId) -> Result<CurrencyId, ()>
 	match asset_id.asset_type {
 		NATIVE => Ok(CurrencyId::Native),
 		LOCAL => {
-			let foreign_id: ForeignCurrencyId = asset_id.asset_index.try_into().map_err(|_| {
+			let foreign_id = asset_id.asset_index.try_into().map_err(|_| {
 				log::error!("{} has no Foreign Currency Id match.", asset_id.asset_index);
 				()
 			})?;

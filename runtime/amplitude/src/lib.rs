@@ -9,6 +9,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
+
 use crate::zenlink::*;
 use xcm::v1::MultiLocation;
 use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
@@ -76,7 +77,10 @@ pub use dia_oracle::dia::AssetId;
 pub use issue::{Event as IssueEvent, IssueRequest};
 pub use module_oracle_rpc_runtime_api::BalanceWrapper;
 pub use nomination::Event as NominationEvent;
-use oracle::dia::DiaOracleAdapter;
+use oracle::{
+	dia,
+	dia::{DiaOracleAdapter, NativeCurrencyKey, XCMCurrencyConversion},
+};
 pub use redeem::{Event as RedeemEvent, RedeemRequest};
 pub use replace::{Event as ReplaceEvent, ReplaceRequest};
 pub use security::StatusCode;
@@ -86,9 +90,8 @@ pub use stellar_relay::traits::{FieldLength, Organization, Validator};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use spacewalk_primitives::{
-	self as primitives, AccountId, Balance, BlockNumber, CurrencyId, CurrencyId::XCM,
-	ForeignCurrencyId, Hash, Moment, Signature, SignedFixedPoint, SignedInner, UnsignedFixedPoint,
-	UnsignedInner,
+	self as primitives, AccountId, Balance, BlockNumber, CurrencyId, CurrencyId::XCM, Hash, Moment,
+	Signature, SignedFixedPoint, SignedInner, UnsignedFixedPoint, UnsignedInner,
 };
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
@@ -143,21 +146,53 @@ pub type Executive = frame_executive::Executive<
 	AllPalletsWithSystem,
 >;
 
+struct AmplitudeDiaOracleKeyConverter;
+
+impl NativeCurrencyKey for AmplitudeDiaOracleKeyConverter {
+	fn native_symbol() -> Vec<u8> {
+		b"AMPE".to_vec()
+	}
+
+	fn native_chain() -> Vec<u8> {
+		b"Amplitude".to_vec()
+	}
+}
+
+impl XCMCurrencyConversion for AmplitudeDiaOracleKeyConverter {
+	fn convert_to_dia_currency_id(token_symbol: u8) -> Option<(Vec<u8>, Vec<u8>)> {
+		match token_symbol {
+			0 => Some((b"Kusama".to_vec(), b"KSM".to_vec())),
+			_ => None,
+		}
+	}
+
+	fn convert_from_dia_currency_id(blockchain: Vec<u8>, symbol: Vec<u8>) -> Option<u8> {
+		match (blockchain.as_slice(), symbol.as_slice()) {
+			(b"Kusama", b"KSM") => Some(0),
+			_ => None,
+		}
+	}
+}
+
 type DataProviderImpl = DiaOracleAdapter<
 	DiaOracleModule,
 	UnsignedFixedPoint,
 	Moment,
-	primitives::DiaOracleKeyConvertor,
+	dia::DiaOracleKeyConvertor<AmplitudeDiaOracleKeyConverter>,
 	ConvertPrice,
 	ConvertMoment,
 >;
+
 pub struct ConvertPrice;
+
 impl Convert<u128, Option<UnsignedFixedPoint>> for ConvertPrice {
 	fn convert(price: u128) -> Option<UnsignedFixedPoint> {
 		Some(UnsignedFixedPoint::from_inner(price))
 	}
 }
+
 pub struct ConvertMoment;
+
 impl Convert<u64, Option<Moment>> for ConvertMoment {
 	fn convert(moment: u64) -> Option<Moment> {
 		Some(moment)
@@ -175,6 +210,7 @@ impl Convert<u64, Option<Moment>> for ConvertMoment {
 ///   - Setting it to `0` will essentially disable the weight fee.
 ///   - Setting it to `1` will cause the literal `#[weight = x]` values to be charged.
 pub struct WeightToFee;
+
 impl WeightToFeePolynomial for WeightToFee {
 	type Balance = Balance;
 	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
@@ -284,6 +320,7 @@ parameter_types! {
 }
 
 pub struct BaseFilter;
+
 impl Contains<RuntimeCall> for BaseFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		match call {
@@ -436,6 +473,7 @@ parameter_types! {
 type NegativeImbalance = <Balances as FrameCurrency<AccountId>>::NegativeImbalance;
 
 pub struct DealWithFees;
+
 impl OnUnbalanced<NegativeImbalance> for DealWithFees {
 	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
 		if let Some(mut fees) = fees_then_tips.next() {
@@ -534,7 +572,8 @@ impl pallet_democracy::Config for Runtime {
 	type EnactmentPeriod = EnactmentPeriod;
 	type LaunchPeriod = LaunchPeriod;
 	type VotingPeriod = VotingPeriod;
-	type VoteLockingPeriod = EnactmentPeriod; // Same as EnactmentPeriod
+	type VoteLockingPeriod = EnactmentPeriod;
+	// Same as EnactmentPeriod
 	type MinimumDeposit = MinimumDeposit;
 	/// A straight majority of the council can decide what their next motion is.
 	type ExternalOrigin =
@@ -586,6 +625,7 @@ parameter_types! {
 }
 
 type CouncilCollective = pallet_collective::Instance1;
+
 impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
@@ -604,6 +644,7 @@ parameter_types! {
 }
 
 type TechnicalCollective = pallet_collective::Instance2;
+
 impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
@@ -737,6 +778,7 @@ pub fn get_all_module_accounts() -> Vec<AccountId> {
 }
 
 pub struct DustRemovalWhitelist;
+
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
 		get_all_module_accounts().contains(a)
@@ -744,6 +786,7 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 }
 
 pub struct CurrencyHooks<T>(PhantomData<T>);
+
 impl<T: orml_tokens::Config> MutationHooks<T::AccountId, T::CurrencyId, T::Balance>
 	for CurrencyHooks<T>
 {
@@ -994,6 +1037,7 @@ where
 }
 
 pub struct CurrencyConvert;
+
 impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for CurrencyConvert {
 	fn convert(
 		amount: &currency::Amount<Runtime>,
@@ -1003,7 +1047,7 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 	}
 }
 parameter_types! {
-	pub const RelayChainCurrencyId: CurrencyId = XCM(ForeignCurrencyId::KSM);
+	pub const RelayChainCurrencyId: CurrencyId = XCM(0); // 0 is the index of the relay chain in our XCM mapping
 }
 impl currency::Config for Runtime {
 	type UnsignedFixedPoint = UnsignedFixedPoint;
@@ -1016,10 +1060,12 @@ impl currency::Config for Runtime {
 	type BalanceConversion = primitives::BalanceConversion;
 	type CurrencyConversion = CurrencyConvert;
 }
+
 impl security::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = security::SubstrateWeight<Runtime>;
 }
+
 impl staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type SignedInner = SignedInner;
@@ -1027,6 +1073,7 @@ impl staking::Config for Runtime {
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type CurrencyId = CurrencyId;
 }
+
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
@@ -1043,6 +1090,7 @@ impl stellar_relay::Config for Runtime {
 	type ValidatorLimit = ValidatorLimit;
 	type WeightInfo = ();
 }
+
 impl reward::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type SignedFixedPoint = SignedFixedPoint;
@@ -1068,6 +1116,7 @@ impl fee::Config for Runtime {
 	type OnSweep = currency::SweepFunds<Runtime, FeeAccount>;
 	type MaxExpectedValue = MaxExpectedValue;
 }
+
 impl vault_registry::Config for Runtime {
 	type PalletId = VaultRegistryPalletId;
 	type RuntimeEvent = RuntimeEvent;
@@ -1075,25 +1124,31 @@ impl vault_registry::Config for Runtime {
 	type WeightInfo = vault_registry::SubstrateWeight<Runtime>;
 	type GetGriefingCollateralCurrencyId = NativeCurrencyId;
 }
+
 impl redeem::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = redeem::SubstrateWeight<Runtime>;
 }
+
 pub struct BlockNumberToBalance;
+
 impl sp_runtime::traits::Convert<BlockNumber, Balance> for BlockNumberToBalance {
 	fn convert(a: BlockNumber) -> Balance {
 		a.into()
 	}
 }
+
 impl issue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type BlockNumberToBalance = BlockNumberToBalance;
 	type WeightInfo = issue::SubstrateWeight<Runtime>;
 }
+
 impl nomination::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = nomination::SubstrateWeight<Runtime>;
 }
+
 impl replace::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = replace::SubstrateWeight<Runtime>;

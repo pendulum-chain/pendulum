@@ -123,21 +123,7 @@ where
 		Ok(amount)
 	}
 }
-//
-// fn currency_id_to_zenlink_id(currency_id:CurrencyId) -> Option<ZenlinkAssetId> {
-// 	let para_chain_id: u32 = ParachainInfo::parachain_id().into();
-// 	match currency_id {
-// 		CurrencyId::Native =>
-// 			Some(ZenlinkAssetId { chain_id: para_chain_id, asset_type: NATIVE, asset_index: 0 }),
-// 		CurrencyId::XCM(xcm) => Some(ZenlinkAssetId {
-// 			chain_id: para_chain_id,
-// 			asset_type: LOCAL,
-// 			asset_index: xcm as u64,
-// 		}),
-// 		_ => { None }
-// 	}
-// }
-//
+
 fn zenlink_id_to_currency_id(asset_id: ZenlinkAssetId) -> Result<CurrencyId, ()> {
 	let para_chain_id: u32 = ParachainInfo::parachain_id().into();
 	if asset_id.chain_id != para_chain_id {

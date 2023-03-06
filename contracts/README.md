@@ -1,3 +1,5 @@
+cargo install cargo-contract --version 1.5.0
+
 Contracts
 
 If you have cargo-contract (https://github.com/paritytech/cargo-contract) installed, you can easily build with:

@@ -441,7 +441,7 @@ pub fn run() -> Result<()> {
 						sp_core::crypto::set_default_ss58_version(
 							foucoco_runtime::SS58Prefix::get().into(),
 						);
-						crate::service::start_parachain_node_spacewalk::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(
+						crate::service::start_parachain_node_spacewalk::<FoucocoRuntimeExecutor>(
 							config,
 							polkadot_config,
 							collator_options,

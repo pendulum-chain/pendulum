@@ -22,12 +22,12 @@ use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayC
 use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node;
 
 use spacewalk_primitives::{
-	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest, 
-	BlockNumber, CurrencyId, AccountId as AccountIdSpacewalk, Balance as BalanceSpacewalk, UnsignedFixedPoint
+	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest,
+	AccountId as AccountIdSpacewalk, Balance as BalanceSpacewalk, BlockNumber, CurrencyId,
+	UnsignedFixedPoint,
 };
 
-use foucoco_runtime::Block as RpcBlock;
-use foucoco_runtime::VaultId;
+use foucoco_runtime::{Block as RpcBlock, VaultId};
 
 // Substrate Imports
 use sc_executor::NativeElseWasmExecutor;
@@ -248,8 +248,10 @@ async fn build_relay_chain_interface(
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
+use foucoco_runtime::RuntimeApi as FoucocoRuntimeApi;
+
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
-async fn start_node_impl_spacewalk<RuntimeApi, Executor>(
+async fn start_node_impl_spacewalk<Executor>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	collator_options: CollatorOptions,
@@ -257,33 +259,9 @@ async fn start_node_impl_spacewalk<RuntimeApi, Executor>(
 	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(
 	TaskManager,
-	Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+	Arc<TFullClient<Block, FoucocoRuntimeApi, NativeElseWasmExecutor<Executor>>>,
 )>
 where
-	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>
-		+ Send
-		+ Sync
-		+ 'static,
-	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::Metadata<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<
-			Block,
-			StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
-		> + sp_offchain::OffchainWorkerApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>
-		+ cumulus_primitives_core::CollectCollationInfo<Block>
-		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
-		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
-		+ AuraApi<Block, AuthorityId>,
-	RuntimeApi: module_vault_registry_rpc::VaultRegistryRuntimeApi<
-		RpcBlock,
-		VaultId,
-		BalanceSpacewalk,
-		UnsignedFixedPoint,
-		CurrencyId,
-		AccountIdSpacewalk,
-	>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
@@ -438,7 +416,6 @@ where
 
 	Ok((task_manager, client))
 }
-
 
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
@@ -819,7 +796,7 @@ where
 }
 
 /// Start a parachain node.
-pub async fn start_parachain_node_spacewalk<RuntimeApi, Executor>(
+pub async fn start_parachain_node_spacewalk<Executor>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	collator_options: CollatorOptions,
@@ -827,35 +804,12 @@ pub async fn start_parachain_node_spacewalk<RuntimeApi, Executor>(
 	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(
 	TaskManager,
-	Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
+	Arc<TFullClient<Block, FoucocoRuntimeApi, NativeElseWasmExecutor<Executor>>>,
 )>
 where
-	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>
-		+ Send
-		+ Sync
-		+ 'static,
-	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::Metadata<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<
-			Block,
-			StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
-		> + sp_offchain::OffchainWorkerApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>
-		+ cumulus_primitives_core::CollectCollationInfo<Block>
-		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
-		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
-		+ AuraApi<Block, AuthorityId>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
-	RuntimeApi: module_vault_registry_rpc::VaultRegistryRuntimeApi<
-		RpcBlock,
-		VaultId,
-		BalanceSpacewalk,
-		UnsignedFixedPoint,
-		CurrencyId,
-		AccountIdSpacewalk,
-	>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
-	start_node_impl_spacewalk(parachain_config, polkadot_config, collator_options, id, hwbench).await
+	start_node_impl_spacewalk(parachain_config, polkadot_config, collator_options, id, hwbench)
+		.await
 }

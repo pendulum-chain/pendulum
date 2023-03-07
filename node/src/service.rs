@@ -237,11 +237,11 @@ async fn build_relay_chain_interface(
 	}
 }
 
-/// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
-///
-/// This is the actual implementation that is abstract over the executor and the runtime api.
+// We use this as the RuntimeApi definition in the following function so that we don't need to specify so many generic traits.
+// This might have to change if we want to use this function for other runtimes.
 use foucoco_runtime::RuntimeApi as FoucocoRuntimeApi;
 
+/// Start a node that exposes the RPC endpoints for the spacewalk pallets.
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
 async fn start_node_impl_spacewalk<Executor>(
 	parachain_config: Configuration,

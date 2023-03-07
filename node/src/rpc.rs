@@ -13,17 +13,15 @@ use sc_client_api::AuxStore;
 pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
+use sp_arithmetic::FixedU128;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 
 use spacewalk_primitives::{
 	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest,
-	BlockNumber, CurrencyId, Hash, Balance as BalanceSpacewalk,
-	AccountId as AccountIdSpacewalk, UnsignedFixedPoint
+	AccountId as AccountIdSpacewalk, Balance as BalanceSpacewalk, BlockNumber, CurrencyId, Hash,
+	UnsignedFixedPoint, VaultId,
 };
-
-use foucoco_runtime::Block as RpcBlock;
-use foucoco_runtime::VaultId;
 
 /// A type representing all RPC extensions.
 pub type RpcExtension = jsonrpsee::RpcModule<()>;
@@ -80,17 +78,16 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	C::Api: module_vault_registry_rpc::VaultRegistryRuntimeApi<
-		RpcBlock,
-		VaultId,
-		BalanceSpacewalk,
-		UnsignedFixedPoint,
+		Block,
+		VaultId<AccountId, CurrencyId>,
+		Balance,
+		FixedU128,
 		CurrencyId,
-		AccountIdSpacewalk,
+		AccountId,
 	>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
-
 	use module_issue_rpc::{Issue, IssueApiServer};
 	use module_redeem_rpc::{Redeem, RedeemApiServer};
 	use module_replace_rpc::{Replace, ReplaceApiServer};
@@ -102,7 +99,7 @@ where
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
-	module.merge(TransactionPayment::new(client).into_rpc())?;
+	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 	module.merge(VaultRegistry::new(client).into_rpc())?;
 	Ok(module)
 }

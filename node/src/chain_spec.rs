@@ -11,8 +11,9 @@ use sp_core::{
 };
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
-	Perquintill,
+	FixedPointNumber, FixedU128, Perquintill,
 };
+use spacewalk_primitives::{oracle::Key, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
 
 use crate::constants::pendulum;
 
@@ -36,6 +37,8 @@ const AMPLITUDE_PARACHAIN_ID: u32 = 2124;
 const AMPLITUDE_INITIAL_ISSUANCE: Balance = 200_000_000 * UNIT;
 const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
 const INITIAL_COLLATOR_STAKING: Balance = 10_010 * UNIT;
+
+const TOKEN_DECIMALS: u32 = 12;
 
 const INITIAL_AMPLITUDE_SUDO_SIGNATORIES: [&str; 5] = [
 	"6nJwMD3gk36fe6pMRL2UpbwAEjDdjjxdngQGShe753pyAvCT",
@@ -133,7 +136,7 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "AMPE".into());
-	properties.insert("tokenDecimals".into(), 12u32.into());
+	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), amplitude_runtime::SS58Prefix::get().into());
 
 	let mut signatories: Vec<_> = INITIAL_AMPLITUDE_SUDO_SIGNATORIES
@@ -189,7 +192,7 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "AMPE".into());
-	properties.insert("tokenDecimals".into(), 12u32.into());
+	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), foucoco_runtime::SS58Prefix::get().into());
 
 	let mut signatories: Vec<_> = INITIAL_AMPLITUDE_SUDO_SIGNATORIES
@@ -217,8 +220,10 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 				// initial collators.
 				invulnerables.clone(),
 				signatories.clone(),
+				vec![sudo_account.clone()],
 				sudo_account.clone(),
 				FOUCOCO_PARACHAIN_ID.into(),
+				false,
 			)
 		},
 		// Bootnodes
@@ -246,7 +251,7 @@ pub fn pendulum_config() -> PendulumChainSpec {
 
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "PEN".into());
-	properties.insert("tokenDecimals".into(), 12u32.into());
+	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), pendulum_runtime::SS58Prefix::get().into());
 
 	let multisig_genesis = create_pendulum_multisig_account(pendulum::MULTISIG_ID_GENESIS);
@@ -366,7 +371,7 @@ pub fn development_config() -> DevelopmentChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), 42.into());
 
 	DevelopmentChainSpec::from_genesis(
@@ -421,7 +426,7 @@ pub fn local_testnet_config() -> DevelopmentChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), 42.into());
 
 	DevelopmentChainSpec::from_genesis(
@@ -565,9 +570,18 @@ fn amplitude_genesis(
 fn foucoco_genesis(
 	invulnerables: Vec<AccountId>,
 	signatories: Vec<AccountId>,
+	authorized_oracles: Vec<AccountId>,
 	sudo_account: AccountId,
 	id: ParaId,
+	start_shutdown: bool,
 ) -> foucoco_runtime::GenesisConfig {
+	fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
+		VaultCurrencyPair {
+			collateral: currency_id,
+			wrapped: foucoco_runtime::DefaultWrappedCurrencyId::get(),
+		}
+	}
+
 	let mut balances: Vec<_> = signatories
 		.iter()
 		.cloned()
@@ -585,6 +599,11 @@ fn foucoco_genesis(
 				INITIAL_COLLATOR_STAKING.saturating_mul(invulnerables.len().try_into().unwrap()),
 			),
 	));
+
+	let token_balances = balances
+		.iter()
+		.flat_map(|k| vec![(k.0.clone(), XCM(0), 1 << 60), (k.0.clone(), XCM(1), 1 << 60)])
+		.collect();
 
 	let stakers: Vec<_> = invulnerables
 		.iter()
@@ -639,10 +658,92 @@ fn foucoco_genesis(
 			..Default::default()
 		},
 		democracy: Default::default(),
-		sudo: foucoco_runtime::SudoConfig { key: Some(sudo_account) },
+		sudo: foucoco_runtime::SudoConfig { key: Some(sudo_account.clone()) },
 		technical_committee: foucoco_runtime::TechnicalCommitteeConfig {
 			members: signatories.clone(),
 			..Default::default()
+		},
+		tokens: foucoco_runtime::TokensConfig {
+			// Configure the initial token supply for the native currency and USDC asset
+			balances: token_balances,
+		},
+		issue: foucoco_runtime::IssueConfig {
+			issue_period: foucoco_runtime::DAYS,
+			issue_minimum_transfer_amount: 1000,
+			limit_volume_amount: None,
+			limit_volume_currency_id: XCM(0),
+			current_volume_amount: 0u32.into(),
+			interval_length: (60u32 * 60 * 24).into(),
+			last_interval_index: 0u32.into(),
+		},
+		redeem: foucoco_runtime::RedeemConfig {
+			redeem_period: foucoco_runtime::DAYS,
+			redeem_minimum_transfer_amount: 1000,
+			limit_volume_amount: None,
+			limit_volume_currency_id: XCM(0),
+			current_volume_amount: 0u32.into(),
+			interval_length: (60u32 * 60 * 24).into(),
+			last_interval_index: 0u32.into(),
+		},
+		replace: foucoco_runtime::ReplaceConfig {
+			replace_period: foucoco_runtime::DAYS,
+			replace_minimum_transfer_amount: 1000,
+		},
+		security: foucoco_runtime::SecurityConfig {
+			initial_status: if start_shutdown {
+				foucoco_runtime::StatusCode::Shutdown
+			} else {
+				foucoco_runtime::StatusCode::Error
+			},
+		},
+		oracle: foucoco_runtime::OracleConfig {
+			max_delay: u32::MAX,
+			oracle_keys: vec![
+				Key::ExchangeRate(CurrencyId::XCM(0)),
+				Key::ExchangeRate(foucoco_runtime::WRAPPED_USDC_CURRENCY),
+			],
+		},
+		vault_registry: foucoco_runtime::VaultRegistryConfig {
+			minimum_collateral_vault: vec![(XCM(0), 0), (XCM(0), 0)],
+			punishment_delay: foucoco_runtime::DAYS,
+			secure_collateral_threshold: vec![(
+				default_pair(XCM(0)),
+				FixedU128::checked_from_rational(150, 100).unwrap(),
+			)],
+			/* 150% */
+			premium_redeem_threshold: vec![(
+				default_pair(XCM(0)),
+				FixedU128::checked_from_rational(130, 100).unwrap(),
+			)],
+			/* 130% */
+			liquidation_collateral_threshold: vec![(
+				default_pair(XCM(0)),
+				FixedU128::checked_from_rational(120, 100).unwrap(),
+			)],
+			/* 120% */
+			system_collateral_ceiling: vec![(
+				default_pair(XCM(0)),
+				60_000 * 10u128.pow(TOKEN_DECIMALS),
+			)],
+		},
+		stellar_relay: foucoco_runtime::StellarRelayConfig::default(),
+		fee: foucoco_runtime::FeeConfig {
+			issue_fee: FixedU128::checked_from_rational(15, 10000).unwrap(), // 0.15%
+			issue_griefing_collateral: FixedU128::checked_from_rational(5, 100000).unwrap(), // 0.005%
+			redeem_fee: FixedU128::checked_from_rational(5, 1000).unwrap(),  // 0.5%
+			premium_redeem_fee: FixedU128::checked_from_rational(5, 100).unwrap(), // 5%
+			punishment_fee: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
+			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
+		},
+		nomination: foucoco_runtime::NominationConfig { is_nomination_enabled: false },
+		dia_oracle_module: foucoco_runtime::DiaOracleModuleConfig {
+			authorized_accounts: authorized_oracles,
+			supported_currencies: vec![foucoco_runtime::AssetId::new(
+				b"Kusama".to_vec(),
+				b"KSM".to_vec(),
+			)],
+			batching_api: b"http://dia-00.pendulumchain.tech:8070/currencies".to_vec(),
+			coin_infos_map: vec![],
 		},
 	}
 }

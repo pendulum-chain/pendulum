@@ -15,6 +15,13 @@ codec = { package = "parity-scale-codec", version = "3.0.0" }
 serde = { version = "1.0.145", features = ["derive"] }
 jsonrpsee = { version = "0.16.2", features = ["server"] }
 
+module-issue-rpc = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3" }
+module-redeem-rpc = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3" }
+module-replace-rpc = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3" }
+module-vault-registry-rpc = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3" }
+
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3" }
+
 # Local
 amplitude-runtime = {path = "../runtime/amplitude"}
 foucoco-runtime = {path = "../runtime/foucoco"}
@@ -54,6 +61,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 sp-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }

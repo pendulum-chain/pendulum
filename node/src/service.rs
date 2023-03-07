@@ -22,12 +22,9 @@ use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayC
 use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node;
 
 use spacewalk_primitives::{
-	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest,
-	AccountId as AccountIdSpacewalk, Balance as BalanceSpacewalk, BlockNumber, CurrencyId,
+	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest, BlockNumber, CurrencyId,
 	UnsignedFixedPoint,
 };
-
-use foucoco_runtime::{Block as RpcBlock, VaultId};
 
 // Substrate Imports
 use sc_executor::NativeElseWasmExecutor;

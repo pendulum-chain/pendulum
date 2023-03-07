@@ -20,7 +20,7 @@ use sp_core::H256;
 
 use spacewalk_primitives::{
 	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest, BlockNumber, CurrencyId,
-	Hash, UnsignedFixedPoint, VaultId,
+	VaultId,
 };
 
 /// A type representing all RPC extensions.

@@ -21,11 +21,6 @@ use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
 use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayChainResult};
 use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node;
 
-use spacewalk_primitives::{
-	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest, BlockNumber, CurrencyId,
-	UnsignedFixedPoint,
-};
-
 // Substrate Imports
 use sc_executor::NativeElseWasmExecutor;
 use sc_network::NetworkService;

@@ -22,11 +22,11 @@ use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayC
 use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node;
 
 use spacewalk_primitives::{
-	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest,
-	BlockNumber, CurrencyId, VaultId,
+	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest, Block as BlockSpacewalk,
+	BlockNumber, CurrencyId, VaultId, AccountId as AccountIdSpacewalk, Balance as BalanceSpacewalk, UnsignedFixedPoint
 };
-use sp_core::H256;
-use sp_arithmetic::FixedU128;
+
+use module_vault_registry_rpc_runtime_api::VaultRegistryApi;
 
 // Substrate Imports
 use sc_executor::NativeElseWasmExecutor;
@@ -276,12 +276,12 @@ where
 		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
 		+ AuraApi<Block, AuthorityId>,
 	RuntimeApi: module_vault_registry_rpc::VaultRegistryRuntimeApi<
-		Block,
-		VaultId<AccountId, CurrencyId>,
-		Balance,
-		FixedU128,
+		BlockSpacewalk,
+		VaultId<AccountIdSpacewalk, CurrencyId>,
+		BalanceSpacewalk,
+		UnsignedFixedPoint,
 		CurrencyId,
-		AccountId,
+		AccountIdSpacewalk,
 	>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
@@ -847,12 +847,12 @@ where
 		+ AuraApi<Block, AuthorityId>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	RuntimeApi: module_vault_registry_rpc::VaultRegistryRuntimeApi<
-		Block,
-		VaultId<AccountId, CurrencyId>,
-		Balance,
-		FixedU128,
+		BlockSpacewalk,
+		VaultId<AccountIdSpacewalk, CurrencyId>,
+		BalanceSpacewalk,
+		UnsignedFixedPoint,
 		CurrencyId,
-		AccountId,
+		AccountIdSpacewalk,
 	>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {

@@ -100,9 +100,6 @@ cumulus-primitives-timestamp = {git = "https://github.com/paritytech/cumulus", d
 cumulus-primitives-utility = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.37"}
 parachain-info = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.37"}
 
-#orml
-orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.37" }
-
 zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.37" }
 zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.37" }
 

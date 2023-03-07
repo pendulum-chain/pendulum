@@ -248,8 +248,8 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
- "zenlink-protocol",
- "zenlink-protocol-runtime-api",
+ "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
+ "zenlink-protocol-runtime-api 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
 ]
 
 [[package]]
@@ -2866,8 +2866,8 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
- "zenlink-protocol",
- "zenlink-protocol-runtime-api",
+ "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
+ "zenlink-protocol-runtime-api 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
 ]
 
 [[package]]
@@ -7289,8 +7289,8 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
- "zenlink-protocol",
- "zenlink-protocol-runtime-api",
+ "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=master)",
+ "zenlink-protocol-runtime-api 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=master)",
 ]
 
 [[package]]
@@ -14164,6 +14164,29 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.4"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=master#e43f6be5747f6ff7a0370e294400bee5dba6c855"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "log",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=05f0007b30c98303078ee64d34390233d6ffb30e)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=05f0007b30c98303078ee64d34390233d6ffb30e)",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
+]
+
+[[package]]
+name = "zenlink-protocol"
+version = "0.4.4"
 source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37#690b8bb2495a9d1d00506f9dab3240ee0c544c0a"
 dependencies = [
  "cumulus-primitives-core",
@@ -14187,12 +14210,23 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.4"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=master#e43f6be5747f6ff7a0370e294400bee5dba6c855"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
+ "sp-std",
+ "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=master)",
+]
+
+[[package]]
+name = "zenlink-protocol-runtime-api"
+version = "0.4.4"
 source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37#690b8bb2495a9d1d00506f9dab3240ee0c544c0a"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-std",
- "zenlink-protocol",
+ "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
 ]
 
 [[package]]

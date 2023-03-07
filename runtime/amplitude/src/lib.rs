@@ -12,7 +12,7 @@ pub mod xcm_config;
 pub mod zenlink;
 use crate::zenlink::*;
 use xcm::v1::MultiLocation;
-use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo, AssetId};
+use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
 

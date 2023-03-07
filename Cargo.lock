@@ -1883,7 +1883,7 @@ dependencies = [
 [[package]]
 name = "currency"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2627,7 +2627,7 @@ dependencies = [
 [[package]]
 name = "fee"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "currency",
  "frame-benchmarking",
@@ -3848,9 +3848,9 @@ checksum = "59ce5ef949d49ee85593fc4d3f3f95ad61657076395cbbce23e2121fc5542074"
 
 [[package]]
 name = "io-lifetimes"
-version = "1.0.5"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1abeb7a0dd0f8181267ff8adc397075586500b81b28a73e8a0208b00fc170fb3"
+checksum = "cfa919a82ea574332e2de6e74b4c36e74d41982b335080fa59d4ef31be20fdf3"
 dependencies = [
  "libc",
  "windows-sys 0.45.0",
@@ -3887,7 +3887,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21b6b32576413a8e69b90e952e4a026476040d81017b80445deda5f2d3921857"
 dependencies = [
  "hermit-abi 0.3.1",
- "io-lifetimes 1.0.5",
+ "io-lifetimes 1.0.6",
  "rustix 0.36.9",
  "windows-sys 0.45.0",
 ]
@@ -3895,7 +3895,7 @@ dependencies = [
 [[package]]
 name = "issue"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "base64 0.13.1",
  "currency",
@@ -5126,7 +5126,7 @@ dependencies = [
 [[package]]
 name = "module-issue-rpc"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "jsonrpsee",
  "module-issue-rpc-runtime-api",
@@ -5139,7 +5139,7 @@ dependencies = [
 [[package]]
 name = "module-issue-rpc-runtime-api"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5150,7 +5150,7 @@ dependencies = [
 [[package]]
 name = "module-oracle-rpc-runtime-api"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5162,7 +5162,7 @@ dependencies = [
 [[package]]
 name = "module-redeem-rpc"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "jsonrpsee",
  "module-redeem-rpc-runtime-api",
@@ -5175,7 +5175,7 @@ dependencies = [
 [[package]]
 name = "module-redeem-rpc-runtime-api"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5186,7 +5186,7 @@ dependencies = [
 [[package]]
 name = "module-replace-rpc"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "jsonrpsee",
  "module-replace-rpc-runtime-api",
@@ -5199,7 +5199,7 @@ dependencies = [
 [[package]]
 name = "module-replace-rpc-runtime-api"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5210,7 +5210,7 @@ dependencies = [
 [[package]]
 name = "module-vault-registry-rpc"
 version = "0.3.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "jsonrpsee",
  "module-oracle-rpc-runtime-api",
@@ -5224,7 +5224,7 @@ dependencies = [
 [[package]]
 name = "module-vault-registry-rpc-runtime-api"
 version = "0.3.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "frame-support",
  "module-oracle-rpc-runtime-api",
@@ -5485,7 +5485,7 @@ dependencies = [
 [[package]]
 name = "nomination"
 version = "0.5.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "currency",
  "fee",
@@ -5655,7 +5655,7 @@ checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 [[package]]
 name = "oracle"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "currency",
  "dia-oracle",
@@ -9017,7 +9017,7 @@ dependencies = [
 [[package]]
 name = "redeem"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "currency",
  "fee",
@@ -9137,7 +9137,7 @@ checksum = "456c603be3e8d448b072f410900c09faf164fbce2d480456f50eea6e25f9c848"
 [[package]]
 name = "replace"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "currency",
  "fee",
@@ -9177,7 +9177,7 @@ dependencies = [
 [[package]]
 name = "reward"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -9466,7 +9466,7 @@ checksum = "fd5c6ff11fecd55b40746d1995a02f2eb375bf8c00d192d521ee09f42bef37bc"
 dependencies = [
  "bitflags",
  "errno",
- "io-lifetimes 1.0.5",
+ "io-lifetimes 1.0.6",
  "libc",
  "linux-raw-sys 0.1.4",
  "windows-sys 0.45.0",
@@ -10748,7 +10748,7 @@ dependencies = [
 [[package]]
 name = "security"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -11787,7 +11787,7 @@ dependencies = [
 [[package]]
 name = "spacewalk-primitives"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "bstringify",
  "frame-support",
@@ -11846,7 +11846,7 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 [[package]]
 name = "staking"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -11939,7 +11939,7 @@ dependencies = [
 [[package]]
 name = "stellar-relay"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "base64 0.13.1",
  "currency",
@@ -12894,7 +12894,7 @@ checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
 [[package]]
 name = "vault-registry"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#10dd5983540d1f86d8acf18f0bc4e86402a227a0"
+source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#058f92e9bea1fb4a0d665c5a9a3e32623c62fea9"
 dependencies = [
  "currency",
  "fee",

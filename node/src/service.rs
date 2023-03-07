@@ -22,11 +22,12 @@ use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayC
 use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node;
 
 use spacewalk_primitives::{
-	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest, Block as BlockSpacewalk,
-	BlockNumber, CurrencyId, VaultId, AccountId as AccountIdSpacewalk, Balance as BalanceSpacewalk, UnsignedFixedPoint
+	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest, 
+	BlockNumber, CurrencyId, AccountId as AccountIdSpacewalk, Balance as BalanceSpacewalk, UnsignedFixedPoint
 };
 
-use module_vault_registry_rpc_runtime_api::VaultRegistryApi;
+use foucoco_runtime::Block as RpcBlock;
+use foucoco_runtime::VaultId;
 
 // Substrate Imports
 use sc_executor::NativeElseWasmExecutor;
@@ -276,8 +277,8 @@ where
 		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
 		+ AuraApi<Block, AuthorityId>,
 	RuntimeApi: module_vault_registry_rpc::VaultRegistryRuntimeApi<
-		BlockSpacewalk,
-		VaultId<AccountIdSpacewalk, CurrencyId>,
+		RpcBlock,
+		VaultId,
 		BalanceSpacewalk,
 		UnsignedFixedPoint,
 		CurrencyId,
@@ -847,8 +848,8 @@ where
 		+ AuraApi<Block, AuthorityId>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	RuntimeApi: module_vault_registry_rpc::VaultRegistryRuntimeApi<
-		BlockSpacewalk,
-		VaultId<AccountIdSpacewalk, CurrencyId>,
+		RpcBlock,
+		VaultId,
 		BalanceSpacewalk,
 		UnsignedFixedPoint,
 		CurrencyId,

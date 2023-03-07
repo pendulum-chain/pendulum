@@ -18,9 +18,12 @@ use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 
 use spacewalk_primitives::{
 	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest,
-	BlockNumber, CurrencyId, Hash, VaultId, Block as BlockSpacewalk, Balance as BalanceSpacewalk,
+	BlockNumber, CurrencyId, Hash, Balance as BalanceSpacewalk,
 	AccountId as AccountIdSpacewalk, UnsignedFixedPoint
 };
+
+use foucoco_runtime::Block as RpcBlock;
+use foucoco_runtime::VaultId;
 
 /// A type representing all RPC extensions.
 pub type RpcExtension = jsonrpsee::RpcModule<()>;
@@ -77,8 +80,8 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	C::Api: module_vault_registry_rpc::VaultRegistryRuntimeApi<
-		BlockSpacewalk,
-		VaultId<AccountIdSpacewalk, CurrencyId>,
+		RpcBlock,
+		VaultId,
 		BalanceSpacewalk,
 		UnsignedFixedPoint,
 		CurrencyId,

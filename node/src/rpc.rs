@@ -16,11 +16,11 @@ use sp_api::ProvideRuntimeApi;
 use sp_arithmetic::FixedU128;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
+use sp_core::H256;
 
 use spacewalk_primitives::{
-	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest,
-	AccountId as AccountIdSpacewalk, Balance as BalanceSpacewalk, BlockNumber, CurrencyId, Hash,
-	UnsignedFixedPoint, VaultId,
+	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest, BlockNumber, CurrencyId,
+	Hash, UnsignedFixedPoint, VaultId,
 };
 
 /// A type representing all RPC extensions.
@@ -85,6 +85,24 @@ where
 		CurrencyId,
 		AccountId,
 	>,
+	C::Api: module_replace_rpc::ReplaceRuntimeApi<
+		Block,
+		AccountId,
+		H256,
+		ReplaceRequest<AccountId, BlockNumber, Balance, CurrencyId>,
+	>,
+	C::Api: module_issue_rpc::IssueRuntimeApi<
+		Block,
+		AccountId,
+		H256,
+		IssueRequest<AccountId, BlockNumber, Balance, CurrencyId>,
+	>,
+	C::Api: module_redeem_rpc::RedeemRuntimeApi<
+		Block,
+		AccountId,
+		H256,
+		RedeemRequest<AccountId, BlockNumber, Balance, CurrencyId>,
+	>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
@@ -100,6 +118,10 @@ where
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
+	module.merge(Issue::new(client.clone()).into_rpc())?;
+	module.merge(Redeem::new(client.clone()).into_rpc())?;
+	module.merge(Replace::new(client.clone()).into_rpc())?;
 	module.merge(VaultRegistry::new(client).into_rpc())?;
+
 	Ok(module)
 }

@@ -7225,6 +7225,8 @@ dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
+ "dia-oracle",
+ "dia-oracle-runtime-api",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
@@ -7244,9 +7246,13 @@ dependencies = [
  "pallet-bounties",
  "pallet-child-bounties",
  "pallet-collective",
+ "pallet-contracts",
+ "pallet-contracts-primitives",
  "pallet-democracy",
+ "pallet-identity",
  "pallet-multisig",
  "pallet-preimage",
+ "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",
@@ -7279,9 +7285,12 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "substrate-wasm-builder",
+ "vesting-manager",
  "xcm",
  "xcm-builder",
  "xcm-executor",
+ "zenlink-protocol",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
@@ -12933,6 +12942,23 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "vesting-manager"
+version = "0.0.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-vesting",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+]
 
 [[package]]
 name = "void"

@@ -39,9 +39,13 @@ pallet-balances = {git = "https://github.com/paritytech/substrate", default-feat
 pallet-bounties = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 pallet-child-bounties = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 pallet-collective = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
+pallet-contracts = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
+pallet-contracts-primitives = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 pallet-democracy = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
+pallet-identity = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 pallet-multisig = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 pallet-preimage = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
+pallet-randomness-collective-flip = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 pallet-scheduler = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 pallet-session = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
 pallet-sudo = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37"}
@@ -68,9 +72,17 @@ sp-version = {git = "https://github.com/paritytech/substrate", default-features 
 orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
 orml-traits = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
 orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
+orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.37" }
 
 # KILT
 parachain-staking = {path = "../../pallets/parachain-staking", default-features = false}
+
+# DIA
+dia-oracle = {git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.37"}
+dia-oracle-runtime-api = {git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.37"}
+
+# Pendulum Pallets
+vesting-manager = {path = "../../pallets/vesting-manager", default-features = false}
 
 # Polkadot
 pallet-xcm = {git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.37"}
@@ -92,8 +104,10 @@ cumulus-primitives-timestamp = {git = "https://github.com/paritytech/cumulus", d
 cumulus-primitives-utility = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.37"}
 parachain-info = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.37"}
 
-#orml
-orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.37" }
+# Zenlink
+zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "master" }
+zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "master" }
+
 
 [features]
 default = [
@@ -112,6 +126,8 @@ std = [
   "cumulus-primitives-core/std",
   "cumulus-primitives-timestamp/std",
   "cumulus-primitives-utility/std",
+  "dia-oracle/std",
+  "dia-oracle-runtime-api/std",
   "frame-executive/std",
   "frame-support/std",
   "frame-system-rpc-runtime-api/std",
@@ -126,8 +142,12 @@ std = [
   "pallet-bounties/std",
   "pallet-child-bounties/std",
   "pallet-collective/std",
+  "pallet-contracts/std",
+  "pallet-contracts-primitives/std",
   "pallet-democracy/std",
+  "pallet-identity/std",
   "pallet-preimage/std",
+  "pallet-randomness-collective-flip/std",
   "pallet-scheduler/std",
   "pallet-session/std",
   "pallet-sudo/std",
@@ -155,9 +175,12 @@ std = [
   "sp-std/std",
   "sp-transaction-pool/std",
   "sp-version/std",
+  "vesting-manager/std",
   "xcm-builder/std",
   "xcm-executor/std",
-  "xcm/std"
+  "xcm/std",
+  "zenlink-protocol/std",
+  "zenlink-protocol-runtime-api/std",
 ]
 
 runtime-benchmarks = [

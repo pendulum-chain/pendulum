@@ -9,8 +9,14 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod currency;
 mod weights;
 pub mod xcm_config;
+pub mod zenlink;
+use crate::zenlink::*;
+use xcm::v1::MultiLocation;
+use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
+
+use codec::Encode;
 
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -19,7 +25,7 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult,
+	ApplyExtrinsicResult, SaturatedConversion,
 };
 
 use sp_std::{marker::PhantomData, prelude::*};
@@ -32,8 +38,8 @@ use frame_support::{
 	dispatch::DispatchClass,
 	parameter_types,
 	traits::{
-		ConstU32, Contains, Currency, EitherOfDiverse, EqualPrivilegeOnly, Imbalance, OnUnbalanced,
-		WithdrawReasons,
+		ConstBool, ConstU32, Contains, Currency, EitherOfDiverse, EqualPrivilegeOnly, Imbalance,
+		OnUnbalanced, WithdrawReasons,
 	},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
@@ -54,9 +60,11 @@ use runtime_common::{
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 
+use dia_oracle::DiaOracle;
+
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
-use currency::{CurrencyId, ForeignCurrencyId};
+use currency::CurrencyId;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{currency::MutationHooks, parameter_type_with_key};
 
@@ -101,6 +109,8 @@ pub type SignedExtra = (
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
 	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+
+pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
@@ -150,10 +160,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("pendulum"),
 	impl_name: create_runtime_str!("pendulum"),
 	authoring_version: 1,
-	spec_version: 1,
+	spec_version: 3,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 1,
+	transaction_version: 3,
 	state_version: 1,
 };
 
@@ -258,7 +268,12 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Utility(_) |
 			RuntimeCall::Vesting(_) |
 			RuntimeCall::XTokens(_) |
-			RuntimeCall::Multisig(_) => true,
+			RuntimeCall::Multisig(_) |
+			RuntimeCall::Identity(_) |
+			RuntimeCall::Contracts(_) |
+			RuntimeCall::ZenlinkProtocol(_) |
+			RuntimeCall::DiaOracleModule(_) |
+			RuntimeCall::VestingManager(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -326,7 +341,7 @@ impl pallet_timestamp::Config for Runtime {
 	type Moment = u64;
 	type OnTimestampSet = ();
 	type MinimumPeriod = MinimumPeriod;
-	type WeightInfo = ();
+	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -419,7 +434,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-	type WeightInfo = ();
+	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -732,7 +747,7 @@ parameter_types! {
 	pub const MaxUnstakeRequests: u32 = 10;
 	pub const NetworkRewardStart: BlockNumber = BlockNumber::MAX;
 	pub const NetworkRewardRate: Perquintill = Perquintill::from_percent(0);
-	pub const CollatorRewardRateDecay: Perquintill = Perquintill::from_percent(95);
+	pub const CollatorRewardRateDecay: Perquintill = Perquintill::from_parts(938_252_045_000_000_000u64);
 }
 
 impl parachain_staking::Config for Runtime {
@@ -805,6 +820,136 @@ impl pallet_vesting::Config for Runtime {
 	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
 
+impl vesting_manager::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type VestingSchedule = Vesting;
+}
+
+const fn deposit(items: u32, bytes: u32) -> Balance {
+	(items as Balance * UNIT + (bytes as Balance) * (5 * MILLIUNIT / 100)) / 10
+}
+
+parameter_types! {
+	pub const DepositPerItem: Balance = deposit(1, 0);
+	pub const DepositPerByte: Balance = deposit(0, 1);
+	pub const DeletionQueueDepth: u32 = 128;
+	pub DeletionWeightLimit: Weight = RuntimeBlockWeights::get()
+		.per_class
+		.get(DispatchClass::Normal)
+		.max_total
+		.unwrap_or(RuntimeBlockWeights::get().max_block);
+	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
+}
+
+impl pallet_contracts::Config for Runtime {
+	type Time = Timestamp;
+	type Randomness = RandomnessCollectiveFlip;
+	type Currency = Balances;
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type CallFilter = frame_support::traits::Nothing;
+	type DepositPerItem = DepositPerItem;
+	type DepositPerByte = DepositPerByte;
+	type CallStack = [pallet_contracts::Frame<Self>; 5];
+	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
+	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
+	type ChainExtension = ();
+	type DeletionQueueDepth = DeletionQueueDepth;
+	type DeletionWeightLimit = DeletionWeightLimit;
+	type Schedule = Schedule;
+	type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
+	type MaxCodeLen = ConstU32<{ 123 * 1024 }>;
+	type MaxStorageKeyLen = ConstU32<128>;
+	type UnsafeUnstableInterface = ConstBool<true>;
+	type MaxDebugBufferLen = ConstU32<{ 2 * 1024 * 1024 }>;
+}
+
+impl pallet_randomness_collective_flip::Config for Runtime {}
+
+parameter_types! {
+	pub const BasicDeposit: Balance = 10 * UNIT;       // 258 bytes on-chain
+	pub const FieldDeposit: Balance = 25 * MILLIUNIT;  // 66 bytes on-chain
+	pub const SubAccountDeposit: Balance = 2 * UNIT;   // 53 bytes on-chain
+	pub const MaxSubAccounts: u32 = 100;
+	pub const MaxAdditionalFields: u32 = 100;
+	pub const MaxRegistrars: u32 = 20;
+}
+
+type EnsureRootOrHalfCouncil = EitherOfDiverse<
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
+>;
+
+impl pallet_identity::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type BasicDeposit = BasicDeposit;
+	type FieldDeposit = FieldDeposit;
+	type SubAccountDeposit = SubAccountDeposit;
+	type MaxSubAccounts = MaxSubAccounts;
+	type MaxAdditionalFields = MaxAdditionalFields;
+	type MaxRegistrars = MaxRegistrars;
+	type Slashed = Treasury;
+	type ForceOrigin = EnsureRootOrHalfCouncil;
+	type RegistrarOrigin = EnsureRootOrHalfCouncil;
+	type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
+}
+
+impl dia_oracle::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type AuthorityId = dia_oracle::crypto::DiaAuthId;
+	type WeightInfo = dia_oracle::weights::DiaWeightInfo<Runtime>;
+}
+
+impl frame_system::offchain::SigningTypes for Runtime {
+	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
+	type Signature = Signature;
+}
+
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
+	RuntimeCall: From<C>,
+{
+	type OverarchingCall = RuntimeCall;
+	type Extrinsic = UncheckedExtrinsic;
+}
+
+impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
+where
+	RuntimeCall: From<LocalCall>,
+{
+	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
+		call: RuntimeCall,
+		public: <Signature as sp_runtime::traits::Verify>::Signer,
+		account: AccountId,
+		index: Index,
+	) -> Option<(
+		RuntimeCall,
+		<UncheckedExtrinsic as sp_runtime::traits::Extrinsic>::SignaturePayload,
+	)> {
+		let period = BlockHashCount::get() as u64;
+		let current_block = System::block_number().saturated_into::<u64>().saturating_sub(1);
+		let tip = 0;
+		let extra: SignedExtra = (
+			frame_system::CheckNonZeroSender::<Runtime>::new(),
+			frame_system::CheckSpecVersion::<Runtime>::new(),
+			frame_system::CheckTxVersion::<Runtime>::new(),
+			frame_system::CheckGenesis::<Runtime>::new(),
+			frame_system::CheckEra::<Runtime>::from(generic::Era::mortal(period, current_block)),
+			frame_system::CheckNonce::<Runtime>::from(index),
+			frame_system::CheckWeight::<Runtime>::new(),
+			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+		);
+
+		let raw_payload = SignedPayload::new(call, extra).ok()?;
+		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
+		let address = account;
+		let (call, extra, _) = raw_payload.deconstruct();
+		Some((call, (sp_runtime::MultiAddress::Id(address), signature.into(), extra)))
+	}
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -854,7 +999,15 @@ construct_runtime!(
 		Utility: pallet_utility::{Pallet, Call, Event} = 51,
 		Currencies: orml_currencies::{Pallet, Call, Storage} = 52,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 53,
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 54
+		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 54,
+		Identity: pallet_identity::{Pallet, Storage, Call, Event<T>} = 55,
+		Contracts: pallet_contracts::{Pallet, Storage, Call, Event<T>} = 56,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 57,
+		DiaOracleModule: dia_oracle::{Pallet, Storage, Call, Event<T>} = 58,
+
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
+
+		VestingManager: vesting_manager::{Pallet, Call, Event<T>} = 100
 	}
 );
 
@@ -987,6 +1140,72 @@ impl_runtime_apis! {
 
 		fn get_staking_rates() -> parachain_staking::runtime_api::StakingRates {
 			ParachainStaking::get_staking_rates()
+		}
+	}
+
+	impl dia_oracle_runtime_api::DiaOracleApi<Block> for Runtime{
+		fn get_value(blockchain: frame_support::sp_std::vec::Vec<u8>, symbol: frame_support::sp_std::vec::Vec<u8>)-> Result<dia_oracle_runtime_api::PriceInfo, sp_runtime::DispatchError>{
+			DiaOracleModule::get_value(blockchain, symbol)
+		}
+
+		fn get_coin_info(blockchain: frame_support::sp_std::vec::Vec<u8>, symbol: frame_support::sp_std::vec::Vec<u8>)-> Result<dia_oracle_runtime_api::CoinInfo,sp_runtime::DispatchError>{
+			DiaOracleModule::get_coin_info(blockchain, symbol)
+		}
+	}
+
+	// zenlink runtime outer apis
+	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId, ZenlinkAssetId> for Runtime {
+
+		fn get_balance(
+			asset_id: ZenlinkAssetId,
+			owner: AccountId
+		) -> AssetBalance {
+			<Runtime as zenlink_protocol::Config>::MultiAssetsHandler::balance_of(asset_id, &owner)
+		}
+
+		fn get_sovereigns_info(
+			asset_id: ZenlinkAssetId
+		) -> Vec<(u32, AccountId, AssetBalance)> {
+			ZenlinkProtocol::get_sovereigns_info(&asset_id)
+		}
+
+		fn get_pair_by_asset_id(
+			asset_0: ZenlinkAssetId,
+			asset_1: ZenlinkAssetId
+		) -> Option<PairInfo<AccountId, AssetBalance, ZenlinkAssetId>> {
+			ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
+		}
+
+		fn get_amount_in_price(
+			supply: AssetBalance,
+			path: Vec<ZenlinkAssetId>
+		) -> AssetBalance {
+			ZenlinkProtocol::desired_in_amount(supply, path)
+		}
+
+		fn get_amount_out_price(
+			supply: AssetBalance,
+			path: Vec<ZenlinkAssetId>
+		) -> AssetBalance {
+			ZenlinkProtocol::supply_out_amount(supply, path)
+		}
+
+		fn get_estimate_lptoken(
+			token_0: ZenlinkAssetId,
+			token_1: ZenlinkAssetId,
+			amount_0_desired: AssetBalance,
+			amount_1_desired: AssetBalance,
+			amount_0_min: AssetBalance,
+			amount_1_min: AssetBalance,
+		) -> AssetBalance{
+			ZenlinkProtocol::get_estimate_lptoken(
+				token_0,
+				token_1,
+				amount_0_desired,
+				amount_1_desired,
+				amount_0_min,
+				amount_1_min
+			)
 		}
 	}
 

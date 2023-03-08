@@ -160,10 +160,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("pendulum"),
 	impl_name: create_runtime_str!("pendulum"),
 	authoring_version: 1,
-	spec_version: 3,
+	spec_version: 4,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 3,
+	transaction_version: 4,
 	state_version: 1,
 };
 
@@ -238,11 +238,6 @@ pub struct BaseFilter;
 impl Contains<RuntimeCall> for BaseFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		match call {
-			RuntimeCall::Balances(pallet_balances::Call::transfer { .. }) |
-			RuntimeCall::Balances(pallet_balances::Call::transfer_all { .. }) |
-			RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive { .. }) |
-			RuntimeCall::Vesting(pallet_vesting::Call::vested_transfer { .. }) => false,
-
 			// These modules are all allowed to be called by transactions:
 			RuntimeCall::Bounties(_) |
 			RuntimeCall::ChildBounties(_) |
@@ -261,7 +256,6 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Authorship(_) |
 			RuntimeCall::Session(_) |
 			RuntimeCall::ParachainSystem(_) |
-			RuntimeCall::Sudo(_) |
 			RuntimeCall::XcmpQueue(_) |
 			RuntimeCall::PolkadotXcm(_) |
 			RuntimeCall::DmpQueue(_) |
@@ -777,11 +771,6 @@ impl parachain_staking::Config for Runtime {
 	const BLOCKS_PER_YEAR: BlockNumber = BLOCKS_PER_YEAR;
 }
 
-impl pallet_sudo::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeCall = RuntimeCall;
-}
-
 parameter_types! {
 	pub const DepositBase: Balance = 300 * MILLIUNIT;
 	pub const DepositFactor: Balance = 50 * MILLIUNIT;
@@ -970,7 +959,6 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
 
 		// Governance
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 12,
 		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 13,
 		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Config<T>, Origin<T>, Event<T>} = 14,
 		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Config<T>, Origin<T>,  Event<T>} = 15,

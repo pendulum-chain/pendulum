@@ -817,7 +817,6 @@ fn pendulum_genesis(
 		},
 		council: pendulum_runtime::CouncilConfig { members: council.clone(), ..Default::default() },
 		democracy: Default::default(),
-		sudo: pendulum_runtime::SudoConfig { key: Some(sudo_account) },
 		technical_committee: pendulum_runtime::TechnicalCommitteeConfig {
 			members: council,
 			..Default::default()

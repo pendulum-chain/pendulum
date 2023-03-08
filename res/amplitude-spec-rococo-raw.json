@@ -3,8 +3,10 @@
   "id": "foucoco",
   "chainType": "Live",
   "bootNodes": [
-    "/dns4/penboot-roc-00.pendulumchain.tech/tcp/30335/p2p/12D3KooWERQvnnatnnBUqKf4Hsggm13Kfy8YbWZPsqNFfWJzFSyA",
-    "/dns4/penboot-roc-01.pendulumchain.tech/tcp/30335/p2p/12D3KooWERQvnnatnnBUqKf4Hsggm13Kfy8YbWZPsqNFfWJzFSyA"
+    "/dns4/pencol-roc-02.pendulumchain.tech/tcp/30335/p2p/12D3KooWDomXY4AHSUaJv3hv8oLfdxD9cV53Y8woJqE9NdFrt4zA",
+    "/dns4/pencol-roc-03.pendulumchain.tech/tcp/30335/p2p/12D3KooWSFXVwxqmLCxAnkdQozUKWeMY1z3kR7xdU1R8HT1MsLyT",
+    "/dns4/pencol-roc-00.pendulumchain.tech/tcp/30335/p2p/12D3KooWBZSjDbSr2h3TYSq7J2arFMkRPJYVoz4V18cs7EDaN5ac",
+    "/dns4/pencol-roc-01.pendulumchain.tech/tcp/30335/p2p/12D3KooWP9ibtZVoCC4zbev4sZVBA57iGAQYRiA8oQG4tzMneTAv"
   ],
   "telemetryEndpoints": null,
   "protocolId": "amplitude",

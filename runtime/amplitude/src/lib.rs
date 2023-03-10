@@ -1054,7 +1054,6 @@ impl currency::Config for Runtime {
 	type SignedInner = SignedInner;
 	type SignedFixedPoint = SignedFixedPoint;
 	type Balance = Balance;
-	type GetNativeCurrencyId = NativeCurrencyId;
 	type GetRelayChainCurrencyId = RelayChainCurrencyId;
 	type AssetConversion = primitives::AssetConversion;
 	type BalanceConversion = primitives::BalanceConversion;

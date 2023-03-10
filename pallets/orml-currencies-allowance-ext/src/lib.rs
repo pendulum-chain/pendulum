@@ -161,8 +161,7 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	// Check the amount approved to be spent by an owner to a delegate
 	pub fn is_allowed_currency(asset: CurrencyOf<T>) -> bool {
-		return true;
-		// return AllowedCurrencies::<T>::get(asset) == Some(())
+		return AllowedCurrencies::<T>::get(asset) == Some(())
 	}
 
 	// Check the amount approved to be spent by an owner to a delegate

@@ -15,6 +15,8 @@ use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
 
+use orml_traits::MultiCurrency;
+
 use codec::Encode;
 
 use smallvec::smallvec;
@@ -355,7 +357,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Security(_) |
 			RuntimeCall::StellarRelay(_) |
 			RuntimeCall::VaultRegistry(_) |
-			RuntimeCall::VaultRewards(_) => true,
+			RuntimeCall::VaultRewards(_) |
+			RuntimeCall::TokenAllowance(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -919,6 +922,329 @@ parameter_types! {
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 }
 
+
+use frame_support::{
+	log::{error, warn},
+	pallet_prelude::*,
+};
+use sp_std::vec::Vec;
+
+use pallet_contracts::chain_extension::{
+	ChainExtension,
+	Environment,
+	Ext,
+	InitState,
+	RetVal,
+	SysConfig,
+	// UncheckedFrom,
+};
+use sp_core::crypto::UncheckedFrom;
+
+#[derive(Default)]
+pub struct Psp22Extension;
+
+use runtime_common::chain_ext::*;
+pub(crate) type BalanceOfForChainExt<T> =
+	<<T as orml_currencies::Config>::MultiCurrency as orml_traits::MultiCurrency<
+		<T as frame_system::Config>::AccountId,
+	>>::Balance;
+
+impl<T> ChainExtension<T> for Psp22Extension
+where
+	T: SysConfig
+		+ orml_tokens::Config<CurrencyId = CurrencyId>
+		+ pallet_contracts::Config
+		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
+		+ orml_currencies_allowance_ext::Config,
+	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
+{
+	fn call<E: Ext>(&mut self, mut env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
+	where
+		E: Ext<T = T>,
+		<E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
+	{
+		let func_id = env.func_id();
+
+		warn!("func_id : {}", func_id);
+
+		match func_id {
+			//transfer
+			1105 => {
+				let ext = env.ext();
+				let address = ext.address().clone();
+				let caller = ext.caller().clone();
+				let mut env = env.buf_in_buf_out();
+				let create_asset: (
+					OriginType,
+					u8,
+					[u8; 12],
+					[u8; 32],
+					T::AccountId,
+					BalanceOfForChainExt<T>,
+				) = env.read_as()?;
+				let (origin_id, type_id, code, issuer, account_id, balance) = create_asset;
+
+				let address_account;
+				if origin_id == OriginType::Caller {
+					address_account = caller;
+				} else {
+					address_account = address;
+				}
+
+				warn!("asset_id : {:#?}", type_id);
+				warn!("address_account : {:#?}", address_account);
+				warn!("account_id : {:#?}", account_id);
+				warn!("balance : {:#?}", balance);
+
+				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+
+				let is_allowed_currency =
+					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+				if !is_allowed_currency {
+					return Err(DispatchError::Other(
+						"Currency id is not allowed for chain extension",
+					))
+				}
+
+				let result = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
+					currency_id,
+					&address_account,
+					&account_id,
+					balance,
+				);
+
+				warn!("result : {:#?}", result);
+			},
+
+			//balance
+			1106 => {
+
+				warn!("balance!!!");
+				let mut env = env.buf_in_buf_out();
+				let create_asset: (u8, [u8; 12], [u8; 32], T::AccountId) = env.read_as()?;
+				let (type_id, code, issuer, account_id) = create_asset;
+
+				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+
+				warn!("asset_id : {:#?}", type_id);
+				warn!("account_id : {:#?}", account_id);
+				
+				let is_allowed_currency =
+					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+				if !is_allowed_currency {
+					warn!("asset_id : {:#?} is_allowed_currency: false", type_id);
+					return Err(DispatchError::Other(
+						"Currency id is not allowed for chain extension",
+					))
+				}
+
+				let balance =
+					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
+						currency_id,
+						&account_id,
+					);
+
+				warn!("balance : {:#?}", balance);
+
+				env.write(&balance.encode(), false, None)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
+			},
+
+			//total_supply
+			1107 => {
+				let mut env = env.buf_in_buf_out();
+				let create_asset: (u8, [u8; 12], [u8; 32], T::AccountId) = env.read_as()?;
+				let (type_id, code, issuer, _account_id) = create_asset;
+
+				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+
+				let is_allowed_currency =
+					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+				if !is_allowed_currency {
+					return Err(DispatchError::Other(
+						"Currency id is not allowed for chain extension",
+					))
+				}
+
+				let total_supply =
+					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(
+						currency_id,
+					);
+
+				env.write(&total_supply.encode(), false, None).map_err(|_| {
+					DispatchError::Other("ChainExtension failed to call total_supply")
+				})?;
+			},
+
+			//approve_transfer
+			1108 => {
+				let ext = env.ext();
+				let address = ext.address().clone();
+				let caller = ext.caller().clone();
+				let mut env = env.buf_in_buf_out();
+				let create_asset: (
+					OriginType,
+					u8,
+					[u8; 12],
+					[u8; 32],
+					T::AccountId,
+					BalanceOfForChainExt<T>,
+				) = env.read_as()?;
+				let (origin_type, type_id, code, issuer, to, amount) = create_asset;
+
+				let from;
+				if origin_type == OriginType::Caller {
+					error!("OriginType::Caller");
+					from = caller;
+				} else {
+					error!("OriginType::Address");
+					from = address;
+				}
+
+				warn!("from : {:#?}", from);
+				warn!("origin_type : {:#?}", origin_type);
+				warn!("to : {:#?}", to);
+				warn!("amount : {:#?}", amount);
+
+				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+
+				let is_allowed_currency =
+					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+				if !is_allowed_currency {
+					return Err(DispatchError::Other(
+						"Currency id is not allowed for chain extension",
+					))
+				}
+
+				let result = orml_currencies_allowance_ext::Pallet::<T>::do_approve_transfer(
+					currency_id,
+					&from,
+					&to,
+					amount,
+				);
+
+				warn!("result : {:#?}", result);
+
+				match result {
+					DispatchResult::Ok(_) => {},
+					DispatchResult::Err(e) => {
+						let err = Result::<(), ChainExtensionErr>::Err(ChainExtensionErr::from(e));
+						env.write(&err.encode(), false, None).map_err(|_| {
+							error!("ChainExtension failed to call 'approve'");
+							DispatchError::Other("ChainExtension failed to call 'approve'")
+						})?;
+					},
+				}
+			},
+
+			//transfer_approved
+			1109 => {
+				let ext = env.ext();
+				let address = ext.address().clone();
+				let caller = ext.caller().clone();
+				let mut env = env.buf_in_buf_out();
+				let create_asset: (
+					T::AccountId,
+					(OriginType, u8, [u8; 12], [u8; 32], T::AccountId, BalanceOfForChainExt<T>),
+				) = env.read_as()?;
+				let owner = create_asset.0;
+				let (origin_type, type_id, code, issuer, to, amount) = create_asset.1;
+
+				let from;
+				if origin_type == OriginType::Caller {
+					from = caller;
+				} else {
+					from = address;
+				}
+
+				warn!("from : {:#?}", from);
+				warn!("owner : {:#?}", owner);
+				warn!("origin_type : {:#?}", origin_type);
+				warn!("to : {:#?}", to);
+				warn!("amount : {:#?}", amount);
+
+				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+
+				let is_allowed_currency =
+					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+				if !is_allowed_currency {
+					return Err(DispatchError::Other(
+						"Currency id is not allowed for chain extension",
+					))
+				}
+
+				let result = orml_currencies_allowance_ext::Pallet::<T>::do_transfer_approved(
+					currency_id,
+					&owner,
+					&from,
+					&to,
+					amount,
+				);
+
+				warn!("transfer_from : {:#?}", result);
+
+				match result {
+					DispatchResult::Ok(_) => {},
+					DispatchResult::Err(e) => {
+						let err = Result::<(), ChainExtensionErr>::Err(ChainExtensionErr::from(e));
+						env.write(&err.encode(), false, None).map_err(|_| {
+							DispatchError::Other(
+								"ChainExtension failed to call 'approved transfer'",
+							)
+						})?;
+					},
+				}
+			},
+
+			//allowance
+			1110 => {
+				let mut env = env.buf_in_buf_out();
+				let allowance_request: (u8, [u8; 12], [u8; 32], T::AccountId, T::AccountId) =
+					env.read_as()?;
+
+				let currency_id =
+					try_from(allowance_request.0, allowance_request.1, allowance_request.2)
+						.unwrap_or(CurrencyId::Native);
+
+				let is_allowed_currency =
+					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+				if !is_allowed_currency {
+					return Err(DispatchError::Other(
+						"Currency id is not allowed for chain extension",
+					))
+				}
+
+				let allowance = orml_currencies_allowance_ext::Pallet::<T>::allowance(
+					currency_id,
+					&allowance_request.3,
+					&allowance_request.4,
+				);
+				warn!("allowance_request : {:#?}", allowance_request);
+				warn!("allowance : {:#?}", allowance);
+
+				env.write(&allowance.encode(), false, None)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
+			},
+
+			//TODO
+			7777 => {
+				error!("Called an dia oracle `func_id`: {:}", func_id);
+				return Err(DispatchError::Other("Unimplemented dia oracle func_id"))
+			},
+			_ => {
+				error!("Called an unregistered `func_id`: {:}", func_id);
+				return Err(DispatchError::Other("Unimplemented func_id"))
+			},
+		}
+
+		Ok(RetVal::Converging(0))
+	}
+
+	fn enabled() -> bool {
+		true
+	}
+}
+
 impl pallet_contracts::Config for Runtime {
 	type Time = Timestamp;
 	type Randomness = RandomnessCollectiveFlip;
@@ -931,7 +1257,7 @@ impl pallet_contracts::Config for Runtime {
 	type CallStack = [pallet_contracts::Frame<Self>; 5];
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-	type ChainExtension = ();
+	type ChainExtension = Psp22Extension;
 	type DeletionQueueDepth = DeletionQueueDepth;
 	type DeletionWeightLimit = DeletionWeightLimit;
 	type Schedule = Schedule;
@@ -943,6 +1269,10 @@ impl pallet_contracts::Config for Runtime {
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
+
+impl orml_currencies_allowance_ext::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+}
 
 parameter_types! {
 	pub const BasicDeposit: Balance = 10 * UNIT;       // 258 bytes on-chain
@@ -1038,7 +1368,7 @@ impl currency::Config for Runtime {
 	type SignedInner = SignedInner;
 	type SignedFixedPoint = SignedFixedPoint;
 	type Balance = Balance;
-	type GetNativeCurrencyId = NativeCurrencyId;
+	// type GetNativeCurrencyId = NativeCurrencyId;
 	type GetRelayChainCurrencyId = RelayChainCurrencyId;
 	type AssetConversion = primitives::AssetConversion;
 	type BalanceConversion = primitives::BalanceConversion;
@@ -1223,6 +1553,8 @@ construct_runtime!(
 		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 69,
 		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 70,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
+
+		TokenAllowance: orml_currencies_allowance_ext::{Pallet, Storage, Call, Event<T>} = 80,
 	}
 );
 

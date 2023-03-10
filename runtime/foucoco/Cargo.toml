@@ -97,6 +97,8 @@ orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 # KILT
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
 
+orml-currencies-allowance-ext = {path = "../../pallets/orml-currencies-allowance-ext", default-features = false}
+
 # DIA
 dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.37" }
 dia-oracle-runtime-api = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.37" }
@@ -217,6 +219,7 @@ std = [
     "module-replace-rpc-runtime-api/std",
     "module-vault-registry-rpc-runtime-api/std",
     "spacewalk-primitives/std",
+    "orml-currencies-allowance-ext/std"
 ]
 
 runtime-benchmarks = [

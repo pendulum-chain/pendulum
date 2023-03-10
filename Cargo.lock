@@ -2807,6 +2807,7 @@ dependencies = [
  "nomination",
  "oracle",
  "orml-currencies",
+ "orml-currencies-allowance-ext",
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "orml-xtokens",
@@ -5124,6 +5125,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "mocktopus"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e4f0d5a1621fea252541cf67533c4b9c32ee892d790768f4ad48f1063059537"
+dependencies = [
+ "mocktopus_macros",
+]
+
+[[package]]
+name = "mocktopus_macros"
+version = "0.7.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3048ef3680533a27f9f8e7d6a0bce44dc61e4895ea0f42709337fa1c8616fefe"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "module-issue-rpc"
 version = "1.2.0"
 source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#c6d3ede8d9554e048157186c318b544bba6614d4"
@@ -5729,6 +5750,26 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "orml-currencies-allowance-ext"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "mocktopus",
+ "orml-currencies",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sha2 0.8.2",
+ "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",

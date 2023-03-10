@@ -701,6 +701,11 @@ fn foucoco_genesis(
 			),
 	));
 
+	let token_balances = balances
+		.iter()
+		.flat_map(|k| vec![(k.0.clone(), XCM(0), 1 << 60), (k.0.clone(), XCM(1), 1 << 60)])
+		.collect();
+
 	let stakers: Vec<_> = invulnerables
 		.iter()
 		.cloned()
@@ -761,13 +766,13 @@ fn foucoco_genesis(
 		},
 		tokens: foucoco_runtime::TokensConfig {
 			// Configure the initial token supply for the native currency and USDC asset
-			balances: vec![],
+			balances: token_balances,
 		},
 		issue: foucoco_runtime::IssueConfig {
 			issue_period: foucoco_runtime::DAYS,
 			issue_minimum_transfer_amount: 1000,
 			limit_volume_amount: None,
-			limit_volume_currency_id: XCM(DOT),
+			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
 			interval_length: (60u32 * 60 * 24).into(),
 			last_interval_index: 0u32.into(),
@@ -776,7 +781,7 @@ fn foucoco_genesis(
 			redeem_period: foucoco_runtime::DAYS,
 			redeem_minimum_transfer_amount: 1000,
 			limit_volume_amount: None,
-			limit_volume_currency_id: XCM(DOT),
+			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
 			interval_length: (60u32 * 60 * 24).into(),
 			last_interval_index: 0u32.into(),
@@ -800,7 +805,7 @@ fn foucoco_genesis(
 			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
-			minimum_collateral_vault: vec![(XCM(0), 0), (XCM(KSM), 0)],
+			minimum_collateral_vault: vec![(XCM(0), 0), (XCM(0), 0)],
 			punishment_delay: foucoco_runtime::DAYS,
 			secure_collateral_threshold: vec![(
 				default_pair(XCM(0)),
@@ -913,7 +918,6 @@ fn pendulum_genesis(
 		},
 		council: pendulum_runtime::CouncilConfig { members: council.clone(), ..Default::default() },
 		democracy: Default::default(),
-		sudo: pendulum_runtime::SudoConfig { key: Some(sudo_account) },
 		technical_committee: pendulum_runtime::TechnicalCommitteeConfig {
 			members: council,
 			..Default::default()

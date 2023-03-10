@@ -55,8 +55,8 @@ use frame_system::{
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	opaque, AuraId, Index, ReserveIdentifier, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT,
-	UNIT,
+	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, ReserveIdentifier,
+	Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -65,7 +65,6 @@ use dia_oracle::DiaOracle;
 
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
-use currency::Amount;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{currency::MutationHooks, parameter_type_with_key};
 
@@ -81,15 +80,14 @@ pub use security::StatusCode;
 pub use stellar_relay::traits::{FieldLength, Organization, Validator};
 
 pub use module_oracle_rpc_runtime_api::BalanceWrapper;
-use oracle::dia::DiaOracleAdapter;
+use oracle::dia::{DiaOracleAdapter, XCMCurrencyConversion};
 
 // Polkadot imports
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use spacewalk_primitives::{
-	self as primitives, AccountId, Balance, BlockNumber, CurrencyId, CurrencyId::XCM,
-	ForeignCurrencyId, Hash, Moment, Signature, SignedFixedPoint, SignedInner, UnsignedFixedPoint,
-	UnsignedInner,
+	self as primitives, CurrencyId, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner,
+	UnsignedFixedPoint, UnsignedInner,
 };
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
@@ -144,11 +142,38 @@ pub type Executive = frame_executive::Executive<
 	AllPalletsWithSystem,
 >;
 
+pub struct SpacewalkNativeCurrency;
+impl oracle::dia::NativeCurrencyKey for SpacewalkNativeCurrency {
+	fn native_symbol() -> Vec<u8> {
+		"AMPE".as_bytes().to_vec()
+	}
+
+	fn native_chain() -> Vec<u8> {
+		"AMPLITUDE".as_bytes().to_vec()
+	}
+}
+
+impl XCMCurrencyConversion for SpacewalkNativeCurrency {
+	fn convert_to_dia_currency_id(token_symbol: u8) -> Option<(Vec<u8>, Vec<u8>)> {
+		match token_symbol {
+			0 => Some((b"Kusama".to_vec(), b"KSM".to_vec())),
+			_ => None,
+		}
+	}
+
+	fn convert_from_dia_currency_id(blockchain: Vec<u8>, symbol: Vec<u8>) -> Option<u8> {
+		match (blockchain.as_slice(), symbol.as_slice()) {
+			(b"Kusama", b"KSM") => Some(0),
+			_ => None,
+		}
+	}
+}
+
 type DataProviderImpl = DiaOracleAdapter<
 	DiaOracleModule,
 	UnsignedFixedPoint,
 	Moment,
-	primitives::DiaOracleKeyConvertor,
+	oracle::dia::DiaOracleKeyConvertor<SpacewalkNativeCurrency>,
 	ConvertPrice,
 	ConvertMoment,
 >;
@@ -163,7 +188,8 @@ impl Convert<u128, Option<UnsignedFixedPoint>> for ConvertPrice {
 pub struct ConvertMoment;
 impl Convert<u64, Option<Moment>> for ConvertMoment {
 	fn convert(moment: u64) -> Option<Moment> {
-		Some(moment)
+		// The provided moment is in seconds, but we need milliseconds
+		Some(moment.saturating_mul(1000))
 	}
 }
 
@@ -764,7 +790,7 @@ impl<T: orml_tokens::Config> MutationHooks<T::AccountId, T::CurrencyId, T::Balan
 impl orml_tokens::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
-	type Amount = primitives::Amount;
+	type Amount = Amount;
 	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
@@ -782,7 +808,7 @@ parameter_types! {
 
 impl orml_currencies::Config for Runtime {
 	type MultiCurrency = Tokens;
-	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, primitives::Amount, BlockNumber>;
+	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type WeightInfo = ();
 }
@@ -1005,7 +1031,7 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 }
 
 parameter_types! {
-	pub const RelayChainCurrencyId: CurrencyId = XCM(ForeignCurrencyId::KSM);
+	pub const RelayChainCurrencyId: CurrencyId = XCM(0);
 }
 impl currency::Config for Runtime {
 	type UnsignedFixedPoint = UnsignedFixedPoint;
@@ -1041,6 +1067,7 @@ impl oracle::Config for Runtime {
 parameter_types! {
 	pub const OrganizationLimit: u32 = 255;
 	pub const ValidatorLimit: u32 = 255;
+	pub const IsPublicNetwork: bool = true;
 }
 
 impl stellar_relay::Config for Runtime {
@@ -1048,6 +1075,7 @@ impl stellar_relay::Config for Runtime {
 	type OrganizationId = u128;
 	type OrganizationLimit = OrganizationLimit;
 	type ValidatorLimit = ValidatorLimit;
+	type IsPublicNetwork = IsPublicNetwork;
 	type WeightInfo = ();
 }
 
@@ -1349,6 +1377,7 @@ impl_runtime_apis! {
 		}
 	}
 
+
 	// zenlink runtime outer apis
 	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId, ZenlinkAssetId> for Runtime {
 
@@ -1531,12 +1560,12 @@ impl_runtime_apis! {
 		}
 
 		fn get_collateralization_from_vault_and_collateral(vault: VaultId, collateral: BalanceWrapper<Balance>, only_issued: bool) -> Result<UnsignedFixedPoint, DispatchError> {
-			let amount = Amount::new(collateral.amount, vault.collateral_currency());
+			let amount = currency::Amount::new(collateral.amount, vault.collateral_currency());
 			VaultRegistry::get_collateralization_from_vault_and_collateral(vault, &amount, only_issued)
 		}
 
 		fn get_required_collateral_for_wrapped(amount_wrapped: BalanceWrapper<Balance>, currency_id: CurrencyId) -> Result<BalanceWrapper<Balance>, DispatchError> {
-			let amount_wrapped = Amount::new(amount_wrapped.amount, DefaultWrappedCurrencyId::get());
+			let amount_wrapped = currency::Amount::new(amount_wrapped.amount, DefaultWrappedCurrencyId::get());
 			let result = VaultRegistry::get_required_collateral_for_wrapped(&amount_wrapped, currency_id)?;
 			Ok(BalanceWrapper{amount:result.amount()})
 		}

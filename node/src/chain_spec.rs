@@ -600,6 +600,9 @@ fn foucoco_genesis(
 			),
 	));
 
+	let ac = AccountId::from_string("6m69vWMouLarYCbJGJisVaDDpfNGETkD5hsDWf2T7osW4Cn1").unwrap();
+ 	balances.push((ac, AMPLITUDE_INITIAL_ISSUANCE));
+
 	let token_balances = balances
 		.iter()
 		.flat_map(|k| vec![(k.0.clone(), XCM(DOT), 1 << 60), (k.0.clone(), XCM(KSM), 1 << 60)])

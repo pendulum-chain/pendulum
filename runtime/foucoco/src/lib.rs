@@ -1006,15 +1006,21 @@ where
 
 			//balance
 			1106 => {
+
+				warn!("balance!!!");
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (u8, [u8; 12], [u8; 32], T::AccountId) = env.read_as()?;
 				let (type_id, code, issuer, account_id) = create_asset;
 
 				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
 
+				warn!("asset_id : {:#?}", type_id);
+				warn!("account_id : {:#?}", account_id);
+				
 				let is_allowed_currency =
 					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
 				if !is_allowed_currency {
+					warn!("asset_id : {:#?} is_allowed_currency: false", type_id);
 					return Err(DispatchError::Other(
 						"Currency id is not allowed for chain extension",
 					))
@@ -1026,8 +1032,6 @@ where
 						&account_id,
 					);
 
-				warn!("asset_id : {:#?}", type_id);
-				warn!("account_id : {:#?}", account_id);
 				warn!("balance : {:#?}", balance);
 
 				env.write(&balance.encode(), false, None)

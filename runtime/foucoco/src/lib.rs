@@ -922,7 +922,6 @@ parameter_types! {
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 }
 
-
 use frame_support::{
 	log::{error, warn},
 	pallet_prelude::*,
@@ -1018,7 +1017,6 @@ where
 
 			//balance
 			1106 => {
-
 				warn!("balance!!!");
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (u8, [u8; 12], [u8; 32], T::AccountId) = env.read_as()?;
@@ -1028,7 +1026,7 @@ where
 
 				warn!("asset_id : {:#?}", type_id);
 				warn!("account_id : {:#?}", account_id);
-				
+
 				let is_allowed_currency =
 					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
 				if !is_allowed_currency {

@@ -9404,9 +9404,12 @@ dependencies = [
 name = "runtime-common"
 version = "0.1.0"
 dependencies = [
+ "parity-scale-codec",
+ "scale-info",
  "sp-consensus-aura",
  "sp-core",
  "sp-runtime",
+ "spacewalk-primitives",
 ]
 
 [[package]]

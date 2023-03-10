@@ -12,3 +12,7 @@ members = [
 	"runtime/pendulum",
 	"runtime/development",
 ]
+
+exclude = [
+    "contracts/",
+]

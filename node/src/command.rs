@@ -426,7 +426,7 @@ pub fn run() -> Result<()> {
 						sp_core::crypto::set_default_ss58_version(
 							amplitude_runtime::SS58Prefix::get().into(),
 						);
-						crate::service::start_parachain_node::<amplitude_runtime::RuntimeApi, AmplitudeRuntimeExecutor>(
+						crate::service::start_parachain_node_spacewalk_amplitude::<AmplitudeRuntimeExecutor>(
 							config,
 							polkadot_config,
 							collator_options,
@@ -441,7 +441,7 @@ pub fn run() -> Result<()> {
 						sp_core::crypto::set_default_ss58_version(
 							foucoco_runtime::SS58Prefix::get().into(),
 						);
-						crate::service::start_parachain_node_spacewalk::<FoucocoRuntimeExecutor>(
+						crate::service::start_parachain_node_spacewalk_foucoco::<FoucocoRuntimeExecutor>(
 							config,
 							polkadot_config,
 							collator_options,

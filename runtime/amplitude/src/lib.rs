@@ -56,8 +56,8 @@ use frame_system::{
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	opaque, AuraId, Index, ReserveIdentifier, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT,
-	UNIT,
+	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, ReserveIdentifier,
+	Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -66,7 +66,6 @@ use dia_oracle::DiaOracle;
 
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
-use currency::Amount;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{currency::MutationHooks, parameter_type_with_key};
 
@@ -90,8 +89,8 @@ pub use stellar_relay::traits::{FieldLength, Organization, Validator};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use spacewalk_primitives::{
-	self as primitives, AccountId, Balance, BlockNumber, CurrencyId, CurrencyId::XCM, Hash, Moment,
-	Signature, SignedFixedPoint, SignedInner, UnsignedFixedPoint, UnsignedInner,
+	self as primitives, CurrencyId, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner,
+	UnsignedFixedPoint, UnsignedInner,
 };
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
@@ -195,7 +194,8 @@ pub struct ConvertMoment;
 
 impl Convert<u64, Option<Moment>> for ConvertMoment {
 	fn convert(moment: u64) -> Option<Moment> {
-		Some(moment)
+		// The provided moment is in seconds, but we need milliseconds
+		Some(moment.saturating_mul(1000))
 	}
 }
 
@@ -803,7 +803,7 @@ impl<T: orml_tokens::Config> MutationHooks<T::AccountId, T::CurrencyId, T::Balan
 impl orml_tokens::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
-	type Amount = primitives::Amount;
+	type Amount = Amount;
 	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
@@ -821,7 +821,7 @@ parameter_types! {
 
 impl orml_currencies::Config for Runtime {
 	type MultiCurrency = Tokens;
-	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, primitives::Amount, BlockNumber>;
+	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type WeightInfo = ();
 }
@@ -1552,11 +1552,11 @@ impl_runtime_apis! {
 			VaultRegistry::get_collateralization_from_vault(vault, only_issued)
 		}
 		fn get_collateralization_from_vault_and_collateral(vault: VaultId, collateral: BalanceWrapper<Balance>, only_issued: bool) -> Result<UnsignedFixedPoint, DispatchError> {
-			let amount = Amount::new(collateral.amount, vault.collateral_currency());
+			let amount = currency::Amount::new(collateral.amount, vault.collateral_currency());
 			VaultRegistry::get_collateralization_from_vault_and_collateral(vault, &amount, only_issued)
 		}
 		fn get_required_collateral_for_wrapped(amount_wrapped: BalanceWrapper<Balance>, currency_id: CurrencyId) -> Result<BalanceWrapper<Balance>, DispatchError> {
-			let amount_wrapped = Amount::new(amount_wrapped.amount, DefaultWrappedCurrencyId::get());
+			let amount_wrapped = currency::Amount::new(amount_wrapped.amount, DefaultWrappedCurrencyId::get());
 			let result = VaultRegistry::get_required_collateral_for_wrapped(&amount_wrapped, currency_id)?;
 			Ok(BalanceWrapper{amount:result.amount()})
 		}

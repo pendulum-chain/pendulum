@@ -518,7 +518,7 @@ fn amplitude_genesis(
 			),
 	));
 
-	let token_balances = balances.iter().flat_map(|k| vec![]).collect();
+	let token_balances = vec![];
 
 	let stakers: Vec<_> = invulnerables
 		.iter()
@@ -533,12 +533,6 @@ fn amplitude_genesis(
 		Perquintill::from_percent(40),
 		Perquintill::from_percent(9),
 	);
-
-	let limit_volume_currency_id = amplitude_runtime::WRAPPED_USDC_CURRENCY;
-	let limit_volume_amount = match &limit_volume_currency_id {
-		CurrencyId::Stellar(asset) => Some(asset.one().saturating_mul(900)),
-		_ => None,
-	};
 
 	amplitude_runtime::GenesisConfig {
 		system: amplitude_runtime::SystemConfig {
@@ -590,8 +584,8 @@ fn amplitude_genesis(
 		issue: amplitude_runtime::IssueConfig {
 			issue_period: amplitude_runtime::DAYS,
 			issue_minimum_transfer_amount: 1000,
-			limit_volume_amount,
-			limit_volume_currency_id,
+			limit_volume_amount: None,
+			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
 			interval_length: (60u32 * 60 * 24).into(),
 			last_interval_index: 0u32.into(),
@@ -599,8 +593,8 @@ fn amplitude_genesis(
 		redeem: amplitude_runtime::RedeemConfig {
 			redeem_period: foucoco_runtime::DAYS,
 			redeem_minimum_transfer_amount: 1000,
-			limit_volume_amount,
-			limit_volume_currency_id,
+			limit_volume_amount: None,
+			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
 			interval_length: (60u32 * 60 * 24).into(),
 			last_interval_index: 0u32.into(),

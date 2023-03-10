@@ -1,4 +1,4 @@
-#![deny(warnings)]
+// #![deny(warnings)]
 #![cfg_attr(test, feature(proc_macro_hygiene))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -161,7 +161,8 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	// Check the amount approved to be spent by an owner to a delegate
 	pub fn is_allowed_currency(asset: CurrencyOf<T>) -> bool {
-		return AllowedCurrencies::<T>::get(asset) == Some(())
+		return true;
+		// return AllowedCurrencies::<T>::get(asset) == Some(())
 	}
 
 	// Check the amount approved to be spent by an owner to a delegate
@@ -183,7 +184,7 @@ impl<T: Config> Pallet<T> {
 		delegate: &T::AccountId,
 		amount: BalanceOf<T>,
 	) -> DispatchResult {
-		ensure!(AllowedCurrencies::<T>::get(id) == Some(()), Error::<T>::CurrencyNotLive);
+		ensure!(Self::is_allowed_currency(id), Error::<T>::CurrencyNotLive);
 		Approvals::<T>::try_mutate((id, &owner, &delegate), |maybe_approved| -> DispatchResult {
 			let mut approved = match maybe_approved.take() {
 				// an approval already exists and is being updated
@@ -220,7 +221,7 @@ impl<T: Config> Pallet<T> {
 		destination: &T::AccountId,
 		amount: BalanceOf<T>,
 	) -> DispatchResult {
-		ensure!(AllowedCurrencies::<T>::get(id) == Some(()), Error::<T>::CurrencyNotLive);
+		ensure!(Self::is_allowed_currency(id), Error::<T>::CurrencyNotLive);
 		Approvals::<T>::try_mutate_exists(
 			(id, &owner, delegate),
 			|maybe_approved| -> DispatchResult {

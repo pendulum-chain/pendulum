@@ -25,13 +25,30 @@ use ink_lang as ink;
 use ink_prelude::{string::String, vec::Vec};
 
 // use crate::traits::psp22::PSP22Error;
-use crate::PSP22Error;
+// use crate::PSP22Error;
 use ink_lang::ChainExtensionInstance;
 
-use brush::{
-	declare_storage_trait,
-	traits::{AccountId, AccountIdExt, Balance, Flush},
-};
+// use brush::{
+// 	declare_storage_trait,
+// 	traits::{AccountId, AccountIdExt, Balance, Flush},
+// };
+
+#[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+pub enum PSP22Error {
+    /// Custom error type for cases if writer of traits added own restrictions
+    Custom(String),
+    /// Returned if not enough balance to fulfill a request is available.
+    InsufficientBalance,
+    /// Returned if not enough allowance to fulfill a request is available.
+    InsufficientAllowance,
+    /// Returned if recipient's address is zero.
+    ZeroRecipientAddress,
+    /// Returned if sender's address is zero.
+    ZeroSenderAddress,
+    /// Returned if safe transfer check fails
+    SafeTransferCheckFailed(String),
+}
 
 pub struct PendulumChainExt;
 

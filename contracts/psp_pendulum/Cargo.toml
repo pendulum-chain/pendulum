@@ -19,7 +19,7 @@ scale-info = { version = "2", default-features = false, features = ["derive"], o
 ethnum = { version = "1", features = ["macros"] }
 
 # These dependencies
-brush = { git = "https://github.com/Supercolony-net/openbrush-contracts", default-features = false, features = ["psp22"], branch = "feature/psp22-extension-pallet-assets" }
+# brush = { git = "https://github.com/Supercolony-net/openbrush-contracts", default-features = false, features = ["psp22"], branch = "feature/psp22-extension-pallet-assets" }
 
 [lib]
 name = "psp22_pendulum"
@@ -43,7 +43,7 @@ std = [
     "scale-info/std",
 
     # These dependencies
-    "brush/std",
+    # "brush/std",
 ]
 ink-as-dependency = []
 

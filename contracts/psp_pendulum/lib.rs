@@ -28,20 +28,22 @@ use ink_prelude::{string::String, vec::Vec};
 
 mod psp_pendulum_lib;
 
-use crate::pallet_assets::*;
-use brush::{
-	contracts::psp22::{utils::*, PSP22Error, *},
-	modifiers,
-};
+// use crate::pallet_assets::*;
+// use brush::{
+// 	contracts::psp22::{utils::*, PSP22Error, *},
+// 	modifiers,
+// };
+use crate::psp_pendulum_lib::PSP22Error;
 use ink_lang::ChainExtensionInstance;
 
-#[brush::contract]
+// #[brush::contract]
+#[ink::contract]
 mod my_psp22_pallet_asset {
 	use crate::*;
-	use brush::contracts::{
-		psp22::{psp22_pallet_asset::*, *},
-		traits::psp22::psp22asset::*,
-	};
+	// use brush::contracts::{
+	// 	psp22::{psp22_pallet_asset::*, *},
+	// 	traits::psp22::psp22asset::*,
+	// };
 	use ink_lang::codegen::StaticEnv;
 	use ink_prelude::string::String;
 	use ink_storage::traits::SpreadAllocate;

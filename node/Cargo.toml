@@ -28,7 +28,6 @@ foucoco-runtime = {path = "../runtime/foucoco"}
 pendulum-runtime = {path = "../runtime/pendulum"}
 development-runtime = {path = "../runtime/development"}
 runtime-common = {path = "../runtime/common"}
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch = "dev/milestone-3" }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }

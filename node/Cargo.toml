@@ -15,12 +15,12 @@ codec = { package = "parity-scale-codec", version = "3.0.0" }
 serde = { version = "1.0.145", features = ["derive"] }
 jsonrpsee = { version = "0.16.2", features = ["server"] }
 
-module-issue-rpc = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3" }
-module-redeem-rpc = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3" }
-module-replace-rpc = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3" }
-module-vault-registry-rpc = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3" }
+module-issue-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"}
+module-redeem-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"}
+module-replace-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"}
+module-vault-registry-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"}
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"}
 
 # Local
 amplitude-runtime = {path = "../runtime/amplitude"}

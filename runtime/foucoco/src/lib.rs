@@ -1066,7 +1066,7 @@ impl oracle::Config for Runtime {
 parameter_types! {
 	pub const OrganizationLimit: u32 = 255;
 	pub const ValidatorLimit: u32 = 255;
-	pub const IsPublicNetwork: bool = true;
+	pub const IsPublicNetwork: bool = false;
 }
 
 impl stellar_relay::Config for Runtime {

@@ -1,7 +1,7 @@
 [package]
 authors = ["Pendulum Chain"]
 edition = "2021"
-name = "orml-currencies-allowance-ext"
+name = "orml-currencies-allowance-extension"
 version = "1.0.0"
 
 [dependencies]

@@ -1,4 +1,4 @@
-// #![deny(warnings)]
+#![deny(warnings)]
 #![cfg_attr(test, feature(proc_macro_hygiene))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -42,14 +42,14 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		AddedAllowedCurrencies {
+		AllowedCurrenciesAdded {
 			currencies: Vec<CurrencyOf<T>>,
 		},
-		DeletedAllowedCurrencies {
+		AllowedCurrenciesDeleted {
 			currencies: Vec<CurrencyOf<T>>,
 		},
 		/// (Additional) funds have been approved for transfer to a destination account.
-		ApprovedTransfer {
+		TransferApproved {
 			currency_id: CurrencyOf<T>,
 			source: T::AccountId,
 			delegate: T::AccountId,
@@ -130,7 +130,7 @@ pub mod pallet {
 				AllowedCurrencies::<T>::insert(i, ());
 			}
 
-			Self::deposit_event(Event::AddedAllowedCurrencies { currencies });
+			Self::deposit_event(Event::AllowedCurrenciesAdded { currencies });
 			Ok(())
 		}
 
@@ -150,7 +150,7 @@ pub mod pallet {
 				AllowedCurrencies::<T>::remove(i);
 			}
 
-			Self::deposit_event(Event::DeletedAllowedCurrencies { currencies });
+			Self::deposit_event(Event::AllowedCurrenciesDeleted { currencies });
 			Ok(())
 		}
 	}
@@ -196,7 +196,7 @@ impl<T: Config> Pallet<T> {
 			*maybe_approved = Some(approved);
 			Ok(())
 		})?;
-		Self::deposit_event(Event::ApprovedTransfer {
+		Self::deposit_event(Event::TransferApproved {
 			currency_id: id,
 			source: owner.clone(),
 			delegate: delegate.clone(),

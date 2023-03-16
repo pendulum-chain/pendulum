@@ -956,7 +956,8 @@ where
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
-		+ orml_currencies_allowance_ext::Config,
+		+ orml_currencies_allowance_ext::Config
+		+ dia_oracle::Config,
 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 {
 	fn call<E: Ext>(&mut self, mut env: Environment<E, InitState>) -> Result<RetVal, DispatchError>

@@ -1,6 +1,6 @@
 use super::{
-	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem,
-	PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
+	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
+	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
 };
 use core::marker::PhantomData;
 use frame_support::{
@@ -66,8 +66,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
-			MultiLocation { parents: 1, interior: Here } =>
-				Some(CurrencyId::XCM(0)),
+			MultiLocation { parents: 1, interior: Here } => Some(CurrencyId::XCM(0)),
 			_ => None,
 		}
 	}

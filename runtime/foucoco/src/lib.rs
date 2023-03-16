@@ -941,6 +941,10 @@ use pallet_contracts::chain_extension::{
 };
 use sp_core::crypto::UncheckedFrom;
 
+pub type CurrencyTypeId = u8;
+pub type StellarAssetCode = [u8; 12];
+pub type StellarAssetIssuer = [u8; 32];
+
 #[derive(Default)]
 pub struct Psp22Extension;
 
@@ -956,7 +960,7 @@ where
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
-		+ orml_currencies_allowance_ext::Config
+		+ orml_currencies_allowance_extension::Config
 		+ dia_oracle::Config,
 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 {
@@ -978,9 +982,9 @@ where
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (
 					OriginType,
-					u8,
-					[u8; 12],
-					[u8; 32],
+					CurrencyTypeId,
+					StellarAssetCode,
+					StellarAssetIssuer,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
 				) = env.read_as()?;
@@ -998,10 +1002,15 @@ where
 				warn!("account_id : {:#?}", account_id);
 				warn!("balance : {:#?}", balance);
 
-				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
+					error!("type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					DispatchError::Other("Currency id does not exist")
+				})?;
 
 				let is_allowed_currency =
-					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+						currency_id,
+					);
 				if !is_allowed_currency {
 					return Err(DispatchError::Other(
 						"Currency id is not allowed for chain extension",
@@ -1020,18 +1029,27 @@ where
 
 			//balance
 			1106 => {
-				warn!("balance!!!");
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (u8, [u8; 12], [u8; 32], T::AccountId) = env.read_as()?;
+				let create_asset: (
+					CurrencyTypeId,
+					StellarAssetCode,
+					StellarAssetIssuer,
+					T::AccountId,
+				) = env.read_as()?;
 				let (type_id, code, issuer, account_id) = create_asset;
 
-				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
+					error!("type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					DispatchError::Other("Currency id does not exist")
+				})?;
 
 				warn!("asset_id : {:#?}", type_id);
 				warn!("account_id : {:#?}", account_id);
 
 				let is_allowed_currency =
-					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+						currency_id,
+					);
 				if !is_allowed_currency {
 					warn!("asset_id : {:#?} is_allowed_currency: false", type_id);
 					return Err(DispatchError::Other(
@@ -1054,13 +1072,23 @@ where
 			//total_supply
 			1107 => {
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (u8, [u8; 12], [u8; 32], T::AccountId) = env.read_as()?;
+				let create_asset: (
+					CurrencyTypeId,
+					StellarAssetCode,
+					StellarAssetIssuer,
+					T::AccountId,
+				) = env.read_as()?;
 				let (type_id, code, issuer, _account_id) = create_asset;
 
-				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
+					error!("type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					DispatchError::Other("Currency id does not exist")
+				})?;
 
 				let is_allowed_currency =
-					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+						currency_id,
+					);
 				if !is_allowed_currency {
 					return Err(DispatchError::Other(
 						"Currency id is not allowed for chain extension",
@@ -1085,9 +1113,9 @@ where
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (
 					OriginType,
-					u8,
-					[u8; 12],
-					[u8; 32],
+					CurrencyTypeId,
+					StellarAssetCode,
+					StellarAssetIssuer,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
 				) = env.read_as()?;
@@ -1095,10 +1123,10 @@ where
 
 				let from;
 				if origin_type == OriginType::Caller {
-					error!("OriginType::Caller");
+					warn!("OriginType::Caller");
 					from = caller;
 				} else {
-					error!("OriginType::Address");
+					warn!("OriginType::Address");
 					from = address;
 				}
 
@@ -1107,17 +1135,22 @@ where
 				warn!("to : {:#?}", to);
 				warn!("amount : {:#?}", amount);
 
-				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
+					error!("type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					DispatchError::Other("Currency id does not exist")
+				})?;
 
 				let is_allowed_currency =
-					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+						currency_id,
+					);
 				if !is_allowed_currency {
 					return Err(DispatchError::Other(
 						"Currency id is not allowed for chain extension",
 					))
 				}
 
-				let result = orml_currencies_allowance_ext::Pallet::<T>::do_approve_transfer(
+				let result = orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
 					currency_id,
 					&from,
 					&to,
@@ -1146,7 +1179,14 @@ where
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (
 					T::AccountId,
-					(OriginType, u8, [u8; 12], [u8; 32], T::AccountId, BalanceOfForChainExt<T>),
+					(
+						OriginType,
+						CurrencyTypeId,
+						StellarAssetCode,
+						StellarAssetIssuer,
+						T::AccountId,
+						BalanceOfForChainExt<T>,
+					),
 				) = env.read_as()?;
 				let owner = create_asset.0;
 				let (origin_type, type_id, code, issuer, to, amount) = create_asset.1;
@@ -1164,17 +1204,22 @@ where
 				warn!("to : {:#?}", to);
 				warn!("amount : {:#?}", amount);
 
-				let currency_id = try_from(type_id, code, issuer).unwrap_or(CurrencyId::Native);
+				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
+					error!("type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					DispatchError::Other("Currency id does not exist")
+				})?;
 
 				let is_allowed_currency =
-					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+						currency_id,
+					);
 				if !is_allowed_currency {
 					return Err(DispatchError::Other(
 						"Currency id is not allowed for chain extension",
 					))
 				}
 
-				let result = orml_currencies_allowance_ext::Pallet::<T>::do_transfer_approved(
+				let result = orml_currencies_allowance_extension::Pallet::<T>::do_transfer_approved(
 					currency_id,
 					&owner,
 					&from,
@@ -1200,22 +1245,35 @@ where
 			//allowance
 			1110 => {
 				let mut env = env.buf_in_buf_out();
-				let allowance_request: (u8, [u8; 12], [u8; 32], T::AccountId, T::AccountId) =
-					env.read_as()?;
+				let allowance_request: (
+					CurrencyTypeId,
+					StellarAssetCode,
+					StellarAssetIssuer,
+					T::AccountId,
+					T::AccountId,
+				) = env.read_as()?;
 
 				let currency_id =
 					try_from(allowance_request.0, allowance_request.1, allowance_request.2)
-						.unwrap_or(CurrencyId::Native);
+						.map_err(|_| {
+							error!(
+								"type_id : {}, code : {:#?}, issuer : {:#?}",
+								allowance_request.0, allowance_request.1, allowance_request.2
+							);
+							DispatchError::Other("Currency id does not exist")
+						})?;
 
 				let is_allowed_currency =
-					orml_currencies_allowance_ext::Pallet::<T>::is_allowed_currency(currency_id);
+					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+						currency_id,
+					);
 				if !is_allowed_currency {
 					return Err(DispatchError::Other(
 						"Currency id is not allowed for chain extension",
 					))
 				}
 
-				let allowance = orml_currencies_allowance_ext::Pallet::<T>::allowance(
+				let allowance = orml_currencies_allowance_extension::Pallet::<T>::allowance(
 					currency_id,
 					&allowance_request.3,
 					&allowance_request.4,
@@ -1285,7 +1343,7 @@ impl pallet_contracts::Config for Runtime {
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
-impl orml_currencies_allowance_ext::Config for Runtime {
+impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
@@ -1568,7 +1626,7 @@ construct_runtime!(
 		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 70,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
 
-		TokenAllowance: orml_currencies_allowance_ext::{Pallet, Storage, Call, Event<T>} = 80,
+		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
 	}
 );
 

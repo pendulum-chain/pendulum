@@ -20,13 +20,13 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /// Extension of [`PSP22`] which allows the beneficiary to extract tokens after given time
-use ink_env::Environment;
-use ink_lang as ink;
-use ink_prelude::{string::String, vec::Vec};
+use ink::env::Environment;
+use ink;
+use ink::prelude::{string::String, vec::Vec};
 
 // use crate::traits::psp22::PSP22Error;
 // use crate::PSP22Error;
-use ink_lang::ChainExtensionInstance;
+use ink::ChainExtensionInstance;
 
 // use brush::{
 // 	declare_storage_trait,
@@ -50,6 +50,8 @@ pub enum PSP22Error {
     SafeTransferCheckFailed(String),
 }
 
+const IS_RESULT: bool = true;
+
 pub struct PendulumChainExt;
 
 impl PendulumChainExt {
@@ -60,9 +62,9 @@ impl PendulumChainExt {
 		min_balance: u128,
 	) -> Result<(), PalletAssetErr> {
 		let subject = PalletAssetRequest::new(origin_type, asset_id, target_address, min_balance);
-		::ink_env::chain_extension::ChainExtensionMethod::build(1102u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1102u32)
 			.input::<PalletAssetRequest>()
-			.output::<Result<(), PalletAssetErr>>()
+			.output::<Result<(), PalletAssetErr>, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&subject)?
 	}
@@ -74,9 +76,9 @@ impl PendulumChainExt {
 		amount: u128,
 	) -> Result<(), PalletAssetErr> {
 		let subject = PalletAssetRequest::new(origin_type, asset_id, target_address, amount);
-		::ink_env::chain_extension::ChainExtensionMethod::build(1103u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1103u32)
 			.input::<PalletAssetRequest>()
-			.output::<Result<(), PalletAssetErr>>()
+			.output::<Result<(), PalletAssetErr>, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&subject)?
 	}
@@ -88,9 +90,9 @@ impl PendulumChainExt {
 		amount: u128,
 	) -> Result<(), PalletAssetErr> {
 		let subject = PalletAssetRequest::new(origin_type, asset_id, target_address, amount);
-		::ink_env::chain_extension::ChainExtensionMethod::build(1104u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1104u32)
 			.input::<PalletAssetRequest>()
-			.output::<Result<(), PalletAssetErr>>()
+			.output::<Result<(), PalletAssetErr>, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&subject)?
 	}
@@ -102,9 +104,9 @@ impl PendulumChainExt {
 		amount: u128,
 	) -> Result<(), PalletAssetErr> {
 		let subject = PalletAssetRequest::new(origin_type, asset_id, target_address, amount);
-		::ink_env::chain_extension::ChainExtensionMethod::build(1105u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1105u32)
 			.input::<PalletAssetRequest>()
-			.output::<Result<(), PalletAssetErr>>()
+			.output::<Result<(), PalletAssetErr>, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&subject)?
 	}
@@ -119,17 +121,17 @@ impl PendulumChainExt {
 			issuer: asset_id.2,
 			address,
 		};
-		::ink_env::chain_extension::ChainExtensionMethod::build(1106u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1106u32)
 			.input::<PalletAssetBalanceRequest>()
-			.output::<u128>()
+			.output::<u128, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&subject)
 	}
 
 	pub fn total_supply(asset_id: (u8, [u8; 12], [u8; 32])) -> Result<u128, PalletAssetErr> {
-		::ink_env::chain_extension::ChainExtensionMethod::build(1107u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1107u32)
 			.input::<(u8, [u8; 12], [u8; 32])>()
-			.output::<u128>()
+			.output::<u128, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&asset_id)
 	}
@@ -141,9 +143,9 @@ impl PendulumChainExt {
 		amount: u128,
 	) -> Result<(), PalletAssetErr> {
 		let subject = PalletAssetRequest::new(origin_type, asset_id, target_address, amount);
-		::ink_env::chain_extension::ChainExtensionMethod::build(1108u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1108u32)
 			.input::<PalletAssetRequest>()
-			.output::<Result<(), PalletAssetErr>>()
+			.output::<Result<(), PalletAssetErr>, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&subject)?
 	}
@@ -156,9 +158,9 @@ impl PendulumChainExt {
 		amount: u128,
 	) -> Result<(), PalletAssetErr> {
 		let subject = PalletAssetRequest::new(origin_type, asset_id, target_address, amount);
-		::ink_env::chain_extension::ChainExtensionMethod::build(1109u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1109u32)
 			.input::<([u8; 32], PalletAssetRequest)>()
-			.output::<Result<(), PalletAssetErr>>()
+			.output::<Result<(), PalletAssetErr>, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&(owner, subject))?
 	}
@@ -168,9 +170,9 @@ impl PendulumChainExt {
 		owner: [u8; 32],
 		spender: [u8; 32],
 	) -> Result<u128, PalletAssetErr> {
-		::ink_env::chain_extension::ChainExtensionMethod::build(1110u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1110u32)
 			.input::<(u8, [u8; 12], [u8; 32], [u8; 32], [u8; 32])>()
-			.output::<u128>()
+			.output::<u128, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&(asset_id.0, asset_id.1, asset_id.2, owner, spender))
 	}
@@ -183,9 +185,9 @@ impl PendulumChainExt {
 		delta_value: u128,
 		is_increase: bool,
 	) -> Result<(), PalletAssetErr> {
-		::ink_env::chain_extension::ChainExtensionMethod::build(1111u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1111u32)
 			.input::<(u8, [u8; 12], [u8; 32], [u8; 32], [u8; 32], u128, bool)>()
-			.output::<Result<(), PalletAssetErr>>()
+			.output::<Result<(), PalletAssetErr>, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&(
 				asset_id.0,
@@ -205,33 +207,33 @@ impl PendulumChainExt {
 		symbol: Vec<u8>,
 		decimals: u8,
 	) -> Result<(), PalletAssetErr> {
-		::ink_env::chain_extension::ChainExtensionMethod::build(1112u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1112u32)
 			.input::<(OriginType, u8, [u8; 12], [u8; 32], Vec<u8>, Vec<u8>, u8)>()
-			.output::<Result<(), PalletAssetErr>>()
+			.output::<Result<(), PalletAssetErr>, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&(origin_type, asset_id.0, asset_id.1, asset_id.2, name, symbol, decimals))?
 	}
 
 	pub fn metadata_name(asset_id: (u8, [u8; 12], [u8; 32])) -> Result<Vec<u8>, PalletAssetErr> {
-		::ink_env::chain_extension::ChainExtensionMethod::build(1113u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1113u32)
 			.input::<(u8, [u8; 12], [u8; 32])>()
-			.output::<Vec<u8>>()
+			.output::<Vec<u8>, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&asset_id)
 	}
 
 	pub fn metadata_symbol(asset_id: (u8, [u8; 12], [u8; 32])) -> Result<Vec<u8>, PalletAssetErr> {
-		::ink_env::chain_extension::ChainExtensionMethod::build(1114u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1114u32)
 			.input::<(u8, [u8; 12], [u8; 32])>()
-			.output::<Vec<u8>>()
+			.output::<Vec<u8>, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&asset_id)
 	}
 
 	pub fn metadata_decimals(asset_id: (u8, [u8; 12], [u8; 32])) -> Result<u8, PalletAssetErr> {
-		::ink_env::chain_extension::ChainExtensionMethod::build(1115u32)
+		::ink::env::chain_extension::ChainExtensionMethod::build(1115u32)
 			.input::<(u8, [u8; 12], [u8; 32])>()
-			.output::<u8>()
+			.output::<u8, {IS_RESULT}>()
 			.handle_error_code::<PalletAssetErr>()
 			.call(&asset_id)
 	}
@@ -380,7 +382,7 @@ impl From<PalletAssetErr> for PSP22Error {
 	}
 }
 
-impl ink_env::chain_extension::FromStatusCode for PalletAssetErr {
+impl ink::env::chain_extension::FromStatusCode for PalletAssetErr {
 	fn from_status_code(status_code: u32) -> Result<(), Self> {
 		match status_code {
 			0 => Ok(()),

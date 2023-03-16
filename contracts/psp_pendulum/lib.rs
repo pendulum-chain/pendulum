@@ -22,9 +22,9 @@
 #![feature(min_specialization)]
 
 use ethnum::U256;
-use ink_env::Environment;
-use ink_lang as ink;
-use ink_prelude::{string::String, vec::Vec};
+use ink::env::Environment;
+use ink;
+use ink::prelude::{string::String, vec::Vec};
 
 mod psp_pendulum_lib;
 
@@ -34,7 +34,7 @@ mod psp_pendulum_lib;
 // 	modifiers,
 // };
 use crate::psp_pendulum_lib::PSP22Error;
-use ink_lang::ChainExtensionInstance;
+use ink::ChainExtensionInstance;
 
 // #[brush::contract]
 #[ink::contract]
@@ -44,12 +44,10 @@ mod my_psp22_pallet_asset {
 	// 	psp22::{psp22_pallet_asset::*, *},
 	// 	traits::psp22::psp22asset::*,
 	// };
-	use ink_lang::codegen::StaticEnv;
-	use ink_prelude::string::String;
-	use ink_storage::traits::SpreadAllocate;
-
-	#[ink(storage)]
-	#[derive(Default, SpreadAllocate)]
+	use ink::codegen::StaticEnv;
+	use ink::prelude::string::String;
+	
+    #[ink(storage)]
 	pub struct MyPSP22 {
 		pub asset_id: (u8, [u8; 12], [u8; 32]),
 		pub origin_type: u8,
@@ -61,11 +59,10 @@ mod my_psp22_pallet_asset {
 			origin_type: psp_pendulum_lib::OriginType,
 			asset_id: (u8, [u8; 12], [u8; 32]),
 		) -> Self {
-			ink_lang::codegen::initialize_contract(|instance: &mut MyPSP22| {
-				instance.origin_type =
-					if origin_type == psp_pendulum_lib::OriginType::Caller { 0 } else { 1 };
-				instance.asset_id = asset_id;
-			})
+			Self {
+				origin_type: if origin_type == psp_pendulum_lib::OriginType::Caller { 0 } else { 1 },
+				asset_id: asset_id,
+			}
 		}
 
 		#[ink(message)]
@@ -222,13 +219,13 @@ mod my_psp22_pallet_asset {
 	mod tests {
 		/// Imports all the definitions from the outer scope so we can use them here.
 		use super::*;
-		use ink_lang as ink;
+		use ink;
 
 		#[ink::test]
 		fn init_works() {
 			// given
 			struct CreateAssetExtension;
-			impl ink_env::test::ChainExtension for CreateAssetExtension {
+			impl ink::env::test::ChainExtension for CreateAssetExtension {
 				/// The static function id of the chain extension.
 				fn func_id(&self) -> u32 {
 					1102
@@ -246,7 +243,7 @@ mod my_psp22_pallet_asset {
 				}
 			}
 			// arrange
-			ink_env::test::register_chain_extension(CreateAssetExtension);
+			ink::env::test::register_chain_extension(CreateAssetExtension);
 			// origin_type: psp_pendulum_lib::OriginType, asset_id: u32, target_address: [u8; 32], min_balance: u128
 			let mut my_psp22 = MyPSP22::new(psp_pendulum_lib::OriginType::Caller, 10, [1u8; 32], 1);
 			// assert

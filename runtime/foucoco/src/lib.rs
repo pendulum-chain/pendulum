@@ -1003,7 +1003,7 @@ where
 				warn!("balance : {:#?}", balance);
 
 				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!("type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					error!("Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
 					DispatchError::Other("Currency id does not exist")
 				})?;
 
@@ -1039,7 +1039,7 @@ where
 				let (type_id, code, issuer, account_id) = create_asset;
 
 				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!("type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					error!("Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
 					DispatchError::Other("Currency id does not exist")
 				})?;
 
@@ -1081,7 +1081,7 @@ where
 				let (type_id, code, issuer, _account_id) = create_asset;
 
 				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!("type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					error!("Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
 					DispatchError::Other("Currency id does not exist")
 				})?;
 
@@ -1136,7 +1136,7 @@ where
 				warn!("amount : {:#?}", amount);
 
 				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!("type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					error!("Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
 					DispatchError::Other("Currency id does not exist")
 				})?;
 
@@ -1205,7 +1205,7 @@ where
 				warn!("amount : {:#?}", amount);
 
 				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!("type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					error!("Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
 					DispatchError::Other("Currency id does not exist")
 				})?;
 
@@ -1257,7 +1257,7 @@ where
 					try_from(allowance_request.0, allowance_request.1, allowance_request.2)
 						.map_err(|_| {
 							error!(
-								"type_id : {}, code : {:#?}, issuer : {:#?}",
+								"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
 								allowance_request.0, allowance_request.1, allowance_request.2
 							);
 							DispatchError::Other("Currency id does not exist")

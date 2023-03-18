@@ -1,10 +1,11 @@
-use crate::{self as oracle, Config};
+use crate::{self as token_allowance, Config};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU32, Everything},
 };
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
+use sp_arithmetic::{FixedI128, FixedU128};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -21,10 +22,11 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-        Tokens: orml_tokens::{Pallet, Storage, Config<T>, Event<T>},
+		Tokens: orml_tokens::{Pallet, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-        Currencies: orml_currencies::{Pallet, Call},
-        TokenAllowance: oracle::{Pallet, Storage, Call, Event<T>},
+		Currencies: orml_currencies::{Pallet, Call},
+		TokenAllowance: token_allowance::{Pallet, Storage, Call, Event<T>},
+		Currency: currency::{Pallet},
 	}
 );
 
@@ -34,6 +36,9 @@ pub type BlockNumber = u64;
 pub type CurrencyId = u64;
 pub type Index = u64;
 pub type Ammount = i64;
+pub type UnsignedFixedPoint = FixedU128;
+pub type SignedFixedPoint = FixedI128;
+pub type SignedInner = i128;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -69,8 +74,9 @@ impl frame_system::Config for Test {
 pub type TestEvent = RuntimeEvent;
 
 parameter_types! {
+	pub const GetCollateralCurrencyId: CurrencyId = 1;
 	pub const MaxLocks: u32 = 50;
-    pub const GetNativeCurrencyId: CurrencyId = 1;
+	pub const GetNativeCurrencyId: CurrencyId = 1;
 }
 
 parameter_type_with_key! {
@@ -126,8 +132,6 @@ impl pallet_balances::Config for Test {
 	type ReserveIdentifier = ();
 }
 
-
-
 impl orml_currencies::Config for Test {
 	type MultiCurrency = Tokens;
 	type NativeCurrency = BasicCurrencyAdapter<Test, Balances, i64, BlockNumber>;
@@ -135,6 +139,55 @@ impl orml_currencies::Config for Test {
 	type WeightInfo = ();
 }
 
-impl Config for Test{
-    type RuntimeEvent = RuntimeEvent;
+impl Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+}
+
+pub struct CurrencyConvert;
+impl currency::CurrencyConversion<currency::Amount<Test>, CurrencyId> for CurrencyConvert {
+	fn convert(
+		_amount: &currency::Amount<Test>,
+		_to: CurrencyId,
+	) -> Result<currency::Amount<Test>, sp_runtime::DispatchError> {
+		unimplemented!()
+	}
+}
+
+impl currency::Config for Test {
+	type UnsignedFixedPoint = UnsignedFixedPoint;
+	type SignedInner = SignedInner;
+	type SignedFixedPoint = SignedFixedPoint;
+	type Balance = Balance;
+	type GetRelayChainCurrencyId = GetCollateralCurrencyId;
+
+	type AssetConversion = spacewalk_primitives::AssetConversion;
+	type BalanceConversion = spacewalk_primitives::BalanceConversion;
+	type CurrencyConversion = CurrencyConvert;
+}
+
+pub struct ExtBuilder;
+
+impl ExtBuilder {
+	pub fn build() -> sp_io::TestExternalities {
+		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+		// frame_support::traits::GenesisBuild::<Test>::assimilate_storage(
+		// 	 &oracle::GenesisConfig { oracle_keys: vec![], max_delay: 0 },
+		// 	&mut storage,
+		// )
+		// .unwrap();
+
+		sp_io::TestExternalities::from(storage)
+	}
+}
+
+pub fn run_test<T>(test: T)
+where
+	T: FnOnce(),
+{
+	// clear_mocks();
+	ExtBuilder::build().execute_with(|| {
+		System::set_block_number(1);
+		test();
+	});
 }

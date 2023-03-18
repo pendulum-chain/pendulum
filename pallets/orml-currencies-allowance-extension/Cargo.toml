@@ -22,7 +22,9 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false, optional = true }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false, optional = true }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false, optional = true }
-
+currency = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3", optional = true }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3", optional = true }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false, optional = true }
 
 
 [dev-dependencies]
@@ -33,6 +35,10 @@ orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-modul
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+currency = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3" }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", branch = "dev/milestone-3"}
+
 
 [features]
 default = ["std"]
@@ -57,5 +63,8 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "orml-tokens",
     "orml-traits",
-    "orml-currencies"
+    "orml-currencies",
+    "currency",
+    "sp-arithmetic",
+    "spacewalk-primitives"
 ]

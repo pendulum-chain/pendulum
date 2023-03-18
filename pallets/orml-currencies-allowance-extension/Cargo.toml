@@ -17,9 +17,11 @@ sp-core = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 sp-runtime = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false}
 sp-std = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false}
 
-orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
-orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
-orml-traits = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false, optional = true }
+
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false, optional = true }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false, optional = true }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false, optional = true }
 
 [dev-dependencies]
 mocktopus = "0.8.0"
@@ -38,5 +40,15 @@ std = [
   "frame-system/std",
   "orml-currencies/std",
   "orml-tokens/std",
-  "orml-traits/std"
+  "orml-traits/std",
+  "frame-benchmarking/std"
+]
+
+runtime-benchmarks = [
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "orml-tokens",
+    "orml-traits",
+    "orml-currencies"
 ]

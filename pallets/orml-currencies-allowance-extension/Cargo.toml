@@ -32,6 +32,7 @@ sp-io = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false}
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 
 [features]
 default = ["std"]

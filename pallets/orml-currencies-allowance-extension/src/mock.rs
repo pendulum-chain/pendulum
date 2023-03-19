@@ -9,7 +9,7 @@ use sp_arithmetic::{FixedI128, FixedU128};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{BlakeTwo256, IdentityLookup, StaticLookup},
 };
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -30,10 +30,12 @@ frame_support::construct_runtime!(
 	}
 );
 
+pub use spacewalk_primitives::CurrencyId;
+
 pub type AccountId = u64;
 pub type Balance = u128;
 pub type BlockNumber = u64;
-pub type CurrencyId = u64;
+// pub type CurrencyId = u64;
 pub type Index = u64;
 pub type Ammount = i64;
 pub type UnsignedFixedPoint = FixedU128;
@@ -74,9 +76,9 @@ impl frame_system::Config for Test {
 pub type TestEvent = RuntimeEvent;
 
 parameter_types! {
-	pub const GetCollateralCurrencyId: CurrencyId = 1;
+	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::Native;
 	pub const MaxLocks: u32 = 50;
-	pub const GetNativeCurrencyId: CurrencyId = 1;
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
 }
 
 parameter_type_with_key! {

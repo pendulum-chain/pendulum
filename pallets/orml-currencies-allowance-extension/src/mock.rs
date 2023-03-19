@@ -5,7 +5,6 @@ use frame_support::{
 };
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
-use sp_arithmetic::{FixedI128, FixedU128};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -26,20 +25,18 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call},
 		TokenAllowance: token_allowance::{Pallet, Storage, Call, Event<T>},
-		Currency: currency::{Pallet},
 	}
 );
 
-pub use spacewalk_primitives::CurrencyId;
+// pub use spacewalk_primitives::CurrencyId;
 
 pub type AccountId = u64;
 pub type Balance = u128;
 pub type BlockNumber = u64;
 pub type Index = u64;
 pub type Ammount = i64;
-pub type UnsignedFixedPoint = FixedU128;
-pub type SignedFixedPoint = FixedI128;
 pub type SignedInner = i128;
+pub type CurrencyId = u64;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -75,9 +72,9 @@ impl frame_system::Config for Test {
 pub type TestEvent = RuntimeEvent;
 
 parameter_types! {
-	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::Native;
+	pub const GetCollateralCurrencyId: CurrencyId = 1;
 	pub const MaxLocks: u32 = 50;
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
+	pub const GetNativeCurrencyId: CurrencyId = 1;
 }
 
 parameter_type_with_key! {
@@ -142,28 +139,6 @@ impl orml_currencies::Config for Test {
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-}
-
-pub struct CurrencyConvert;
-impl currency::CurrencyConversion<currency::Amount<Test>, CurrencyId> for CurrencyConvert {
-	fn convert(
-		_amount: &currency::Amount<Test>,
-		_to: CurrencyId,
-	) -> Result<currency::Amount<Test>, sp_runtime::DispatchError> {
-		unimplemented!()
-	}
-}
-
-impl currency::Config for Test {
-	type UnsignedFixedPoint = UnsignedFixedPoint;
-	type SignedInner = SignedInner;
-	type SignedFixedPoint = SignedFixedPoint;
-	type Balance = Balance;
-	type GetRelayChainCurrencyId = GetCollateralCurrencyId;
-
-	type AssetConversion = spacewalk_primitives::AssetConversion;
-	type BalanceConversion = spacewalk_primitives::BalanceConversion;
-	type CurrencyConversion = CurrencyConvert;
 }
 
 pub struct ExtBuilder;

@@ -186,7 +186,7 @@ dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
- "currency 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "currency",
  "dia-oracle",
  "dia-oracle-runtime-api",
  "fee",
@@ -208,8 +208,8 @@ dependencies = [
  "nomination",
  "oracle",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
@@ -258,7 +258,7 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
  "staking",
  "stellar-relay",
  "substrate-wasm-builder",
@@ -1901,33 +1901,13 @@ dependencies = [
 [[package]]
 name = "currency"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#71fd63b0aa6f7fd6db8d951e4523702015d2edb1"
-dependencies = [
- "frame-support",
- "frame-system",
- "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "pallet-balances",
- "pallet-transaction-payment",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-runtime",
- "sp-std",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3)",
-]
-
-[[package]]
-name = "currency"
-version = "1.2.0"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d#d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"
 dependencies = [
  "frame-support",
  "frame-system",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "pallet-balances",
  "pallet-transaction-payment",
  "parity-scale-codec",
@@ -1935,7 +1915,7 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
 ]
 
 [[package]]
@@ -2669,7 +2649,7 @@ name = "fee"
 version = "1.0.0"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d#d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"
 dependencies = [
- "currency 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "currency",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -2684,7 +2664,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
  "staking",
 ]
 
@@ -2826,7 +2806,7 @@ dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
- "currency 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "currency",
  "dia-oracle",
  "dia-oracle-runtime-api",
  "fee",
@@ -2849,8 +2829,8 @@ dependencies = [
  "oracle",
  "orml-currencies",
  "orml-currencies-allowance-extension",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
@@ -2900,7 +2880,7 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
  "staking",
  "stellar-relay",
  "substrate-wasm-builder",
@@ -3941,7 +3921,7 @@ version = "1.0.0"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d#d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"
 dependencies = [
  "base64 0.13.1",
- "currency 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "currency",
  "fee",
  "frame-benchmarking",
  "frame-support",
@@ -3949,8 +3929,8 @@ dependencies = [
  "log",
  "oracle",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -3962,7 +3942,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
  "stellar-relay",
  "substrate-stellar-sdk",
  "vault-registry",
@@ -5566,15 +5546,15 @@ name = "nomination"
 version = "0.5.0"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d#d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"
 dependencies = [
- "currency 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "currency",
  "fee",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "oracle",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -5587,7 +5567,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
  "staking",
  "vault-registry",
 ]
@@ -5738,7 +5718,7 @@ name = "oracle"
 version = "1.2.0"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d#d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"
 dependencies = [
- "currency 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "currency",
  "dia-oracle",
  "frame-benchmarking",
  "frame-support",
@@ -5754,7 +5734,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
  "staking",
 ]
 
@@ -5802,12 +5782,12 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "frame-support",
  "frame-system",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5820,36 +5800,33 @@ dependencies = [
 name = "orml-currencies-allowance-extension"
 version = "1.0.0"
 dependencies = [
- "currency 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3)",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "mocktopus",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "serde",
  "sha2 0.8.2",
- "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3)",
 ]
 
 [[package]]
 name = "orml-oracle"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "frame-support",
  "frame-system",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5862,11 +5839,11 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "frame-support",
  "frame-system",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5892,12 +5869,12 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
  "num-traits",
- "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5928,7 +5905,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5956,10 +5933,10 @@ dependencies = [
 [[package]]
 name = "orml-xcm-support"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "frame-support",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "parity-scale-codec",
  "sp-runtime",
  "sp-std",
@@ -5970,12 +5947,12 @@ dependencies = [
 [[package]]
 name = "orml-xtokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
  "frame-system",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "orml-xcm-support",
  "pallet-xcm",
  "parity-scale-codec",
@@ -7311,7 +7288,7 @@ dependencies = [
  "sp-session",
  "sp-timestamp",
  "sp-transaction-pool",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
  "substrate-build-script-utils",
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
@@ -7344,8 +7321,8 @@ dependencies = [
  "hex-literal",
  "log",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
@@ -9145,15 +9122,15 @@ name = "redeem"
 version = "1.0.0"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d#d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"
 dependencies = [
- "currency 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "currency",
  "fee",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "oracle",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -9165,7 +9142,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
  "stellar-relay",
  "substrate-stellar-sdk",
  "vault-registry",
@@ -9267,7 +9244,7 @@ name = "replace"
 version = "1.0.0"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d#d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"
 dependencies = [
- "currency 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "currency",
  "fee",
  "frame-benchmarking",
  "frame-support",
@@ -9275,8 +9252,8 @@ dependencies = [
  "nomination",
  "oracle",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -9288,7 +9265,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
  "stellar-relay",
  "substrate-stellar-sdk",
  "vault-registry",
@@ -9320,7 +9297,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
 ]
 
 [[package]]
@@ -9529,7 +9506,7 @@ dependencies = [
  "sp-consensus-aura",
  "sp-core",
  "sp-runtime",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
 ]
 
 [[package]]
@@ -11920,22 +11897,6 @@ dependencies = [
 [[package]]
 name = "spacewalk-primitives"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?branch=dev/milestone-3#71fd63b0aa6f7fd6db8d951e4523702015d2edb1"
-dependencies = [
- "bstringify",
- "frame-support",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-runtime",
- "sp-std",
- "substrate-stellar-sdk",
-]
-
-[[package]]
-name = "spacewalk-primitives"
-version = "1.2.0"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d#d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"
 dependencies = [
  "bstringify",
@@ -12000,8 +11961,8 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -12010,7 +11971,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
 ]
 
 [[package]]
@@ -12091,7 +12052,7 @@ version = "1.0.0"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d#d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"
 dependencies = [
  "base64 0.13.1",
- "currency 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "currency",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -13045,7 +13006,7 @@ name = "vault-registry"
 version = "1.2.0"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d#d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"
 dependencies = [
- "currency 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "currency",
  "fee",
  "fixed-hash 0.7.0",
  "frame-benchmarking",
@@ -13054,8 +13015,8 @@ dependencies = [
  "log",
  "oracle",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -13068,7 +13029,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives 1.2.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d)",
+ "spacewalk-primitives",
  "staking",
  "substrate-stellar-sdk",
 ]

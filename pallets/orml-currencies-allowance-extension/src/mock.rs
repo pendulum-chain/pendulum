@@ -9,7 +9,7 @@ use sp_arithmetic::{FixedI128, FixedU128};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup, StaticLookup},
+	traits::{BlakeTwo256, IdentityLookup},
 };
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -35,7 +35,6 @@ pub use spacewalk_primitives::CurrencyId;
 pub type AccountId = u64;
 pub type Balance = u128;
 pub type BlockNumber = u64;
-// pub type CurrencyId = u64;
 pub type Index = u64;
 pub type Ammount = i64;
 pub type UnsignedFixedPoint = FixedU128;
@@ -171,13 +170,7 @@ pub struct ExtBuilder;
 
 impl ExtBuilder {
 	pub fn build() -> sp_io::TestExternalities {
-		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-
-		// frame_support::traits::GenesisBuild::<Test>::assimilate_storage(
-		// 	 &oracle::GenesisConfig { oracle_keys: vec![], max_delay: 0 },
-		// 	&mut storage,
-		// )
-		// .unwrap();
+		let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 		sp_io::TestExternalities::from(storage)
 	}
@@ -187,7 +180,6 @@ pub fn run_test<T>(test: T)
 where
 	T: FnOnce(),
 {
-	// clear_mocks();
 	ExtBuilder::build().execute_with(|| {
 		System::set_block_number(1);
 		test();

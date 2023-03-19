@@ -22,7 +22,7 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false, optional = true }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false, optional = true }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37", default-features = false, optional = true }
-
+pallet-balances = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false, optional = true }
 
 [dev-dependencies]
 mocktopus = "0.8.0"
@@ -31,6 +31,7 @@ sp-io = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.37" }
+pallet-balances = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37"}
 
 
 [features]
@@ -56,5 +57,6 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "orml-currencies",
     "orml-tokens",
-    "orml-traits"
+    "orml-traits",
+    "pallet-balances"
 ]

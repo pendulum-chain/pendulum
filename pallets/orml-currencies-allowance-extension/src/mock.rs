@@ -139,6 +139,8 @@ impl orml_currencies::Config for Test {
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = ();
+
 }
 
 pub struct ExtBuilder;

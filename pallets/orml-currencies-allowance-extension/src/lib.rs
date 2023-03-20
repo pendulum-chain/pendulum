@@ -5,6 +5,7 @@
 #[cfg(test)]
 extern crate mocktopus;
 
+pub use default_weights::{SubstrateWeight, WeightInfo};
 use frame_support::{dispatch::DispatchResult, ensure};
 #[cfg(test)]
 use mocktopus::macros::mockable;
@@ -14,6 +15,8 @@ use sp_std::{convert::TryInto, prelude::*, vec};
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
+mod default_weights;
 
 #[cfg(test)]
 mod mock;
@@ -46,6 +49,9 @@ pub mod pallet {
 	pub trait Config: frame_system::Config + orml_tokens::Config + orml_currencies::Config {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+		/// Weight information for the extrinsics in this module.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
@@ -128,7 +134,7 @@ pub mod pallet {
 		/// # Arguments
 		/// * `currencies` - list of currency id allowed to use in chain extension
 		#[pallet::call_index(1)]
-		#[pallet::weight(10000)]
+		#[pallet::weight(<T as Config>::WeightInfo::add_allowed_currencies())]
 		#[transactional]
 		pub fn add_allowed_currencies(
 			origin: OriginFor<T>,
@@ -148,7 +154,7 @@ pub mod pallet {
 		/// # Arguments
 		/// * `currencies` - list of currency id allowed to use in chain extension
 		#[pallet::call_index(2)]
-		#[pallet::weight(10000)]
+		#[pallet::weight(<T as Config>::WeightInfo::remove_allowed_currencies())]
 		#[transactional]
 		pub fn remove_allowed_currencies(
 			origin: OriginFor<T>,

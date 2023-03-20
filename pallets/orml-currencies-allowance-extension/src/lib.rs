@@ -76,7 +76,6 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Parachain is not running.
 		Unapproved,
-		ParachainNotRunning,
 		CurrencyNotLive,
 	}
 

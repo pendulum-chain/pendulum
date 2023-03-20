@@ -26,6 +26,7 @@ pallet-balances = {git = "https://github.com/paritytech/substrate", branch = "po
 
 [dev-dependencies]
 mocktopus = "0.8.0"
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 sp-io = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false}
 
 pallet-balances = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37"}

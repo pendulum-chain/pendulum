@@ -80,13 +80,15 @@ fn should_remove_few_allowed_currencies() {
 		assert_eq!(AllowedCurrencies::<Test>::get(2), Some(()));
 		assert_eq!(AllowedCurrencies::<Test>::get(3), Some(()));
 
+		let removed_currencies: Vec<CurrencyOf<Test>> = vec![native_currency_id, 1, 2];
 		assert_ok!(TokenAllowance::remove_allowed_currencies(
 			RuntimeOrigin::root(),
-			added_currencies
+			removed_currencies
 		));
+
 		assert_eq!(AllowedCurrencies::<Test>::get(native_currency_id), None);
 		assert_eq!(AllowedCurrencies::<Test>::get(1), None);
 		assert_eq!(AllowedCurrencies::<Test>::get(2), None);
-		assert_eq!(AllowedCurrencies::<Test>::get(3), None);
+		assert_eq!(AllowedCurrencies::<Test>::get(3), Some(()));
 	})
 }

@@ -28,14 +28,11 @@ frame_support::construct_runtime!(
 	}
 );
 
-// pub use spacewalk_primitives::CurrencyId;
-
 pub type AccountId = u64;
 pub type Balance = u128;
 pub type BlockNumber = u64;
 pub type Index = u64;
 pub type Ammount = i64;
-pub type SignedInner = i128;
 pub type CurrencyId = u64;
 
 parameter_types! {

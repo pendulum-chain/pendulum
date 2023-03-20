@@ -208,8 +208,8 @@ dependencies = [
  "nomination",
  "oracle",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
@@ -1906,8 +1906,8 @@ dependencies = [
  "frame-support",
  "frame-system",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "pallet-balances",
  "pallet-transaction-payment",
  "parity-scale-codec",
@@ -2828,8 +2828,9 @@ dependencies = [
  "nomination",
  "oracle",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-currencies-allowance-extension",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
@@ -3927,8 +3928,8 @@ dependencies = [
  "log",
  "oracle",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -5147,6 +5148,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "mocktopus"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e4f0d5a1621fea252541cf67533c4b9c32ee892d790768f4ad48f1063059537"
+dependencies = [
+ "mocktopus_macros",
+]
+
+[[package]]
+name = "mocktopus_macros"
+version = "0.7.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3048ef3680533a27f9f8e7d6a0bce44dc61e4895ea0f42709337fa1c8616fefe"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "module-issue-rpc"
 version = "1.2.0"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d#d5c5b77109e1ef7ae4a2e9b7a654fb6ed7b7a32d"
@@ -5517,8 +5538,8 @@ dependencies = [
  "frame-system",
  "oracle",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -5746,12 +5767,12 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "frame-support",
  "frame-system",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5761,14 +5782,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-currencies-allowance-extension"
+version = "1.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "mocktopus",
+ "orml-currencies",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sha2 0.8.2",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "orml-oracle"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "frame-support",
  "frame-system",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5781,11 +5824,11 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "frame-support",
  "frame-system",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5811,12 +5854,12 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
  "num-traits",
- "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5847,7 +5890,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5875,10 +5918,10 @@ dependencies = [
 [[package]]
 name = "orml-xcm-support"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "frame-support",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "parity-scale-codec",
  "sp-runtime",
  "sp-std",
@@ -5889,12 +5932,12 @@ dependencies = [
 [[package]]
 name = "orml-xtokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
  "frame-system",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "orml-xcm-support",
  "pallet-xcm",
  "parity-scale-codec",
@@ -7263,8 +7306,8 @@ dependencies = [
  "hex-literal",
  "log",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
@@ -9062,8 +9105,8 @@ dependencies = [
  "frame-system",
  "oracle",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -9185,8 +9228,8 @@ dependencies = [
  "nomination",
  "oracle",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -11891,8 +11934,8 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -12945,8 +12988,8 @@ dependencies = [
  "log",
  "oracle",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.37)",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",

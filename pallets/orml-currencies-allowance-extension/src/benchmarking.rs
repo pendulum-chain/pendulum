@@ -6,23 +6,23 @@ use sp_std::prelude::*;
 
 benchmarks! {
 	add_allowed_currencies {
-		let nativeCurrencyId = <T as  orml_currencies::Config>::GetNativeCurrencyId::get();
-		let added_currencies: Vec<CurrencyOf<T>> = vec![nativeCurrencyId];
+		let native_currency_id = <T as  orml_currencies::Config>::GetNativeCurrencyId::get();
+		let added_currencies: Vec<CurrencyOf<T>> = vec![native_currency_id];
 	}: _(RawOrigin::Root, added_currencies)
 	verify {
-		let nativeCurrencyId = <T as  orml_currencies::Config>::GetNativeCurrencyId::get();
-		assert_eq!(AllowedCurrencies::<T>::get(nativeCurrencyId), Some(()));
+		let native_currency_id = <T as  orml_currencies::Config>::GetNativeCurrencyId::get();
+		assert_eq!(AllowedCurrencies::<T>::get(native_currency_id), Some(()));
 	}
 
 	remove_allowed_currencies {
-		let nativeCurrencyId = <T as  orml_currencies::Config>::GetNativeCurrencyId::get();
-		AllowedCurrencies::<T>::insert(nativeCurrencyId, ());
+		let native_currency_id = <T as  orml_currencies::Config>::GetNativeCurrencyId::get();
+		AllowedCurrencies::<T>::insert(native_currency_id, ());
 
-		let removed_currencies: Vec<CurrencyOf<T>> = vec![nativeCurrencyId];
+		let removed_currencies: Vec<CurrencyOf<T>> = vec![native_currency_id];
 	}: _(RawOrigin::Root, removed_currencies)
 	verify {
-		let nativeCurrencyId = <T as  orml_currencies::Config>::GetNativeCurrencyId::get();
-		assert_eq!(AllowedCurrencies::<T>::get(nativeCurrencyId), None);
+		let native_currency_id = <T as  orml_currencies::Config>::GetNativeCurrencyId::get();
+		assert_eq!(AllowedCurrencies::<T>::get(native_currency_id), None);
 	}
 }
 

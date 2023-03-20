@@ -32,7 +32,7 @@ pub type AccountId = u64;
 pub type Balance = u128;
 pub type BlockNumber = u64;
 pub type Index = u64;
-pub type Ammount = i64;
+pub type Amount = i64;
 pub type CurrencyId = u64;
 
 parameter_types! {
@@ -97,7 +97,7 @@ impl<T: orml_tokens::Config>
 impl orml_tokens::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
-	type Amount = Ammount;
+	type Amount = Amount;
 	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
@@ -129,7 +129,7 @@ impl pallet_balances::Config for Test {
 
 impl orml_currencies::Config for Test {
 	type MultiCurrency = Tokens;
-	type NativeCurrency = BasicCurrencyAdapter<Test, Balances, i64, BlockNumber>;
+	type NativeCurrency = BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type WeightInfo = ();
 }

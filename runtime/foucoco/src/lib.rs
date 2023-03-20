@@ -1360,7 +1360,7 @@ impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = orml_currencies_allowance_extension::default_weigths::SubstrateWeight;
+	type WeightInfo = orml_currencies_allowance_extension::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {

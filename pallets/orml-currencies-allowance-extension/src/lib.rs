@@ -131,7 +131,7 @@ pub mod pallet {
 		///
 		/// # Arguments
 		/// * `currencies` - list of currency id allowed to use in chain extension
-		#[pallet::call_index(1)]
+		#[pallet::call_index(0)]
 		#[pallet::weight(<T as Config>::WeightInfo::add_allowed_currencies())]
 		#[transactional]
 		pub fn add_allowed_currencies(
@@ -151,7 +151,7 @@ pub mod pallet {
 		///
 		/// # Arguments
 		/// * `currencies` - list of currency id allowed to use in chain extension
-		#[pallet::call_index(2)]
+		#[pallet::call_index(1)]
 		#[pallet::weight(<T as Config>::WeightInfo::remove_allowed_currencies())]
 		#[transactional]
 		pub fn remove_allowed_currencies(

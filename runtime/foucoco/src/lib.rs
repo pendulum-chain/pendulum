@@ -931,13 +931,7 @@ use frame_support::{
 use sp_std::vec::Vec;
 
 use pallet_contracts::chain_extension::{
-	ChainExtension,
-	Environment,
-	Ext,
-	InitState,
-	RetVal,
-	SysConfig,
-	// UncheckedFrom,
+	ChainExtension, Environment, Ext, InitState, RetVal, SysConfig,
 };
 use sp_core::crypto::UncheckedFrom;
 
@@ -971,7 +965,7 @@ where
 	{
 		let func_id = env.func_id();
 
-		warn!("func_id : {}", func_id);
+		warn!("Calling function with ID {} from Psp22Extension", func_id);
 
 		match func_id {
 			//transfer
@@ -990,12 +984,8 @@ where
 				) = env.read_as()?;
 				let (origin_id, type_id, code, issuer, account_id, balance) = create_asset;
 
-				let address_account;
-				if origin_id == OriginType::Caller {
-					address_account = caller;
-				} else {
-					address_account = address;
-				}
+				let address_account =
+					if origin_id == OriginType::Caller { caller } else { address };
 
 				warn!("asset_id : {:#?}", type_id);
 				warn!("address_account : {:#?}", address_account);
@@ -1003,7 +993,10 @@ where
 				warn!("balance : {:#?}", balance);
 
 				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!("Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					error!(
+						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
+						type_id, code, issuer
+					);
 					DispatchError::Other("Currency id does not exist")
 				})?;
 
@@ -1024,7 +1017,7 @@ where
 					balance,
 				);
 
-				warn!("result : {:#?}", result);
+				warn!("transfer_result: {:#?}", result);
 			},
 
 			//balance
@@ -1039,7 +1032,10 @@ where
 				let (type_id, code, issuer, account_id) = create_asset;
 
 				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!("Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					error!(
+						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
+						type_id, code, issuer
+					);
 					DispatchError::Other("Currency id does not exist")
 				})?;
 
@@ -1081,7 +1077,10 @@ where
 				let (type_id, code, issuer, _account_id) = create_asset;
 
 				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!("Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					error!(
+						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
+						type_id, code, issuer
+					);
 					DispatchError::Other("Currency id does not exist")
 				})?;
 
@@ -1121,14 +1120,7 @@ where
 				) = env.read_as()?;
 				let (origin_type, type_id, code, issuer, to, amount) = create_asset;
 
-				let from;
-				if origin_type == OriginType::Caller {
-					warn!("OriginType::Caller");
-					from = caller;
-				} else {
-					warn!("OriginType::Address");
-					from = address;
-				}
+				let from = if origin_type == OriginType::Caller { caller } else { address };
 
 				warn!("from : {:#?}", from);
 				warn!("origin_type : {:#?}", origin_type);
@@ -1136,7 +1128,10 @@ where
 				warn!("amount : {:#?}", amount);
 
 				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!("Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					error!(
+						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
+						type_id, code, issuer
+					);
 					DispatchError::Other("Currency id does not exist")
 				})?;
 
@@ -1157,7 +1152,7 @@ where
 					amount,
 				);
 
-				warn!("result : {:#?}", result);
+				warn!("approve_transfer : {:#?}", result);
 
 				match result {
 					DispatchResult::Ok(_) => {},
@@ -1191,12 +1186,7 @@ where
 				let owner = create_asset.0;
 				let (origin_type, type_id, code, issuer, to, amount) = create_asset.1;
 
-				let from;
-				if origin_type == OriginType::Caller {
-					from = caller;
-				} else {
-					from = address;
-				}
+				let from = if origin_type == OriginType::Caller { caller } else { address };
 
 				warn!("from : {:#?}", from);
 				warn!("owner : {:#?}", owner);
@@ -1205,7 +1195,10 @@ where
 				warn!("amount : {:#?}", amount);
 
 				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!("Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}", type_id, code, issuer);
+					error!(
+						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
+						type_id, code, issuer
+					);
 					DispatchError::Other("Currency id does not exist")
 				})?;
 
@@ -1345,6 +1338,7 @@ impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = orml_currencies_allowance_extension::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {

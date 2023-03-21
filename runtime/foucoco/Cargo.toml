@@ -180,6 +180,7 @@ std = [
     "pallet-xcm/std",
     "parachain-info/std",
     "parachain-staking/std",
+    "orml-currencies-allowance-extension/std",
     "polkadot-parachain/std",
     "polkadot-runtime-common/std",
     "runtime-common/std",

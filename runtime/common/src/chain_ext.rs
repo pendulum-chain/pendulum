@@ -39,7 +39,7 @@ pub enum ChainExtensionErr {
 	/// There are too many consumers so the account cannot be created.
 	TooManyConsumers,
 	/// An error to do with tokens.
-	Token(PalletAssetTokenErr),
+	Token(PalletAssetTokenError),
 	/// An arithmetic error.
 	Arithmetic(PalletAssetArithmeticErr),
 	/// Unknown error
@@ -59,7 +59,7 @@ pub enum PalletAssetArithmeticErr {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
-pub enum PalletAssetTokenErr {
+pub enum PalletAssetTokenError {
 	/// Funds are unavailable.
 	NoFunds,
 	/// Account that must exist would die.
@@ -89,7 +89,7 @@ impl From<DispatchError> for ChainExtensionErr {
 			DispatchError::NoProviders => ChainExtensionErr::NoProviders,
 			DispatchError::TooManyConsumers => ChainExtensionErr::TooManyConsumers,
 			DispatchError::Token(token_err) =>
-				ChainExtensionErr::Token(PalletAssetTokenErr::from(token_err)),
+				ChainExtensionErr::Token(PalletAssetTokenError::from(token_err)),
 			DispatchError::Arithmetic(arithmetic_error) =>
 				ChainExtensionErr::Arithmetic(PalletAssetArithmeticErr::from(arithmetic_error)),
 			_ => ChainExtensionErr::Unknown,
@@ -107,16 +107,16 @@ impl From<ArithmeticError> for PalletAssetArithmeticErr {
 	}
 }
 
-impl From<TokenError> for PalletAssetTokenErr {
+impl From<TokenError> for PalletAssetTokenError {
 	fn from(e: TokenError) -> Self {
 		match e {
-			TokenError::NoFunds => PalletAssetTokenErr::NoFunds,
-			TokenError::WouldDie => PalletAssetTokenErr::WouldDie,
-			TokenError::BelowMinimum => PalletAssetTokenErr::BelowMinimum,
-			TokenError::CannotCreate => PalletAssetTokenErr::CannotCreate,
-			TokenError::UnknownAsset => PalletAssetTokenErr::UnknownAsset,
-			TokenError::Frozen => PalletAssetTokenErr::Frozen,
-			TokenError::Unsupported => PalletAssetTokenErr::Unsupported,
+			TokenError::NoFunds => PalletAssetTokenError::NoFunds,
+			TokenError::WouldDie => PalletAssetTokenError::WouldDie,
+			TokenError::BelowMinimum => PalletAssetTokenError::BelowMinimum,
+			TokenError::CannotCreate => PalletAssetTokenError::CannotCreate,
+			TokenError::UnknownAsset => PalletAssetTokenError::UnknownAsset,
+			TokenError::Frozen => PalletAssetTokenError::Frozen,
+			TokenError::Unsupported => PalletAssetTokenError::Unsupported,
 		}
 	}
 }
@@ -125,26 +125,7 @@ pub fn try_from(type_id: u8, code: [u8; 12], issuer: [u8; 32]) -> Result<Currenc
 	match type_id {
 		0 => {
 			let foreign_currency_id = code[0];
-			match foreign_currency_id {
-				0 => Ok(CurrencyId::XCM(0)),
-				1 => Ok(CurrencyId::XCM(1)),
-				2 => Ok(CurrencyId::XCM(2)),
-				3 => Ok(CurrencyId::XCM(3)),
-				4 => Ok(CurrencyId::XCM(4)),
-				5 => Ok(CurrencyId::XCM(5)),
-				6 => Ok(CurrencyId::XCM(6)),
-				7 => Ok(CurrencyId::XCM(7)),
-				8 => Ok(CurrencyId::XCM(8)),
-				9 => Ok(CurrencyId::XCM(9)),
-				10 => Ok(CurrencyId::XCM(10)),
-				11 => Ok(CurrencyId::XCM(11)),
-				12 => Ok(CurrencyId::XCM(12)),
-				13 => Ok(CurrencyId::XCM(13)),
-				14 => Ok(CurrencyId::XCM(14)),
-				15 => Ok(CurrencyId::XCM(15)),
-				16 => Ok(CurrencyId::XCM(16)),
-				_ => Err(()),
-			}
+			Ok(CurrencyId::XCM(foreign_currency_id))
 		},
 		1 => Ok(CurrencyId::Native),
 		2 => Ok(CurrencyId::StellarNative),

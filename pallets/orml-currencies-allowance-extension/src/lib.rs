@@ -10,7 +10,7 @@ use frame_support::{dispatch::DispatchResult, ensure};
 #[cfg(test)]
 use mocktopus::macros::mockable;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::*;
+use sp_runtime::{traits::*, ArithmeticError};
 use sp_std::{convert::TryInto, prelude::*, vec};
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -205,7 +205,7 @@ impl<T: Config> Pallet<T> {
 				None => Default::default(),
 			};
 
-			approved = approved.saturating_add(amount);
+			approved = approved.checked_add(&amount).ok_or(ArithmeticError::Overflow)?;
 			*maybe_approved = Some(approved);
 			Ok(())
 		})?;

@@ -1253,15 +1253,18 @@ where
 					T::AccountId,
 				) = env.read_as()?;
 
-				let currency_id =
-					try_from(allowance_request.0, allowance_request.1, allowance_request.2)
-						.map_err(|_| {
-							error!(
-								"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
-								allowance_request.0, allowance_request.1, allowance_request.2
-							);
-							DispatchError::Other("Currency id does not exist")
-						})?;
+				let currency_id = try_get_currency_id_from(
+					allowance_request.0,
+					allowance_request.1,
+					allowance_request.2,
+				)
+				.map_err(|_| {
+					error!(
+						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
+						allowance_request.0, allowance_request.1, allowance_request.2
+					);
+					DispatchError::Other("Currency id does not exist")
+				})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(

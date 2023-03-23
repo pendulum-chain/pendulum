@@ -96,6 +96,17 @@ use spacewalk_primitives::{
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
+use frame_support::{
+	log::{error, warn},
+	pallet_prelude::*,
+};
+use sp_std::vec::Vec;
+
+use pallet_contracts::chain_extension::{
+	ChainExtension, Environment, Ext, InitState, RetVal, SysConfig,
+};
+use sp_core::crypto::UncheckedFrom;
+
 // XCM Imports
 use xcm_executor::XcmExecutor;
 
@@ -924,17 +935,6 @@ parameter_types! {
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 }
 
-use frame_support::{
-	log::{error, warn},
-	pallet_prelude::*,
-};
-use sp_std::vec::Vec;
-
-use pallet_contracts::chain_extension::{
-	ChainExtension, Environment, Ext, InitState, RetVal, SysConfig,
-};
-use sp_core::crypto::UncheckedFrom;
-
 pub type CurrencyTypeId = u8;
 pub type StellarAssetCode = [u8; 12];
 pub type StellarAssetIssuer = [u8; 32];
@@ -992,13 +992,14 @@ where
 				warn!("account_id : {:#?}", account_id);
 				warn!("balance : {:#?}", balance);
 
-				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!(
+				let currency_id =
+					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
+						error!(
 						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
 						type_id, code, issuer
 					);
-					DispatchError::Other("Currency id does not exist")
-				})?;
+						DispatchError::Other("Currency id does not exist")
+					})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1031,13 +1032,14 @@ where
 				) = env.read_as()?;
 				let (type_id, code, issuer, account_id) = create_asset;
 
-				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!(
+				let currency_id =
+					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
+						error!(
 						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
 						type_id, code, issuer
 					);
-					DispatchError::Other("Currency id does not exist")
-				})?;
+						DispatchError::Other("Currency id does not exist")
+					})?;
 
 				warn!("asset_id : {:#?}", type_id);
 				warn!("account_id : {:#?}", account_id);
@@ -1076,13 +1078,14 @@ where
 				) = env.read_as()?;
 				let (type_id, code, issuer, _account_id) = create_asset;
 
-				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!(
+				let currency_id =
+					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
+						error!(
 						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
 						type_id, code, issuer
 					);
-					DispatchError::Other("Currency id does not exist")
-				})?;
+						DispatchError::Other("Currency id does not exist")
+					})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1127,13 +1130,14 @@ where
 				warn!("to : {:#?}", to);
 				warn!("amount : {:#?}", amount);
 
-				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!(
+				let currency_id =
+					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
+						error!(
 						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
 						type_id, code, issuer
 					);
-					DispatchError::Other("Currency id does not exist")
-				})?;
+						DispatchError::Other("Currency id does not exist")
+					})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1157,7 +1161,8 @@ where
 				match result {
 					DispatchResult::Ok(_) => {},
 					DispatchResult::Err(e) => {
-						let err = Result::<(), ChainExtensionErr>::Err(ChainExtensionErr::from(e));
+						let err =
+							Result::<(), ChainExtensionError>::Err(ChainExtensionError::from(e));
 						env.write(&err.encode(), false, None).map_err(|_| {
 							error!("ChainExtension failed to call 'approve'");
 							DispatchError::Other("ChainExtension failed to call 'approve'")
@@ -1194,13 +1199,14 @@ where
 				warn!("to : {:#?}", to);
 				warn!("amount : {:#?}", amount);
 
-				let currency_id = try_from(type_id, code, issuer).map_err(|_| {
-					error!(
+				let currency_id =
+					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
+						error!(
 						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
 						type_id, code, issuer
 					);
-					DispatchError::Other("Currency id does not exist")
-				})?;
+						DispatchError::Other("Currency id does not exist")
+					})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1225,7 +1231,8 @@ where
 				match result {
 					DispatchResult::Ok(_) => {},
 					DispatchResult::Err(e) => {
-						let err = Result::<(), ChainExtensionErr>::Err(ChainExtensionErr::from(e));
+						let err =
+							Result::<(), ChainExtensionError>::Err(ChainExtensionError::from(e));
 						env.write(&err.encode(), false, None).map_err(|_| {
 							DispatchError::Other(
 								"ChainExtension failed to call 'approved transfer'",

@@ -23,7 +23,7 @@ struct PalletAssetBalanceRequest {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
-pub enum ChainExtensionErr {
+pub enum ChainExtensionError {
 	/// Some error occurred.
 	Other,
 	/// Failed to lookup some data.
@@ -41,13 +41,13 @@ pub enum ChainExtensionErr {
 	/// An error to do with tokens.
 	Token(PalletAssetTokenError),
 	/// An arithmetic error.
-	Arithmetic(PalletAssetArithmeticErr),
+	Arithmetic(PalletAssetArithmeticError),
 	/// Unknown error
 	Unknown,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
-pub enum PalletAssetArithmeticErr {
+pub enum PalletAssetArithmeticError {
 	/// Underflow.
 	Underflow,
 	/// Overflow.
@@ -78,31 +78,31 @@ pub enum PalletAssetTokenError {
 	Unknown,
 }
 
-impl From<DispatchError> for ChainExtensionErr {
+impl From<DispatchError> for ChainExtensionError {
 	fn from(e: DispatchError) -> Self {
 		match e {
-			DispatchError::Other(_) => ChainExtensionErr::Other,
-			DispatchError::CannotLookup => ChainExtensionErr::CannotLookup,
-			DispatchError::BadOrigin => ChainExtensionErr::BadOrigin,
-			DispatchError::Module(_) => ChainExtensionErr::Module,
-			DispatchError::ConsumerRemaining => ChainExtensionErr::ConsumerRemaining,
-			DispatchError::NoProviders => ChainExtensionErr::NoProviders,
-			DispatchError::TooManyConsumers => ChainExtensionErr::TooManyConsumers,
+			DispatchError::Other(_) => ChainExtensionError::Other,
+			DispatchError::CannotLookup => ChainExtensionError::CannotLookup,
+			DispatchError::BadOrigin => ChainExtensionError::BadOrigin,
+			DispatchError::Module(_) => ChainExtensionError::Module,
+			DispatchError::ConsumerRemaining => ChainExtensionError::ConsumerRemaining,
+			DispatchError::NoProviders => ChainExtensionError::NoProviders,
+			DispatchError::TooManyConsumers => ChainExtensionError::TooManyConsumers,
 			DispatchError::Token(token_err) =>
-				ChainExtensionErr::Token(PalletAssetTokenError::from(token_err)),
+				ChainExtensionError::Token(PalletAssetTokenError::from(token_err)),
 			DispatchError::Arithmetic(arithmetic_error) =>
-				ChainExtensionErr::Arithmetic(PalletAssetArithmeticErr::from(arithmetic_error)),
-			_ => ChainExtensionErr::Unknown,
+				ChainExtensionError::Arithmetic(PalletAssetArithmeticError::from(arithmetic_error)),
+			_ => ChainExtensionError::Unknown,
 		}
 	}
 }
 
-impl From<ArithmeticError> for PalletAssetArithmeticErr {
+impl From<ArithmeticError> for PalletAssetArithmeticError {
 	fn from(e: ArithmeticError) -> Self {
 		match e {
-			ArithmeticError::Underflow => PalletAssetArithmeticErr::Underflow,
-			ArithmeticError::Overflow => PalletAssetArithmeticErr::Overflow,
-			ArithmeticError::DivisionByZero => PalletAssetArithmeticErr::DivisionByZero,
+			ArithmeticError::Underflow => PalletAssetArithmeticError::Underflow,
+			ArithmeticError::Overflow => PalletAssetArithmeticError::Overflow,
+			ArithmeticError::DivisionByZero => PalletAssetArithmeticError::DivisionByZero,
 		}
 	}
 }
@@ -121,7 +121,11 @@ impl From<TokenError> for PalletAssetTokenError {
 	}
 }
 
-pub fn try_from(type_id: u8, code: [u8; 12], issuer: [u8; 32]) -> Result<CurrencyId, ()> {
+pub fn try_get_currency_id_from(
+	type_id: u8,
+	code: [u8; 12],
+	issuer: [u8; 32],
+) -> Result<CurrencyId, ()> {
 	match type_id {
 		0 => {
 			let foreign_currency_id = code[0];

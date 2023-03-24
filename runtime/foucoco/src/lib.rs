@@ -244,10 +244,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 7,
+	spec_version: 8,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 19,
+	transaction_version: 20,
 	state_version: 1,
 };
 
@@ -1449,6 +1449,7 @@ impl currency::Config for Runtime {
 	type AssetConversion = primitives::AssetConversion;
 	type BalanceConversion = primitives::BalanceConversion;
 	type CurrencyConversion = CurrencyConvert;
+	type AmountCompatibility = primitives::StellarCompatibility;
 }
 
 impl security::Config for Runtime {

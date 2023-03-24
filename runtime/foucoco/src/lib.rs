@@ -243,7 +243,7 @@ impl_opaque_keys! {
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
-	authoring_version: 19,
+	authoring_version: 1,
 	spec_version: 7,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,

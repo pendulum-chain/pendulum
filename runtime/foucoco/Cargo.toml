@@ -220,6 +220,7 @@ std = [
     "module-replace-rpc-runtime-api/std",
     "module-vault-registry-rpc-runtime-api/std",
     "spacewalk-primitives/std",
+    "orml-currencies-allowance-extension/std"
 ]
 
 runtime-benchmarks = [

@@ -2,8 +2,10 @@
 
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
-	MultiSignature,
+	DispatchError, MultiSignature,
 };
+
+pub mod chain_ext;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;

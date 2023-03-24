@@ -1449,6 +1449,7 @@ impl currency::Config for Runtime {
 	type AssetConversion = primitives::AssetConversion;
 	type BalanceConversion = primitives::BalanceConversion;
 	type CurrencyConversion = CurrencyConvert;
+	type AmountCompatibility = primitives::StellarCompatibility;
 }
 
 impl security::Config for Runtime {

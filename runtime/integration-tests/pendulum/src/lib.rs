@@ -34,7 +34,7 @@ use polkadot_parachain::primitives::{
 decl_test_relay_chain! {
 	pub struct Relay {
 		Runtime = polkadot_runtime::Runtime,
-		XcmConfig = polkadot_runtime::xcm_config::XCMConfig,
+		XcmConfig = polkadot_runtime::xcm_config::XcmConfig,
 		new_ext = relay_ext(),
 	}
 }

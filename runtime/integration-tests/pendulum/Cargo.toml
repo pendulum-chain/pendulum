@@ -28,3 +28,5 @@ polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = 
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.37" }
 polkadot-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.37" }
 polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.37" }
+
+pendulum-runtime = { path = "../../pendulum"}

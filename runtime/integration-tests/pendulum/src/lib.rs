@@ -1,9 +1,14 @@
 // mod parachain;
 // mod relay_chain;
 
+use frame_support::traits::GenesisBuild;
+use pendulum_runtime::{PendulumCurrencyId, Runtime, System};
+use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
 use polkadot_parachain::primitives::Id as ParaId;
+use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
+use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sp_runtime::traits::AccountIdConversion;
-use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
+use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, Weight};
 
 pub const ALICE: sp_runtime::AccountId32 = sp_runtime::AccountId32::new([0u8; 32]);
 pub const INITIAL_BALANCE: u128 = 1_000_000_000;
@@ -13,7 +18,7 @@ decl_test_parachain! {
 		Runtime = pendulum_runtime::Runtime,
 		XcmpMessageHandler = pendulum_runtime::XcmpQueue,
 		DmpMessageHandler = pendulum_runtime::DmpQueue,
-		new_ext = para_ext(1),
+		new_ext = para_ext_pendulum(1234),
 	}
 }
 
@@ -29,7 +34,7 @@ decl_test_network! {
 	pub struct MockNet {
 		relay_chain = Relay,
 		parachains = vec![
-			(1, PendulumParachain),
+			(1234, PendulumParachain),
 			// (2, Statemint),
 		],
 	}
@@ -64,8 +69,8 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 
 	pallet_balances::GenesisConfig::<Runtime> {
 		balances: vec![
-            // (ALICE, INITIAL_BALANCE), (para_account_id(1), INITIAL_BALANCE)
-            ],
+		// (ALICE, INITIAL_BALANCE), (para_account_id(1), INITIAL_BALANCE)
+		],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
@@ -75,12 +80,100 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 	ext
 }
 
+pub struct ExtBuilderPendulum {
+	balances: Vec<(AccountId, PendulumCurrencyId, Balance)>,
+	parachain_id: u32,
+}
+impl Default for ExtBuilderPendulum {
+	fn default() -> Self {
+		Self { balances: vec![], parachain_id: 1234 }
+	}
+}
+
+pub fn para_ext_pendulum(parachain_id: u32) -> sp_io::TestExternalities {
+	ExtBuilderPendulum::default()
+		.balances(vec![])
+		.parachain_id(parachain_id)
+		.build()
+}
+
+impl ExtBuilderPendulum {
+	pub fn balances(mut self, balances: Vec<(AccountId, PendulumCurrencyId, Balance)>) -> Self {
+		self.balances = balances;
+		self
+	}
+	pub fn parachain_id(mut self, parachain_id: u32) -> Self {
+		self.parachain_id = parachain_id;
+		self
+	}
+	pub fn build(self) -> sp_io::TestExternalities {
+		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+		// let native_currency_id = Pendulum_runtime::Native::get();
+		pallet_balances::GenesisConfig::<Runtime> {
+			balances: vec![(AccountId::from(ALICE), INITIAL_BALANCE)],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+		<parachain_info::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
+			&parachain_info::GenesisConfig { parachain_id: self.parachain_id.into() },
+			&mut t,
+		)
+		.unwrap();
+		<pallet_xcm::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
+			&pallet_xcm::GenesisConfig { safe_xcm_version: Some(2) },
+			&mut t,
+		)
+		.unwrap();
+		let mut ext = sp_io::TestExternalities::new(t);
+		ext.execute_with(|| System::set_block_number(1));
+		ext
+	}
+}
+
+fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
+	HostConfiguration {
+		minimum_validation_upgrade_delay: 5,
+		validation_upgrade_cooldown: 5u32,
+		validation_upgrade_delay: 5,
+		code_retention_period: 1200,
+		max_code_size: MAX_CODE_SIZE,
+		max_pov_size: MAX_POV_SIZE,
+		max_head_data_size: 32 * 1024,
+		group_rotation_frequency: 20,
+		chain_availability_period: 4,
+		thread_availability_period: 4,
+		max_upward_queue_count: 8,
+		max_upward_queue_size: 1024 * 1024,
+		max_downward_message_size: 1024,
+		ump_service_total_weight: Weight::from_ref_time(4 * 1_000_000_000),
+		max_upward_message_size: 50 * 1024,
+		max_upward_message_num_per_candidate: 5,
+		hrmp_sender_deposit: 0,
+		hrmp_recipient_deposit: 0,
+		hrmp_channel_max_capacity: 8,
+		hrmp_channel_max_total_size: 8 * 1024,
+		hrmp_max_parachain_inbound_channels: 4,
+		hrmp_max_parathread_inbound_channels: 4,
+		hrmp_channel_max_message_size: 1024 * 1024,
+		hrmp_max_parachain_outbound_channels: 4,
+		hrmp_max_parathread_outbound_channels: 4,
+		hrmp_max_message_num_per_candidate: 5,
+		dispute_period: 6,
+		no_show_slots: 2,
+		n_delay_tranches: 25,
+		needed_approvals: 2,
+		relay_vrf_modulo_samples: 2,
+		zeroth_delay_tranche_width: 0,
+		..Default::default()
+	}
+}
+
 // pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay_chain::Runtime>;
 // pub type ParachainPalletXcm = pallet_xcm::Pallet<parachain::Runtime>;
 
 #[cfg(test)]
 mod tests {
-    #[test]
+	#[test]
 	fn dmp() {}
 }
 

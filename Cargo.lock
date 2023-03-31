@@ -14361,6 +14361,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "xcm-emulator"
+version = "0.1.0"
+source = "git+https://github.com/shaunxw/xcm-simulator?rev=6847a58888e483f0ed2e0b72f90e00767ea0ecac#6847a58888e483f0ed2e0b72f90e00767ea0ecac"
+dependencies = [
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-parachain-system",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "cumulus-primitives-parachain-inherent",
+ "cumulus-test-relay-sproof-builder",
+ "frame-support",
+ "frame-system",
+ "parachain-info",
+ "parity-scale-codec",
+ "paste",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "quote",
+ "sp-arithmetic",
+ "sp-io",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
+]
+
+[[package]]
 name = "xcm-executor"
 version = "0.9.37"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.37#645723987cf9662244be8faf4e9b63e8b9a1b3a3"
@@ -14430,6 +14456,7 @@ dependencies = [
  "sp-std",
  "xcm",
  "xcm-builder",
+ "xcm-emulator",
  "xcm-executor",
  "xcm-simulator",
 ]

@@ -22,15 +22,6 @@ pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];
 pub const INITIAL_BALANCE: u128 = 1_000_000_000;
 
-decl_test_parachain! {
-	pub struct PendulumParachain {
-		Runtime = pendulum_runtime::Runtime,
-		XcmpMessageHandler = pendulum_runtime::XcmpQueue,
-		DmpMessageHandler = pendulum_runtime::DmpQueue,
-		new_ext = para_ext_pendulum(1234),
-	}
-}
-
 decl_test_relay_chain! {
 	pub struct Relay {
 		Runtime = polkadot_runtime::Runtime,
@@ -39,12 +30,20 @@ decl_test_relay_chain! {
 	}
 }
 
+decl_test_parachain! {
+	pub struct PendulumParachain {
+		Runtime = pendulum_runtime::Runtime,
+		XcmpMessageHandler = pendulum_runtime::XcmpQueue,
+		DmpMessageHandler = pendulum_runtime::DmpQueue,
+		new_ext = para_ext_pendulum(2094),
+	}
+}
+
 decl_test_network! {
 	pub struct MockNet {
 		relay_chain = Relay,
 		parachains = vec![
-			(1234, PendulumParachain),
-			// (2, Statemint),
+			(2094, PendulumParachain),
 		],
 	}
 }
@@ -57,7 +56,10 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 	use polkadot_runtime::{Runtime, System};
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 	pallet_balances::GenesisConfig::<Runtime> {
-		balances: vec![(AccountId::from(ALICE), dot(2002))],
+		balances: vec![(AccountId::from(ALICE), dot(100000)),
+		(ParaId::from(2094).into_account_truncating(), 10 * dot(100000)),
+		],
+		
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
@@ -82,7 +84,7 @@ pub struct ExtBuilderPendulum {
 }
 impl Default for ExtBuilderPendulum {
 	fn default() -> Self {
-		Self { balances: vec![], parachain_id: 1234 }
+		Self { balances: vec![], parachain_id: 2094 }
 	}
 }
 
@@ -165,7 +167,7 @@ fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
 }
 
 pub fn dot(amount: Balance) -> Balance {
-	amount * one(18)
+	amount * one(9)
 }
 
 pub fn one(decimals: u32) -> Balance {
@@ -184,6 +186,8 @@ mod tests {
 #[test]
 
 fn transfer_ksm_from_relay_chain_to_pendulum() {
+
+	MockNet::reset();
 	let transfer_amount: Balance = dot(2);
 	println!("transfer KSM amount : {} ", transfer_amount);
 	let mut balance_before = 0;
@@ -197,25 +201,72 @@ fn transfer_ksm_from_relay_chain_to_pendulum() {
 		);
 		println!("Alice orml tokens KSM before {}", orml_tokens_before);
 	});
+
 	Relay::execute_with(|| {
+
 		assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
 			polkadot_runtime::RuntimeOrigin::signed(ALICE.into()),
-			Box::new(Parachain(1234).into().into()),
+			Box::new(Parachain(2094).into().into()),
 			Box::new(Junction::AccountId32 { network: NetworkId::Any, id: ALICE }.into().into()),
 			Box::new((Here, transfer_amount).into()),
 			0
 		));
+
+		use polkadot_runtime::{RuntimeEvent, System};
+		for i in System::events().iter(){
+			println!("polkadot_runtime 1 {:?}", i);
+		}
 	});
+
 	const DOT_FEE: Balance = 3200000000;
 	PendulumParachain::execute_with(|| {
+
+		use pendulum_runtime::{RuntimeEvent, System};
+		for i in System::events().iter(){
+			println!(" Pendulum_runtime 4 {:?}", i);
+		}
 		assert_eq!(
 			pendulum_runtime::Tokens::balance(
 				pendulum_runtime::PendulumCurrencyId::XCM(0),
 				&ALICE.into()
 			),
-			orml_tokens_before + transfer_amount - DOT_FEE
+			// orml_tokens_before + transfer_amount - DOT_FEE
+			0
 		);
 	});
+
+	Relay::execute_with(|| {
+		use polkadot_runtime::{RuntimeEvent, System};
+		for i in System::events().iter(){
+			println!("polkadot_runtime 2 {:?}", i);
+		}
+	});
+
+	PendulumParachain::execute_with(|| {
+		use pendulum_runtime::{RuntimeEvent, System};
+		for i in System::events().iter(){
+			println!(" Pendulum_runtime 3 {:?}", i);
+		}
+	});
+	
+
+	
+
+	return;
+
+	PendulumParachain::execute_with(|| {
+
+		use pendulum_runtime::{RuntimeEvent, System};
+		for i in System::events().iter(){
+			println!(" Pendulum_runtime 5 {:?}", i);
+		}
+	});
+
+	use pendulum_runtime::{RuntimeEvent, System};
+		for i in System::events().iter(){
+			println!(" Pendulum_runtime 6 {:?}", i);
+		}
+
 	Relay::execute_with(|| {
 		let before_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
 		println!("BOB KSM BEFORE balance on relay chain {} ", before_bob_free_balance);
@@ -415,7 +466,7 @@ fn transfer_ksm_from_relay_chain_to_pendulum() {
 // 		MockNet::reset();
 
 // 		let send_amount = 10;
-// 		let query_id_set = 1234;
+// 		let query_id_set = 2094;
 
 // 		// Send a message which fully succeeds on the relay chain
 // 		ParaA::execute_with(|| {

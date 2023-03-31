@@ -1,17 +1,25 @@
 // mod parachain;
 // mod relay_chain;
 
-use frame_support::traits::GenesisBuild;
-use pendulum_runtime::{PendulumCurrencyId, Runtime, System};
+use frame_support::{
+	assert_ok,
+	traits::{fungibles::Inspect, GenesisBuild},
+};
+use pendulum_runtime::{Balances, PendulumCurrencyId, Runtime, System, Tokens};
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
 use polkadot_parachain::primitives::Id as ParaId;
 use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sp_runtime::traits::AccountIdConversion;
-use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, Weight};
+use xcm::v1::{Junction, Junction::Parachain};
+use xcm_simulator::{
+	decl_test_network, decl_test_parachain, decl_test_relay_chain, Junctions, Junctions::Here,
+	MultiLocation, NetworkId, TestExt, Weight, WeightLimit,
+};
 
 // pub const ALICE: sp_runtime::AccountId32 = sp_runtime::AccountId32::new([0u8; 32]);
 pub const ALICE: [u8; 32] = [4u8; 32];
+pub const BOB: [u8; 32] = [5u8; 32];
 pub const INITIAL_BALANCE: u128 = 1_000_000_000;
 
 decl_test_parachain! {
@@ -171,6 +179,70 @@ pub fn one(decimals: u32) -> Balance {
 mod tests {
 	#[test]
 	fn dmp() {}
+}
+
+#[test]
+
+fn transfer_ksm_from_relay_chain_to_pendulum() {
+	let transfer_amount: Balance = dot(2);
+	println!("transfer KSM amount : {} ", transfer_amount);
+	let mut balance_before = 0;
+	let mut orml_tokens_before = 0;
+	PendulumParachain::execute_with(|| {
+		balance_before = Balances::free_balance(&ALICE.into());
+		println!("Alice balance_before {}", balance_before);
+		let orml_tokens_before = pendulum_runtime::Tokens::balance(
+			pendulum_runtime::PendulumCurrencyId::XCM(0),
+			&ALICE.into(),
+		);
+		println!("Alice orml tokens KSM before {}", orml_tokens_before);
+	});
+	Relay::execute_with(|| {
+		assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
+			polkadot_runtime::RuntimeOrigin::signed(ALICE.into()),
+			Box::new(Parachain(1234).into().into()),
+			Box::new(Junction::AccountId32 { network: NetworkId::Any, id: ALICE }.into().into()),
+			Box::new((Here, transfer_amount).into()),
+			0
+		));
+	});
+	const DOT_FEE: Balance = 3200000000;
+	PendulumParachain::execute_with(|| {
+		assert_eq!(
+			pendulum_runtime::Tokens::balance(
+				pendulum_runtime::PendulumCurrencyId::XCM(0),
+				&ALICE.into()
+			),
+			orml_tokens_before + transfer_amount - DOT_FEE
+		);
+	});
+	Relay::execute_with(|| {
+		let before_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
+		println!("BOB KSM BEFORE balance on relay chain {} ", before_bob_free_balance);
+		assert_eq!(before_bob_free_balance, 0);
+	});
+	PendulumParachain::execute_with(|| {
+		assert_ok!(pendulum_runtime::XTokens::transfer(
+			pendulum_runtime::RuntimeOrigin::signed(ALICE.into()),
+			pendulum_runtime::PendulumCurrencyId::XCM(0),
+			dot(1),
+			Box::new(
+				MultiLocation::new(
+					1,
+					Junctions::X1(Junction::AccountId32 { id: BOB, network: NetworkId::Any })
+				)
+				.into()
+			),
+			WeightLimit::Limited(4_000_000_000),
+		));
+	});
+	//h horozin rmp  hrmp
+	// ump dmp
+	Relay::execute_with(|| {
+		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
+		println!("BOB KSM AFTER balance on relay chain {} ", after_bob_free_balance);
+		assert_eq!(after_bob_free_balance, 999988476752);
+	});
 }
 
 // #[cfg(test)]

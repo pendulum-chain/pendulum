@@ -10,7 +10,8 @@ use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sp_runtime::traits::AccountIdConversion;
 use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, Weight};
 
-pub const ALICE: sp_runtime::AccountId32 = sp_runtime::AccountId32::new([0u8; 32]);
+// pub const ALICE: sp_runtime::AccountId32 = sp_runtime::AccountId32::new([0u8; 32]);
+pub const ALICE: [u8; 32] = [4u8; 32];
 pub const INITIAL_BALANCE: u128 = 1_000_000_000;
 
 decl_test_parachain! {
@@ -40,41 +41,28 @@ decl_test_network! {
 	}
 }
 
-// pub fn para_account_id(id: u32) -> relay_chain::AccountId {
-// 	ParaId::from(id).into_account_truncating()
-// }
-
-pub fn para_ext(para_id: u32) -> sp_io::TestExternalities {
-	use pendulum_runtime::{Runtime, System};
-
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
-
-	pallet_balances::GenesisConfig::<Runtime> { balances: vec![(ALICE, INITIAL_BALANCE)] }
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| {
-		System::set_block_number(1);
-		// MsgQueue::set_para_id(para_id.into());
-	});
-	ext
+pub fn para_account_id(id: u32) -> polkadot_core_primitives::AccountId {
+	ParaId::from(id).into_account_truncating()
 }
 
 pub fn relay_ext() -> sp_io::TestExternalities {
-	// use relay_chain::{Runtime, System};
 	use polkadot_runtime::{Runtime, System};
-
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
-
 	pallet_balances::GenesisConfig::<Runtime> {
-		balances: vec![
-		// (ALICE, INITIAL_BALANCE), (para_account_id(1), INITIAL_BALANCE)
-		],
+		balances: vec![(AccountId::from(ALICE), dot(2002))],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
-
+	polkadot_runtime_parachains::configuration::GenesisConfig::<Runtime> {
+		config: default_parachains_host_configuration(),
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+	<pallet_xcm::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
+		&pallet_xcm::GenesisConfig { safe_xcm_version: Some(2) },
+		&mut t,
+	)
+	.unwrap();
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| System::set_block_number(1));
 	ext
@@ -166,6 +154,14 @@ fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
 		zeroth_delay_tranche_width: 0,
 		..Default::default()
 	}
+}
+
+pub fn dot(amount: Balance) -> Balance {
+	amount * one(18)
+}
+
+pub fn one(decimals: u32) -> Balance {
+	10u128.saturating_pow(decimals.into())
 }
 
 // pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay_chain::Runtime>;

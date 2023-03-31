@@ -1,26 +1,29 @@
-// mod parachain;
-// mod relay_chain;
-
-use frame_support::traits::GenesisBuild;
-use pendulum_runtime::{PendulumCurrencyId, Runtime, System};
+use frame_support::{
+	assert_ok,
+	traits::{fungibles::Inspect, GenesisBuild},
+};
+use pendulum_runtime::{Balances, PendulumCurrencyId, Runtime, System, Tokens};
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
 use polkadot_parachain::primitives::Id as ParaId;
 use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sp_runtime::traits::AccountIdConversion;
-use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, Weight};
+use xcm::{
+	latest::{
+		AssetId, Fungibility, Junction, Junction::*, Junctions::*, MultiAsset, MultiLocation,
+		NetworkId, WeightLimit,
+	},
+	v2::{Instruction::WithdrawAsset, Xcm},
+	VersionedMultiLocation,
+};
+const DOT_FEE: Balance = 3200000000;
+use xcm_emulator::{
+	decl_test_network, decl_test_parachain, decl_test_relay_chain, Junctions, TestExt, Weight,
+};
 
-pub const ALICE: sp_runtime::AccountId32 = sp_runtime::AccountId32::new([0u8; 32]);
+pub const ALICE: [u8; 32] = [4u8; 32];
+pub const BOB: [u8; 32] = [5u8; 32];
 pub const INITIAL_BALANCE: u128 = 1_000_000_000;
-
-decl_test_parachain! {
-	pub struct PendulumParachain {
-		Runtime = pendulum_runtime::Runtime,
-		XcmpMessageHandler = pendulum_runtime::XcmpQueue,
-		DmpMessageHandler = pendulum_runtime::DmpQueue,
-		new_ext = para_ext_pendulum(1234),
-	}
-}
 
 decl_test_relay_chain! {
 	pub struct Relay {
@@ -30,51 +33,50 @@ decl_test_relay_chain! {
 	}
 }
 
+decl_test_parachain! {
+	pub struct PendulumParachain {
+		Runtime = pendulum_runtime::Runtime,
+		RuntimeOrigin = pendulum_runtime::RuntimeOrigin,
+		XcmpMessageHandler = pendulum_runtime::XcmpQueue,
+		DmpMessageHandler = pendulum_runtime::DmpQueue,
+		new_ext = para_ext_pendulum(2094),
+	}
+}
+
 decl_test_network! {
 	pub struct MockNet {
 		relay_chain = Relay,
 		parachains = vec![
-			(1234, PendulumParachain),
-			// (2, Statemint),
+			(2094, PendulumParachain),
 		],
 	}
 }
 
-// pub fn para_account_id(id: u32) -> relay_chain::AccountId {
-// 	ParaId::from(id).into_account_truncating()
-// }
-
-pub fn para_ext(para_id: u32) -> sp_io::TestExternalities {
-	use pendulum_runtime::{Runtime, System};
-
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
-
-	pallet_balances::GenesisConfig::<Runtime> { balances: vec![(ALICE, INITIAL_BALANCE)] }
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| {
-		System::set_block_number(1);
-		// MsgQueue::set_para_id(para_id.into());
-	});
-	ext
+pub fn para_account_id(id: u32) -> polkadot_core_primitives::AccountId {
+	ParaId::from(id).into_account_truncating()
 }
 
 pub fn relay_ext() -> sp_io::TestExternalities {
-	// use relay_chain::{Runtime, System};
 	use polkadot_runtime::{Runtime, System};
-
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
-
 	pallet_balances::GenesisConfig::<Runtime> {
 		balances: vec![
-		// (ALICE, INITIAL_BALANCE), (para_account_id(1), INITIAL_BALANCE)
+			(AccountId::from(ALICE), dot(100000)),
+			(ParaId::from(2094).into_account_truncating(), 10 * dot(100000)),
 		],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
-
+	polkadot_runtime_parachains::configuration::GenesisConfig::<Runtime> {
+		config: default_parachains_host_configuration(),
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+	<pallet_xcm::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
+		&pallet_xcm::GenesisConfig { safe_xcm_version: Some(2) },
+		&mut t,
+	)
+	.unwrap();
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| System::set_block_number(1));
 	ext
@@ -86,7 +88,7 @@ pub struct ExtBuilderPendulum {
 }
 impl Default for ExtBuilderPendulum {
 	fn default() -> Self {
-		Self { balances: vec![], parachain_id: 1234 }
+		Self { balances: vec![], parachain_id: 2094 }
 	}
 }
 
@@ -168,229 +170,107 @@ fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
 	}
 }
 
-// pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay_chain::Runtime>;
-// pub type ParachainPalletXcm = pallet_xcm::Pallet<parachain::Runtime>;
-
-#[cfg(test)]
-mod tests {
-	#[test]
-	fn dmp() {}
+pub fn dot(amount: Balance) -> Balance {
+	amount * one(9)
 }
 
-// #[cfg(test)]
-// mod tests {
-// 	use super::*;
+pub fn one(decimals: u32) -> Balance {
+	10u128.saturating_pow(decimals.into())
+}
 
-// 	use codec::Encode;
-// 	use frame_support::assert_ok;
-// 	use xcm::latest::prelude::*;
-// 	use xcm_simulator::TestExt;
+#[test]
+fn transfer_polkadot_from_relay_chain_to_pendulum() {
+	MockNet::reset();
 
-// 	// Helper function for forming buy execution message
-// 	fn buy_execution<C>(fees: impl Into<MultiAsset>) -> Instruction<C> {
-// 		BuyExecution { fees: fees.into(), weight_limit: Unlimited }
-// 	}
+	let transfer_amount: Balance = dot(20);
+	println!("transfer DOT amount : {} ", transfer_amount);
+	let mut balance_before = 0;
+	let mut orml_tokens_before = 0;
+	PendulumParachain::execute_with(|| {
+		balance_before = Balances::free_balance(&ALICE.into());
+		println!("Alice balance_before {}", balance_before);
+		let orml_tokens_before = pendulum_runtime::Tokens::balance(
+			pendulum_runtime::PendulumCurrencyId::XCM(0),
+			&ALICE.into(),
+		);
+		println!("Alice orml tokens DOT before {}", orml_tokens_before);
+	});
 
-// 	#[test]
-// 	fn dmp() {
-// 		MockNet::reset();
+	Relay::execute_with(|| {
+		assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
+			polkadot_runtime::RuntimeOrigin::signed(ALICE.into()),
+			Box::new(Parachain(2094).into().into()),
+			Box::new(Junction::AccountId32 { network: NetworkId::Any, id: ALICE }.into().into()),
+			Box::new((Here, transfer_amount).into()),
+			0
+		));
+	});
 
-// 		let remark = parachain::RuntimeCall::System(
-// 			frame_system::Call::<parachain::Runtime>::remark_with_event { remark: vec![1, 2, 3] },
-// 		);
-// 		Relay::execute_with(|| {
-// 			assert_ok!(RelayChainPalletXcm::send_xcm(
-// 				Here,
-// 				Parachain(1),
-// 				Xcm(vec![Transact {
-// 					origin_type: OriginKind::SovereignAccount,
-// 					require_weight_at_most: INITIAL_BALANCE as u64,
-// 					call: remark.encode().into(),
-// 				}]),
-// 			));
-// 		});
+	Relay::execute_with(|| {
+		use polkadot_runtime::{RuntimeEvent, System};
+		for i in System::events().iter() {
+			println!("polkadot_runtime {:?}", i);
+		}
+	});
 
-// 		ParaA::execute_with(|| {
-// 			use parachain::{RuntimeEvent, System};
-// 			assert!(System::events().iter().any(|r| matches!(
-// 				r.event,
-// 				RuntimeEvent::System(frame_system::Event::Remarked { .. })
-// 			)));
-// 		});
-// 	}
+	println!("____________________________________________________");
 
-// 	#[test]
-// 	fn ump() {
-// 		MockNet::reset();
+	PendulumParachain::execute_with(|| {
+		use pendulum_runtime::{RuntimeEvent, System, Tokens};
+		for i in System::events().iter() {
+			println!(" Pendulum_runtime {:?}", i);
+		}
 
-// 		let remark = relay_chain::RuntimeCall::System(
-// 			frame_system::Call::<relay_chain::Runtime>::remark_with_event { remark: vec![1, 2, 3] },
-// 		);
-// 		ParaA::execute_with(|| {
-// 			assert_ok!(ParachainPalletXcm::send_xcm(
-// 				Here,
-// 				Parent,
-// 				Xcm(vec![Transact {
-// 					origin_type: OriginKind::SovereignAccount,
-// 					require_weight_at_most: INITIAL_BALANCE as u64,
-// 					call: remark.encode().into(),
-// 				}]),
-// 			));
-// 		});
+		assert!(System::events().iter().any(|r| matches!(
+			r.event,
+			RuntimeEvent::Tokens(orml_tokens::Event::Deposited { .. })
+		)));
 
-// 		Relay::execute_with(|| {
-// 			use relay_chain::{RuntimeEvent, System};
-// 			assert!(System::events().iter().any(|r| matches!(
-// 				r.event,
-// 				RuntimeEvent::System(frame_system::Event::Remarked { .. })
-// 			)));
-// 		});
-// 	}
+		assert!(System::events().iter().any(|r| matches!(
+			r.event,
+			RuntimeEvent::DmpQueue(cumulus_pallet_dmp_queue::Event::ExecutedDownward { .. })
+		)));
+	});
 
-// 	#[test]
-// 	fn xcmp() {
-// 		MockNet::reset();
+	PendulumParachain::execute_with(|| {
+		assert_eq!(
+			pendulum_runtime::Tokens::balance(
+				pendulum_runtime::PendulumCurrencyId::XCM(0),
+				&ALICE.into()
+			),
+			orml_tokens_before + transfer_amount - DOT_FEE
+		);
+	});
 
-// 		let remark = parachain::RuntimeCall::System(
-// 			frame_system::Call::<parachain::Runtime>::remark_with_event { remark: vec![1, 2, 3] },
-// 		);
-// 		ParaA::execute_with(|| {
-// 			assert_ok!(ParachainPalletXcm::send_xcm(
-// 				Here,
-// 				(Parent, Parachain(2)),
-// 				Xcm(vec![Transact {
-// 					origin_type: OriginKind::SovereignAccount,
-// 					require_weight_at_most: INITIAL_BALANCE as u64,
-// 					call: remark.encode().into(),
-// 				}]),
-// 			));
-// 		});
+	return
+	//TODO move to another test.
+	//TODO rewrite the test with correct assert statements
+	Relay::execute_with(|| {
+		let before_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
+		println!("BOB DOT BEFORE balance on relay chain {} ", before_bob_free_balance);
+		assert_eq!(before_bob_free_balance, 0);
+	});
 
-// 		ParaB::execute_with(|| {
-// 			use parachain::{RuntimeEvent, System};
-// 			assert!(System::events().iter().any(|r| matches!(
-// 				r.event,
-// 				RuntimeEvent::System(frame_system::Event::Remarked { .. })
-// 			)));
-// 		});
-// 	}
-
-// 	#[test]
-// 	fn reserve_transfer() {
-// 		MockNet::reset();
-
-// 		let withdraw_amount = 123;
-
-// 		Relay::execute_with(|| {
-// 			assert_ok!(RelayChainPalletXcm::reserve_transfer_assets(
-// 				relay_chain::RuntimeOrigin::signed(ALICE),
-// 				Box::new(X1(Parachain(1)).into().into()),
-// 				Box::new(X1(AccountId32 { network: Any, id: ALICE.into() }).into().into()),
-// 				Box::new((Here, withdraw_amount).into()),
-// 				0,
-// 			));
-// 			assert_eq!(
-// 				parachain::Balances::free_balance(&para_account_id(1)),
-// 				INITIAL_BALANCE + withdraw_amount
-// 			);
-// 		});
-
-// 		ParaA::execute_with(|| {
-// 			// free execution, full amount received
-// 			assert_eq!(
-// 				pallet_balances::Pallet::<parachain::Runtime>::free_balance(&ALICE),
-// 				INITIAL_BALANCE + withdraw_amount
-// 			);
-// 		});
-// 	}
-
-// 	/// Scenario:
-// 	/// A parachain transfers funds on the relay chain to another parachain account.
-// 	///
-// 	/// Asserts that the parachain accounts are updated as expected.
-// 	#[test]
-// 	fn withdraw_and_deposit() {
-// 		MockNet::reset();
-
-// 		let send_amount = 10;
-
-// 		ParaA::execute_with(|| {
-// 			let message = Xcm(vec![
-// 				WithdrawAsset((Here, send_amount).into()),
-// 				buy_execution((Here, send_amount)),
-// 				DepositAsset {
-// 					assets: All.into(),
-// 					max_assets: 1,
-// 					beneficiary: Parachain(2).into(),
-// 				},
-// 			]);
-// 			// Send withdraw and deposit
-// 			assert_ok!(ParachainPalletXcm::send_xcm(Here, Parent, message.clone()));
-// 		});
-
-// 		Relay::execute_with(|| {
-// 			assert_eq!(
-// 				relay_chain::Balances::free_balance(para_account_id(1)),
-// 				INITIAL_BALANCE - send_amount
-// 			);
-// 			assert_eq!(relay_chain::Balances::free_balance(para_account_id(2)), send_amount);
-// 		});
-// 	}
-
-// 	/// Scenario:
-// 	/// A parachain wants to be notified that a transfer worked correctly.
-// 	/// It sends a `QueryHolding` after the deposit to get notified on success.
-// 	///
-// 	/// Asserts that the balances are updated correctly and the expected XCM is sent.
-// 	#[test]
-// 	fn query_holding() {
-// 		MockNet::reset();
-
-// 		let send_amount = 10;
-// 		let query_id_set = 1234;
-
-// 		// Send a message which fully succeeds on the relay chain
-// 		ParaA::execute_with(|| {
-// 			let message = Xcm(vec![
-// 				WithdrawAsset((Here, send_amount).into()),
-// 				buy_execution((Here, send_amount)),
-// 				DepositAsset {
-// 					assets: All.into(),
-// 					max_assets: 1,
-// 					beneficiary: Parachain(2).into(),
-// 				},
-// 				QueryHolding {
-// 					query_id: query_id_set,
-// 					dest: Parachain(1).into(),
-// 					assets: All.into(),
-// 					max_response_weight: 1_000_000_000,
-// 				},
-// 			]);
-// 			// Send withdraw and deposit with query holding
-// 			assert_ok!(ParachainPalletXcm::send_xcm(Here, Parent, message.clone(),));
-// 		});
-
-// 		// Check that transfer was executed
-// 		Relay::execute_with(|| {
-// 			// Withdraw executed
-// 			assert_eq!(
-// 				relay_chain::Balances::free_balance(para_account_id(1)),
-// 				INITIAL_BALANCE - send_amount
-// 			);
-// 			// Deposit executed
-// 			assert_eq!(relay_chain::Balances::free_balance(para_account_id(2)), send_amount);
-// 		});
-
-// 		// Check that QueryResponse message was received
-// 		ParaA::execute_with(|| {
-// 			assert_eq!(
-// 				parachain::MsgQueue::received_dmp(),
-// 				vec![Xcm(vec![QueryResponse {
-// 					query_id: query_id_set,
-// 					response: Response::Assets(MultiAssets::new()),
-// 					max_weight: 1_000_000_000,
-// 				}])],
-// 			);
-// 		});
-// 	}
-// }
+	PendulumParachain::execute_with(|| {
+		assert_ok!(pendulum_runtime::XTokens::transfer(
+			pendulum_runtime::RuntimeOrigin::signed(ALICE.into()),
+			pendulum_runtime::PendulumCurrencyId::XCM(0),
+			dot(1),
+			Box::new(
+				MultiLocation::new(
+					1,
+					Junctions::X1(Junction::AccountId32 { id: BOB, network: NetworkId::Any })
+				)
+				.into()
+			),
+			WeightLimit::Limited(4_000_000_000),
+		));
+	});
+	//h horozin rmp  hrmp
+	// ump dmp
+	Relay::execute_with(|| {
+		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
+		println!("BOB DOT AFTER balance on relay chain {} ", after_bob_free_balance);
+		assert_eq!(after_bob_free_balance, 999988476752);
+	});
+}

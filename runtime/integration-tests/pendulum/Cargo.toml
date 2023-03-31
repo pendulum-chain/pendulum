@@ -30,5 +30,6 @@ polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch =
 polkadot-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.37" }
 polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.37" }
 
+xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", rev = "6847a58888e483f0ed2e0b72f90e00767ea0ecac" }
 
 pendulum-runtime = { path = "../../pendulum"}

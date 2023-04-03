@@ -43,20 +43,21 @@ decl_test_parachain! {
 	}
 }
 
-// decl_test_parachain! {
-// 	pub struct Statemine {
-// 		Runtime = statemine_runtime::Runtime,
-// 		RuntimeOrigin = statemine_runtime::RuntimeOrigin,
-// 		XcmpMessageHandler = statemine_runtime::XcmpQueue,
-// 		DmpMessageHandler = statemine_runtime::DmpQueue,
-// 		new_ext = para_ext(1000),
-// 	}
-// }
+decl_test_parachain! {
+	pub struct Statemine {
+		Runtime = statemint_runtime::Runtime,
+		RuntimeOrigin = statemint_runtime::RuntimeOrigin,
+		XcmpMessageHandler = statemint_runtime::XcmpQueue,
+		DmpMessageHandler = statemint_runtime::DmpQueue,
+		new_ext = para_ext_statemint(1000),
+	}
+}
 
 decl_test_network! {
 	pub struct MockNet {
 		relay_chain = Relay,
 		parachains = vec![
+			(1000, Statemine),
 			(2094, PendulumParachain),
 		],
 	}
@@ -150,6 +151,65 @@ impl ExtBuilderPendulum {
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}
+}
+
+pub struct ExtStatemintBuilder {
+	balances: Vec<(AccountId, u128, Balance)>,
+	parachain_id: u32,
+}
+
+impl Default for ExtStatemintBuilder {
+	fn default() -> Self {
+		Self { balances: vec![], parachain_id: 1000 }
+	}
+}
+
+impl ExtStatemintBuilder {
+	pub fn balances(mut self, balances: Vec<(AccountId, u128, Balance)>) -> Self {
+		self.balances = balances;
+		self
+	}
+
+	#[allow(dead_code)]
+	pub fn parachain_id(mut self, parachain_id: u32) -> Self {
+		self.parachain_id = parachain_id;
+		self
+	}
+
+	pub fn build(self) -> sp_io::TestExternalities {
+		use statemint_runtime::Runtime as StatemintRuntime;
+
+		let mut t = frame_system::GenesisConfig::default()
+			.build_storage::<StatemintRuntime>()
+			.unwrap();
+
+		pallet_balances::GenesisConfig::<StatemintRuntime> { balances: vec![] }
+			.assimilate_storage(&mut t)
+			.unwrap();
+
+		<parachain_info::GenesisConfig as GenesisBuild<StatemintRuntime>>::assimilate_storage(
+			&parachain_info::GenesisConfig { parachain_id: self.parachain_id.into() },
+			&mut t,
+		)
+		.unwrap();
+
+		<pallet_xcm::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
+			&pallet_xcm::GenesisConfig { safe_xcm_version: Some(2) },
+			&mut t,
+		)
+		.unwrap();
+
+		let mut ext = sp_io::TestExternalities::new(t);
+		ext.execute_with(|| System::set_block_number(1));
+		ext
+	}
+}
+
+pub fn para_ext_statemint(parachain_id: u32) -> sp_io::TestExternalities {
+	ExtStatemintBuilder::default()
+		.balances(vec![])
+		.parachain_id(parachain_id)
+		.build()
 }
 
 fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
@@ -338,5 +398,3 @@ fn transfer_polkadot_from_pendulum_to_relay_chain() {
 		assert_eq!(after_bob_free_balance, dot(100) + transfer_dot_amount - FEE);
 	});
 }
-
-

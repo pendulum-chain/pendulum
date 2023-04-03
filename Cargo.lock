@@ -14440,6 +14440,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-xtokens",
  "pallet-balances",
  "pallet-xcm",
  "parachain-info",

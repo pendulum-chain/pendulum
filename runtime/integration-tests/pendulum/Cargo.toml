@@ -34,5 +34,5 @@ xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", rev = "6847a5
 
 orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.37" }
 cumulus-pallet-dmp-queue = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.37"}
-
+orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.37" }
 pendulum-runtime = { path = "../../pendulum"}

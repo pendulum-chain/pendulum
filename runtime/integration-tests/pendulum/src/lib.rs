@@ -62,6 +62,7 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 	pallet_balances::GenesisConfig::<Runtime> {
 		balances: vec![
 			(AccountId::from(ALICE), dot(100000)),
+			(AccountId::from(BOB), dot(100)),
 			(ParaId::from(2094).into_account_truncating(), 10 * dot(100000)),
 		],
 	}
@@ -112,7 +113,16 @@ impl ExtBuilderPendulum {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 		// let native_currency_id = Pendulum_runtime::Native::get();
 		pallet_balances::GenesisConfig::<Runtime> {
-			balances: vec![(AccountId::from(ALICE), INITIAL_BALANCE)],
+			balances: vec![
+				(AccountId::from(ALICE), INITIAL_BALANCE),
+				(AccountId::from(BOB), INITIAL_BALANCE),
+			],
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		orml_tokens::GenesisConfig::<Runtime> {
+			balances: vec![(AccountId::from(BOB), PendulumCurrencyId::XCM(0), dot(100))],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -241,21 +251,26 @@ fn transfer_polkadot_from_relay_chain_to_pendulum() {
 			orml_tokens_before + transfer_amount - DOT_FEE
 		);
 	});
+}
 
-	return
-	//TODO move to another test.
-	//TODO rewrite the test with correct assert statements
+#[test]
+fn transfer_polkadot_from_pendulum_to_relay_chain() {
+	MockNet::reset();
+
+	let transfer_dot_amount: Balance = dot(10);
+	let FEE = 421434140;
+
 	Relay::execute_with(|| {
-		let before_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
-		println!("BOB DOT BEFORE balance on relay chain {} ", before_bob_free_balance);
-		assert_eq!(before_bob_free_balance, 0);
+		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
+		// println!("BOB DOT BEFORE balance on relay chain {} ", after_bob_free_balance);
+		assert_eq!(after_bob_free_balance, dot(100));
 	});
 
 	PendulumParachain::execute_with(|| {
 		assert_ok!(pendulum_runtime::XTokens::transfer(
-			pendulum_runtime::RuntimeOrigin::signed(ALICE.into()),
+			pendulum_runtime::RuntimeOrigin::signed(BOB.into()),
 			pendulum_runtime::PendulumCurrencyId::XCM(0),
-			dot(1),
+			transfer_dot_amount,
 			Box::new(
 				MultiLocation::new(
 					1,
@@ -266,11 +281,50 @@ fn transfer_polkadot_from_relay_chain_to_pendulum() {
 			WeightLimit::Limited(4_000_000_000),
 		));
 	});
-	//h horozin rmp  hrmp
-	// ump dmp
+
+	PendulumParachain::execute_with(|| {
+		use pendulum_runtime::{RuntimeEvent, System};
+		// for i in System::events().iter() {
+		// 	println!(" Pendulum_runtime {:?}", i);
+		// }
+
+		assert!(System::events().iter().any(|r| matches!(
+			r.event,
+			RuntimeEvent::Tokens(orml_tokens::Event::Withdrawn { .. })
+		)));
+
+		assert!(System::events().iter().any(|r| matches!(
+			r.event,
+			RuntimeEvent::XTokens(orml_xtokens::Event::TransferredMultiAssets { .. })
+		)));
+	});
+
+	Relay::execute_with(|| {
+		use polkadot_runtime::{RuntimeEvent, System};
+
+		// for i in System::events().iter() {
+		// 	println!("polkadot_runtime {:?}", i);
+		// }
+
+		assert!(System::events().iter().any(|r| matches!(
+			r.event,
+			RuntimeEvent::Balances(pallet_balances::Event::Withdraw { .. })
+		)));
+
+		assert!(System::events().iter().any(|r| matches!(
+			r.event,
+			RuntimeEvent::Balances(pallet_balances::Event::Deposit { .. })
+		)));
+
+		assert!(System::events().iter().any(|r| matches!(
+			r.event,
+			RuntimeEvent::Ump(polkadot_runtime_parachains::ump::Event::ExecutedUpward { .. })
+		)));
+	});
+
 	Relay::execute_with(|| {
 		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
-		println!("BOB DOT AFTER balance on relay chain {} ", after_bob_free_balance);
-		assert_eq!(after_bob_free_balance, 999988476752);
+		// println!("BOB DOT AFTER balance on relay chain {} ", after_bob_free_balance);
+		assert_eq!(after_bob_free_balance, dot(100) + transfer_dot_amount - FEE);
 	});
 }

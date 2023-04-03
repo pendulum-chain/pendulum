@@ -1,8 +1,10 @@
 use frame_support::{
 	assert_ok,
-	traits::{fungibles::Inspect, Currency, GenesisBuild},
+	traits::{fungible::Mutate, fungibles::Inspect, Currency, GenesisBuild},
 };
-use pendulum_runtime::{Balances, PendulumCurrencyId, Runtime, System, Tokens};
+use pendulum_runtime::{
+	Balances, PendulumCurrencyId, Runtime, RuntimeOrigin, System, Tokens, XTokens,
+};
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
 use polkadot_parachain::primitives::{Id as ParaId, Sibling};
 use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
@@ -406,6 +408,16 @@ fn transfer_polkadot_from_pendulum_to_relay_chain() {
 fn statemine_transfer_asset_to_pendulum() {
 	let para_2094: AccountId = Sibling::from(2094).into_account_truncating();
 
+	PendulumParachain::execute_with(|| {
+		assert_eq!(
+			pendulum_runtime::Tokens::balance(
+				pendulum_runtime::PendulumCurrencyId::XCM(1),
+				&BOB.into()
+			),
+			0
+		);
+	});
+
 	Statemine::execute_with(|| {
 		use statemint_runtime::*;
 
@@ -480,6 +492,60 @@ fn statemine_transfer_asset_to_pendulum() {
 			),
 			TEN
 		);
+	});
+}
 
+#[test]
+fn statemine_transfer_asset_to_statemint() {
+	statemine_transfer_asset_to_pendulum();
+
+	Statemine::execute_with(|| {});
+
+	PendulumParachain::execute_with(|| {
+		assert_eq!(TEN, Tokens::balance(PendulumCurrencyId::XCM(1), &AccountId::from(BOB)));
+		// ensure sender has enough PEN balance to be charged as fee
+		assert_ok!(Balances::mint_into(&AccountId::from(BOB), TEN));
+
+		assert_ok!(XTokens::transfer(
+			RuntimeOrigin::signed(BOB.into()),
+			PendulumCurrencyId::XCM(1),
+			UNIT * 1,
+			Box::new(
+				MultiLocation::new(
+					1,
+					X2(
+						Parachain(1000),
+						Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
+					)
+				)
+				.into()
+			),
+			WeightLimit::Limited(10_000_000_000),
+		));
+
+		assert_eq!(
+			TEN - 1 * UNIT, //inital balance - one unit
+			Tokens::balance(PendulumCurrencyId::XCM(1), &AccountId::from(BOB))
+		);
+
+		// for i in System::events().iter() {
+		// 	println!(" Pendulum_runtime {:?}", i);
+		// }
+
+		use pendulum_runtime::{RuntimeEvent, System};
+		assert!(System::events().iter().any(|r| matches!(
+			r.event,
+			RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. })
+		)));
+
+		// assert_eq!(TEN - ksm_fee_amount, Tokens::free_balance(KSM, &AccountId::from(BOB)));
+	});
+
+	Statemine::execute_with(|| {
+		use statemint_runtime::*;
+
+		// https://github.com/paritytech/cumulus/pull/1278 support using self sufficient asset
+		// for paying xcm execution fee on Statemine.
+		assert_eq!(990_000_000_000, Assets::balance(ASSET_ID, &AccountId::from(BOB)));
 	});
 }

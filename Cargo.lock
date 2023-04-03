@@ -14571,6 +14571,7 @@ name = "xcm-simulator-example"
 version = "0.1.0"
 dependencies = [
  "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-xcmp-queue",
  "frame-support",
  "frame-system",
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",

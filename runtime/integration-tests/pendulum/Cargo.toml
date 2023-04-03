@@ -38,3 +38,5 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 pendulum-runtime = { path = "../../pendulum"}
 
 statemint-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.37" }
+
+cumulus-pallet-xcmp-queue = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.37"}

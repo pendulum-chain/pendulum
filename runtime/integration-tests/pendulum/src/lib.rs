@@ -1,13 +1,13 @@
 use frame_support::{
 	assert_ok,
-	traits::{fungibles::Inspect, GenesisBuild},
+	traits::{fungibles::Inspect, Currency, GenesisBuild},
 };
 use pendulum_runtime::{Balances, PendulumCurrencyId, Runtime, System, Tokens};
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
-use polkadot_parachain::primitives::Id as ParaId;
+use polkadot_parachain::primitives::{Id as ParaId, Sibling};
 use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 use xcm::{
 	latest::{
 		AssetId, Fungibility, Junction, Junction::*, Junctions::*, MultiAsset, MultiLocation,
@@ -17,6 +17,9 @@ use xcm::{
 	VersionedMultiLocation,
 };
 const DOT_FEE: Balance = 3200000000;
+const ASSET_ID: u32 = 1984; //Real USDT Asset ID from Statemint
+pub const UNIT: Balance = 1_000_000_000_000;
+pub const TEN: Balance = 10_000_000_000_000;
 use xcm_emulator::{
 	decl_test_network, decl_test_parachain, decl_test_relay_chain, Junctions, TestExt, Weight,
 };
@@ -396,5 +399,78 @@ fn transfer_polkadot_from_pendulum_to_relay_chain() {
 		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
 		// println!("BOB DOT AFTER balance on relay chain {} ", after_bob_free_balance);
 		assert_eq!(after_bob_free_balance, dot(100) + transfer_dot_amount - FEE);
+	});
+}
+
+#[test]
+fn statemine_transfer_asset_to_pendulum() {
+	let para_2094: AccountId = Sibling::from(2094).into_account_truncating();
+
+	Statemine::execute_with(|| {
+		use statemint_runtime::*;
+
+		let origin = RuntimeOrigin::signed(ALICE.into());
+		Balances::make_free_balance_be(&ALICE.into(), TEN);
+		Balances::make_free_balance_be(&BOB.into(), UNIT);
+
+		// If using non root, create custom asset cost 0.1 Dot
+		// We're using force_create here to make sure asset is sufficient.
+		assert_ok!(Assets::force_create(
+			RuntimeOrigin::root(),
+			ASSET_ID.into(),
+			MultiAddress::Id(ALICE.into()),
+			true,
+			UNIT / 100
+		));
+
+		assert_ok!(Assets::mint(
+			origin.clone(),
+			ASSET_ID.into(),
+			MultiAddress::Id(ALICE.into()),
+			1000 * UNIT
+		));
+
+		// need to have some DOT to be able to receive user assets
+		Balances::make_free_balance_be(&para_2094, UNIT);
+
+		assert_ok!(PolkadotXcm::limited_reserve_transfer_assets(
+			origin.clone(),
+			Box::new(MultiLocation::new(1, X1(Parachain(2094))).into()),
+			Box::new(Junction::AccountId32 { id: BOB, network: NetworkId::Any }.into().into()),
+			Box::new((X2(PalletInstance(50), GeneralIndex(ASSET_ID as u128)), TEN).into()),
+			0,
+			WeightLimit::Unlimited
+		));
+
+		assert_eq!(990 * UNIT, Assets::balance(ASSET_ID, &AccountId::from(ALICE)));
+		assert_eq!(0, Assets::balance(ASSET_ID, &AccountId::from(BOB)));
+
+		assert_eq!(TEN, Assets::balance(ASSET_ID, &para_2094));
+		// the DOT balance of sibling parachain sovereign account is not changed
+		assert_eq!(UNIT, Balances::free_balance(&para_2094));
+	});
+
+	// Rerun the Statemine::execute to actually send the egress message via XCM
+	Statemine::execute_with(|| {});
+
+	PendulumParachain::execute_with(|| {
+		use pendulum_runtime::{RuntimeEvent, System};
+		for i in System::events().iter() {
+			println!(" Pendulum_runtime {:?}", i);
+		}
+
+		assert!(System::events()
+			.iter()
+			.any(|r| matches!(r.event, RuntimeEvent::Tokens(orml_tokens::Event::Endowed { .. }))));
+
+		assert!(System::events().iter().any(|r| matches!(
+			r.event,
+			RuntimeEvent::Tokens(orml_tokens::Event::Deposited { .. })
+		)));
+
+		assert!(System::events().iter().any(|r| matches!(
+			r.event,
+			RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { .. })
+		)));
 	});
 }

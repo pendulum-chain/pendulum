@@ -472,5 +472,14 @@ fn statemine_transfer_asset_to_pendulum() {
 			r.event,
 			RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { .. })
 		)));
+
+		assert_eq!(
+			pendulum_runtime::Tokens::balance(
+				pendulum_runtime::PendulumCurrencyId::XCM(1),
+				&BOB.into()
+			),
+			TEN
+		);
+
 	});
 }

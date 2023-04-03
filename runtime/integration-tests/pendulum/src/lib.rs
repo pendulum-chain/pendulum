@@ -43,6 +43,16 @@ decl_test_parachain! {
 	}
 }
 
+// decl_test_parachain! {
+// 	pub struct Statemine {
+// 		Runtime = statemine_runtime::Runtime,
+// 		RuntimeOrigin = statemine_runtime::RuntimeOrigin,
+// 		XcmpMessageHandler = statemine_runtime::XcmpQueue,
+// 		DmpMessageHandler = statemine_runtime::DmpQueue,
+// 		new_ext = para_ext(1000),
+// 	}
+// }
+
 decl_test_network! {
 	pub struct MockNet {
 		relay_chain = Relay,
@@ -328,3 +338,5 @@ fn transfer_polkadot_from_pendulum_to_relay_chain() {
 		assert_eq!(after_bob_free_balance, dot(100) + transfer_dot_amount - FEE);
 	});
 }
+
+

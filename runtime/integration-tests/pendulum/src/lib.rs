@@ -27,9 +27,16 @@ use xcm_emulator::{
 	decl_test_network, decl_test_parachain, decl_test_relay_chain, Junctions, TestExt, Weight,
 };
 
+mod setup;
+use setup::*;
+
 pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];
 pub const INITIAL_BALANCE: u128 = 1_000_000_000;
+
+pub fn dot(amount: Balance) -> Balance {
+	amount * 10u128.saturating_pow(9)
+}
 
 decl_test_relay_chain! {
 	pub struct Relay {
@@ -80,7 +87,7 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 		balances: vec![
 			(AccountId::from(ALICE), dot(100000)),
 			(AccountId::from(BOB), dot(100)),
-			(ParaId::from(2094).into_account_truncating(), 10 * dot(100000)),
+			(para_account_id(2094), 10 * dot(100000)),
 		],
 	}
 	.assimilate_storage(&mut t)
@@ -100,115 +107,11 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 	ext
 }
 
-pub struct ExtBuilderPendulum {
-	balances: Vec<(AccountId, PendulumCurrencyId, Balance)>,
-	parachain_id: u32,
-}
-impl Default for ExtBuilderPendulum {
-	fn default() -> Self {
-		Self { balances: vec![], parachain_id: 2094 }
-	}
-}
-
 pub fn para_ext_pendulum(parachain_id: u32) -> sp_io::TestExternalities {
 	ExtBuilderPendulum::default()
 		.balances(vec![])
 		.parachain_id(parachain_id)
 		.build()
-}
-
-impl ExtBuilderPendulum {
-	pub fn balances(mut self, balances: Vec<(AccountId, PendulumCurrencyId, Balance)>) -> Self {
-		self.balances = balances;
-		self
-	}
-	pub fn parachain_id(mut self, parachain_id: u32) -> Self {
-		self.parachain_id = parachain_id;
-		self
-	}
-	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
-		// let native_currency_id = Pendulum_runtime::Native::get();
-		pallet_balances::GenesisConfig::<Runtime> {
-			balances: vec![
-				(AccountId::from(ALICE), INITIAL_BALANCE),
-				(AccountId::from(BOB), INITIAL_BALANCE),
-			],
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		orml_tokens::GenesisConfig::<Runtime> {
-			balances: vec![(AccountId::from(BOB), PendulumCurrencyId::XCM(0), dot(100))],
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-		<parachain_info::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
-			&parachain_info::GenesisConfig { parachain_id: self.parachain_id.into() },
-			&mut t,
-		)
-		.unwrap();
-		<pallet_xcm::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
-			&pallet_xcm::GenesisConfig { safe_xcm_version: Some(2) },
-			&mut t,
-		)
-		.unwrap();
-		let mut ext = sp_io::TestExternalities::new(t);
-		ext.execute_with(|| System::set_block_number(1));
-		ext
-	}
-}
-
-pub struct ExtStatemintBuilder {
-	balances: Vec<(AccountId, u128, Balance)>,
-	parachain_id: u32,
-}
-
-impl Default for ExtStatemintBuilder {
-	fn default() -> Self {
-		Self { balances: vec![], parachain_id: 1000 }
-	}
-}
-
-impl ExtStatemintBuilder {
-	pub fn balances(mut self, balances: Vec<(AccountId, u128, Balance)>) -> Self {
-		self.balances = balances;
-		self
-	}
-
-	#[allow(dead_code)]
-	pub fn parachain_id(mut self, parachain_id: u32) -> Self {
-		self.parachain_id = parachain_id;
-		self
-	}
-
-	pub fn build(self) -> sp_io::TestExternalities {
-		use statemint_runtime::Runtime as StatemintRuntime;
-
-		let mut t = frame_system::GenesisConfig::default()
-			.build_storage::<StatemintRuntime>()
-			.unwrap();
-
-		pallet_balances::GenesisConfig::<StatemintRuntime> { balances: vec![] }
-			.assimilate_storage(&mut t)
-			.unwrap();
-
-		<parachain_info::GenesisConfig as GenesisBuild<StatemintRuntime>>::assimilate_storage(
-			&parachain_info::GenesisConfig { parachain_id: self.parachain_id.into() },
-			&mut t,
-		)
-		.unwrap();
-
-		<pallet_xcm::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
-			&pallet_xcm::GenesisConfig { safe_xcm_version: Some(2) },
-			&mut t,
-		)
-		.unwrap();
-
-		let mut ext = sp_io::TestExternalities::new(t);
-		ext.execute_with(|| System::set_block_number(1));
-		ext
-	}
 }
 
 pub fn para_ext_statemint(parachain_id: u32) -> sp_io::TestExternalities {
@@ -256,30 +159,17 @@ fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
 	}
 }
 
-pub fn dot(amount: Balance) -> Balance {
-	amount * one(9)
-}
-
-pub fn one(decimals: u32) -> Balance {
-	10u128.saturating_pow(decimals.into())
-}
-
 #[test]
 fn transfer_polkadot_from_relay_chain_to_pendulum() {
 	MockNet::reset();
 
 	let transfer_amount: Balance = dot(20);
-	println!("transfer DOT amount : {} ", transfer_amount);
-	let mut balance_before = 0;
 	let mut orml_tokens_before = 0;
 	PendulumParachain::execute_with(|| {
-		balance_before = Balances::free_balance(&ALICE.into());
-		println!("Alice balance_before {}", balance_before);
 		let orml_tokens_before = pendulum_runtime::Tokens::balance(
 			pendulum_runtime::PendulumCurrencyId::XCM(0),
 			&ALICE.into(),
 		);
-		println!("Alice orml tokens DOT before {}", orml_tokens_before);
 	});
 
 	Relay::execute_with(|| {
@@ -292,20 +182,8 @@ fn transfer_polkadot_from_relay_chain_to_pendulum() {
 		));
 	});
 
-	Relay::execute_with(|| {
-		use polkadot_runtime::{RuntimeEvent, System};
-		for i in System::events().iter() {
-			println!("polkadot_runtime {:?}", i);
-		}
-	});
-
-	println!("____________________________________________________");
-
 	PendulumParachain::execute_with(|| {
 		use pendulum_runtime::{RuntimeEvent, System, Tokens};
-		for i in System::events().iter() {
-			println!(" Pendulum_runtime {:?}", i);
-		}
 
 		assert!(System::events().iter().any(|r| matches!(
 			r.event,

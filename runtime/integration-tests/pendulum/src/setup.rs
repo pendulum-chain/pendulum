@@ -1,4 +1,23 @@
 use super::*;
+use pendulum_runtime::{
+	Balances, PendulumCurrencyId, Runtime, RuntimeOrigin, System, Tokens, XTokens,
+};
+
+use frame_support::{
+	assert_ok,
+	traits::{fungible::Mutate, fungibles::Inspect, Currency, GenesisBuild},
+};
+
+use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
+use polkadot_parachain::primitives::{Id as ParaId, Sibling};
+
+pub fn dot(amount: Balance) -> Balance {
+	amount * 10u128.saturating_pow(9)
+}
+pub const ALICE: [u8; 32] = [4u8; 32];
+pub const BOB: [u8; 32] = [5u8; 32];
+pub const INITIAL_BALANCE: u128 = 1_000_000_000;
+
 pub struct ExtBuilderPendulum {
 	balances: Vec<(AccountId, PendulumCurrencyId, Balance)>,
 	parachain_id: u32,

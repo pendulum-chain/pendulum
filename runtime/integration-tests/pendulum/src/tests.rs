@@ -1,4 +1,4 @@
-use crate::*;
+use crate::{polkadot_test_net::*, *};
 #[test]
 fn transfer_polkadot_from_relay_chain_to_pendulum() {
 	MockNet::reset();

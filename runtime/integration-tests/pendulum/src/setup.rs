@@ -1,15 +1,6 @@
-use super::*;
-use pendulum_runtime::{
-	Balances, PendulumCurrencyId, Runtime, RuntimeOrigin, System, Tokens, XTokens,
-};
-
-use frame_support::{
-	assert_ok,
-	traits::{fungible::Mutate, fungibles::Inspect, Currency, GenesisBuild},
-};
-
-use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
-use polkadot_parachain::primitives::{Id as ParaId, Sibling};
+use frame_support::traits::GenesisBuild;
+use pendulum_runtime::{PendulumCurrencyId, Runtime, System};
+use polkadot_core_primitives::{AccountId, Balance};
 
 pub fn dot(amount: Balance) -> Balance {
 	amount * 10u128.saturating_pow(9)

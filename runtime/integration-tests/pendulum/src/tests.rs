@@ -1,36 +1,22 @@
-use crate::{polkadot_test_net::*, setup::*, *};
-
-use sp_runtime::{traits::AccountIdConversion, MultiAddress};
-
-use xcm_emulator::{Junctions, TestExt};
-
-use xcm::{
-	latest::{
-		AssetId, Fungibility, Junction, Junction::*, Junctions::*, MultiAsset, MultiLocation,
-		NetworkId, WeightLimit,
-	},
-	v2::{Instruction::WithdrawAsset, Xcm},
-	VersionedMultiLocation,
-};
-
-use pendulum_runtime::{
-	Balances, PendulumCurrencyId, Runtime, RuntimeOrigin, System, Tokens, XTokens,
-};
-
+use crate::{polkadot_test_net::*, setup::*};
 use frame_support::{
 	assert_ok,
-	traits::{fungible::Mutate, fungibles::Inspect, Currency, GenesisBuild},
+	traits::{fungible::Mutate, fungibles::Inspect, Currency},
 };
+use pendulum_runtime::{Balances, PendulumCurrencyId, RuntimeOrigin, Tokens, XTokens};
+use sp_runtime::{traits::AccountIdConversion, MultiAddress};
+use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId, WeightLimit};
+use xcm_emulator::{Junctions, TestExt};
 
-use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
-use polkadot_parachain::primitives::{Id as ParaId, Sibling};
+use polkadot_core_primitives::{AccountId, Balance};
+use polkadot_parachain::primitives::Sibling;
 
 const DOT_FEE: Balance = 3200000000;
 const ASSET_ID: u32 = 1984; //Real USDT Asset ID from Statemint
 const INCORRECT_ASSET_ID: u32 = 0;
-const FEE: u128 = 421434140;
 pub const UNIT: Balance = 1_000_000_000_000;
 pub const TEN: Balance = 10_000_000_000_000;
+const FEE: u128 = 421434140;
 
 #[test]
 fn transfer_polkadot_from_relay_chain_to_pendulum() {
@@ -56,7 +42,7 @@ fn transfer_polkadot_from_relay_chain_to_pendulum() {
 	});
 
 	PendulumParachain::execute_with(|| {
-		use pendulum_runtime::{RuntimeEvent, System, Tokens};
+		use pendulum_runtime::{RuntimeEvent, System};
 
 		assert!(System::events().iter().any(|r| matches!(
 			r.event,

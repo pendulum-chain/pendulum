@@ -1,16 +1,12 @@
 use crate::setup::{dot, ExtBuilderPendulum, ExtStatemintBuilder, ALICE, BOB};
-use frame_support::{
-	assert_ok,
-	traits::{fungible::Mutate, fungibles::Inspect, Currency, GenesisBuild},
-};
-use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
-use polkadot_parachain::primitives::{Id as ParaId, Sibling};
+use frame_support::traits::GenesisBuild;
+use polkadot_core_primitives::{AccountId, BlockNumber};
+use polkadot_parachain::primitives::Id as ParaId;
 use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
-use sp_runtime::{traits::AccountIdConversion, MultiAddress};
-use xcm_emulator::{
-	decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt, Weight,
-};
+use sp_runtime::traits::AccountIdConversion;
+use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, Weight};
+
 decl_test_relay_chain! {
 	pub struct Relay {
 		Runtime = polkadot_runtime::Runtime,

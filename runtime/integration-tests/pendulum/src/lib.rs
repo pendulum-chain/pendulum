@@ -20,6 +20,7 @@ use xcm::{
 };
 const DOT_FEE: Balance = 3200000000;
 const ASSET_ID: u32 = 1984; //Real USDT Asset ID from Statemint
+const INCORRECT_ASSET_ID: u32 = 0;
 pub const UNIT: Balance = 1_000_000_000_000;
 pub const TEN: Balance = 10_000_000_000_000;
 use xcm_emulator::{
@@ -399,8 +400,84 @@ fn transfer_polkadot_from_pendulum_to_relay_chain() {
 
 	Relay::execute_with(|| {
 		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
-		// println!("BOB DOT AFTER balance on relay chain {} ", after_bob_free_balance);
 		assert_eq!(after_bob_free_balance, dot(100) + transfer_dot_amount - FEE);
+	});
+}
+
+#[test]
+fn statemint_transfer_incorrect_asset_to_pendulum_fails() {
+	let para_2094: AccountId = Sibling::from(2094).into_account_truncating();
+
+	PendulumParachain::execute_with(|| {
+		assert_eq!(
+			pendulum_runtime::Tokens::balance(
+				pendulum_runtime::PendulumCurrencyId::XCM(1),
+				&BOB.into()
+			),
+			0
+		);
+	});
+
+	Statemint::execute_with(|| {
+		use statemint_runtime::*;
+
+		let origin = RuntimeOrigin::signed(ALICE.into());
+		Balances::make_free_balance_be(&ALICE.into(), TEN);
+		Balances::make_free_balance_be(&BOB.into(), UNIT);
+
+		// If using non root, create custom asset cost 0.1 Dot
+		// We're using force_create here to make sure asset is sufficient.
+		assert_ok!(Assets::force_create(
+			RuntimeOrigin::root(),
+			INCORRECT_ASSET_ID.into(),
+			MultiAddress::Id(ALICE.into()),
+			true,
+			UNIT / 100
+		));
+
+		assert_ok!(Assets::mint(
+			origin.clone(),
+			INCORRECT_ASSET_ID.into(),
+			MultiAddress::Id(ALICE.into()),
+			1000 * UNIT
+		));
+
+		// need to have some DOT to be able to receive user assets
+		Balances::make_free_balance_be(&para_2094, UNIT);
+
+		assert_ok!(PolkadotXcm::limited_reserve_transfer_assets(
+			origin.clone(),
+			Box::new(MultiLocation::new(1, X1(Parachain(2094))).into()),
+			Box::new(Junction::AccountId32 { id: BOB, network: NetworkId::Any }.into().into()),
+			Box::new(
+				(X2(PalletInstance(50), GeneralIndex(INCORRECT_ASSET_ID as u128)), TEN).into()
+			),
+			0,
+			WeightLimit::Unlimited
+		));
+
+		assert_eq!(990 * UNIT, Assets::balance(INCORRECT_ASSET_ID, &AccountId::from(ALICE)));
+		assert_eq!(0, Assets::balance(INCORRECT_ASSET_ID, &AccountId::from(BOB)));
+
+		assert_eq!(TEN, Assets::balance(INCORRECT_ASSET_ID, &para_2094));
+		// the DOT balance of sibling parachain sovereign account is not changed
+		assert_eq!(UNIT, Balances::free_balance(&para_2094));
+	});
+
+	// Rerun the Statemint::execute to actually send the egress message via XCM
+	Statemint::execute_with(|| {});
+
+	PendulumParachain::execute_with(|| {
+		use pendulum_runtime::{RuntimeEvent, System};
+
+		assert!(System::events().iter().any(|r| matches!(
+			r.event,
+			RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Fail {
+				message_hash: _,
+				error: xcm::v2::Error::FailedToTransactAsset(..),
+				weight: _
+			})
+		)));
 	});
 }
 

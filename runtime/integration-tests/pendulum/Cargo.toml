@@ -1,6 +1,6 @@
 [package]
-name = "xcm-simulator-example"
-description = "Examples of xcm-simulator usage."
+name = "runtime-integration-tests"
+description = "Pendulum runtime integration tests"
 authors = ["Pendulum"]
 edition = "2021"
 version = "0.1.0"

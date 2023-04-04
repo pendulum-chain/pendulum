@@ -338,8 +338,6 @@ fn statemint_transfer_asset_to_statemint() {
 			r.event,
 			RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. })
 		)));
-
-		// assert_eq!(TEN - ksm_fee_amount, Tokens::free_balance(KSM, &AccountId::from(BOB)));
 	});
 
 	Statemint::execute_with(|| {

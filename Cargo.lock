@@ -9658,6 +9658,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "runtime-integration-tests"
+version = "0.1.0"
+dependencies = [
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-xcmp-queue",
+ "frame-support",
+ "frame-system",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
+ "orml-xtokens",
+ "pallet-balances",
+ "pallet-xcm",
+ "parachain-info",
+ "parity-scale-codec",
+ "pendulum-runtime",
+ "polkadot-core-primitives",
+ "polkadot-parachain",
+ "polkadot-primitives",
+ "polkadot-runtime",
+ "polkadot-runtime-common",
+ "polkadot-runtime-parachains",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "statemint-runtime",
+ "xcm",
+ "xcm-builder",
+ "xcm-emulator",
+ "xcm-executor",
+ "xcm-simulator",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -14564,40 +14598,6 @@ dependencies = [
  "sp-std",
  "xcm",
  "xcm-executor",
-]
-
-[[package]]
-name = "xcm-simulator-example"
-version = "0.1.0"
-dependencies = [
- "cumulus-pallet-dmp-queue",
- "cumulus-pallet-xcmp-queue",
- "frame-support",
- "frame-system",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.37)",
- "orml-xtokens",
- "pallet-balances",
- "pallet-xcm",
- "parachain-info",
- "parity-scale-codec",
- "pendulum-runtime",
- "polkadot-core-primitives",
- "polkadot-parachain",
- "polkadot-primitives",
- "polkadot-runtime",
- "polkadot-runtime-common",
- "polkadot-runtime-parachains",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "statemint-runtime",
- "xcm",
- "xcm-builder",
- "xcm-emulator",
- "xcm-executor",
- "xcm-simulator",
 ]
 
 [[package]]

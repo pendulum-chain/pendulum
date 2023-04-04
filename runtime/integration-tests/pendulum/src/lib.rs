@@ -49,7 +49,7 @@ decl_test_parachain! {
 }
 
 decl_test_parachain! {
-	pub struct Statemine {
+	pub struct Statemint {
 		Runtime = statemint_runtime::Runtime,
 		RuntimeOrigin = statemint_runtime::RuntimeOrigin,
 		XcmpMessageHandler = statemint_runtime::XcmpQueue,
@@ -62,7 +62,7 @@ decl_test_network! {
 	pub struct MockNet {
 		relay_chain = Relay,
 		parachains = vec![
-			(1000, Statemine),
+			(1000, Statemint),
 			(2094, PendulumParachain),
 		],
 	}
@@ -405,7 +405,7 @@ fn transfer_polkadot_from_pendulum_to_relay_chain() {
 }
 
 #[test]
-fn statemine_transfer_asset_to_pendulum() {
+fn statemint_transfer_asset_to_pendulum() {
 	let para_2094: AccountId = Sibling::from(2094).into_account_truncating();
 
 	PendulumParachain::execute_with(|| {
@@ -418,7 +418,7 @@ fn statemine_transfer_asset_to_pendulum() {
 		);
 	});
 
-	Statemine::execute_with(|| {
+	Statemint::execute_with(|| {
 		use statemint_runtime::*;
 
 		let origin = RuntimeOrigin::signed(ALICE.into());
@@ -462,8 +462,8 @@ fn statemine_transfer_asset_to_pendulum() {
 		assert_eq!(UNIT, Balances::free_balance(&para_2094));
 	});
 
-	// Rerun the Statemine::execute to actually send the egress message via XCM
-	Statemine::execute_with(|| {});
+	// Rerun the Statemint::execute to actually send the egress message via XCM
+	Statemint::execute_with(|| {});
 
 	PendulumParachain::execute_with(|| {
 		use pendulum_runtime::{RuntimeEvent, System};
@@ -496,10 +496,10 @@ fn statemine_transfer_asset_to_pendulum() {
 }
 
 #[test]
-fn statemine_transfer_asset_to_statemint() {
-	statemine_transfer_asset_to_pendulum();
+fn statemint_transfer_asset_to_statemint() {
+	statemint_transfer_asset_to_pendulum();
 
-	Statemine::execute_with(|| {});
+	Statemint::execute_with(|| {});
 
 	PendulumParachain::execute_with(|| {
 		assert_eq!(TEN, Tokens::balance(PendulumCurrencyId::XCM(1), &AccountId::from(BOB)));
@@ -541,11 +541,11 @@ fn statemine_transfer_asset_to_statemint() {
 		// assert_eq!(TEN - ksm_fee_amount, Tokens::free_balance(KSM, &AccountId::from(BOB)));
 	});
 
-	Statemine::execute_with(|| {
+	Statemint::execute_with(|| {
 		use statemint_runtime::*;
 
 		// https://github.com/paritytech/cumulus/pull/1278 support using self sufficient asset
-		// for paying xcm execution fee on Statemine.
+		// for paying xcm execution fee on Statemint.
 		assert_eq!(990_000_000_000, Assets::balance(ASSET_ID, &AccountId::from(BOB)));
 	});
 }

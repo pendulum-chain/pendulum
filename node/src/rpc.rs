@@ -103,10 +103,12 @@ where
 		H256,
 		RedeemRequest<AccountId, BlockNumber, Balance, CurrencyId>,
 	>,
+	C::Api: module_oracle_rpc::OracleRuntimeApi<Block, Balance, CurrencyId>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
 	use module_issue_rpc::{Issue, IssueApiServer};
+	use module_oracle_rpc::{Oracle, OracleApiServer};
 	use module_redeem_rpc::{Redeem, RedeemApiServer};
 	use module_replace_rpc::{Replace, ReplaceApiServer};
 	use module_vault_registry_rpc::{VaultRegistry, VaultRegistryApiServer};
@@ -121,7 +123,8 @@ where
 	module.merge(Issue::new(client.clone()).into_rpc())?;
 	module.merge(Redeem::new(client.clone()).into_rpc())?;
 	module.merge(Replace::new(client.clone()).into_rpc())?;
-	module.merge(VaultRegistry::new(client).into_rpc())?;
+	module.merge(VaultRegistry::new(client.clone()).into_rpc())?;
+	module.merge(Oracle::new(client).into_rpc())?;
 
 	Ok(module)
 }

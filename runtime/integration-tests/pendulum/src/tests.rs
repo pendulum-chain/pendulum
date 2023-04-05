@@ -34,7 +34,7 @@ fn transfer_dot_from_relay_chain_to_pendulum() {
 	Relay::execute_with(|| {
 		assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
 			polkadot_runtime::RuntimeOrigin::signed(ALICE.into()),
-			Box::new(Parachain(2094).into().into()),
+			Box::new(X1(Parachain(2094)).into().into()),
 			Box::new(Junction::AccountId32 { network: NetworkId::Any, id: ALICE }.into().into()),
 			Box::new((Here, transfer_amount).into()),
 			0
@@ -67,7 +67,7 @@ fn transfer_dot_from_relay_chain_to_pendulum() {
 }
 
 #[test]
-fn transfer_polkadot_from_pendulum_to_relay_chain() {
+fn transfer_dot_from_pendulum_to_relay_chain() {
 	MockNet::reset();
 
 	let transfer_dot_amount: Balance = one(10);
@@ -128,10 +128,7 @@ fn transfer_polkadot_from_pendulum_to_relay_chain() {
 
 	Relay::execute_with(|| {
 		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
-		assert_eq!(
-			after_bob_free_balance,
-			one(100) + transfer_dot_amount - DOT_FEE_WHEN_TRANSFER_TO_RELAY
-		);
+		assert_eq!(after_bob_free_balance, one(100) + transfer_dot_amount - DOT_FEE_WHEN_TRANSFER_TO_RELAY);
 	});
 }
 

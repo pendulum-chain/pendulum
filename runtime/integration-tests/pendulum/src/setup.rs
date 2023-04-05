@@ -2,7 +2,7 @@ use frame_support::traits::GenesisBuild;
 use pendulum_runtime::{PendulumCurrencyId, Runtime, System};
 use polkadot_core_primitives::{AccountId, Balance};
 
-pub fn dot(amount: Balance) -> Balance {
+pub fn one(amount: Balance) -> Balance {
 	amount * 10u128.saturating_pow(9)
 }
 pub const ALICE: [u8; 32] = [4u8; 32];
@@ -40,7 +40,7 @@ impl ExtBuilderPendulum {
 		.unwrap();
 
 		orml_tokens::GenesisConfig::<Runtime> {
-			balances: vec![(AccountId::from(BOB), PendulumCurrencyId::XCM(0), dot(100))],
+			balances: vec![(AccountId::from(BOB), PendulumCurrencyId::XCM(0), one(100))],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

@@ -22,7 +22,7 @@ const FEE: u128 = 421434140;
 fn transfer_polkadot_from_relay_chain_to_pendulum() {
 	MockNet::reset();
 
-	let transfer_amount: Balance = dot(20);
+	let transfer_amount: Balance = one(20);
 	let mut orml_tokens_before = 0;
 	PendulumParachain::execute_with(|| {
 		orml_tokens_before = pendulum_runtime::Tokens::balance(
@@ -70,11 +70,11 @@ fn transfer_polkadot_from_relay_chain_to_pendulum() {
 fn transfer_polkadot_from_pendulum_to_relay_chain() {
 	MockNet::reset();
 
-	let transfer_dot_amount: Balance = dot(10);
+	let transfer_dot_amount: Balance = one(10);
 
 	Relay::execute_with(|| {
 		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
-		assert_eq!(after_bob_free_balance, dot(100));
+		assert_eq!(after_bob_free_balance, one(100));
 	});
 
 	PendulumParachain::execute_with(|| {
@@ -128,7 +128,7 @@ fn transfer_polkadot_from_pendulum_to_relay_chain() {
 
 	Relay::execute_with(|| {
 		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
-		assert_eq!(after_bob_free_balance, dot(100) + transfer_dot_amount - FEE);
+		assert_eq!(after_bob_free_balance, one(100) + transfer_dot_amount - FEE);
 	});
 }
 

@@ -72,9 +72,10 @@ fn transfer_dot_from_pendulum_to_relay_chain() {
 
 	let transfer_dot_amount: Balance = one(10);
 
+	let expected_base_balance = one(100);
 	Relay::execute_with(|| {
-		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
-		assert_eq!(after_bob_free_balance, one(100));
+		let before_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
+		assert_eq!(before_bob_free_balance, expected_base_balance);
 	});
 
 	PendulumParachain::execute_with(|| {
@@ -128,7 +129,10 @@ fn transfer_dot_from_pendulum_to_relay_chain() {
 
 	Relay::execute_with(|| {
 		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
-		assert_eq!(after_bob_free_balance, one(100) + transfer_dot_amount - DOT_FEE_WHEN_TRANSFER_TO_RELAY);
+		assert_eq!(
+			after_bob_free_balance,
+			expected_base_balance + transfer_dot_amount - DOT_FEE_WHEN_TRANSFER_TO_RELAY
+		);
 	});
 }
 

@@ -322,6 +322,7 @@ fn statemint_transfer_asset_to_pendulum() {
 
 #[test]
 fn statemint_transfer_asset_to_statemint() {
+	//first we need to set up USDT balance on pendulum chain before to start transfer it back.
 	statemint_transfer_asset_to_pendulum();
 
 	Statemint::execute_with(|| {});

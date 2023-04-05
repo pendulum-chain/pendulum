@@ -8,12 +8,13 @@ use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId, WeightLimit};
 use xcm_emulator::{Junctions, TestExt};
 
+use pendulum_runtime::{RuntimeEvent, System};
 use polkadot_core_primitives::{AccountId, Balance};
 use polkadot_parachain::primitives::Sibling;
 
 const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: Balance = 3200000000; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
 const ASSET_ID: u32 = 1984; //Real USDT Asset ID from Statemint
-const INCORRECT_ASSET_ID: u32 = 0;
+const INCORRECT_ASSET_ID: u32 = 0; //Incorrect asset id that pendulum is not supporting pendulum_runtime xcm_config
 pub const UNIT: Balance = 1_000_000_000_000;
 pub const TEN_UNITS: Balance = 10_000_000_000_000;
 const DOT_FEE_WHEN_TRANSFER_TO_RELAY: u128 = 421434140; //This fee will taken to transfer assets(Polkadot) from sovereign parachain account to destination user account;
@@ -42,8 +43,6 @@ fn transfer_dot_from_relay_chain_to_pendulum() {
 	});
 
 	PendulumParachain::execute_with(|| {
-		use pendulum_runtime::{RuntimeEvent, System};
-
 		assert!(System::events().iter().any(|r| matches!(
 			r.event,
 			RuntimeEvent::Tokens(orml_tokens::Event::Deposited { .. })
@@ -95,8 +94,6 @@ fn transfer_dot_from_pendulum_to_relay_chain() {
 	});
 
 	PendulumParachain::execute_with(|| {
-		use pendulum_runtime::{RuntimeEvent, System};
-
 		assert!(System::events().iter().any(|r| matches!(
 			r.event,
 			RuntimeEvent::Tokens(orml_tokens::Event::Withdrawn { .. })
@@ -206,8 +203,6 @@ fn statemint_transfer_incorrect_asset_to_pendulum_should_fails() {
 	Statemint::execute_with(|| {});
 
 	PendulumParachain::execute_with(|| {
-		use pendulum_runtime::{RuntimeEvent, System};
-
 		assert!(System::events().iter().any(|r| matches!(
 			r.event,
 			RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Fail {
@@ -291,7 +286,6 @@ fn statemint_transfer_asset_to_pendulum() {
 	Statemint::execute_with(|| {});
 
 	PendulumParachain::execute_with(|| {
-		use pendulum_runtime::{RuntimeEvent, System};
 		for i in System::events().iter() {
 			println!(" Pendulum_runtime {:?}", i);
 		}
@@ -354,7 +348,6 @@ fn statemint_transfer_asset_to_statemint() {
 			Tokens::balance(PendulumCurrencyId::XCM(1), &AccountId::from(BOB))
 		);
 
-		use pendulum_runtime::{RuntimeEvent, System};
 		assert!(System::events().iter().any(|r| matches!(
 			r.event,
 			RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. })

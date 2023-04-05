@@ -2,9 +2,10 @@ use frame_support::traits::GenesisBuild;
 use pendulum_runtime::{PendulumCurrencyId, Runtime, System};
 use polkadot_core_primitives::{AccountId, Balance};
 
-pub fn dot(amount: Balance) -> Balance {
+pub fn one(amount: Balance) -> Balance {
 	amount * 10u128.saturating_pow(9)
 }
+
 pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];
 pub const INITIAL_BALANCE: u128 = 1_000_000_000;
@@ -13,6 +14,7 @@ pub struct ExtBuilderPendulum {
 	balances: Vec<(AccountId, PendulumCurrencyId, Balance)>,
 	parachain_id: u32,
 }
+
 impl Default for ExtBuilderPendulum {
 	fn default() -> Self {
 		Self { balances: vec![], parachain_id: 2094 }
@@ -24,10 +26,12 @@ impl ExtBuilderPendulum {
 		self.balances = balances;
 		self
 	}
+
 	pub fn parachain_id(mut self, parachain_id: u32) -> Self {
 		self.parachain_id = parachain_id;
 		self
 	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 		pallet_balances::GenesisConfig::<Runtime> {
@@ -40,7 +44,7 @@ impl ExtBuilderPendulum {
 		.unwrap();
 
 		orml_tokens::GenesisConfig::<Runtime> {
-			balances: vec![(AccountId::from(BOB), PendulumCurrencyId::XCM(0), dot(100))],
+			balances: vec![(AccountId::from(BOB), PendulumCurrencyId::XCM(0), one(100))],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

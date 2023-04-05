@@ -8,21 +8,22 @@ use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId, WeightLimit};
 use xcm_emulator::{Junctions, TestExt};
 
+use pendulum_runtime::{RuntimeEvent, System};
 use polkadot_core_primitives::{AccountId, Balance};
 use polkadot_parachain::primitives::Sibling;
 
-const DOT_FEE: Balance = 3200000000;
+const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: Balance = 3200000000; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
 const ASSET_ID: u32 = 1984; //Real USDT Asset ID from Statemint
-const INCORRECT_ASSET_ID: u32 = 0;
+const INCORRECT_ASSET_ID: u32 = 0; //Incorrect asset id that pendulum is not supporting pendulum_runtime xcm_config
 pub const UNIT: Balance = 1_000_000_000_000;
-pub const TEN: Balance = 10_000_000_000_000;
-const FEE: u128 = 421434140;
+pub const TEN_UNITS: Balance = 10_000_000_000_000;
+const DOT_FEE_WHEN_TRANSFER_TO_RELAY: u128 = 421434140; //This fee will taken to transfer assets(Polkadot) from sovereign parachain account to destination user account;
 
 #[test]
-fn transfer_polkadot_from_relay_chain_to_pendulum() {
+fn transfer_dot_from_relay_chain_to_pendulum() {
 	MockNet::reset();
 
-	let transfer_amount: Balance = dot(20);
+	let transfer_amount: Balance = one(20);
 	let mut orml_tokens_before = 0;
 	PendulumParachain::execute_with(|| {
 		orml_tokens_before = pendulum_runtime::Tokens::balance(
@@ -34,7 +35,7 @@ fn transfer_polkadot_from_relay_chain_to_pendulum() {
 	Relay::execute_with(|| {
 		assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
 			polkadot_runtime::RuntimeOrigin::signed(ALICE.into()),
-			Box::new(Parachain(2094).into().into()),
+			Box::new(X1(Parachain(2094)).into().into()),
 			Box::new(Junction::AccountId32 { network: NetworkId::Any, id: ALICE }.into().into()),
 			Box::new((Here, transfer_amount).into()),
 			0
@@ -42,8 +43,6 @@ fn transfer_polkadot_from_relay_chain_to_pendulum() {
 	});
 
 	PendulumParachain::execute_with(|| {
-		use pendulum_runtime::{RuntimeEvent, System};
-
 		assert!(System::events().iter().any(|r| matches!(
 			r.event,
 			RuntimeEvent::Tokens(orml_tokens::Event::Deposited { .. })
@@ -61,20 +60,21 @@ fn transfer_polkadot_from_relay_chain_to_pendulum() {
 				pendulum_runtime::PendulumCurrencyId::XCM(0),
 				&ALICE.into()
 			),
-			orml_tokens_before + transfer_amount - DOT_FEE
+			orml_tokens_before + transfer_amount - DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN
 		);
 	});
 }
 
 #[test]
-fn transfer_polkadot_from_pendulum_to_relay_chain() {
+fn transfer_dot_from_pendulum_to_relay_chain() {
 	MockNet::reset();
 
-	let transfer_dot_amount: Balance = dot(10);
+	let transfer_dot_amount: Balance = one(10);
 
+	let expected_base_balance = one(100);
 	Relay::execute_with(|| {
-		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
-		assert_eq!(after_bob_free_balance, dot(100));
+		let before_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
+		assert_eq!(before_bob_free_balance, expected_base_balance);
 	});
 
 	PendulumParachain::execute_with(|| {
@@ -94,8 +94,6 @@ fn transfer_polkadot_from_pendulum_to_relay_chain() {
 	});
 
 	PendulumParachain::execute_with(|| {
-		use pendulum_runtime::{RuntimeEvent, System};
-
 		assert!(System::events().iter().any(|r| matches!(
 			r.event,
 			RuntimeEvent::Tokens(orml_tokens::Event::Withdrawn { .. })
@@ -128,21 +126,29 @@ fn transfer_polkadot_from_pendulum_to_relay_chain() {
 
 	Relay::execute_with(|| {
 		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
-		assert_eq!(after_bob_free_balance, dot(100) + transfer_dot_amount - FEE);
+		assert_eq!(
+			after_bob_free_balance,
+			expected_base_balance + transfer_dot_amount - DOT_FEE_WHEN_TRANSFER_TO_RELAY
+		);
 	});
 }
 
 #[test]
-fn statemint_transfer_incorrect_asset_to_pendulum_fails() {
+fn statemint_transfer_incorrect_asset_to_pendulum_should_fails() {
 	let para_2094: AccountId = Sibling::from(2094).into_account_truncating();
 
+	//pendulum_runtime::PendulumCurrencyId::XCM(1) is the representation of USDT from Statemint on Pendulum chain.
+	//The asset id for USDT on Statemint is 1984. and pendulum support only this asset id to recive it on chain.
+	//we are going to execute XCM call to sent incorrect Asset Id and expect to see cumulus_pallet_xcmp_queue::Event::Fail event with an error FailedToTransactAsset.
+	//we what to be sure that the initial USDT balance for BOB is the same after XCM call from statemint when we tried to send wrong ASSET_ID from system parachain.
+	let extected_base_usdt_balance = 0;
 	PendulumParachain::execute_with(|| {
 		assert_eq!(
 			pendulum_runtime::Tokens::balance(
 				pendulum_runtime::PendulumCurrencyId::XCM(1),
 				&BOB.into()
 			),
-			0
+			extected_base_usdt_balance
 		);
 	});
 
@@ -150,7 +156,7 @@ fn statemint_transfer_incorrect_asset_to_pendulum_fails() {
 		use statemint_runtime::*;
 
 		let origin = RuntimeOrigin::signed(ALICE.into());
-		Balances::make_free_balance_be(&ALICE.into(), TEN);
+		Balances::make_free_balance_be(&ALICE.into(), TEN_UNITS);
 		Balances::make_free_balance_be(&BOB.into(), UNIT);
 
 		// If using non root, create custom asset cost 0.1 Dot
@@ -178,7 +184,8 @@ fn statemint_transfer_incorrect_asset_to_pendulum_fails() {
 			Box::new(MultiLocation::new(1, X1(Parachain(2094))).into()),
 			Box::new(Junction::AccountId32 { id: BOB, network: NetworkId::Any }.into().into()),
 			Box::new(
-				(X2(PalletInstance(50), GeneralIndex(INCORRECT_ASSET_ID as u128)), TEN).into()
+				(X2(PalletInstance(50), GeneralIndex(INCORRECT_ASSET_ID as u128)), TEN_UNITS)
+					.into()
 			),
 			0,
 			WeightLimit::Unlimited
@@ -187,7 +194,7 @@ fn statemint_transfer_incorrect_asset_to_pendulum_fails() {
 		assert_eq!(990 * UNIT, Assets::balance(INCORRECT_ASSET_ID, &AccountId::from(ALICE)));
 		assert_eq!(0, Assets::balance(INCORRECT_ASSET_ID, &AccountId::from(BOB)));
 
-		assert_eq!(TEN, Assets::balance(INCORRECT_ASSET_ID, &para_2094));
+		assert_eq!(TEN_UNITS, Assets::balance(INCORRECT_ASSET_ID, &para_2094));
 		// the DOT balance of sibling parachain sovereign account is not changed
 		assert_eq!(UNIT, Balances::free_balance(&para_2094));
 	});
@@ -196,8 +203,6 @@ fn statemint_transfer_incorrect_asset_to_pendulum_fails() {
 	Statemint::execute_with(|| {});
 
 	PendulumParachain::execute_with(|| {
-		use pendulum_runtime::{RuntimeEvent, System};
-
 		assert!(System::events().iter().any(|r| matches!(
 			r.event,
 			RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Fail {
@@ -206,6 +211,16 @@ fn statemint_transfer_incorrect_asset_to_pendulum_fails() {
 				weight: _
 			})
 		)));
+	});
+
+	PendulumParachain::execute_with(|| {
+		assert_eq!(
+			pendulum_runtime::Tokens::balance(
+				pendulum_runtime::PendulumCurrencyId::XCM(1),
+				&BOB.into()
+			),
+			extected_base_usdt_balance
+		);
 	});
 }
 
@@ -227,7 +242,7 @@ fn statemint_transfer_asset_to_pendulum() {
 		use statemint_runtime::*;
 
 		let origin = RuntimeOrigin::signed(ALICE.into());
-		Balances::make_free_balance_be(&ALICE.into(), TEN);
+		Balances::make_free_balance_be(&ALICE.into(), TEN_UNITS);
 		Balances::make_free_balance_be(&BOB.into(), UNIT);
 
 		// If using non root, create custom asset cost 0.1 Dot
@@ -254,7 +269,7 @@ fn statemint_transfer_asset_to_pendulum() {
 			origin.clone(),
 			Box::new(MultiLocation::new(1, X1(Parachain(2094))).into()),
 			Box::new(Junction::AccountId32 { id: BOB, network: NetworkId::Any }.into().into()),
-			Box::new((X2(PalletInstance(50), GeneralIndex(ASSET_ID as u128)), TEN).into()),
+			Box::new((X2(PalletInstance(50), GeneralIndex(ASSET_ID as u128)), TEN_UNITS).into()),
 			0,
 			WeightLimit::Unlimited
 		));
@@ -262,7 +277,7 @@ fn statemint_transfer_asset_to_pendulum() {
 		assert_eq!(990 * UNIT, Assets::balance(ASSET_ID, &AccountId::from(ALICE)));
 		assert_eq!(0, Assets::balance(ASSET_ID, &AccountId::from(BOB)));
 
-		assert_eq!(TEN, Assets::balance(ASSET_ID, &para_2094));
+		assert_eq!(TEN_UNITS, Assets::balance(ASSET_ID, &para_2094));
 		// the DOT balance of sibling parachain sovereign account is not changed
 		assert_eq!(UNIT, Balances::free_balance(&para_2094));
 	});
@@ -271,7 +286,6 @@ fn statemint_transfer_asset_to_pendulum() {
 	Statemint::execute_with(|| {});
 
 	PendulumParachain::execute_with(|| {
-		use pendulum_runtime::{RuntimeEvent, System};
 		for i in System::events().iter() {
 			println!(" Pendulum_runtime {:?}", i);
 		}
@@ -295,21 +309,22 @@ fn statemint_transfer_asset_to_pendulum() {
 				pendulum_runtime::PendulumCurrencyId::XCM(1),
 				&BOB.into()
 			),
-			TEN
+			TEN_UNITS
 		);
 	});
 }
 
 #[test]
 fn statemint_transfer_asset_to_statemint() {
+	//first we need to set up USDT balance on pendulum chain before to start transfer it back.
 	statemint_transfer_asset_to_pendulum();
 
 	Statemint::execute_with(|| {});
 
 	PendulumParachain::execute_with(|| {
-		assert_eq!(TEN, Tokens::balance(PendulumCurrencyId::XCM(1), &AccountId::from(BOB)));
+		assert_eq!(TEN_UNITS, Tokens::balance(PendulumCurrencyId::XCM(1), &AccountId::from(BOB)));
 		// ensure sender has enough PEN balance to be charged as fee
-		assert_ok!(Balances::mint_into(&AccountId::from(BOB), TEN));
+		assert_ok!(Balances::mint_into(&AccountId::from(BOB), TEN_UNITS));
 
 		assert_ok!(XTokens::transfer(
 			RuntimeOrigin::signed(BOB.into()),
@@ -329,11 +344,10 @@ fn statemint_transfer_asset_to_statemint() {
 		));
 
 		assert_eq!(
-			TEN - 1 * UNIT, //inital balance - one unit
+			TEN_UNITS - 1 * UNIT, //inital balance - one unit
 			Tokens::balance(PendulumCurrencyId::XCM(1), &AccountId::from(BOB))
 		);
 
-		use pendulum_runtime::{RuntimeEvent, System};
 		assert!(System::events().iter().any(|r| matches!(
 			r.event,
 			RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. })

@@ -11,15 +11,15 @@ use xcm_emulator::{Junctions, TestExt};
 use polkadot_core_primitives::{AccountId, Balance};
 use polkadot_parachain::primitives::Sibling;
 
-const DOT_FEE: Balance = 3200000000; //The fees tha relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
+const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: Balance = 3200000000; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
 const ASSET_ID: u32 = 1984; //Real USDT Asset ID from Statemint
 const INCORRECT_ASSET_ID: u32 = 0;
 pub const UNIT: Balance = 1_000_000_000_000;
 pub const TEN_UNITS: Balance = 10_000_000_000_000;
-const FEE: u128 = 421434140;
+const DOT_FEE_WHEN_TRANSFER_TO_RELAY: u128 = 421434140; //This fee will taken to transfer assets(Polkadot) from sovereign parachain account to destination user account;
 
 #[test]
-fn transfer_polkadot_from_relay_chain_to_pendulum() {
+fn transfer_dot_from_relay_chain_to_pendulum() {
 	MockNet::reset();
 
 	let transfer_amount: Balance = one(20);
@@ -61,7 +61,7 @@ fn transfer_polkadot_from_relay_chain_to_pendulum() {
 				pendulum_runtime::PendulumCurrencyId::XCM(0),
 				&ALICE.into()
 			),
-			orml_tokens_before + transfer_amount - DOT_FEE
+			orml_tokens_before + transfer_amount - DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN
 		);
 	});
 }
@@ -128,7 +128,10 @@ fn transfer_polkadot_from_pendulum_to_relay_chain() {
 
 	Relay::execute_with(|| {
 		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
-		assert_eq!(after_bob_free_balance, one(100) + transfer_dot_amount - FEE);
+		assert_eq!(
+			after_bob_free_balance,
+			one(100) + transfer_dot_amount - DOT_FEE_WHEN_TRANSFER_TO_RELAY
+		);
 	});
 }
 

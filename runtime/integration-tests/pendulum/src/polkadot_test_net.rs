@@ -1,4 +1,4 @@
-use crate::setup::{one, ExtBuilderPendulum, ExtStatemintBuilder, ALICE, BOB};
+use crate::setup::{units, ExtBuilderPendulum, ExtStatemintBuilder, ALICE, BOB};
 use frame_support::traits::GenesisBuild;
 use polkadot_core_primitives::{AccountId, BlockNumber};
 use polkadot_parachain::primitives::Id as ParaId;
@@ -54,9 +54,9 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 	pallet_balances::GenesisConfig::<Runtime> {
 		balances: vec![
-			(AccountId::from(ALICE), one(100000)),
-			(AccountId::from(BOB), one(100)),
-			(para_account_id(2094), 10 * one(100000)),
+			(AccountId::from(ALICE), units(100000)),
+			(AccountId::from(BOB), units(100)),
+			(para_account_id(2094), 10 * units(100000)),
 		],
 	}
 	.assimilate_storage(&mut t)

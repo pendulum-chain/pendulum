@@ -23,7 +23,7 @@ const DOT_FEE_WHEN_TRANSFER_TO_RELAY: u128 = 421434140; //This fee will taken to
 fn transfer_dot_from_relay_chain_to_pendulum() {
 	MockNet::reset();
 
-	let transfer_amount: Balance = one(20);
+	let transfer_amount: Balance = units(20);
 	let mut orml_tokens_before = 0;
 	PendulumParachain::execute_with(|| {
 		orml_tokens_before = pendulum_runtime::Tokens::balance(
@@ -69,9 +69,9 @@ fn transfer_dot_from_relay_chain_to_pendulum() {
 fn transfer_dot_from_pendulum_to_relay_chain() {
 	MockNet::reset();
 
-	let transfer_dot_amount: Balance = one(10);
+	let transfer_dot_amount: Balance = units(10);
 
-	let expected_base_balance = one(100);
+	let expected_base_balance = units(100);
 	Relay::execute_with(|| {
 		let before_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
 		assert_eq!(before_bob_free_balance, expected_base_balance);

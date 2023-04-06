@@ -36,7 +36,7 @@ fn transfer_dot_from_relay_chain_to_pendulum() {
 		assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
 			polkadot_runtime::RuntimeOrigin::signed(ALICE.into()),
 			Box::new(X1(Parachain(2094)).into().into()),
-			Box::new(Junction::AccountId32 { network: NetworkId::Any, id: ALICE }.into().into()),
+			Box::new(X1(Junction::AccountId32 { network: NetworkId::Any, id: ALICE }).into().into()),
 			Box::new((Here, transfer_amount).into()),
 			0
 		));

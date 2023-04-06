@@ -133,14 +133,14 @@ fn transfer_dot_from_pendulum_to_relay_chain() {
 	});
 }
 
+//pendulum_runtime::PendulumCurrencyId::XCM(1) is the representation of USDT from Statemint on Pendulum chain.
+//The asset id for USDT on Statemint is 1984. and pendulum support only this asset id to recive it on chain.
+//we are going to execute XCM call to sent incorrect Asset Id and expect to see cumulus_pallet_xcmp_queue::Event::Fail event with an error FailedToTransactAsset.
+//we what to be sure that the initial USDT balance for BOB is the same after XCM call from statemint when we tried to send wrong ASSET_ID from system parachain.
 #[test]
 fn statemint_transfer_incorrect_asset_to_pendulum_should_fails() {
 	let para_2094: AccountId = Sibling::from(2094).into_account_truncating();
 
-	//pendulum_runtime::PendulumCurrencyId::XCM(1) is the representation of USDT from Statemint on Pendulum chain.
-	//The asset id for USDT on Statemint is 1984. and pendulum support only this asset id to recive it on chain.
-	//we are going to execute XCM call to sent incorrect Asset Id and expect to see cumulus_pallet_xcmp_queue::Event::Fail event with an error FailedToTransactAsset.
-	//we what to be sure that the initial USDT balance for BOB is the same after XCM call from statemint when we tried to send wrong ASSET_ID from system parachain.
 	let extected_base_usdt_balance = 0;
 	PendulumParachain::execute_with(|| {
 		assert_eq!(

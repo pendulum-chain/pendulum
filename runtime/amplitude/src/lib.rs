@@ -1659,6 +1659,18 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl module_oracle_rpc_runtime_api::OracleApi<Block, Balance, CurrencyId> for Runtime {
+		fn currency_to_usd(amount:BalanceWrapper<Balance>, currency_id: CurrencyId) -> Result<BalanceWrapper<Balance>, DispatchError> {
+			let result = Oracle::currency_to_usd(amount.amount, currency_id)?;
+			Ok(BalanceWrapper{amount:result})
+		}
+
+		fn usd_to_currency(amount:BalanceWrapper<Balance>, currency_id: CurrencyId) -> Result<BalanceWrapper<Balance>, DispatchError> {
+			let result = Oracle::usd_to_currency(amount.amount, currency_id)?;
+			Ok(BalanceWrapper{amount:result})
+		}
+	}
+
 }
 
 struct CheckInherents;

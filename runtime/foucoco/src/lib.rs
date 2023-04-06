@@ -244,7 +244,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 8,
+	spec_version: 9,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 20,
@@ -2077,6 +2077,18 @@ impl_runtime_apis! {
 			key: Vec<u8>,
 		) -> pallet_contracts_primitives::GetStorageResult {
 			Contracts::get_storage(address, key)
+		}
+	}
+
+	impl module_oracle_rpc_runtime_api::OracleApi<Block, Balance, CurrencyId> for Runtime {
+		fn currency_to_usd(amount:BalanceWrapper<Balance>, currency_id: CurrencyId) -> Result<BalanceWrapper<Balance>, DispatchError> {
+			let result = Oracle::currency_to_usd(amount.amount, currency_id)?;
+			Ok(BalanceWrapper{amount:result})
+		}
+
+		fn usd_to_currency(amount:BalanceWrapper<Balance>, currency_id: CurrencyId) -> Result<BalanceWrapper<Balance>, DispatchError> {
+			let result = Oracle::usd_to_currency(amount.amount, currency_id)?;
+			Ok(BalanceWrapper{amount:result})
 		}
 	}
 

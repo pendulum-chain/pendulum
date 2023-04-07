@@ -11,4 +11,5 @@ members = [
 	"runtime/foucoco",
 	"runtime/pendulum",
 	"runtime/development",
+	"runtime/integration-tests/pendulum",
 ]

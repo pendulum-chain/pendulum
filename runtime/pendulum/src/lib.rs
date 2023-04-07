@@ -14,6 +14,7 @@ use crate::zenlink::*;
 use xcm::v1::MultiLocation;
 use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
+pub use currency::CurrencyId as PendulumCurrencyId;
 pub use parachain_staking::InflationInfo;
 
 use codec::Encode;

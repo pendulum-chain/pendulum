@@ -16,6 +16,7 @@ use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 pub use parachain_staking::InflationInfo;
 
 use orml_traits::MultiCurrency;
+use bifrost_farming as farming;
 
 use codec::Encode;
 
@@ -371,6 +372,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::StellarRelay(_) |
 			RuntimeCall::VaultRegistry(_) |
 			RuntimeCall::VaultRewards(_) |
+			RuntimeCall::Farming(_) |
 			RuntimeCall::TokenAllowance(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -1438,6 +1440,10 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 }
 
 parameter_types! {
+	
+}
+
+parameter_types! {
 	pub const RelayChainCurrencyId: CurrencyId = XCM(0);
 }
 impl currency::Config for Runtime {
@@ -1450,6 +1456,29 @@ impl currency::Config for Runtime {
 	type BalanceConversion = primitives::BalanceConversion;
 	type CurrencyConversion = CurrencyConvert;
 	type AmountCompatibility = primitives::StellarCompatibility;
+}
+
+parameter_types! {
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
+}
+parameter_types! {
+	pub BifrostTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
+type FarmingControlOrigin = EitherOfDiverse<
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
+>;
+
+impl farming::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = FarmingControlOrigin;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type Keeper = FarmingKeeperPalletId;
+	type RewardIssuer = FarmingRewardIssuerPalletId;
+	type WeightInfo = farming::weights::BifrostWeight<Runtime>;
 }
 
 impl security::Config for Runtime {
@@ -1632,6 +1661,8 @@ construct_runtime!(
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
 
 		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
+
+		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 	}
 );
 

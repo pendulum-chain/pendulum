@@ -669,7 +669,7 @@ dependencies = [
 [[package]]
 name = "bifrost-farming"
 version = "0.8.0"
-source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v0.9.37#1c9a5912b612e80ba921607c256e6ae3abfb1ce8"
+source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v0.9.37#f36ef7baa39d2ec80efeaa4dc5af1e4c50916345"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -689,7 +689,7 @@ dependencies = [
 [[package]]
 name = "bifrost-farming-rpc-runtime-api"
 version = "0.8.0"
-source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v0.9.37#1c9a5912b612e80ba921607c256e6ae3abfb1ce8"
+source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v0.9.37#f36ef7baa39d2ec80efeaa4dc5af1e4c50916345"
 dependencies = [
  "node-primitives",
  "parity-scale-codec",
@@ -5645,7 +5645,7 @@ dependencies = [
 [[package]]
 name = "node-primitives"
 version = "0.8.0"
-source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v0.9.37#1c9a5912b612e80ba921607c256e6ae3abfb1ce8"
+source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v0.9.37#f36ef7baa39d2ec80efeaa4dc5af1e4c50916345"
 dependencies = [
  "bstringify",
  "frame-support",

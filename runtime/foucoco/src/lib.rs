@@ -15,8 +15,9 @@ use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
 
-use orml_traits::MultiCurrency;
 use bifrost_farming as farming;
+use bifrost_farming_rpc_runtime_api as farming_rpc_runtime_api;
+use orml_traits::MultiCurrency;
 
 use codec::Encode;
 
@@ -110,6 +111,9 @@ use sp_core::crypto::UncheckedFrom;
 
 // XCM Imports
 use xcm_executor::XcmExecutor;
+
+/// Balancer pool ID.
+pub type PoolId = u32; //pool id for farming rpc api
 
 pub type VaultId = primitives::VaultId<AccountId, CurrencyId>;
 
@@ -1439,9 +1443,7 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 	}
 }
 
-parameter_types! {
-	
-}
+parameter_types! {}
 
 parameter_types! {
 	pub const RelayChainCurrencyId: CurrencyId = XCM(0);
@@ -1473,6 +1475,7 @@ type FarmingControlOrigin = EitherOfDiverse<
 
 impl farming::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type CurrencyId = CurrencyId;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = FarmingControlOrigin;
 	type TreasuryAccount = BifrostTreasuryAccount;
@@ -1871,6 +1874,16 @@ impl_runtime_apis! {
 				amount_0_min,
 				amount_1_min
 			)
+		}
+	}
+
+	impl farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId> for Runtime {
+		fn get_farming_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_farming_rewards(&who, pid).unwrap_or(Vec::new())
+		}
+
+		fn get_gauge_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_gauge_rewards(&who, pid).unwrap_or(Vec::new())
 		}
 	}
 

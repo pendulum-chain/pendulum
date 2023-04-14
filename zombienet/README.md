@@ -1,27 +1,48 @@
 **Zombienet for macos**
 
-Download from [zombienet](https://github.com/paritytech/zombienet/releases)
+Download manualy from [zombienet](https://github.com/paritytech/zombienet/releases)
 
-or
+or using *wget* command:
 
 `wget https://github.com/paritytech/zombienet/releases/download/v1.3.30/zombienet-macos`
 
-Give permission to execute zombienet-macos file
+- Give permission to execute *zombienet-macos* file
 
 `chmod +x zombienet-macos`
 
-Check --help to any option.
+- Check `--help`
 
 `./zombienet-macos --help`
 
-Build Polkadot
 
-`cargo build --release`
+**Build Polkadot**
 
-Build Foucoco
+- build polkadot with *testnet* profile or production
 
-`cargo build --release`
+`cargo build --profile testnet -p test-parachain-adder-collator` or `cargo build --release`
 
-Run zombienet
+**Build pendulum-node**
 
-`./zombienet-macos spawn --provider native config.toml`
+```
+cd pendulum/node
+cargo build --release
+```
+
+
+- Specify chain in *config.toml*
+  *pendulum* / *amplitude* / *foucoco*
+
+  ```
+  [[parachains]]
+  ...
+  chain = "foucoco" 
+  ...
+  ```
+- Run zombienet (specify *provider* and path to zombienet *config.toml* file)
+
+`./zombienet-macos spawn --provider native ./zombienet/config.toml`
+
+
+Usefull link: 
+
+**Parity zombienet** [repository](https://github.com/paritytech/zombienet)

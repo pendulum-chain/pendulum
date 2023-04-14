@@ -1465,7 +1465,7 @@ parameter_types! {
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
 }
 parameter_types! {
-	pub BifrostTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+	pub FoucocoTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
 type FarmingControlOrigin = EitherOfDiverse<

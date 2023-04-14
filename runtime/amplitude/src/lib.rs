@@ -345,6 +345,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Identity(_) |
 			RuntimeCall::Contracts(_) |
 			RuntimeCall::ZenlinkProtocol(_) |
+			RuntimeCall::VestingManager(_) |
 			RuntimeCall::DiaOracleModule(_) |
 			RuntimeCall::Fee(_) |
 			RuntimeCall::Issue(_) |
@@ -903,6 +904,11 @@ impl pallet_vesting::Config for Runtime {
 	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
 
+impl vesting_manager::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type VestingSchedule = Vesting;
+}
+
 const fn deposit(items: u32, bytes: u32) -> Balance {
 	(items as Balance * UNIT + (bytes as Balance) * (5 * MILLIUNIT / 100)) / 10
 }
@@ -1218,6 +1224,8 @@ construct_runtime!(
 		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 69,
 		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 70,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
+
+		VestingManager: vesting_manager::{Pallet, Call, Event<T>} = 100
 	}
 );
 

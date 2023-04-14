@@ -263,6 +263,7 @@ dependencies = [
  "stellar-relay",
  "substrate-wasm-builder",
  "vault-registry",
+ "vesting-manager",
  "xcm",
  "xcm-builder",
  "xcm-executor",

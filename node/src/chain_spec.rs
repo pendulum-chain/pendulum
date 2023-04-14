@@ -13,7 +13,7 @@ use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	FixedPointNumber, FixedU128, Perquintill,
 };
-use spacewalk_primitives::{oracle::Key, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
+use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
 
 use crate::constants::pendulum;
 
@@ -58,6 +58,24 @@ const INITIAL_AMPLITUDE_VALIDATORS: [&str; 8] = [
 	"6mGcZntk59RK2JfxfdmprgDJeByVUgaffMQYkp1ZeoEKeBJA",
 	"6jq7obxC7AxhWeJNzopwYidKNNe48cLrbGSgB2zs2SuRTWGA",
 ];
+
+// For mainnet USDC issued by centre.io
+const MAINNET_DEFAULT_WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
+	code: *b"USDC",
+	issuer: [
+		59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
+		190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
+	],
+});
+
+// For Testnet USDC issued by the testnet issuer
+const TESTNET_DEFAULT_WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4(
+	*b"USDC",
+	[
+		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
+		108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
+	],
+);
 
 const FOUCOCO_PARACHAIN_ID: u32 = 2124;
 
@@ -494,10 +512,7 @@ fn amplitude_genesis(
 	start_shutdown: bool,
 ) -> amplitude_runtime::GenesisConfig {
 	fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
-		VaultCurrencyPair {
-			collateral: currency_id,
-			wrapped: amplitude_runtime::DefaultWrappedCurrencyId::get(),
-		}
+		VaultCurrencyPair { collateral: currency_id, wrapped: MAINNET_DEFAULT_WRAPPED_CURRENCY_ID }
 	}
 
 	let mut balances: Vec<_> = signatories
@@ -614,7 +629,7 @@ fn amplitude_genesis(
 			max_delay: u32::MAX,
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(0)),
-				Key::ExchangeRate(amplitude_runtime::DefaultWrappedCurrencyId::get()),
+				Key::ExchangeRate(MAINNET_DEFAULT_WRAPPED_CURRENCY_ID),
 			],
 		},
 		vault_registry: amplitude_runtime::VaultRegistryConfig {
@@ -671,10 +686,7 @@ fn foucoco_genesis(
 	start_shutdown: bool,
 ) -> foucoco_runtime::GenesisConfig {
 	fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
-		VaultCurrencyPair {
-			collateral: currency_id,
-			wrapped: foucoco_runtime::DefaultWrappedCurrencyId::get(),
-		}
+		VaultCurrencyPair { collateral: currency_id, wrapped: TESTNET_DEFAULT_WRAPPED_CURRENCY_ID }
 	}
 
 	let mut balances: Vec<_> = signatories
@@ -795,7 +807,7 @@ fn foucoco_genesis(
 			max_delay: u32::MAX,
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(0)),
-				Key::ExchangeRate(foucoco_runtime::WRAPPED_USDC_CURRENCY),
+				Key::ExchangeRate(TESTNET_DEFAULT_WRAPPED_CURRENCY_ID),
 			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {

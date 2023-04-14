@@ -282,15 +282,6 @@ const MAXIMUM_BLOCK_WEIGHT: Weight =
 	Weight::from_ref_time(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2))
 		.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64);
 
-// For mainnet USDC issued by centre.io
-pub const WRAPPED_USDC_CURRENCY: CurrencyId = CurrencyId::AlphaNum4(
-	*b"USDC",
-	[
-		59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
-		190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
-	],
-);
-
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
@@ -819,7 +810,6 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native;
-	pub const DefaultWrappedCurrencyId: CurrencyId = WRAPPED_USDC_CURRENCY;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -1973,9 +1963,9 @@ impl_runtime_apis! {
 			VaultRegistry::get_collateralization_from_vault_and_collateral(vault, &amount, only_issued)
 		}
 
-		fn get_required_collateral_for_wrapped(amount_wrapped: BalanceWrapper<Balance>, currency_id: CurrencyId) -> Result<BalanceWrapper<Balance>, DispatchError> {
-			let amount_wrapped = currency::Amount::new(amount_wrapped.amount, DefaultWrappedCurrencyId::get());
-			let result = VaultRegistry::get_required_collateral_for_wrapped(&amount_wrapped, currency_id)?;
+		fn get_required_collateral_for_wrapped(amount_wrapped: BalanceWrapper<Balance>, wrapped_currency_id: CurrencyId, collateral_currency_id: CurrencyId) -> Result<BalanceWrapper<Balance>, DispatchError> {
+			let amount_wrapped = currency::Amount::new(amount_wrapped.amount, wrapped_currency_id);
+			let result = VaultRegistry::get_required_collateral_for_wrapped(&amount_wrapped, collateral_currency_id)?;
 			Ok(BalanceWrapper{amount:result.amount()})
 		}
 

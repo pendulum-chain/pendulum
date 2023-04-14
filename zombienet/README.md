@@ -47,6 +47,6 @@ cargo build --release
 
 `./zombienet-macos spawn --provider native ./zombienet/config.toml`
 
-Usefull link:
+Useful link:
 
 **Parity zombienet** [repository](https://github.com/paritytech/zombienet)

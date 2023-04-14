@@ -96,6 +96,9 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 # KILT
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
 
+# Pendulum Pallets
+vesting-manager = {path = "../../pallets/vesting-manager", default-features = false}
+
 # DIA
 dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.37" }
 dia-oracle-runtime-api = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.37" }
@@ -189,6 +192,7 @@ std = [
     "sp-std/std",
     "sp-transaction-pool/std",
     "sp-version/std",
+    "vesting-manager/std",
     "xcm-builder/std",
     "xcm-executor/std",
     "xcm/std",

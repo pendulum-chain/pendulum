@@ -1,6 +1,6 @@
 **Zombienet for macos**
 
-Download manualy from [zombienet](https://github.com/paritytech/zombienet/releases)
+Download manually from [zombienet](https://github.com/paritytech/zombienet/releases)
 
 or using *wget* command:
 

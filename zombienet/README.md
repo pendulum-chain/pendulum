@@ -14,8 +14,14 @@ or using *wget* command:
 
 `./zombienet-macos --help`
 
-
 **Build Polkadot**
+
+- clone polkadot
+
+```
+git clone git@github.com:paritytech/polkadot
+cd polkadot
+```
 
 - build polkadot with *testnet* profile or production
 
@@ -27,7 +33,6 @@ or using *wget* command:
 cd pendulum/node
 cargo build --release
 ```
-
 
 - Specify chain in *config.toml*
   *pendulum* / *amplitude* / *foucoco*
@@ -42,7 +47,6 @@ cargo build --release
 
 `./zombienet-macos spawn --provider native ./zombienet/config.toml`
 
-
-Usefull link: 
+Usefull link:
 
 **Parity zombienet** [repository](https://github.com/paritytech/zombienet)

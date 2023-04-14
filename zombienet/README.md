@@ -25,7 +25,7 @@ cd polkadot
 
 - build polkadot with *testnet* profile or production
 
-`cargo build --profile testnet -p test-parachain-adder-collator` or `cargo build --release`
+`cargo build --profile testnet` or `cargo build --profile release`
 
 **Build pendulum-node**
 

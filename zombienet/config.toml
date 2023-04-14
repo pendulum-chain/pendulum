@@ -5,9 +5,11 @@ chain = "rococo-local"
 
   [[relaychain.nodes]]
   name = "alice"
+  validator = true
 
   [[relaychain.nodes]]
   name = "bob"
+  validator = true
 
 [[parachains]]
 id = 1000

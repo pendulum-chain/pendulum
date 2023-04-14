@@ -1548,7 +1548,7 @@ impl_runtime_apis! {
 			VaultRegistry::get_collateralization_from_vault_and_collateral(vault, &amount, only_issued)
 		}
 		fn get_required_collateral_for_wrapped(amount_wrapped: BalanceWrapper<Balance>, wrapped_currency_id: CurrencyId, collateral_currency_id: CurrencyId) -> Result<BalanceWrapper<Balance>, DispatchError> {
-			let amount_wrapped = currency::Amount::new(amount_wrapped.amount(), wrapped_currency_id);
+			let amount_wrapped = currency::Amount::new(amount_wrapped.amount, wrapped_currency_id);
 			let result = VaultRegistry::get_required_collateral_for_wrapped(&amount_wrapped, collateral_currency_id)?;
 			Ok(BalanceWrapper{amount:result.amount()})
 		}

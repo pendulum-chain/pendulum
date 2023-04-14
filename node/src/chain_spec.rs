@@ -13,7 +13,7 @@ use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	FixedPointNumber, FixedU128, Perquintill,
 };
-use spacewalk_primitives::{oracle::Key, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
+use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
 
 use crate::constants::pendulum;
 
@@ -60,13 +60,13 @@ const INITIAL_AMPLITUDE_VALIDATORS: [&str; 8] = [
 ];
 
 // For mainnet USDC issued by centre.io
-const MAINNET_DEFAULT_WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4 {
+const MAINNET_DEFAULT_WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
 	code: *b"USDC",
 	issuer: [
 		59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
 		190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
 	],
-};
+});
 
 // For Testnet USDC issued by the testnet issuer
 const TESTNET_DEFAULT_WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4(

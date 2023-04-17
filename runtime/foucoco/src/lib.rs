@@ -1478,7 +1478,7 @@ impl farming::Config for Runtime {
 	type CurrencyId = CurrencyId;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = FarmingControlOrigin;
-	type TreasuryAccount = BifrostTreasuryAccount;
+	type TreasuryAccount = FoucocoTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = farming::weights::BifrostWeight<Runtime>;

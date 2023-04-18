@@ -492,7 +492,7 @@ where
 				deny_unsafe,
 			};
 
-			crate::rpc::create_full_spacewalk(deps).map_err(Into::into)
+			crate::rpc::create_full_spacewalk_foucoco(deps).map_err(Into::into)
 		})
 	};
 

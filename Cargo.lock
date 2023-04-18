@@ -669,7 +669,7 @@ dependencies = [
 [[package]]
 name = "bifrost-farming"
 version = "0.8.0"
-source = "git+https://github.com/pendulum-chain/bifrost?branch=introduce-abstraction-for-currency-id#a7778200b6aca64819391241936f4849f785e2d6"
+source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v0.9.37#a95c17d4de062d09ed4393940eb63a7af926a40e"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -689,7 +689,7 @@ dependencies = [
 [[package]]
 name = "bifrost-farming-rpc-api"
 version = "0.8.0"
-source = "git+https://github.com/pendulum-chain/bifrost?branch=introduce-abstraction-for-currency-id#a7778200b6aca64819391241936f4849f785e2d6"
+source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v0.9.37#a95c17d4de062d09ed4393940eb63a7af926a40e"
 dependencies = [
  "bifrost-farming-rpc-runtime-api",
  "jsonrpsee",
@@ -706,7 +706,7 @@ dependencies = [
 [[package]]
 name = "bifrost-farming-rpc-runtime-api"
 version = "0.8.0"
-source = "git+https://github.com/pendulum-chain/bifrost?branch=introduce-abstraction-for-currency-id#a7778200b6aca64819391241936f4849f785e2d6"
+source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v0.9.37#a95c17d4de062d09ed4393940eb63a7af926a40e"
 dependencies = [
  "node-primitives",
  "parity-scale-codec",
@@ -5662,7 +5662,7 @@ dependencies = [
 [[package]]
 name = "node-primitives"
 version = "0.8.0"
-source = "git+https://github.com/pendulum-chain/bifrost?branch=introduce-abstraction-for-currency-id#a7778200b6aca64819391241936f4849f785e2d6"
+source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v0.9.37#a95c17d4de062d09ed4393940eb63a7af926a40e"
 dependencies = [
  "bstringify",
  "frame-support",

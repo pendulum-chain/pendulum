@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use runtime_common::{opaque::Block, AccountId, Balance, Index as Nonce};
+use runtime_common::{opaque::Block, AccountId, Balance, Index as Nonce, PoolId};
 
 use sc_client_api::AuxStore;
 pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
@@ -28,9 +28,6 @@ use bifrost_farming_rpc_runtime_api::FarmingRuntimeApi;
 
 /// A type representing all RPC extensions.
 pub type RpcExtension = jsonrpsee::RpcModule<()>;
-
-/// Type for IDs of farming pools
-pub type PoolId = u32; //pool id for farming rpc api
 
 /// Full client dependencies
 pub struct FullDeps<C, P> {

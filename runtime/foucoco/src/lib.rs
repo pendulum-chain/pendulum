@@ -59,8 +59,8 @@ use frame_system::{
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, ReserveIdentifier,
-	Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
+	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
+	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -111,9 +111,6 @@ use sp_core::crypto::UncheckedFrom;
 
 // XCM Imports
 use xcm_executor::XcmExecutor;
-
-/// Type for IDs of farming pools
-pub type PoolId = u32; //pool id for farming rpc api
 
 pub type VaultId = primitives::VaultId<AccountId, CurrencyId>;
 
@@ -1463,7 +1460,6 @@ parameter_types! {
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"fo/fmrir");
 	pub FoucocoTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
-parameter_types! {}
 
 impl farming::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;

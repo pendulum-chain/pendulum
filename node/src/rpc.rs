@@ -26,6 +26,10 @@ use spacewalk_primitives::{
 use bifrost_farming_rpc_api::{FarmingRpc, FarmingRpcApiServer};
 use bifrost_farming_rpc_runtime_api::FarmingRuntimeApi;
 
+use zenlink_protocol::AssetId as ZenlinkAssetId;
+use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApiServer};
+use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
+
 /// A type representing all RPC extensions.
 pub type RpcExtension = jsonrpsee::RpcModule<()>;
 
@@ -53,6 +57,7 @@ where
 		+ 'static,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+	// C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, ZenlinkAssetId>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
@@ -63,7 +68,8 @@ where
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
-	module.merge(TransactionPayment::new(client).into_rpc())?;
+	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
+	// module.merge(ZenlinkProtocol::new(client).into_rpc())?;
 	Ok(module)
 }
 
@@ -107,6 +113,7 @@ where
 		RedeemRequest<AccountId, BlockNumber, Balance, CurrencyId>,
 	>,
 	C::Api: module_oracle_rpc::OracleRuntimeApi<Block, Balance, CurrencyId>,
+	// C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, ZenlinkAssetId>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
@@ -127,7 +134,8 @@ where
 	module.merge(Redeem::new(client.clone()).into_rpc())?;
 	module.merge(Replace::new(client.clone()).into_rpc())?;
 	module.merge(VaultRegistry::new(client.clone()).into_rpc())?;
-	module.merge(Oracle::new(client).into_rpc())?;
+	module.merge(Oracle::new(client.clone()).into_rpc())?;
+	// module.merge(ZenlinkProtocol::new(client).into_rpc())?;
 
 	Ok(module)
 }
@@ -172,6 +180,7 @@ where
 		RedeemRequest<AccountId, BlockNumber, Balance, CurrencyId>,
 	>,
 	C::Api: module_oracle_rpc::OracleRuntimeApi<Block, Balance, CurrencyId>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, ZenlinkAssetId>,
 	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
@@ -194,6 +203,7 @@ where
 	module.merge(Replace::new(client.clone()).into_rpc())?;
 	module.merge(VaultRegistry::new(client.clone()).into_rpc())?;
 	module.merge(Oracle::new(client.clone()).into_rpc())?;
+	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
 	module.merge(FarmingRpc::new(client).into_rpc())?;
 
 	Ok(module)

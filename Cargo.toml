@@ -13,3 +13,15 @@ members = [
 	"runtime/development",
 	"runtime/integration-tests/pendulum",
 ]
+
+# need this because of bifrost farming dependency in runtime
+[patch."https://github.com/open-web3-stack/open-runtime-module-library"] 
+orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.37" }
+
+# need this because of bifrost farming dependency in runtime
+[patch.crates-io]
+orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.37" }
+orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.37" }
+orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.37" }
+zenlink-protocol = { git = "https://github.com/zenlinkpro//Zenlink-DEX-Module",  branch = "polkadot-v0.9.37" }
+zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro//Zenlink-DEX-Module", branch = "polkadot-v0.9.37" }

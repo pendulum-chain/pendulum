@@ -129,8 +129,8 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.37" }
 zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.37" }
 
-bifrost-farming = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "polkadot-v0.9.37" }
-bifrost-farming-rpc-runtime-api = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "polkadot-v0.9.37" }
+bifrost-farming = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "introduce-abstraction-for-currency-id" }
+bifrost-farming-rpc-runtime-api = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "introduce-abstraction-for-currency-id" }
 
 [features]
 default = [

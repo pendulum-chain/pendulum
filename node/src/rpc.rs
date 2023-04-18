@@ -40,7 +40,7 @@ pub struct FullDeps<C, P> {
 }
 
 /// Instantiate all RPC extensions.
-pub fn create_full<C, P>(
+pub fn create_full_pendulum<C, P>(
 	deps: FullDeps<C, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
@@ -67,7 +67,7 @@ where
 	Ok(module)
 }
 
-pub fn create_full_spacewalk<C, P>(
+pub fn create_full_amplitude<C, P>(
 	deps: FullDeps<C, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
@@ -132,7 +132,7 @@ where
 	Ok(module)
 }
 
-pub fn create_full_spacewalk_foucoco<C, P>(
+pub fn create_full_foucoco<C, P>(
 	deps: FullDeps<C, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where

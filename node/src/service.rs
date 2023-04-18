@@ -321,7 +321,7 @@ where
 				deny_unsafe,
 			};
 
-			crate::rpc::create_full_spacewalk(deps).map_err(Into::into)
+			crate::rpc::create_full_amplitude(deps).map_err(Into::into)
 		})
 	};
 
@@ -492,7 +492,7 @@ where
 				deny_unsafe,
 			};
 
-			crate::rpc::create_full_spacewalk_foucoco(deps).map_err(Into::into)
+			crate::rpc::create_full_foucoco(deps).map_err(Into::into)
 		})
 	};
 
@@ -678,7 +678,7 @@ where
 				deny_unsafe,
 			};
 
-			crate::rpc::create_full(deps).map_err(Into::into)
+			crate::rpc::create_full_pendulum(deps).map_err(Into::into)
 		})
 	};
 

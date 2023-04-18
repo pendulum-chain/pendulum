@@ -112,7 +112,7 @@ use sp_core::crypto::UncheckedFrom;
 // XCM Imports
 use xcm_executor::XcmExecutor;
 
-/// Balancer pool ID.
+/// Type for IDs of farming pools
 pub type PoolId = u32; //pool id for farming rpc api
 
 pub type VaultId = primitives::VaultId<AccountId, CurrencyId>;
@@ -1443,8 +1443,6 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 	}
 }
 
-parameter_types! {}
-
 parameter_types! {
 	pub const RelayChainCurrencyId: CurrencyId = XCM(0);
 }
@@ -1461,23 +1459,17 @@ impl currency::Config for Runtime {
 }
 
 parameter_types! {
-	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
-	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
-}
-parameter_types! {
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"fo/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"fo/fmrir");
 	pub FoucocoTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
-
-type FarmingControlOrigin = EitherOfDiverse<
-	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
->;
+parameter_types! {}
 
 impl farming::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type CurrencyId = CurrencyId;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = FarmingControlOrigin;
+	type ControlOrigin = EnsureRoot<AccountId>;
 	type TreasuryAccount = FoucocoTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;

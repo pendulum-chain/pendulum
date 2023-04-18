@@ -687,6 +687,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-farming-rpc-api"
+version = "0.8.0"
+source = "git+https://github.com/pendulum-chain/bifrost?branch=introduce-abstraction-for-currency-id#a7778200b6aca64819391241936f4849f785e2d6"
+dependencies = [
+ "bifrost-farming-rpc-runtime-api",
+ "jsonrpsee",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
 name = "bifrost-farming-rpc-runtime-api"
 version = "0.8.0"
 source = "git+https://github.com/pendulum-chain/bifrost?branch=introduce-abstraction-for-currency-id#a7778200b6aca64819391241936f4849f785e2d6"
@@ -7413,6 +7430,8 @@ name = "pendulum-node"
 version = "0.1.0"
 dependencies = [
  "amplitude-runtime",
+ "bifrost-farming-rpc-api",
+ "bifrost-farming-rpc-runtime-api",
  "clap",
  "cumulus-client-cli",
  "cumulus-client-consensus-aura",

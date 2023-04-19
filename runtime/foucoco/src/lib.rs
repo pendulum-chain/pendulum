@@ -15,6 +15,8 @@ use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
 
+use bifrost_farming as farming;
+use bifrost_farming_rpc_runtime_api as farming_rpc_runtime_api;
 use orml_traits::MultiCurrency;
 
 use codec::Encode;
@@ -57,8 +59,8 @@ use frame_system::{
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, ReserveIdentifier,
-	Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
+	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
+	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -362,6 +364,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::StellarRelay(_) |
 			RuntimeCall::VaultRegistry(_) |
 			RuntimeCall::VaultRewards(_) |
+			RuntimeCall::Farming(_) |
 			RuntimeCall::TokenAllowance(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -1442,6 +1445,23 @@ impl currency::Config for Runtime {
 	type AmountCompatibility = primitives::StellarCompatibility;
 }
 
+parameter_types! {
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"fo/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"fo/fmrir");
+	pub FoucocoTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
+impl farming::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureRoot<AccountId>;
+	type TreasuryAccount = FoucocoTreasuryAccount;
+	type Keeper = FarmingKeeperPalletId;
+	type RewardIssuer = FarmingRewardIssuerPalletId;
+	type WeightInfo = farming::weights::BifrostWeight<Runtime>;
+}
+
 impl security::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = security::SubstrateWeight<Runtime>;
@@ -1622,6 +1642,8 @@ construct_runtime!(
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
 
 		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
+
+		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 	}
 );
 
@@ -1830,6 +1852,16 @@ impl_runtime_apis! {
 				amount_0_min,
 				amount_1_min
 			)
+		}
+	}
+
+	impl farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId> for Runtime {
+		fn get_farming_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_farming_rewards(&who, pid).unwrap_or(Vec::new())
+		}
+
+		fn get_gauge_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_gauge_rewards(&who, pid).unwrap_or(Vec::new())
 		}
 	}
 

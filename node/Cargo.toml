@@ -86,6 +86,10 @@ cumulus-relay-chain-interface = { git = "https://github.com/paritytech/cumulus.g
 cumulus-relay-chain-rpc-interface = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.37" }
 cumulus-relay-chain-minimal-node = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.37" }
 
+#bifrost
+bifrost-farming-rpc-api = { git = "https://github.com/pendulum-chain/bifrost", branch = "polkadot-v0.9.37"  }
+bifrost-farming-rpc-runtime-api = { git = "https://github.com/pendulum-chain/bifrost", branch = "polkadot-v0.9.37" }
+
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 

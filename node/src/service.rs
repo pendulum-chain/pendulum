@@ -243,7 +243,7 @@ use amplitude_runtime::RuntimeApi as AmplitudeRuntimeApi;
 
 /// Start a node that exposes the RPC endpoints for the spacewalk pallets for the amplitude runtime.
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
-async fn start_node_impl_spacewalk_amplitude<Executor>(
+async fn start_node_impl_amplitude<Executor>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	collator_options: CollatorOptions,
@@ -414,7 +414,7 @@ where
 use foucoco_runtime::RuntimeApi as FoucocoRuntimeApi;
 /// Start a node that exposes the RPC endpoints for the spacewalk pallets for the Foucoco runtime.
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
-async fn start_node_impl_spacewalk_foucoco<Executor>(
+async fn start_node_impl_foucoco<Executor>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	collator_options: CollatorOptions,
@@ -584,7 +584,7 @@ where
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
-async fn start_node_impl<RuntimeApi, Executor>(
+async fn start_node_impl_pendulum<RuntimeApi, Executor>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	collator_options: CollatorOptions,
@@ -955,7 +955,7 @@ where
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
-	start_node_impl(parachain_config, polkadot_config, collator_options, id, hwbench).await
+	start_node_impl_pendulum(parachain_config, polkadot_config, collator_options, id, hwbench).await
 }
 
 /// Start a parachain node with the Spacewalk RPC exposed using the foucoco runtime definitions.
@@ -973,14 +973,7 @@ where
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
-	start_node_impl_spacewalk_foucoco(
-		parachain_config,
-		polkadot_config,
-		collator_options,
-		id,
-		hwbench,
-	)
-	.await
+	start_node_impl_foucoco(parachain_config, polkadot_config, collator_options, id, hwbench).await
 }
 
 /// Start a parachain node with the Spacewalk RPC exposed using the amplitude runtime definitions.
@@ -998,12 +991,6 @@ where
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
-	start_node_impl_spacewalk_amplitude(
-		parachain_config,
-		polkadot_config,
-		collator_options,
-		id,
-		hwbench,
-	)
-	.await
+	start_node_impl_amplitude(parachain_config, polkadot_config, collator_options, id, hwbench)
+		.await
 }

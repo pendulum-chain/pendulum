@@ -86,9 +86,10 @@ cumulus-relay-chain-interface = { git = "https://github.com/paritytech/cumulus.g
 cumulus-relay-chain-rpc-interface = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.37" }
 cumulus-relay-chain-minimal-node = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.37" }
 
-zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", branch = "polkadot-v0.9.37" }
-zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", branch = "polkadot-v0.9.37" }
-zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", branch = "polkadot-v0.9.37" }
+
+zenlink-protocol = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "update-jsonrpsee-to-0.16.2" }
+zenlink-protocol-rpc = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "update-jsonrpsee-to-0.16.2" }
+zenlink-protocol-runtime-api = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "update-jsonrpsee-to-0.16.2" }
 
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }

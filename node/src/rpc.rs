@@ -23,6 +23,10 @@ use spacewalk_primitives::{
 	VaultId,
 };
 
+use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApiServer};
+use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
+use zenlink_protocol::AssetId;
+
 /// A type representing all RPC extensions.
 pub type RpcExtension = jsonrpsee::RpcModule<()>;
 
@@ -105,6 +109,7 @@ where
 	>,
 	C::Api: module_oracle_rpc::OracleRuntimeApi<Block, Balance, CurrencyId>,
 	C::Api: BlockBuilder<Block>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	P: TransactionPool + Sync + Send + 'static,
 {
 	use module_issue_rpc::{Issue, IssueApiServer};
@@ -124,6 +129,7 @@ where
 	module.merge(Redeem::new(client.clone()).into_rpc())?;
 	module.merge(Replace::new(client.clone()).into_rpc())?;
 	module.merge(VaultRegistry::new(client.clone()).into_rpc())?;
+	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
 	module.merge(Oracle::new(client).into_rpc())?;
 
 	Ok(module)

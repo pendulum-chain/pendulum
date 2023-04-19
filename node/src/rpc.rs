@@ -54,8 +54,8 @@ where
 		+ 'static,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	// C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api: BlockBuilder<Block>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	P: TransactionPool + Sync + Send + 'static,
 {
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
@@ -67,7 +67,7 @@ where
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
-	// module.merge(ZenlinkProtocol::new(client).into_rpc())?;
+	module.merge(ZenlinkProtocol::new(client).into_rpc())?;
 	Ok(module)
 }
 

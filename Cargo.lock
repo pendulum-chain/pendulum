@@ -4954,9 +4954,9 @@ checksum = "d4d2456c373231a208ad294c33dc5bff30051eafd954cd4caae83a712b12854d"
 
 [[package]]
 name = "linux-raw-sys"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f508063cc7bb32987c71511216bd5a32be15bccb6a80b52df8b9d7f01fc3aa2"
+checksum = "9b085a4f2cde5781fc4b1717f2e86c62f5cda49de7ba99a7c2eae02b61c9064c"
 
 [[package]]
 name = "lock_api"
@@ -9778,7 +9778,7 @@ dependencies = [
  "errno 0.3.1",
  "io-lifetimes 1.0.10",
  "libc",
- "linux-raw-sys 0.3.2",
+ "linux-raw-sys 0.3.3",
  "windows-sys 0.48.0",
 ]
 

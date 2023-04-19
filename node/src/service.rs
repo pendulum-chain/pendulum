@@ -33,6 +33,9 @@ use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::traits::BlakeTwo256;
 use substrate_prometheus_endpoint::Registry;
 
+use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
+use zenlink_protocol::AssetId;
+
 use polkadot_service::CollatorPair;
 use sc_consensus::ImportQueue;
 
@@ -610,7 +613,8 @@ where
 		+ cumulus_primitives_core::CollectCollationInfo<Block>
 		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
 		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
-		+ AuraApi<Block, AuthorityId>,
+		+ AuraApi<Block, AuthorityId> 
+		+ ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
@@ -951,7 +955,8 @@ where
 		+ cumulus_primitives_core::CollectCollationInfo<Block>
 		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
 		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
-		+ AuraApi<Block, AuthorityId>,
+		+ AuraApi<Block, AuthorityId>
+		+ ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {

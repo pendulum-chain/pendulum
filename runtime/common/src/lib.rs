@@ -15,7 +15,7 @@ pub type Signature = MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 /// Type for IDs of farming pools
-pub type PoolId = u32; //pool id for farming rpc api
+pub type PoolId = u32;
 
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 

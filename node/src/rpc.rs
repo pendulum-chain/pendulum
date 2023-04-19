@@ -26,6 +26,10 @@ use spacewalk_primitives::{
 use bifrost_farming_rpc_api::{FarmingRpc, FarmingRpcApiServer};
 use bifrost_farming_rpc_runtime_api::FarmingRuntimeApi;
 
+use zenlink_protocol::AssetId;
+use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApiServer};
+use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
+
 /// A type representing all RPC extensions.
 pub type RpcExtension = jsonrpsee::RpcModule<()>;
 
@@ -54,6 +58,7 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	C::Api: BlockBuilder<Block>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	P: TransactionPool + Sync + Send + 'static,
 {
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
@@ -63,7 +68,36 @@ where
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
-	module.merge(TransactionPayment::new(client).into_rpc())?;
+	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
+	module.merge(ZenlinkProtocol::new(client).into_rpc())?;
+	Ok(module)
+}
+
+/// Instantiate all RPC extensions.
+pub fn create_full_development<C, P>(
+	deps: FullDeps<C, P>,
+) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
+where
+	C: ProvideRuntimeApi<Block>
+		+ HeaderBackend<Block>
+		+ AuxStore
+		+ HeaderMetadata<Block, Error = BlockChainError>
+		+ Send
+		+ Sync
+		+ 'static,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+	C::Api: BlockBuilder<Block>,
+	P: TransactionPool + Sync + Send + 'static,
+{
+	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
+	use substrate_frame_rpc_system::{System, SystemApiServer};
+
+	let mut module = RpcExtension::new(());
+	let FullDeps { client, pool, deny_unsafe } = deps;
+
+	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
+	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 	Ok(module)
 }
 
@@ -108,6 +142,7 @@ where
 	>,
 	C::Api: module_oracle_rpc::OracleRuntimeApi<Block, Balance, CurrencyId>,
 	C::Api: BlockBuilder<Block>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	P: TransactionPool + Sync + Send + 'static,
 {
 	use module_issue_rpc::{Issue, IssueApiServer};
@@ -127,7 +162,8 @@ where
 	module.merge(Redeem::new(client.clone()).into_rpc())?;
 	module.merge(Replace::new(client.clone()).into_rpc())?;
 	module.merge(VaultRegistry::new(client.clone()).into_rpc())?;
-	module.merge(Oracle::new(client).into_rpc())?;
+	module.merge(Oracle::new(client.clone()).into_rpc())?;
+	module.merge(ZenlinkProtocol::new(client).into_rpc())?;
 
 	Ok(module)
 }
@@ -174,6 +210,7 @@ where
 	C::Api: module_oracle_rpc::OracleRuntimeApi<Block, Balance, CurrencyId>,
 	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
 	C::Api: BlockBuilder<Block>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	P: TransactionPool + Sync + Send + 'static,
 {
 	use module_issue_rpc::{Issue, IssueApiServer};
@@ -194,7 +231,8 @@ where
 	module.merge(Replace::new(client.clone()).into_rpc())?;
 	module.merge(VaultRegistry::new(client.clone()).into_rpc())?;
 	module.merge(Oracle::new(client.clone()).into_rpc())?;
-	module.merge(FarmingRpc::new(client).into_rpc())?;
+	module.merge(FarmingRpc::new(client.clone()).into_rpc())?;
+	module.merge(ZenlinkProtocol::new(client).into_rpc())?;
 
 	Ok(module)
 }

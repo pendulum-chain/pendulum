@@ -27,5 +27,5 @@ orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-l
 orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.37" }
 orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.37" }
 orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.37" }
-zenlink-protocol = { git = "https://github.com/zenlinkpro//Zenlink-DEX-Module",  branch = "polkadot-v0.9.37" }
-zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro//Zenlink-DEX-Module", branch = "polkadot-v0.9.37" }
+zenlink-protocol = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "update-jsonrpsee-to-0.16.2" }
+zenlink-protocol-runtime-api = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "update-jsonrpsee-to-0.16.2" }

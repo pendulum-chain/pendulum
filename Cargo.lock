@@ -267,7 +267,7 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
- "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
+ "zenlink-protocol",
  "zenlink-protocol-runtime-api",
 ]
 
@@ -3010,7 +3010,7 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
- "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
+ "zenlink-protocol",
  "zenlink-protocol-runtime-api",
 ]
 
@@ -5674,7 +5674,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro//Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
+ "zenlink-protocol",
 ]
 
 [[package]]
@@ -7499,6 +7499,9 @@ dependencies = [
  "substrate-prometheus-endpoint",
  "try-runtime-cli",
  "xcm",
+ "zenlink-protocol",
+ "zenlink-protocol-rpc",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
@@ -7577,7 +7580,7 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
- "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
+ "zenlink-protocol",
  "zenlink-protocol-runtime-api",
 ]
 
@@ -14701,7 +14704,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro//Zenlink-DEX-Module?branch=polkadot-v0.9.37#690b8bb2495a9d1d00506f9dab3240ee0c544c0a"
+source = "git+https://github.com/pendulum-chain/Zenlink-DEX-Module?branch=update-jsonrpsee-to-0.16.2#dfdd0ddd5c9399cc66d0b806203d2bec424983de"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -14722,37 +14725,29 @@ dependencies = [
 ]
 
 [[package]]
-name = "zenlink-protocol"
+name = "zenlink-protocol-rpc"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37#690b8bb2495a9d1d00506f9dab3240ee0c544c0a"
+source = "git+https://github.com/pendulum-chain/Zenlink-DEX-Module?branch=update-jsonrpsee-to-0.16.2#dfdd0ddd5c9399cc66d0b806203d2bec424983de"
 dependencies = [
- "cumulus-primitives-core",
- "frame-support",
- "frame-system",
- "log",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=05f0007b30c98303078ee64d34390233d6ffb30e)",
- "orml-traits",
- "pallet-balances",
+ "jsonrpsee",
  "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-arithmetic",
- "sp-core",
+ "sp-api",
+ "sp-blockchain",
+ "sp-rpc",
  "sp-runtime",
- "sp-std",
- "xcm",
- "xcm-executor",
+ "zenlink-protocol",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37#690b8bb2495a9d1d00506f9dab3240ee0c544c0a"
+source = "git+https://github.com/pendulum-chain/Zenlink-DEX-Module?branch=update-jsonrpsee-to-0.16.2#dfdd0ddd5c9399cc66d0b806203d2bec424983de"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-std",
- "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
+ "zenlink-protocol",
 ]
 
 [[package]]
@@ -14814,8 +14809,3 @@ source = "git+https://github.com/open-web3-stack//open-runtime-module-library?br
 name = "orml-tokens"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack//open-runtime-module-library?branch=polkadot-v0.9.37#16b6c1149a15674d21c87244b7988a667e2c14d9"
-
-[[patch.unused]]
-name = "zenlink-protocol-runtime-api"
-version = "0.4.4"
-source = "git+https://github.com/zenlinkpro//Zenlink-DEX-Module?branch=polkadot-v0.9.37#690b8bb2495a9d1d00506f9dab3240ee0c544c0a"

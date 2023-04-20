@@ -1295,10 +1295,6 @@ where
 
 				let blockchain = trim_trailing_zeros(&price_feed_request.0).to_vec();
 				let symbol = trim_trailing_zeros(&price_feed_request.1).to_vec();
-				warn!("input blockchain  : {:x}", blockchain);
-				warn!("Kusama blockchain : {:x}", b"Kusama");
-				warn!("input symbol : {:x}", symbol);
-				warn!("KSM symbol   : {:x}", b"KSM");
 
 				let price_feed = <dia_oracle::Pallet<T> as DiaOracle>::get_coin_info(blockchain, symbol);
 

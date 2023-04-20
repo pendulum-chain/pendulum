@@ -1293,12 +1293,14 @@ where
 				let mut env = env.buf_in_buf_out();
 				let price_feed_request: ([u8; 32], [u8; 32]) = env.read_as()?;
 
-				let blockchain = price_feed_request.0;
-				let symbol = price_feed_request.1;
-				let price_feed = <dia_oracle::Pallet<T> as DiaOracle>::get_coin_info(
-					blockchain.to_vec(),
-					symbol.to_vec(),
-				);
+				let blockchain = trim_trailing_zeros(&price_feed_request.0).to_vec();
+				let symbol = trim_trailing_zeros(&price_feed_request.1).to_vec();
+				warn!("input blockchain  : {:x}", blockchain);
+				warn!("Kusama blockchain : {:x}", b"Kusama");
+				warn!("input symbol : {:x}", symbol);
+				warn!("KSM symbol   : {:x}", b"KSM");
+
+				let price_feed = <dia_oracle::Pallet<T> as DiaOracle>::get_coin_info(blockchain, symbol);
 
 				warn!("price_feed_request : {:#?}", price_feed_request);
 				warn!("price_feed : {:#?}", price_feed);
@@ -1320,7 +1322,17 @@ where
 		true
 	}
 }
-
+fn trim_trailing_zeros(slice: &[u8]) -> &[u8] {
+    let mut trim_amount = 0;
+    for el in slice.iter().rev() {
+        if *el == 0 {
+            trim_amount += 1;
+        } else {
+            break;
+        }
+    }
+    &slice[..slice.len() - trim_amount]
+}
 impl pallet_contracts::Config for Runtime {
 	type Time = Timestamp;
 	type Randomness = RandomnessCollectiveFlip;

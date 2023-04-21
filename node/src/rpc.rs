@@ -211,7 +211,6 @@ where
 	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
 	C::Api: BlockBuilder<Block>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
-	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
 	P: TransactionPool + Sync + Send + 'static,
 {
 	use module_issue_rpc::{Issue, IssueApiServer};

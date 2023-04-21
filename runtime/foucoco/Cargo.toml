@@ -132,9 +132,6 @@ zenlink-protocol-runtime-api = { git = "https://github.com/pendulum-chain/Zenlin
 bifrost-farming = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "polkadot-v0.9.37" }
 bifrost-farming-rpc-runtime-api = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "polkadot-v0.9.37" }
 
-bifrost-farming = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "polkadot-v0.9.37" }
-bifrost-farming-rpc-runtime-api = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "polkadot-v0.9.37" }
-
 [features]
 default = [
     "std",

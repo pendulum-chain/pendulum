@@ -276,7 +276,7 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
- "zenlink-protocol",
+ "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
  "zenlink-protocol-runtime-api",
 ]
 
@@ -3019,7 +3019,7 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
- "zenlink-protocol",
+ "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
  "zenlink-protocol-runtime-api",
 ]
 
@@ -7589,7 +7589,7 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
- "zenlink-protocol",
+ "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
  "zenlink-protocol-runtime-api",
 ]
 
@@ -14762,7 +14762,7 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-std",
- "zenlink-protocol",
+ "zenlink-protocol 0.4.4 (git+https://github.com/zenlinkpro/Zenlink-DEX-Module?branch=polkadot-v0.9.37)",
 ]
 
 [[package]]

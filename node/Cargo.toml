@@ -90,6 +90,10 @@ cumulus-relay-chain-minimal-node = { git = "https://github.com/paritytech/cumulu
 bifrost-farming-rpc-api = { git = "https://github.com/pendulum-chain/bifrost", branch = "polkadot-v0.9.37"  }
 bifrost-farming-rpc-runtime-api = { git = "https://github.com/pendulum-chain/bifrost", branch = "polkadot-v0.9.37" }
 
+zenlink-protocol = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "polkadot-v0.9.37" }
+zenlink-protocol-rpc = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "polkadot-v0.9.37" }
+zenlink-protocol-runtime-api = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "polkadot-v0.9.37" }
+
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37" }
 

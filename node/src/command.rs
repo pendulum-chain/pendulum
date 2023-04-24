@@ -456,7 +456,7 @@ pub fn run() -> Result<()> {
 						sp_core::crypto::set_default_ss58_version(
 							pendulum_runtime::SS58Prefix::get().into(),
 						);
-						crate::service::start_parachain_node::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(
+						crate::service::start_parachain_node_pendulum::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(
 							config,
 							polkadot_config,
 							collator_options,
@@ -468,7 +468,7 @@ pub fn run() -> Result<()> {
 						.map_err(Into::into)
 					},
 
-					ChainIdentity::Development => crate::service::start_parachain_node::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor>(
+					ChainIdentity::Development => crate::service::start_parachain_node_development::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor>(
 						config,
 						polkadot_config,
 						collator_options,

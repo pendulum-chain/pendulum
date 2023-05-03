@@ -160,10 +160,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("pendulum"),
 	impl_name: create_runtime_str!("pendulum"),
 	authoring_version: 1,
-	spec_version: 5,
+	spec_version: 6,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 5,
+	transaction_version: 6,
 	state_version: 1,
 };
 
@@ -238,6 +238,8 @@ pub struct BaseFilter;
 impl Contains<RuntimeCall> for BaseFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		match call {
+			RuntimeCall::ParachainStaking(parachain_staking::Call::join_delegators { .. }) |
+			RuntimeCall::ParachainStaking(parachain_staking::Call::delegator_stake_more { .. }) |
 			RuntimeCall::Balances(pallet_balances::Call::transfer { .. }) |
 			RuntimeCall::Balances(pallet_balances::Call::transfer_all { .. }) |
 			RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive { .. }) |

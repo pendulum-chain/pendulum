@@ -160,10 +160,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("pendulum"),
 	impl_name: create_runtime_str!("pendulum"),
 	authoring_version: 1,
-	spec_version: 6,
+	spec_version: 7,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 6,
+	transaction_version: 7,
 	state_version: 1,
 };
 
@@ -238,13 +238,6 @@ pub struct BaseFilter;
 impl Contains<RuntimeCall> for BaseFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		match call {
-			RuntimeCall::ParachainStaking(parachain_staking::Call::join_delegators { .. }) |
-			RuntimeCall::ParachainStaking(parachain_staking::Call::delegator_stake_more { .. }) |
-			RuntimeCall::Balances(pallet_balances::Call::transfer { .. }) |
-			RuntimeCall::Balances(pallet_balances::Call::transfer_all { .. }) |
-			RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive { .. }) |
-			RuntimeCall::Vesting(pallet_vesting::Call::vested_transfer { .. }) => false,
-
 			// These modules are all allowed to be called by transactions:
 			RuntimeCall::Bounties(_) |
 			RuntimeCall::ChildBounties(_) |
@@ -475,7 +468,7 @@ parameter_types! {
 	pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
 	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
 	pub const MaxProposals: u32 = 100;
-	pub const VoteLockingPeriod: u32 = 1;
+	pub const VoteLockingPeriod: u32 = 7 * DAYS;
 }
 
 impl pallet_democracy::Config for Runtime {
@@ -735,7 +728,7 @@ impl orml_currencies::Config for Runtime {
 parameter_types! {
 	pub const MinBlocksPerRound: BlockNumber = HOURS;
 	pub const DefaultBlocksPerRound: BlockNumber = 2 * HOURS;
-	pub const StakeDuration: BlockNumber = 10;
+	pub const StakeDuration: BlockNumber = 7 * DAYS;
 	pub const ExitQueueDelay: u32 = 2;
 	pub const MinCollators: u32 = 8;
 	pub const MinRequiredCollators: u32 = 4;

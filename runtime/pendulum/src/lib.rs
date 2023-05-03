@@ -160,10 +160,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("pendulum"),
 	impl_name: create_runtime_str!("pendulum"),
 	authoring_version: 1,
-	spec_version: 4,
+	spec_version: 5,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 4,
+	transaction_version: 5,
 	state_version: 1,
 };
 
@@ -238,6 +238,11 @@ pub struct BaseFilter;
 impl Contains<RuntimeCall> for BaseFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		match call {
+			RuntimeCall::Balances(pallet_balances::Call::transfer { .. }) |
+			RuntimeCall::Balances(pallet_balances::Call::transfer_all { .. }) |
+			RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive { .. }) |
+			RuntimeCall::Vesting(pallet_vesting::Call::vested_transfer { .. }) => false,
+
 			// These modules are all allowed to be called by transactions:
 			RuntimeCall::Bounties(_) |
 			RuntimeCall::ChildBounties(_) |
@@ -468,6 +473,7 @@ parameter_types! {
 	pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
 	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
 	pub const MaxProposals: u32 = 100;
+	pub const VoteLockingPeriod: u32 = 1;
 }
 
 impl pallet_democracy::Config for Runtime {
@@ -476,7 +482,7 @@ impl pallet_democracy::Config for Runtime {
 	type EnactmentPeriod = EnactmentPeriod;
 	type LaunchPeriod = LaunchPeriod;
 	type VotingPeriod = VotingPeriod;
-	type VoteLockingPeriod = EnactmentPeriod; // Same as EnactmentPeriod
+	type VoteLockingPeriod = VoteLockingPeriod;
 	type MinimumDeposit = MinimumDeposit;
 	/// A straight majority of the council can decide what their next motion is.
 	type ExternalOrigin =
@@ -727,7 +733,7 @@ impl orml_currencies::Config for Runtime {
 parameter_types! {
 	pub const MinBlocksPerRound: BlockNumber = HOURS;
 	pub const DefaultBlocksPerRound: BlockNumber = 2 * HOURS;
-	pub const StakeDuration: BlockNumber = 7 * DAYS;
+	pub const StakeDuration: BlockNumber = 10;
 	pub const ExitQueueDelay: u32 = 2;
 	pub const MinCollators: u32 = 8;
 	pub const MinRequiredCollators: u32 = 4;

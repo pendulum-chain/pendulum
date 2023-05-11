@@ -924,7 +924,13 @@ parameter_types! {
 		.get(DispatchClass::Normal)
 		.max_total
 		.unwrap_or(RuntimeBlockWeights::get().max_block);
-	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
+	pub Schedule: pallet_contracts::Schedule<Runtime> = pallet_contracts::Schedule::<Runtime>{
+		limits: pallet_contracts::Limits{
+			parameters: 16,
+			..Default::default()
+		},
+		..Default::default()
+	};
 }
 
 pub type CurrencyTypeId = u8;

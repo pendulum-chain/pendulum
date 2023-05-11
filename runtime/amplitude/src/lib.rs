@@ -459,8 +459,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-	/// Relay Chain `TransactionByteFee` / 10
-	pub const TransactionByteFee: Balance = 10 * MICROUNIT;
+	pub const TransactionByteFee: Balance = 100 * NANOUNIT;
 	pub const OperationalFeeMultiplier: u8 = 5;
 }
 

@@ -9733,6 +9733,7 @@ dependencies = [
 name = "runtime-common"
 version = "0.1.0"
 dependencies = [
+ "dia-oracle",
  "parity-scale-codec",
  "scale-info",
  "sp-consensus-aura",

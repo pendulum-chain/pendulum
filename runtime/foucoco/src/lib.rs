@@ -928,10 +928,6 @@ parameter_types! {
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 }
 
-pub type CurrencyTypeId = u8;
-pub type StellarAssetCode = [u8; 12];
-pub type StellarAssetIssuer = [u8; 32];
-
 #[derive(Default)]
 pub struct Psp22Extension;
 
@@ -969,30 +965,19 @@ where
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (
 					OriginType,
-					CurrencyTypeId,
-					StellarAssetCode,
-					StellarAssetIssuer,
+					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
 				) = env.read_as()?;
-				let (origin_id, type_id, code, issuer, account_id, balance) = create_asset;
+				let (origin_id, currency_id, account_id, balance) = create_asset;
 
 				let address_account =
 					if origin_id == OriginType::Caller { caller } else { address };
 
-				warn!("asset_id : {:#?}", type_id);
+				warn!("currency_id : {:#?}", currency_id);
 				warn!("address_account : {:#?}", address_account);
 				warn!("account_id : {:#?}", account_id);
 				warn!("balance : {:#?}", balance);
-
-				let currency_id =
-					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
-						error!(
-						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
-						type_id, code, issuer
-					);
-						DispatchError::Other("Currency id does not exist")
-					})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1018,23 +1003,12 @@ where
 			1106 => {
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (
-					CurrencyTypeId,
-					StellarAssetCode,
-					StellarAssetIssuer,
+					CurrencyId,
 					T::AccountId,
 				) = env.read_as()?;
-				let (type_id, code, issuer, account_id) = create_asset;
+				let (currency_id, account_id) = create_asset;
 
-				let currency_id =
-					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
-						error!(
-						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
-						type_id, code, issuer
-					);
-						DispatchError::Other("Currency id does not exist")
-					})?;
-
-				warn!("asset_id : {:#?}", type_id);
+				warn!("currency_id : {:#?}", currency_id);
 				warn!("account_id : {:#?}", account_id);
 
 				let is_allowed_currency =
@@ -1042,7 +1016,7 @@ where
 						currency_id,
 					);
 				if !is_allowed_currency {
-					warn!("asset_id : {:#?} is_allowed_currency: false", type_id);
+					warn!("asset_id : {:#?} is_allowed_currency: false", currency_id);
 					return Err(DispatchError::Other(
 						"Currency id is not allowed for chain extension",
 					))
@@ -1064,21 +1038,10 @@ where
 			1107 => {
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (
-					CurrencyTypeId,
-					StellarAssetCode,
-					StellarAssetIssuer,
+					CurrencyId,
 					T::AccountId,
 				) = env.read_as()?;
-				let (type_id, code, issuer, _account_id) = create_asset;
-
-				let currency_id =
-					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
-						error!(
-						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
-						type_id, code, issuer
-					);
-						DispatchError::Other("Currency id does not exist")
-					})?;
+				let (currency_id, _account_id) = create_asset;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1108,13 +1071,11 @@ where
 				let mut env = env.buf_in_buf_out();
 				let create_asset: (
 					OriginType,
-					CurrencyTypeId,
-					StellarAssetCode,
-					StellarAssetIssuer,
+					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
 				) = env.read_as()?;
-				let (origin_type, type_id, code, issuer, to, amount) = create_asset;
+				let (origin_type, currency_id, to, amount) = create_asset;
 
 				let from = if origin_type == OriginType::Caller { caller } else { address };
 
@@ -1122,15 +1083,6 @@ where
 				warn!("origin_type : {:#?}", origin_type);
 				warn!("to : {:#?}", to);
 				warn!("amount : {:#?}", amount);
-
-				let currency_id =
-					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
-						error!(
-						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
-						type_id, code, issuer
-					);
-						DispatchError::Other("Currency id does not exist")
-					})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1174,15 +1126,13 @@ where
 					T::AccountId,
 					(
 						OriginType,
-						CurrencyTypeId,
-						StellarAssetCode,
-						StellarAssetIssuer,
+						CurrencyId,
 						T::AccountId,
 						BalanceOfForChainExt<T>,
 					),
 				) = env.read_as()?;
 				let owner = create_asset.0;
-				let (origin_type, type_id, code, issuer, to, amount) = create_asset.1;
+				let (origin_type, currency_id, to, amount) = create_asset.1;
 
 				let from = if origin_type == OriginType::Caller { caller } else { address };
 
@@ -1191,15 +1141,6 @@ where
 				warn!("origin_type : {:#?}", origin_type);
 				warn!("to : {:#?}", to);
 				warn!("amount : {:#?}", amount);
-
-				let currency_id =
-					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
-						error!(
-						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
-						type_id, code, issuer
-					);
-						DispatchError::Other("Currency id does not exist")
-					})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1239,25 +1180,12 @@ where
 			1110 => {
 				let mut env = env.buf_in_buf_out();
 				let allowance_request: (
-					CurrencyTypeId,
-					StellarAssetCode,
-					StellarAssetIssuer,
+					CurrencyId,
 					T::AccountId,
 					T::AccountId,
 				) = env.read_as()?;
-
-				let currency_id = try_get_currency_id_from(
-					allowance_request.0,
-					allowance_request.1,
-					allowance_request.2,
-				)
-				.map_err(|_| {
-					error!(
-						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
-						allowance_request.0, allowance_request.1, allowance_request.2
-					);
-					DispatchError::Other("Currency id does not exist")
-				})?;
+				warn!("allowance_request : {:#?}", allowance_request);	
+				let (currency_id, owner, delegate) = allowance_request;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1271,10 +1199,9 @@ where
 
 				let allowance = orml_currencies_allowance_extension::Pallet::<T>::allowance(
 					currency_id,
-					&allowance_request.3,
-					&allowance_request.4,
+					&owner,
+					&delegate,
 				);
-				warn!("allowance_request : {:#?}", allowance_request);
 				warn!("allowance : {:#?}", allowance);
 
 				env.write(&allowance.encode(), false, None)

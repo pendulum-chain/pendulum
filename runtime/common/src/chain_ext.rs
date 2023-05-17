@@ -1,7 +1,7 @@
 use crate::*;
 use sp_core::{Decode, Encode, MaxEncodedLen};
 use sp_runtime::{ArithmeticError, TokenError};
-use spacewalk_primitives::{Asset, CurrencyId};
+pub use spacewalk_primitives::{Asset, CurrencyId};
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
 pub enum OriginType {
 	Caller,
@@ -118,26 +118,5 @@ impl From<TokenError> for PalletAssetTokenError {
 			TokenError::Frozen => PalletAssetTokenError::Frozen,
 			TokenError::Unsupported => PalletAssetTokenError::Unsupported,
 		}
-	}
-}
-
-pub fn try_get_currency_id_from(
-	type_id: u8,
-	code: [u8; 12],
-	issuer: [u8; 32],
-) -> Result<CurrencyId, ()> {
-	match type_id {
-		0 => {
-			let foreign_currency_id = code[0];
-			Ok(CurrencyId::XCM(foreign_currency_id))
-		},
-		1 => Ok(CurrencyId::Native),
-		2 => Ok(CurrencyId::StellarNative),
-		3 => {
-			let code = [code[0], code[1], code[2], code[3]];
-			Ok(CurrencyId::Stellar(Asset::AlphaNum4 { code, issuer }))
-		},
-		4 => Ok(CurrencyId::Stellar(Asset::AlphaNum12 { code, issuer })),
-		_ => Err(()),
 	}
 }

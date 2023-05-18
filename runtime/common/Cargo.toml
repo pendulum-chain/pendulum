@@ -17,7 +17,8 @@ scale-info = {version = "2.1.1", default-features = false, features = ["derive"]
 sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37" }
 sp-consensus-aura = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37" }
 sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37" }
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev =  "c4bdbb8f5ce74023e06898ef7576d1ce93882ac1"}
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev =  "befd6fe8de903407e212902956398df25b50e8f3"}
+dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.37" }
 
 [features]
 default = [
@@ -30,7 +31,8 @@ std = [
 	"sp-core/std",
 	"spacewalk-primitives/std",
 	"parity-scale-codec/std",
-	"scale-info/std"
+	"scale-info/std",
+	"dia-oracle/std",
 ]
 
 runtime-benchmarks = [

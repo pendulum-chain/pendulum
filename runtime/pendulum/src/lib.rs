@@ -56,7 +56,7 @@ pub use sp_runtime::{traits::AccountIdConversion, MultiAddress, Perbill, Permill
 
 use runtime_common::{
 	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, ReserveIdentifier,
-	Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
+	Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -373,8 +373,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-	/// Relay Chain `TransactionByteFee` / 10
-	pub const TransactionByteFee: Balance = 10 * MICROUNIT;
+	pub const TransactionByteFee: Balance = 100 * NANOUNIT;
 	pub const OperationalFeeMultiplier: u8 = 5;
 }
 

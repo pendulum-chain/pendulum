@@ -246,10 +246,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 10,
+	spec_version: 11,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 21,
+	transaction_version: 22,
 	state_version: 1,
 };
 
@@ -468,8 +468,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-	/// Relay Chain `TransactionByteFee` / 10
-	pub const TransactionByteFee: Balance = 10 * MICROUNIT;
+	pub const TransactionByteFee: Balance = 100 * NANOUNIT;
 	pub const OperationalFeeMultiplier: u8 = 5;
 }
 
@@ -925,7 +924,13 @@ parameter_types! {
 		.get(DispatchClass::Normal)
 		.max_total
 		.unwrap_or(RuntimeBlockWeights::get().max_block);
-	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
+	pub Schedule: pallet_contracts::Schedule<Runtime> = pallet_contracts::Schedule::<Runtime>{
+		limits: pallet_contracts::Limits{
+			parameters: 16,
+			..Default::default()
+		},
+		..Default::default()
+	};
 }
 
 #[derive(Default)]
@@ -1211,20 +1216,22 @@ where
 			//dia price feed
 			7777 => {
 				let mut env = env.buf_in_buf_out();
-				let price_feed_request: ([u8; 32], [u8; 32]) = env.read_as()?;
+				let (blockchain, symbol): (Blockchain, Symbol) = env.read_as()?;
 
-				let blockchain = price_feed_request.0;
-				let symbol = price_feed_request.1;
-				let price_feed = <dia_oracle::Pallet<T> as DiaOracle>::get_coin_info(
-					blockchain.to_vec(),
-					symbol.to_vec(),
-				);
+				let result =
+					<dia_oracle::Pallet<T> as DiaOracle>::get_coin_info(blockchain.to_trimmed_vec(), symbol.to_trimmed_vec());
 
-				warn!("price_feed_request : {:#?}", price_feed_request);
-				warn!("price_feed : {:#?}", price_feed);
+				warn!("blockchain: {:#?}, symbol: {:#?}", blockchain, symbol);
+				warn!("price_feed: {:#?}", result);
 
-				env.write(&price_feed.encode(), false, None).map_err(|_| {
-					DispatchError::Other("ChainExtension failed to call price feed")
+				let result = match result {
+					Ok(coin_info) =>
+						Result::<CoinInfo, ChainExtensionError>::Ok(CoinInfo::from(coin_info)),
+					Err(e) =>
+						Result::<CoinInfo, ChainExtensionError>::Err(ChainExtensionError::from(e)),
+				};
+				env.write(&result.encode(), false, None).map_err(|_| {
+					DispatchError::Other("ChainExtension failed to call 'price feed'")
 				})?;
 			},
 			_ => {

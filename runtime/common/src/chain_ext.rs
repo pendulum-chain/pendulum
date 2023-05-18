@@ -1,7 +1,11 @@
 use crate::*;
 use sp_core::{Decode, Encode, MaxEncodedLen};
-use sp_runtime::{ArithmeticError, TokenError};
+use sp_runtime::{ArithmeticError, TokenError, codec};
+use scale_info::prelude::vec::Vec;
+use dia_oracle::dia;
+
 pub use spacewalk_primitives::{Asset, CurrencyId};
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
 pub enum OriginType {
 	Caller,
@@ -23,6 +27,7 @@ struct PalletAssetBalanceRequest {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum ChainExtensionError {
 	/// Some error occurred.
 	Other,
@@ -47,6 +52,7 @@ pub enum ChainExtensionError {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum PalletAssetArithmeticError {
 	/// Underflow.
 	Underflow,
@@ -59,6 +65,7 @@ pub enum PalletAssetArithmeticError {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum PalletAssetTokenError {
 	/// Funds are unavailable.
 	NoFunds,
@@ -117,6 +124,53 @@ impl From<TokenError> for PalletAssetTokenError {
 			TokenError::UnknownAsset => PalletAssetTokenError::UnknownAsset,
 			TokenError::Frozen => PalletAssetTokenError::Frozen,
 			TokenError::Unsupported => PalletAssetTokenError::Unsupported,
+		}
+	}
+}
+
+pub type Blockchain = [u8; 32];
+pub type Symbol = [u8; 32];
+
+pub trait ToTrimmedVec {
+	fn to_trimmed_vec(&self) -> Vec<u8>;
+}
+impl ToTrimmedVec for [u8; 32] {
+	fn to_trimmed_vec(&self) -> Vec<u8> {
+		trim_trailing_zeros(self).to_vec()
+	}
+}
+
+fn trim_trailing_zeros(slice: &[u8]) -> &[u8] {
+	let mut trim_amount = 0;
+	for el in slice.iter().rev() {
+		if *el == 0 {
+			trim_amount += 1;
+		} else {
+			break
+		}
+	}
+	&slice[..slice.len() - trim_amount]
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, codec::Encode, codec::Decode)]
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+pub struct CoinInfo {
+	pub symbol: Vec<u8>,
+	pub name: Vec<u8>,
+	pub blockchain: Vec<u8>,
+	pub supply: u128,
+	pub last_update_timestamp: u64,
+	pub price: u128,
+}
+impl From<dia::CoinInfo> for CoinInfo {
+	fn from(coin_info: dia::CoinInfo) -> Self {
+		Self {
+			symbol: coin_info.symbol,
+			name: coin_info.name,
+			blockchain: coin_info.blockchain,
+			supply: coin_info.supply,
+			last_update_timestamp: coin_info.last_update_timestamp,
+			price: coin_info.price,
 		}
 	}
 }

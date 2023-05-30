@@ -10,7 +10,7 @@ mod weights;
 pub mod xcm_config;
 pub mod zenlink;
 use crate::zenlink::*;
-use xcm::v1::MultiLocation;
+use xcm::v3::MultiLocation;
 use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
@@ -1535,7 +1535,7 @@ construct_runtime!(
 		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,
 
 		// Collator support. The order of these 4 are important and shall not change.
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 30,
+		Authorship: pallet_authorship::{Pallet, Storage} = 30,
 		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 32,
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 33,
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 34,
@@ -1788,7 +1788,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId> for Runtime {
+	impl farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId> for Runtime {
 		fn get_farming_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
 			Farming::get_farming_rewards(&who, pid).unwrap_or(Vec::new())
 		}

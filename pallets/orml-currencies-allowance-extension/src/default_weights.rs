@@ -39,13 +39,13 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: TokenAllowance AllowedCurrencies (r:0 w:1)
 	fn add_allowed_currencies() -> Weight {
 		// Minimum execution time: 12_000 nanoseconds.
-		Weight::from_ref_time(14_000_000 as u64)
+		Weight::from_parts(14_000_000 as u64, 0)
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: TokenAllowance AllowedCurrencies (r:0 w:1)
 	fn remove_allowed_currencies() -> Weight {
 		// Minimum execution time: 31_000 nanoseconds.
-		Weight::from_ref_time(32_000_000 as u64)
+		Weight::from_parts(32_000_000 as u64, 0)
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 }
@@ -55,13 +55,13 @@ impl WeightInfo for () {
 	// Storage: TokenAllowance AllowedCurrencies (r:0 w:1)
 	fn add_allowed_currencies() -> Weight {
 		// Minimum execution time: 12_000 nanoseconds.
-		Weight::from_ref_time(14_000_000 as u64)
+		Weight::from_parts(14_000_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: TokenAllowance AllowedCurrencies (r:0 w:1)
 	fn remove_allowed_currencies() -> Weight {
 		// Minimum execution time: 31_000 nanoseconds.
-		Weight::from_ref_time(32_000_000 as u64)
+		Weight::from_parts(32_000_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 }

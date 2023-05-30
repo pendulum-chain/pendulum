@@ -281,8 +281,8 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 /// We allow for 0.5 of a second of compute with a 12 second average block time.
 const MAXIMUM_BLOCK_WEIGHT: Weight =
-	Weight::from_ref_time(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2))
-		.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64);
+	Weight::from_parts(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2))
+		.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZEu64, 0);
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -442,8 +442,6 @@ parameter_types! {
 
 impl pallet_authorship::Config for Runtime {
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
-	type UncleGenerations = UncleGenerations;
-	type FilterUncle = ();
 	type EventHandler = ParachainStaking;
 }
 
@@ -1208,7 +1206,7 @@ impl pallet_contracts::Config for Runtime {
 	type MaxDebugBufferLen = ConstU32<{ 2 * 1024 * 1024 }>;
 }
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
+impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
 
 impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -1493,7 +1491,7 @@ construct_runtime!(
 		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 54,
 		Identity: pallet_identity::{Pallet, Storage, Call, Event<T>} = 55,
 		Contracts: pallet_contracts::{Pallet, Storage, Call, Event<T>} = 56,
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 57,
+		RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 57,
 		DiaOracleModule: dia_oracle::{Pallet, Storage, Call, Config<T>, Event<T>} = 58,
 
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,

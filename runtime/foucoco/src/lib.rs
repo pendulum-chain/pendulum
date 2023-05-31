@@ -969,7 +969,7 @@ where
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
 
-				let mut env = env.buf_in_buf_out();
+				let env = env.buf_in_buf_out();
 				let input = env.read(256)?;
 				let (origin_id, currency_id, account_id, balance): (
 					OriginType,
@@ -1134,14 +1134,12 @@ where
 
 				let mut env = env.buf_in_buf_out();
 				let input = env.read(256)?;
-				let (owner, (origin_type, currency_id, to, amount)): (
+				let (owner, origin_type, currency_id, to, amount): (
 					T::AccountId,
-					(
-						OriginType,
-						CurrencyId,
-						T::AccountId,
-						BalanceOfForChainExt<T>,
-					),
+					OriginType,
+					CurrencyId,
+					T::AccountId,
+					BalanceOfForChainExt<T>,
 				) = chain_ext::decode(input).map_err(|_| {
 					DispatchError::Other("ChainExtension failed to decode input")
 				})?;

@@ -8,9 +8,19 @@ use dia_oracle::dia;
 pub use spacewalk_primitives::{Asset, CurrencyId};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum OriginType {
 	Caller,
 	Address,
+}
+impl From<u8> for OriginType {
+	fn from(origin: u8) -> OriginType {
+		if origin == 0 {
+			OriginType::Caller
+		} else {
+			OriginType::Address
+		}
+	}
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
@@ -211,3 +221,6 @@ pub fn decode<T : Decode>(input: Vec<u8>) -> Result<T, codec::Error> {
 	let value: T = T::decode(&mut reader)?;
 	return Ok(value)
 }
+
+pub type Address = [u8; 32];
+pub type Amount = u128;

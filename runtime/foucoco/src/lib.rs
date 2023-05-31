@@ -61,6 +61,7 @@ pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 use runtime_common::{
 	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
 	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
+	chain_ext,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -967,14 +968,17 @@ where
 				let ext = env.ext();
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
+
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (
+				let input = env.read(256)?;
+				let (origin_id, currency_id, account_id, balance): (
 					OriginType,
 					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
-				) = env.read_as()?;
-				let (origin_id, currency_id, account_id, balance) = create_asset;
+				) = chain_ext::decode(input).map_err(|_| {
+					DispatchError::Other("ChainExtension failed to decode input")
+				})?;
 
 				let address_account =
 					if origin_id == OriginType::Caller { caller } else { address };
@@ -1007,11 +1011,10 @@ where
 			//balance
 			1106 => {
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (
-					CurrencyId,
-					T::AccountId,
-				) = env.read_as()?;
-				let (currency_id, account_id) = create_asset;
+				let input = env.read(256)?;
+				let (currency_id, account_id): (CurrencyId, T::AccountId) = chain_ext::decode(input).map_err(|_| {
+					DispatchError::Other("ChainExtension failed to decode input")
+				})?;
 
 				warn!("currency_id : {:#?}", currency_id);
 				warn!("account_id : {:#?}", account_id);
@@ -1042,11 +1045,10 @@ where
 			//total_supply
 			1107 => {
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (
-					CurrencyId,
-					T::AccountId,
-				) = env.read_as()?;
-				let (currency_id, _account_id) = create_asset;
+				let input = env.read(256)?;
+				let currency_id: CurrencyId = chain_ext::decode(input).map_err(|_| {
+					DispatchError::Other("ChainExtension failed to decode input")
+				})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1073,14 +1075,17 @@ where
 				let ext = env.ext();
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
+
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (
+				let input = env.read(256)?;
+				let (origin_type, currency_id, to, amount): (
 					OriginType,
 					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
-				) = env.read_as()?;
-				let (origin_type, currency_id, to, amount) = create_asset;
+				) = chain_ext::decode(input).map_err(|_| {
+					DispatchError::Other("ChainExtension failed to decode input")
+				})?;
 
 				let from = if origin_type == OriginType::Caller { caller } else { address };
 
@@ -1126,8 +1131,10 @@ where
 				let ext = env.ext();
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
+
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (
+				let input = env.read(256)?;
+				let (owner, (origin_type, currency_id, to, amount)): (
 					T::AccountId,
 					(
 						OriginType,
@@ -1135,9 +1142,9 @@ where
 						T::AccountId,
 						BalanceOfForChainExt<T>,
 					),
-				) = env.read_as()?;
-				let owner = create_asset.0;
-				let (origin_type, currency_id, to, amount) = create_asset.1;
+				) = chain_ext::decode(input).map_err(|_| {
+					DispatchError::Other("ChainExtension failed to decode input")
+				})?;
 
 				let from = if origin_type == OriginType::Caller { caller } else { address };
 
@@ -1184,13 +1191,14 @@ where
 			//allowance
 			1110 => {
 				let mut env = env.buf_in_buf_out();
-				let allowance_request: (
+				let input = env.read(256)?;
+				let (currency_id, owner, delegate): (
 					CurrencyId,
 					T::AccountId,
 					T::AccountId,
-				) = env.read_as()?;
-				warn!("allowance_request : {:#?}", allowance_request);	
-				let (currency_id, owner, delegate) = allowance_request;
+				) = chain_ext::decode(input).map_err(|_| {
+					DispatchError::Other("ChainExtension failed to decode input")
+				})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(

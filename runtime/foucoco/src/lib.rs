@@ -59,9 +59,8 @@ use frame_system::{
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
+	chain_ext, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
 	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
-	chain_ext,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -976,9 +975,8 @@ where
 					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
-				) = chain_ext::decode(input).map_err(|_| {
-					DispatchError::Other("ChainExtension failed to decode input")
-				})?;
+				) = chain_ext::decode(input)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
 				let address_account =
 					if origin_id == OriginType::Caller { caller } else { address };
@@ -1012,9 +1010,10 @@ where
 			1106 => {
 				let mut env = env.buf_in_buf_out();
 				let input = env.read(256)?;
-				let (currency_id, account_id): (CurrencyId, T::AccountId) = chain_ext::decode(input).map_err(|_| {
-					DispatchError::Other("ChainExtension failed to decode input")
-				})?;
+				let (currency_id, account_id): (CurrencyId, T::AccountId) =
+					chain_ext::decode(input).map_err(|_| {
+						DispatchError::Other("ChainExtension failed to decode input")
+					})?;
 
 				warn!("currency_id : {:#?}", currency_id);
 				warn!("account_id : {:#?}", account_id);
@@ -1046,9 +1045,8 @@ where
 			1107 => {
 				let mut env = env.buf_in_buf_out();
 				let input = env.read(256)?;
-				let currency_id: CurrencyId = chain_ext::decode(input).map_err(|_| {
-					DispatchError::Other("ChainExtension failed to decode input")
-				})?;
+				let currency_id: CurrencyId = chain_ext::decode(input)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1083,9 +1081,8 @@ where
 					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
-				) = chain_ext::decode(input).map_err(|_| {
-					DispatchError::Other("ChainExtension failed to decode input")
-				})?;
+				) = chain_ext::decode(input)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
 				let from = if origin_type == OriginType::Caller { caller } else { address };
 
@@ -1140,9 +1137,8 @@ where
 					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
-				) = chain_ext::decode(input).map_err(|_| {
-					DispatchError::Other("ChainExtension failed to decode input")
-				})?;
+				) = chain_ext::decode(input)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
 				let from = if origin_type == OriginType::Caller { caller } else { address };
 
@@ -1190,13 +1186,10 @@ where
 			1110 => {
 				let mut env = env.buf_in_buf_out();
 				let input = env.read(256)?;
-				let (currency_id, owner, delegate): (
-					CurrencyId,
-					T::AccountId,
-					T::AccountId,
-				) = chain_ext::decode(input).map_err(|_| {
-					DispatchError::Other("ChainExtension failed to decode input")
-				})?;
+				let (currency_id, owner, delegate): (CurrencyId, T::AccountId, T::AccountId) =
+					chain_ext::decode(input).map_err(|_| {
+						DispatchError::Other("ChainExtension failed to decode input")
+					})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1224,8 +1217,10 @@ where
 				let mut env = env.buf_in_buf_out();
 				let (blockchain, symbol): (Blockchain, Symbol) = env.read_as()?;
 
-				let result =
-					<dia_oracle::Pallet<T> as DiaOracle>::get_coin_info(blockchain.to_trimmed_vec(), symbol.to_trimmed_vec());
+				let result = <dia_oracle::Pallet<T> as DiaOracle>::get_coin_info(
+					blockchain.to_trimmed_vec(),
+					symbol.to_trimmed_vec(),
+				);
 
 				warn!("blockchain: {:#?}, symbol: {:#?}", blockchain, symbol);
 				warn!("price_feed: {:#?}", result);

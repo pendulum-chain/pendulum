@@ -381,7 +381,7 @@ impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
 		MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: Some(NetworkId::Rococo), id: account.into() }),
+			interior: X1(AccountId32 { network: None, id: account.into() }),
 		}
 	}
 }

@@ -7,6 +7,7 @@ use frame_support::{
 	log, match_types, parameter_types,
 	traits::{Everything, Nothing},
 };
+use frame_support::traits::{ConstU32, Contains, ContainsPair};
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
@@ -16,16 +17,12 @@ use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
-use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteAssetId, EnsureXcmOrigin,
-	FixedWeightBounds, FungiblesAdapter, ParentIsPreset, RelayChainAsNative,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
-};
+use xcm_builder::{AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, CurrencyAdapter, EnsureXcmOrigin, FixedWeightBounds, FungiblesAdapter, IsConcrete, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents};
 use xcm_executor::{
-	traits::{FilterAssetLocation, JustTry, ShouldExecute},
+	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
+use xcm_executor::traits::WithOriginFilter;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -102,22 +99,34 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConv
 /// A `FilterAssetLocation` implementation. Filters multi native assets whose
 /// reserve is same with `origin`.
 pub struct MultiNativeAsset<ReserveProvider>(PhantomData<ReserveProvider>);
-impl<ReserveProvider> FilterAssetLocation for MultiNativeAsset<ReserveProvider>
+impl<ReserveProvider> ContainsPair<MultiAsset,MultiLocation> for MultiNativeAsset<ReserveProvider>
 where
 	ReserveProvider: Reserve,
 {
 	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
-		todo!()
+		if let Some(ref reserve) = ReserveProvider::reserve(asset) {
+			if reserve == origin {
+				return true;
+			}
+		}
+		false
 	}
-	// fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
-	// 	if let Some(ref reserve) = ReserveProvider::reserve(asset) {
-	// 		if reserve == origin {
-	// 			return true
-	// 		}
-	// 	}
-	// 	false
-	// }
 }
+
+
+/// Means for transacting the native currency on this chain.
+pub type CurrencyTransactor = CurrencyAdapter<
+	// Use this currency:
+	Balances,
+	// Use this currency when it is a fungible asset matching the given location or name:
+	IsConcrete<RelayLocation>,
+	// Convert an XCM MultiLocation into a local account id:
+	LocationToAccountId,
+	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+	AccountId,
+	// We don't track any teleports of `Balances`.
+	(),
+>;
 
 /// Means for transacting the fungibles assets of ths parachain.
 pub type FungiblesTransactor = FungiblesAdapter<
@@ -125,7 +134,7 @@ pub type FungiblesTransactor = FungiblesAdapter<
 	Tokens,
 	// This means that this adapter should handle any token that `CurrencyIdConvert` can convert
 	// to `CurrencyId`, the `CurrencyId` type of `Tokens`, the fungibles implementation it uses.
-	ConvertedConcreteAssetId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
+	ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
 	// Convert an XCM MultiLocation into a local account id
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly)
@@ -135,6 +144,9 @@ pub type FungiblesTransactor = FungiblesAdapter<
 	// The account to use for tracking teleports.
 	CheckingAccount,
 >;
+
+/// Means for transacting assets on this chain.
+pub type AssetTransactors = (CurrencyTransactor, FungiblesTransactor);
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
@@ -159,10 +171,10 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
-	pub UnitWeightCost: u64 = 1_000_000_000;
+	pub UnitWeightCost: XCMWeight = XCMWeight::from_parts(1_000_000_000,0);
 	pub const MaxInstructions: u32 = 100;
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
-	pub const BaseXcmWeight: XCMWeight = 150_000_000;
+	pub const BaseXcmWeight: XCMWeight = XCMWeight::from_parts(150_000_000, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
@@ -171,6 +183,47 @@ match_types! {
 		MultiLocation { parents: 1, interior: Here } |
 		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }
 	};
+}
+
+/// A call filter for the XCM Transact instruction. This is a temporary measure until we properly
+/// account for proof size weights.
+///
+/// Calls that are allowed through this filter must:
+/// 1. Have a fixed weight;
+/// 2. Cannot lead to another call being made
+/// 3. Have a defined proof size weight, e.g. no unbounded vecs in call parameters. - TODO: shouldn't max XCM weight handle this?
+pub struct SafeCallFilter;
+
+impl SafeCallFilter {
+	// 1. RuntimeCall::Multisig(..) - contains `Vec` in argument so we should avoid this
+	// 2. RuntimeCall::EVM(..) & RuntimeCall::Ethereum(..) have to be prohibited since we cannot measure PoV size properly
+	// 3. RuntimeCall::Contracts(..) it should be safe to allow for such calls but perhaps it's better to do more delibrate testing on Shibuya/RocStar.
+
+	/// Checks whether the base (non-composite) call is allowed to be executed via `Transact` XCM instruction.
+	pub fn allow_base_call(call: &RuntimeCall) -> bool {
+		match call {
+			RuntimeCall::System(..) |
+			RuntimeCall::Balances(..) |
+			RuntimeCall::PolkadotXcm(..) |
+			RuntimeCall::XcmpQueue(..) |
+			RuntimeCall::DmpQueue(..) |
+			RuntimeCall::Session(..) => true,
+			_ => false,
+		}
+	}
+}
+
+impl Contains<RuntimeCall> for SafeCallFilter {
+	fn contains(call: &RuntimeCall) -> bool {
+		#[cfg(feature = "runtime-benchmarks")]
+		{
+			if matches!(call, RuntimeCall::System(frame_system::Call::remark_with_event { .. })) {
+				return true
+			}
+		}
+
+		Self::allow_base_call(call)
+	}
 }
 
 //TODO: move DenyThenTry to polkadot's xcm module.
@@ -186,27 +239,17 @@ where
 	Deny: ShouldExecute,
 	Allow: ShouldExecute,
 {
-	fn should_execute<Call>(
-		origin: &MultiLocation,
-		message: &mut Xcm<Call>,
-		max_weight: XCMWeight,
-		weight_credit: &mut XCMWeight,
-	) -> Result<(), ()> {
-		Deny::should_execute(origin, message, max_weight, weight_credit)?;
-		Allow::should_execute(origin, message, max_weight, weight_credit)
+	fn should_execute<RuntimeCall>(origin: &MultiLocation, instructions: &mut [Instruction<RuntimeCall>], max_weight: XCMWeight, weight_credit: &mut XCMWeight) -> Result<(), ()> {
+			Deny::should_execute(origin, instructions, max_weight, weight_credit)?;
+			Allow::should_execute(origin, instructions, max_weight, weight_credit)
 	}
 }
 
 // See issue #5233
 pub struct DenyReserveTransferToRelayChain;
 impl ShouldExecute for DenyReserveTransferToRelayChain {
-	fn should_execute<Call>(
-		origin: &MultiLocation,
-		message: &mut Xcm<Call>,
-		_max_weight: XCMWeight,
-		_weight_credit: &mut XCMWeight,
-	) -> Result<(), ()> {
-		if message.0.iter().any(|inst| {
+	fn should_execute<RuntimeCall>(origin: &MultiLocation, instructions: &mut [Instruction<RuntimeCall>], max_weight: XCMWeight, weight_credit: &mut XCMWeight) -> Result<(), ()> {
+		if instructions.iter().any(|inst| {
 			matches!(
 				inst,
 				InitiateReserveWithdraw {
@@ -224,7 +267,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 
 		// allow reserve transfers to arrive from relay chain
 		if matches!(origin, MultiLocation { parents: 1, interior: Here }) &&
-			message.0.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
+			instructions.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
 		{
 			log::warn!(
 				target: "xcm::barriers",
@@ -243,7 +286,7 @@ impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
 	type XcmSender = XcmRouter;
 	// How to withdraw and deposit an asset.
-	type AssetTransactor = FungiblesTransactor;
+	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	type IsTeleporter = ();
@@ -264,7 +307,7 @@ impl xcm_executor::Config for XcmConfig {
 	type FeeManager = ();
 	type MessageExporter = ();
 	type UniversalAliases = ();
-	type CallDispatcher = ();
+	type CallDispatcher = WithOriginFilter<SafeCallFilter>;
 	type SafeCallFilter = ();
 }
 
@@ -294,7 +337,7 @@ impl pallet_xcm::Config for Runtime {
 	type XcmTeleportFilter = Nothing;
 	type XcmReserveTransferFilter = Everything;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type UniversalLocation = ();
+	type UniversalLocation = UniversalLocation;
 
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
@@ -304,8 +347,9 @@ impl pallet_xcm::Config for Runtime {
 	type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
 	type TrustedLockers = ();
 	type SovereignAccountOf = ();
-	type MaxLockers = ();
-	type WeightInfo = ();
+	type MaxLockers = ConstU32<8>;
+	type WeightInfo = pallet_xcm::TestWeightInfo;
+	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ();
 }
 
@@ -329,6 +373,7 @@ impl orml_xtokens::Config for Runtime {
 	type MinXcmFee = ParachainMinFee; //TODO to support hrmp transfer beetween parachain adjust this parameter
 	type MultiLocationsFilter = Everything;
 	type ReserveProvider = RelativeReserveProvider;
+	type UniversalLocation = UniversalLocation;
 }
 
 pub struct AccountIdToMultiLocation;
@@ -336,7 +381,7 @@ impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
 		MultiLocation {
 			parents: 0,
-			interior: X1(AccountId32 { network: NetworkId::Any, id: account.into() }),
+			interior: X1(AccountId32 { network: Some(NetworkId::Rococo), id: account.into() }),
 		}
 	}
 }

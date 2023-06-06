@@ -931,7 +931,6 @@ parameter_types! {
 		..Default::default()
 	};
 }
-
 #[derive(Default)]
 pub struct Psp22Extension;
 

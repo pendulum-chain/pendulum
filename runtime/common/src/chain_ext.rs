@@ -186,39 +186,8 @@ impl From<dia::CoinInfo> for CoinInfo {
 	}
 }
 
-/// DecodeByteReader is used for reading a Vec<u8>. It implements codec::Input, which is needed by T::decode() to decode scale encoded types.
-pub struct DecodeByteReader {
-	remaining_len: usize,
-	vec: Vec<u8>,
-}
-impl DecodeByteReader {
-	pub fn new(vec: Vec<u8>) -> Self {
-		Self { remaining_len: vec.len(), vec }
-	}
-}
-// Doc comments passed down from the trait explain what its these functions should do, but basically read() reads the exact number of bytes required to fill the given input buffer. remaining_len() is there to track how much is left to read since the buffer may be smaller than the vec, so it might end up being called multiple times until vec is fully read.
-impl Input for DecodeByteReader {
-	fn remaining_len(&mut self) -> Result<Option<usize>, codec::Error> {
-		Ok(Some(self.remaining_len))
-	}
-	fn read(&mut self, into: &mut [u8]) -> Result<(), codec::Error> {
-		let mut vec_index = self.vec.len() - self.remaining_len;
-		for i in 0..into.len() {
-			if vec_index < self.vec.len() {
-				into[i] = self.vec[vec_index];
-				vec_index += 1;
-			} else {
-				into[i] = 0;
-			}
-		}
-		self.remaining_len = self.vec.len() - vec_index;
-		Ok(())
-	}
-}
-
-/// decode uses DecodeByteReader to decode a Vec<u8> into its scale encoded type.
+/// decode gets the slice from a Vec<u8> to decode it into its scale encoded type.
 pub fn decode<T: Decode>(input: Vec<u8>) -> Result<T, codec::Error> {
-	let mut reader = DecodeByteReader::new(input.clone());
-	let value: T = T::decode(&mut reader)?;
-	return Ok(value)
+	let mut input = input.as_slice();
+	T::decode(&mut input)
 }

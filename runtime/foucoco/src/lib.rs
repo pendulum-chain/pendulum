@@ -59,7 +59,7 @@ use frame_system::{
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
+	chain_ext, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
 	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
@@ -933,10 +933,6 @@ parameter_types! {
 	};
 }
 
-pub type CurrencyTypeId = u8;
-pub type StellarAssetCode = [u8; 12];
-pub type StellarAssetIssuer = [u8; 32];
-
 #[derive(Default)]
 pub struct Psp22Extension;
 
@@ -971,33 +967,24 @@ where
 				let ext = env.ext();
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
-				let mut env = env.buf_in_buf_out();
-				let create_asset: (
+
+				let env = env.buf_in_buf_out();
+				let input = env.read(256)?;
+				let (origin_id, currency_id, account_id, balance): (
 					OriginType,
-					CurrencyTypeId,
-					StellarAssetCode,
-					StellarAssetIssuer,
+					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
-				) = env.read_as()?;
-				let (origin_id, type_id, code, issuer, account_id, balance) = create_asset;
+				) = chain_ext::decode(input)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
 				let address_account =
 					if origin_id == OriginType::Caller { caller } else { address };
 
-				warn!("asset_id : {:#?}", type_id);
+				warn!("currency_id : {:#?}", currency_id);
 				warn!("address_account : {:#?}", address_account);
 				warn!("account_id : {:#?}", account_id);
 				warn!("balance : {:#?}", balance);
-
-				let currency_id =
-					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
-						error!(
-						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
-						type_id, code, issuer
-					);
-						DispatchError::Other("Currency id does not exist")
-					})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1022,24 +1009,13 @@ where
 			//balance
 			1106 => {
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (
-					CurrencyTypeId,
-					StellarAssetCode,
-					StellarAssetIssuer,
-					T::AccountId,
-				) = env.read_as()?;
-				let (type_id, code, issuer, account_id) = create_asset;
-
-				let currency_id =
-					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
-						error!(
-						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
-						type_id, code, issuer
-					);
-						DispatchError::Other("Currency id does not exist")
+				let input = env.read(256)?;
+				let (currency_id, account_id): (CurrencyId, T::AccountId) =
+					chain_ext::decode(input).map_err(|_| {
+						DispatchError::Other("ChainExtension failed to decode input")
 					})?;
 
-				warn!("asset_id : {:#?}", type_id);
+				warn!("currency_id : {:#?}", currency_id);
 				warn!("account_id : {:#?}", account_id);
 
 				let is_allowed_currency =
@@ -1047,7 +1023,7 @@ where
 						currency_id,
 					);
 				if !is_allowed_currency {
-					warn!("asset_id : {:#?} is_allowed_currency: false", type_id);
+					warn!("asset_id : {:#?} is_allowed_currency: false", currency_id);
 					return Err(DispatchError::Other(
 						"Currency id is not allowed for chain extension",
 					))
@@ -1068,22 +1044,9 @@ where
 			//total_supply
 			1107 => {
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (
-					CurrencyTypeId,
-					StellarAssetCode,
-					StellarAssetIssuer,
-					T::AccountId,
-				) = env.read_as()?;
-				let (type_id, code, issuer, _account_id) = create_asset;
-
-				let currency_id =
-					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
-						error!(
-						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
-						type_id, code, issuer
-					);
-						DispatchError::Other("Currency id does not exist")
-					})?;
+				let input = env.read(256)?;
+				let currency_id: CurrencyId = chain_ext::decode(input)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1110,16 +1073,16 @@ where
 				let ext = env.ext();
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
+
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (
+				let input = env.read(256)?;
+				let (origin_type, currency_id, to, amount): (
 					OriginType,
-					CurrencyTypeId,
-					StellarAssetCode,
-					StellarAssetIssuer,
+					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
-				) = env.read_as()?;
-				let (origin_type, type_id, code, issuer, to, amount) = create_asset;
+				) = chain_ext::decode(input)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
 				let from = if origin_type == OriginType::Caller { caller } else { address };
 
@@ -1127,15 +1090,6 @@ where
 				warn!("origin_type : {:#?}", origin_type);
 				warn!("to : {:#?}", to);
 				warn!("amount : {:#?}", amount);
-
-				let currency_id =
-					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
-						error!(
-						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
-						type_id, code, issuer
-					);
-						DispatchError::Other("Currency id does not exist")
-					})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1174,20 +1128,17 @@ where
 				let ext = env.ext();
 				let address = ext.address().clone();
 				let caller = ext.caller().clone();
+
 				let mut env = env.buf_in_buf_out();
-				let create_asset: (
+				let input = env.read(256)?;
+				let (owner, origin_type, currency_id, to, amount): (
 					T::AccountId,
-					(
-						OriginType,
-						CurrencyTypeId,
-						StellarAssetCode,
-						StellarAssetIssuer,
-						T::AccountId,
-						BalanceOfForChainExt<T>,
-					),
-				) = env.read_as()?;
-				let owner = create_asset.0;
-				let (origin_type, type_id, code, issuer, to, amount) = create_asset.1;
+					OriginType,
+					CurrencyId,
+					T::AccountId,
+					BalanceOfForChainExt<T>,
+				) = chain_ext::decode(input)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
 				let from = if origin_type == OriginType::Caller { caller } else { address };
 
@@ -1196,15 +1147,6 @@ where
 				warn!("origin_type : {:#?}", origin_type);
 				warn!("to : {:#?}", to);
 				warn!("amount : {:#?}", amount);
-
-				let currency_id =
-					try_get_currency_id_from(type_id, code, issuer).map_err(|_| {
-						error!(
-						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
-						type_id, code, issuer
-					);
-						DispatchError::Other("Currency id does not exist")
-					})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1243,26 +1185,11 @@ where
 			//allowance
 			1110 => {
 				let mut env = env.buf_in_buf_out();
-				let allowance_request: (
-					CurrencyTypeId,
-					StellarAssetCode,
-					StellarAssetIssuer,
-					T::AccountId,
-					T::AccountId,
-				) = env.read_as()?;
-
-				let currency_id = try_get_currency_id_from(
-					allowance_request.0,
-					allowance_request.1,
-					allowance_request.2,
-				)
-				.map_err(|_| {
-					error!(
-						"Currency ID does not exist! type_id : {}, code : {:#?}, issuer : {:#?}",
-						allowance_request.0, allowance_request.1, allowance_request.2
-					);
-					DispatchError::Other("Currency id does not exist")
-				})?;
+				let input = env.read(256)?;
+				let (currency_id, owner, delegate): (CurrencyId, T::AccountId, T::AccountId) =
+					chain_ext::decode(input).map_err(|_| {
+						DispatchError::Other("ChainExtension failed to decode input")
+					})?;
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1276,10 +1203,9 @@ where
 
 				let allowance = orml_currencies_allowance_extension::Pallet::<T>::allowance(
 					currency_id,
-					&allowance_request.3,
-					&allowance_request.4,
+					&owner,
+					&delegate,
 				);
-				warn!("allowance_request : {:#?}", allowance_request);
 				warn!("allowance : {:#?}", allowance);
 
 				env.write(&allowance.encode(), false, None)
@@ -1291,8 +1217,10 @@ where
 				let mut env = env.buf_in_buf_out();
 				let (blockchain, symbol): (Blockchain, Symbol) = env.read_as()?;
 
-				let result =
-					<dia_oracle::Pallet<T> as DiaOracle>::get_coin_info(blockchain.to_trimmed_vec(), symbol.to_trimmed_vec());
+				let result = <dia_oracle::Pallet<T> as DiaOracle>::get_coin_info(
+					blockchain.to_trimmed_vec(),
+					symbol.to_trimmed_vec(),
+				);
 
 				warn!("blockchain: {:#?}, symbol: {:#?}", blockchain, symbol);
 				warn!("price_feed: {:#?}", result);

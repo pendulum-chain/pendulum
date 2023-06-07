@@ -1,30 +1,39 @@
 use crate::*;
-use sp_core::{Decode, Encode, MaxEncodedLen};
-use sp_runtime::{ArithmeticError, TokenError, codec};
-use spacewalk_primitives::{Asset, CurrencyId};
-use scale_info::prelude::vec::Vec;
+use codec::Input;
 use dia_oracle::dia;
+use scale_info::prelude::vec::Vec;
+use sp_core::{Decode, Encode, MaxEncodedLen};
+use sp_runtime::{codec, ArithmeticError, TokenError};
 
+pub use spacewalk_primitives::{Asset, CurrencyId};
+
+/// Address is a type alias for easier readability of address (accountId) communicated between contract and chain extension.
+pub type Address = [u8; 32];
+/// Amount is a type alias for easier readability of amount communicated between contract and chain extension.
+pub type Amount = u128;
+/// Blockchain is a type alias for easier readability of dia blockchain name communicated between contract and chain extension.
+pub type Blockchain = [u8; 32];
+/// Symbol is a type alias for easier readability of dia blockchain symbol communicated between contract and chain extension.
+pub type Symbol = [u8; 32];
+
+/// OriginType is the origin type that is communicated between contract and chain extension. It implements From<u8> because it is stored as u8 in contract memory.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum OriginType {
 	Caller,
 	Address,
 }
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
-struct PalletAssetRequest {
-	origin_type: OriginType,
-	asset_id: u32,
-	target_address: [u8; 32],
-	amount: u128,
+impl From<u8> for OriginType {
+	fn from(origin: u8) -> OriginType {
+		if origin == 0 {
+			OriginType::Caller
+		} else {
+			OriginType::Address
+		}
+	}
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
-struct PalletAssetBalanceRequest {
-	asset_id: u32,
-	address: [u8; 32],
-}
-
+/// ChainExtensionError is almost the same as DispatchError, but with some modifications to make it compatible with being communicated between contract and chain extension. It implements the necessary From<T> conversions with DispatchError and other nested errors.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum ChainExtensionError {
@@ -43,29 +52,17 @@ pub enum ChainExtensionError {
 	/// There are too many consumers so the account cannot be created.
 	TooManyConsumers,
 	/// An error to do with tokens.
-	Token(PalletAssetTokenError),
+	Token(ChainExtensionTokenError),
 	/// An arithmetic error.
-	Arithmetic(PalletAssetArithmeticError),
+	Arithmetic(ChainExtensionArithmeticError),
 	/// Unknown error
 	Unknown,
 }
 
+/// ChainExtensionTokenError is a nested error in ChainExtensionError, similar to DispatchError's TokenError.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub enum PalletAssetArithmeticError {
-	/// Underflow.
-	Underflow,
-	/// Overflow.
-	Overflow,
-	/// Division by zero.
-	DivisionByZero,
-	/// Unknown error
-	Unknown,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
-#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub enum PalletAssetTokenError {
+pub enum ChainExtensionTokenError {
 	/// Funds are unavailable.
 	NoFunds,
 	/// Account that must exist would die.
@@ -84,6 +81,20 @@ pub enum PalletAssetTokenError {
 	Unknown,
 }
 
+/// ChainExtensionArithmeticError is a nested error in ChainExtensionError, similar to DispatchError's ArithmeticError.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+pub enum ChainExtensionArithmeticError {
+	/// Underflow.
+	Underflow,
+	/// Overflow.
+	Overflow,
+	/// Division by zero.
+	DivisionByZero,
+	/// Unknown error
+	Unknown,
+}
+
 impl From<DispatchError> for ChainExtensionError {
 	fn from(e: DispatchError) -> Self {
 		match e {
@@ -95,62 +106,40 @@ impl From<DispatchError> for ChainExtensionError {
 			DispatchError::NoProviders => ChainExtensionError::NoProviders,
 			DispatchError::TooManyConsumers => ChainExtensionError::TooManyConsumers,
 			DispatchError::Token(token_err) =>
-				ChainExtensionError::Token(PalletAssetTokenError::from(token_err)),
-			DispatchError::Arithmetic(arithmetic_error) =>
-				ChainExtensionError::Arithmetic(PalletAssetArithmeticError::from(arithmetic_error)),
+				ChainExtensionError::Token(ChainExtensionTokenError::from(token_err)),
+			DispatchError::Arithmetic(arithmetic_error) => ChainExtensionError::Arithmetic(
+				ChainExtensionArithmeticError::from(arithmetic_error),
+			),
 			_ => ChainExtensionError::Unknown,
 		}
 	}
 }
 
-impl From<ArithmeticError> for PalletAssetArithmeticError {
-	fn from(e: ArithmeticError) -> Self {
-		match e {
-			ArithmeticError::Underflow => PalletAssetArithmeticError::Underflow,
-			ArithmeticError::Overflow => PalletAssetArithmeticError::Overflow,
-			ArithmeticError::DivisionByZero => PalletAssetArithmeticError::DivisionByZero,
-		}
-	}
-}
-
-impl From<TokenError> for PalletAssetTokenError {
+impl From<TokenError> for ChainExtensionTokenError {
 	fn from(e: TokenError) -> Self {
 		match e {
-			TokenError::NoFunds => PalletAssetTokenError::NoFunds,
-			TokenError::WouldDie => PalletAssetTokenError::WouldDie,
-			TokenError::BelowMinimum => PalletAssetTokenError::BelowMinimum,
-			TokenError::CannotCreate => PalletAssetTokenError::CannotCreate,
-			TokenError::UnknownAsset => PalletAssetTokenError::UnknownAsset,
-			TokenError::Frozen => PalletAssetTokenError::Frozen,
-			TokenError::Unsupported => PalletAssetTokenError::Unsupported,
+			TokenError::NoFunds => ChainExtensionTokenError::NoFunds,
+			TokenError::WouldDie => ChainExtensionTokenError::WouldDie,
+			TokenError::BelowMinimum => ChainExtensionTokenError::BelowMinimum,
+			TokenError::CannotCreate => ChainExtensionTokenError::CannotCreate,
+			TokenError::UnknownAsset => ChainExtensionTokenError::UnknownAsset,
+			TokenError::Frozen => ChainExtensionTokenError::Frozen,
+			TokenError::Unsupported => ChainExtensionTokenError::Unsupported,
 		}
 	}
 }
 
-pub fn try_get_currency_id_from(
-	type_id: u8,
-	code: [u8; 12],
-	issuer: [u8; 32],
-) -> Result<CurrencyId, ()> {
-	match type_id {
-		0 => {
-			let foreign_currency_id = code[0];
-			Ok(CurrencyId::XCM(foreign_currency_id))
-		},
-		1 => Ok(CurrencyId::Native),
-		2 => Ok(CurrencyId::StellarNative),
-		3 => {
-			let code = [code[0], code[1], code[2], code[3]];
-			Ok(CurrencyId::Stellar(Asset::AlphaNum4 { code, issuer }))
-		},
-		4 => Ok(CurrencyId::Stellar(Asset::AlphaNum12 { code, issuer })),
-		_ => Err(()),
+impl From<ArithmeticError> for ChainExtensionArithmeticError {
+	fn from(e: ArithmeticError) -> Self {
+		match e {
+			ArithmeticError::Underflow => ChainExtensionArithmeticError::Underflow,
+			ArithmeticError::Overflow => ChainExtensionArithmeticError::Overflow,
+			ArithmeticError::DivisionByZero => ChainExtensionArithmeticError::DivisionByZero,
+		}
 	}
 }
 
-pub type Blockchain = [u8; 32];
-pub type Symbol = [u8; 32];
-
+/// ToTrimmedVec is a trait implemented for [u8; 32] to allow both types Blockchain and Symbol (which are [u8; 32]) to have the trim_trailing_zeros function.
 pub trait ToTrimmedVec {
 	fn to_trimmed_vec(&self) -> Vec<u8>;
 }
@@ -160,6 +149,7 @@ impl ToTrimmedVec for [u8; 32] {
 	}
 }
 
+/// trim_trailing_zeros takes an input slice and returns it without the trailing zeros.
 fn trim_trailing_zeros(slice: &[u8]) -> &[u8] {
 	let mut trim_amount = 0;
 	for el in slice.iter().rev() {
@@ -172,6 +162,7 @@ fn trim_trailing_zeros(slice: &[u8]) -> &[u8] {
 	&slice[..slice.len() - trim_amount]
 }
 
+/// CoinInfo is almost the same as Dia's CoinInfo, but with Encode, Decode, and TypeInfo which are necessary for contract to chain extension communication. Implements From<dia::CoinInfo> to make conversion.
 #[derive(Debug, Clone, PartialEq, Eq, codec::Encode, codec::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub struct CoinInfo {
@@ -193,4 +184,10 @@ impl From<dia::CoinInfo> for CoinInfo {
 			price: coin_info.price,
 		}
 	}
+}
+
+/// decode gets the slice from a Vec<u8> to decode it into its scale encoded type.
+pub fn decode<T: Decode>(input: Vec<u8>) -> Result<T, codec::Error> {
+	let mut input = input.as_slice();
+	T::decode(&mut input)
 }

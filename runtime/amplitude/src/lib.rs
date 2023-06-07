@@ -11,7 +11,7 @@ pub mod xcm_config;
 pub mod zenlink;
 
 use crate::zenlink::*;
-use xcm::v1::MultiLocation;
+use xcm::v3::MultiLocation;
 use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
@@ -53,13 +53,13 @@ use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureRoot,
+	EnsureRoot, EnsureSigned,
 };
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
 	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, ReserveIdentifier,
-	Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
+	Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -273,8 +273,8 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 /// We allow for 0.5 of a second of compute with a 12 second average block time.
 const MAXIMUM_BLOCK_WEIGHT: Weight =
-	Weight::from_parts(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2))
-		.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZEu64, 0);
+	Weight::from_parts(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2), 0)
+		.set_proof_size(cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64);
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -332,7 +332,6 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Preimage(_) |
 			RuntimeCall::Timestamp(_) |
 			RuntimeCall::Balances(_) |
-			RuntimeCall::Authorship(_) |
 			RuntimeCall::Session(_) |
 			RuntimeCall::ParachainSystem(_) |
 			RuntimeCall::XcmpQueue(_) |
@@ -515,6 +514,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+	type PriceForSiblingDelivery = ();
 	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
 }
 
@@ -607,6 +607,7 @@ impl pallet_democracy::Config for Runtime {
 	type Preimages = Preimage;
 	type MaxDeposits = ConstU32<100>;
 	type MaxBlacklisted = ConstU32<100>;
+	type SubmitOrigin = EnsureSigned<AccountId>;
 }
 
 parameter_types! {
@@ -626,6 +627,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type MaxMembers = CouncilMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type SetMembersOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
@@ -645,6 +647,7 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type MaxMembers = TechnicalMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type SetMembersOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
@@ -1086,7 +1089,7 @@ impl stellar_relay::Config for Runtime {
 	type OrganizationLimit = OrganizationLimit;
 	type ValidatorLimit = ValidatorLimit;
 	type IsPublicNetwork = IsPublicNetwork;
-	type WeightInfo = ();
+	type WeightInfo = stellar_relay::SubstrateWeight<Runtime>;
 }
 
 impl reward::Config for Runtime {
@@ -1183,7 +1186,7 @@ construct_runtime!(
 		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,
 
 		// Collator support. The order of these 4 are important and shall not change.
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 30,
+		Authorship: pallet_authorship::{Pallet, Storage} = 30,
 		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 32,
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 33,
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 34,
@@ -1349,6 +1352,12 @@ impl_runtime_apis! {
 		) -> pallet_transaction_payment::FeeDetails<Balance> {
 			TransactionPayment::query_fee_details(uxt, len)
 		}
+		fn query_weight_to_fee(weight: Weight) -> Balance {
+			TransactionPayment::weight_to_fee(weight)
+		}
+		fn query_length_to_fee(length: u32) -> Balance {
+			TransactionPayment::length_to_fee(length)
+		}
 	}
 
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
@@ -1387,12 +1396,6 @@ impl_runtime_apis! {
 			<Runtime as zenlink_protocol::Config>::MultiAssetsHandler::balance_of(asset_id, &owner)
 		}
 
-		fn get_sovereigns_info(
-			asset_id: ZenlinkAssetId
-		) -> Vec<(u32, AccountId, AssetBalance)> {
-			ZenlinkProtocol::get_sovereigns_info(&asset_id)
-		}
-
 		fn get_pair_by_asset_id(
 			asset_0: ZenlinkAssetId,
 			asset_1: ZenlinkAssetId
@@ -1429,6 +1432,18 @@ impl_runtime_apis! {
 				amount_1_desired,
 				amount_0_min,
 				amount_1_min
+			)
+		}
+
+		fn calculate_remove_liquidity(
+			asset_0: ZenlinkAssetId,
+			asset_1: ZenlinkAssetId,
+			amount: AssetBalance,
+		) -> Option<(AssetBalance, AssetBalance)>{
+			ZenlinkProtocol::calculate_remove_liquidity(
+				asset_0,
+				asset_1,
+				amount,
 			)
 		}
 	}

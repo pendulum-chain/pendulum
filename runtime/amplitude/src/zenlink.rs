@@ -7,7 +7,7 @@ use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::marker::PhantomData;
 
 use zenlink_protocol::{
-	AssetId, AssetIdConverter, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets, LOCAL, NATIVE,
+	AssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets, LOCAL, NATIVE,
 };
 
 pub type ZenlinkAssetId = AssetId;
@@ -26,9 +26,6 @@ impl zenlink_protocol::Config for Runtime {
 	type LpGenerate = PairLpGenerate<Self>;
 	type TargetChains = ZenlinkRegisteredParaChains;
 	type SelfParaId = SelfParaId;
-	type AccountIdConverter = ();
-	type AssetIdConverter = AssetIdConverter;
-	type XcmExecutor = ();
 	type WeightInfo = ();
 }
 

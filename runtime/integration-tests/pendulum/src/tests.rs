@@ -5,13 +5,14 @@ use frame_support::{
 };
 use pendulum_runtime::{Balances, PendulumCurrencyId, RuntimeOrigin, Tokens, XTokens};
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
-use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId, WeightLimit};
+use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, WeightLimit};
 use xcm_emulator::TestExt;
+
 
 use pendulum_runtime::{RuntimeEvent, System};
 use polkadot_core_primitives::{AccountId, Balance};
 use polkadot_parachain::primitives::Sibling;
-use xcm::{v3::Weight, VersionedMultiLocation};
+use xcm::v3::Weight;
 
 const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: Balance = 3200000000; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
 const ASSET_ID: u32 = 1984; //Real USDT Asset ID from Statemint
@@ -33,13 +34,15 @@ fn transfer_dot_from_relay_chain_to_pendulum() {
 		);
 	});
 
-	let dest: MultiLocation = Junction::AccountId32 { network: None, id: ALICE }.into();
-
 	Relay::execute_with(|| {
 		assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
 			polkadot_runtime::RuntimeOrigin::signed(ALICE.into()),
-			Box::new(X1(Parachain(2094)).into()),
-			Box::new(VersionedMultiLocation::V3(dest).clone().into()),
+
+			Box::new(Parachain(2094).into()),
+			Box::new(
+				Junction::AccountId32 { network: None, id: ALICE }.into_location()
+				.into_versioned()
+			),
 			Box::new((Here, transfer_amount).into()),
 			0
 		));

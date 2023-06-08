@@ -2381,7 +2381,7 @@ fn kick_candidate_with_full_unstaking() {
 			let max_unstake_reqs: usize =
 				<Test as Config>::MaxUnstakeRequests::get().saturating_sub(1).saturated_into();
 			// Fill unstake requests
-			for block in 1u64..1u64.saturating_add(max_unstake_reqsu64, 0) {
+			for block in 1u64..1u64.saturating_add(max_unstake_reqs as u64) {
 				System::set_block_number(block);
 				assert_ok!(StakePallet::candidate_stake_less(Origin::signed(3), 1));
 			}
@@ -2418,7 +2418,7 @@ fn kick_delegator_with_full_unstaking() {
 			let max_unstake_reqs: usize =
 				<Test as Config>::MaxUnstakeRequests::get().saturating_sub(1).saturated_into();
 			// Fill unstake requests
-			for block in 1u64..1u64.saturating_add(max_unstake_reqsu64, 0) {
+			for block in 1u64..1u64.saturating_add(max_unstake_reqs as u64) {
 				System::set_block_number(block);
 				assert_ok!(StakePallet::delegator_stake_less(Origin::signed(5), 1, 1));
 			}

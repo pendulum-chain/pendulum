@@ -58,7 +58,7 @@ construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
+		Authorship: pallet_authorship::{Pallet, Storage},
 		StakePallet: stake::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
 		Aura: pallet_aura::{Pallet, Storage},
@@ -67,7 +67,7 @@ construct_runtime!(
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: Weight = Weight::from_parts(1024);
+	pub const MaximumBlockWeight: Weight = Weight::from_parts(1024,0);
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
 	pub const SS58Prefix: u8 = 42;
@@ -363,11 +363,9 @@ pub(crate) fn roll_to(n: BlockNumber, authors: Vec<Option<AccountId>>) {
 		if let Some(Some(author)) = authors.get((System::block_number()) as usize) {
 			StakePallet::note_author(*author);
 		}
-		<AllPalletsReversedWithSystemFirst as OnFinalize<u64>>::on_finalize(System::block_number());
+		<AllPalletsWithSystem as OnFinalize<u64>>::on_finalize(System::block_number());
 		System::set_block_number(System::block_number() + 1);
-		<AllPalletsReversedWithSystemFirst as OnInitialize<u64>>::on_initialize(
-			System::block_number(),
-		);
+		<AllPalletsWithSystem as OnInitialize<u64>>::on_initialize(System::block_number());
 	}
 }
 
@@ -398,11 +396,9 @@ pub(crate) fn roll_to_claim_rewards(n: BlockNumber, authors: Vec<Option<AccountI
 				StakePallet::claim_rewards(RuntimeOrigin::signed(delegation.owner));
 			}
 		}
-		<AllPalletsReversedWithSystemFirst as OnFinalize<u64>>::on_finalize(System::block_number());
+		<AllPalletsWithSystem as OnFinalize<u64>>::on_finalize(System::block_number());
 		System::set_block_number(System::block_number() + 1);
-		<AllPalletsReversedWithSystemFirst as OnInitialize<u64>>::on_initialize(
-			System::block_number(),
-		);
+		<AllPalletsWithSystem as OnInitialize<u64>>::on_initialize(System::block_number());
 	}
 }
 

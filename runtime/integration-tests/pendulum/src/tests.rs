@@ -6,11 +6,12 @@ use frame_support::{
 use pendulum_runtime::{Balances, PendulumCurrencyId, RuntimeOrigin, Tokens, XTokens};
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId, WeightLimit};
-use xcm_emulator::{Junctions, TestExt};
+use xcm_emulator::TestExt;
 
 use pendulum_runtime::{RuntimeEvent, System};
 use polkadot_core_primitives::{AccountId, Balance};
 use polkadot_parachain::primitives::Sibling;
+use xcm::{v3::Weight, VersionedMultiLocation};
 
 const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: Balance = 3200000000; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
 const ASSET_ID: u32 = 1984; //Real USDT Asset ID from Statemint
@@ -32,13 +33,13 @@ fn transfer_dot_from_relay_chain_to_pendulum() {
 		);
 	});
 
+	let dest: MultiLocation = Junction::AccountId32 { network: None, id: ALICE }.into();
+
 	Relay::execute_with(|| {
 		assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
 			polkadot_runtime::RuntimeOrigin::signed(ALICE.into()),
-			Box::new(X1(Parachain(2094)).into().into()),
-			Box::new(
-				X1(Junction::AccountId32 { network: NetworkId::Any, id: ALICE }).into().into()
-			),
+			Box::new(X1(Parachain(2094)).into()),
+			Box::new(VersionedMultiLocation::V3(dest).clone().into()),
 			Box::new((Here, transfer_amount).into()),
 			0
 		));
@@ -85,13 +86,10 @@ fn transfer_dot_from_pendulum_to_relay_chain() {
 			pendulum_runtime::PendulumCurrencyId::XCM(0),
 			transfer_dot_amount,
 			Box::new(
-				MultiLocation::new(
-					1,
-					Junctions::X1(Junction::AccountId32 { id: BOB, network: NetworkId::Any })
-				)
-				.into()
+				MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: BOB }) }
+					.into()
 			),
-			WeightLimit::Limited(4_000_000_000),
+			WeightLimit::Limited(4_000_000_000.into()),
 		));
 	});
 
@@ -184,7 +182,7 @@ fn statemint_transfer_incorrect_asset_to_pendulum_should_fails() {
 		assert_ok!(PolkadotXcm::limited_reserve_transfer_assets(
 			origin.clone(),
 			Box::new(MultiLocation::new(1, X1(Parachain(2094))).into()),
-			Box::new(Junction::AccountId32 { id: BOB, network: NetworkId::Any }.into().into()),
+			Box::new(Junction::AccountId32 { id: BOB, network: None }.into()),
 			Box::new(
 				(X2(PalletInstance(50), GeneralIndex(INCORRECT_ASSET_ID as u128)), TEN_UNITS)
 					.into()
@@ -209,7 +207,7 @@ fn statemint_transfer_incorrect_asset_to_pendulum_should_fails() {
 			r.event,
 			RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Fail {
 				message_hash: _,
-				error: xcm::v2::Error::FailedToTransactAsset(..),
+				error: xcm::v3::Error::FailedToTransactAsset(..),
 				weight: _
 			})
 		)));
@@ -270,7 +268,7 @@ fn statemint_transfer_asset_to_pendulum() {
 		assert_ok!(PolkadotXcm::limited_reserve_transfer_assets(
 			origin.clone(),
 			Box::new(MultiLocation::new(1, X1(Parachain(2094))).into()),
-			Box::new(Junction::AccountId32 { id: BOB, network: NetworkId::Any }.into().into()),
+			Box::new(Junction::AccountId32 { id: BOB, network: None }.into()),
 			Box::new((X2(PalletInstance(50), GeneralIndex(ASSET_ID as u128)), TEN_UNITS).into()),
 			0,
 			WeightLimit::Unlimited
@@ -335,14 +333,11 @@ fn statemint_transfer_asset_to_statemint() {
 			Box::new(
 				MultiLocation::new(
 					1,
-					X2(
-						Parachain(1000),
-						Junction::AccountId32 { network: NetworkId::Any, id: BOB.into() }
-					)
+					X2(Parachain(1000), Junction::AccountId32 { network: None, id: BOB.into() })
 				)
 				.into()
 			),
-			WeightLimit::Limited(10_000_000_000),
+			WeightLimit::Limited(Weight::from_parts(10_000_000_000, 0)),
 		));
 
 		assert_eq!(

@@ -24,7 +24,6 @@ use crate::{self as stake, types::NegativeImbalanceOf};
 use frame_support::{
 	assert_ok, construct_runtime, parameter_types,
 	traits::{Currency, GenesisBuild, OnFinalize, OnInitialize, OnUnbalanced},
-	weights::Weight,
 };
 use pallet_authorship::EventHandler;
 use sp_consensus_aura::sr25519::AuthorityId;
@@ -58,16 +57,15 @@ construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Authorship: pallet_authorship::{Pallet, Storage},
-		StakePallet: stake::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
 		Aura: pallet_aura::{Pallet, Storage},
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
+		StakePallet: stake::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Authorship: pallet_authorship::{Pallet, Storage},
 	}
 );
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: Weight = Weight::from_parts(1024,0);
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
 	pub const SS58Prefix: u8 = 42;
@@ -341,6 +339,13 @@ impl ExtBuilder {
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}
+	pub fn build_and_execute_with_sanity_tests(self, test: impl FnOnce()) {
+		self.build().execute_with(|| {
+			test();
+			crate::try_state::do_try_state::<Test>()
+				.expect("Sanity test for parachain staking failed.");
+		})
+	}
 }
 
 /// Compare whether the difference of both sides is at most `precision * left`.
@@ -384,6 +389,7 @@ pub(crate) fn roll_to_claim_rewards(n: BlockNumber, authors: Vec<Option<AccountI
 			StakePallet::note_author(*author);
 			// author must convert RewardCount to Rewards before claiming
 			assert_ok!(StakePallet::increment_collator_rewards(RuntimeOrigin::signed(*author)));
+
 			// author claims rewards
 			assert_ok!(StakePallet::claim_rewards(RuntimeOrigin::signed(*author)));
 

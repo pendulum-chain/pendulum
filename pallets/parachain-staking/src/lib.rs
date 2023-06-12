@@ -125,6 +125,9 @@ pub(crate) mod mock;
 #[cfg(test)]
 pub(crate) mod tests;
 
+#[cfg(any(feature = "try-runtime", test))]
+mod try_state;
+
 mod inflation;
 mod set;
 mod types;

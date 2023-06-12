@@ -1,5 +1,4 @@
 use crate::*;
-use codec::Input;
 use dia_oracle::dia;
 use scale_info::prelude::vec::Vec;
 use sp_core::{Decode, Encode, MaxEncodedLen};

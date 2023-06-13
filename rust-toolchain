@@ -3,6 +3,3 @@ channel = "nightly-2022-12-12"
 components = [ "rustfmt", "clippy" ]
 targets = [ "wasm32-unknown-unknown" ]
 profile = "minimal"
-
-[target.armv7-unknown-linux-gnueabi]
-linker = "arm-linux-gnueabi-gcc"

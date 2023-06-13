@@ -158,15 +158,6 @@ where
 		Deny::should_execute(origin, instructions, max_weight, weight_credit)?;
 		Allow::should_execute(origin, instructions, max_weight, weight_credit)
 	}
-	// fn should_execute<Call>(
-	// 	origin: &MultiLocation,
-	// 	message: &mut Xcm<Call>,
-	// 	max_weight: XCMWeight,
-	// 	weight_credit: &mut XCMWeight,
-	// ) -> Result<(), ()> {
-	// 	Deny::should_execute(origin, message, max_weight, weight_credit)?;
-	// 	Allow::should_execute(origin, message, max_weight, weight_credit)
-	// }
 }
 
 // See issue #5233
@@ -226,9 +217,9 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = NativeAsset;
+	// Teleporting is disabled.
 	type IsTeleporter = ();
 	type UniversalLocation = UniversalLocation;
-	// Teleporting is disabled.
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type Trader =

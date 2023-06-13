@@ -317,7 +317,7 @@ benchmarks! {
 		assert_ok!(<Pallet<T>>::candidate_stake_more(RawOrigin::Signed(candidate.clone()).into(), more_stake));
 
 		// fill unstake BTreeMap by unstaked many entries of 1
-		fill_unstaking::<T>(&candidate, None, uu64, 0);
+		fill_unstaking::<T>(&candidate, None, u as u64);
 
 		// go to block in which we can exit
 		assert_ok!(<Pallet<T>>::init_leave_candidates(RawOrigin::Signed(candidate.clone()).into()));
@@ -356,14 +356,14 @@ benchmarks! {
 		assert_ok!(<Pallet<T>>::candidate_stake_more(RawOrigin::Signed(candidate.clone()).into(), more_stake));
 
 		// fill unstake BTreeMap by unstaked many entries of 1
-		fill_unstaking::<T>(&candidate, None, uu64, 0);
+		fill_unstaking::<T>(&candidate, None, u as u64);
 
 		let origin = RawOrigin::Signed(candidate.clone());
 	}: _(origin, more_stake)
 	verify {
 		let new_stake = <CandidatePool<T>>::get(&candidate).unwrap().stake;
 		assert!(<Unstaking<T>>::get(candidate).is_empty());
-		assert_eq!(new_stake, old_stake + more_stake + more_stake - T::CurrencyBalance::from(uu64, 0));
+		assert_eq!(new_stake, old_stake + more_stake + more_stake - T::CurrencyBalance::from(u as u64));
 	}
 
 	candidate_stake_less {
@@ -436,11 +436,11 @@ benchmarks! {
 
 		// increase stake so we can unstake, because current stake is minimum
 		T::Currency::make_free_balance_be(&delegator, T::CurrencyBalance::from(u128::MAX));
-		assert_ok!(<Pallet<T>>::delegator_stake_more(RawOrigin::Signed(delegator.clone()).into(), T::Lookup::unlookup(collator.clone()), T::CurrencyBalance::from(uu64, 0)));
-		assert_eq!(<DelegatorState<T>>::get(&delegator).unwrap().amount, amount + T::CurrencyBalance::from(uu64, 0));
+		assert_ok!(<Pallet<T>>::delegator_stake_more(RawOrigin::Signed(delegator.clone()).into(), T::Lookup::unlookup(collator.clone()), T::CurrencyBalance::from(u as u64)));
+		assert_eq!(<DelegatorState<T>>::get(&delegator).unwrap().amount, amount + T::CurrencyBalance::from(u as u64));
 
 		// fill unstake BTreeMap by unstaked many entries of 1
-		fill_unstaking::<T>(&collator, Some(&delegator), uu64, 0);
+		fill_unstaking::<T>(&collator, Some(&delegator), u as u64);
 		assert_eq!(<DelegatorState<T>>::get(&delegator).unwrap().amount, amount);
 		let unlookup_collator = T::Lookup::unlookup(collator.clone());
 
@@ -545,8 +545,8 @@ benchmarks! {
 		assert_ok!(<Pallet<T>>::candidate_stake_more(RawOrigin::Signed(candidate.clone()).into(), stake));
 
 		// fill unstake BTreeMap by unstaked many entries of 1
-		fill_unstaking::<T>(&candidate, None, uu64, 0);
-		assert_eq!(<CandidatePool<T>>::get(&candidate).unwrap().stake, stake + stake -  T::CurrencyBalance::from(uu64, 0));
+		fill_unstaking::<T>(&candidate, None, u as u64);
+		assert_eq!(<CandidatePool<T>>::get(&candidate).unwrap().stake, stake + stake -  T::CurrencyBalance::from(u as u64));
 
 		// roll to block in which first unstake can be unlocked
 		System::<T>::set_block_number(T::StakeDuration::get());

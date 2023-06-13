@@ -5,7 +5,7 @@ use frame_support::{
 };
 use pendulum_runtime::{Balances, PendulumCurrencyId, RuntimeOrigin, Tokens, XTokens};
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
-use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, WeightLimit};
+use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId, WeightLimit};
 use xcm_emulator::TestExt;
 
 
@@ -206,6 +206,9 @@ fn statemint_transfer_incorrect_asset_to_pendulum_should_fails() {
 	Statemint::execute_with(|| {});
 
 	PendulumParachain::execute_with(|| {
+		//println!("all events: {:#?}",System::events());
+
+
 		assert!(System::events().iter().any(|r| matches!(
 			r.event,
 			RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Fail {
@@ -289,9 +292,9 @@ fn statemint_transfer_asset_to_pendulum() {
 	Statemint::execute_with(|| {});
 
 	PendulumParachain::execute_with(|| {
-		for i in System::events().iter() {
-			println!(" Pendulum_runtime {:?}", i);
-		}
+		// for i in System::events().iter() {
+		// 	println!(" Pendulum_runtime {:?}", i);
+		// }
 
 		assert!(System::events()
 			.iter()
@@ -336,7 +339,7 @@ fn statemint_transfer_asset_to_statemint() {
 			Box::new(
 				MultiLocation::new(
 					1,
-					X2(Parachain(1000), Junction::AccountId32 { network: None, id: BOB.into() })
+					X2(Parachain(1000), Junction::AccountId32 { network: Some(NetworkId::Polkadot), id: BOB.into() })
 				)
 				.into()
 			),

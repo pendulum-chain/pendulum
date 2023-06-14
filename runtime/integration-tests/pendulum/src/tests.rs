@@ -291,9 +291,9 @@ fn statemint_transfer_asset_to_pendulum() {
 	Statemint::execute_with(|| {});
 
 	PendulumParachain::execute_with(|| {
-		// for i in System::events().iter() {
-		// 	println!(" Pendulum_runtime {:?}", i);
-		// }
+		for i in System::events().iter() {
+			println!(" Pendulum_runtime {:?}", i);
+		}
 
 		assert!(System::events()
 			.iter()

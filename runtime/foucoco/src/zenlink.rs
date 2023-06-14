@@ -153,11 +153,19 @@ impl TryFrom<CurrencyId> for ZenlinkAssetId {
 				asset_type: LOCAL,
 				asset_index: (disc << 8) + token_id,
 			}),
-			CurrencyId::Stellar => Ok(ZenlinkAssetId {
-				chain_id: PARA_CHAIN_ID,
-				asset_type: LOCAL,
-				asset_index: (disc << 8) + 1,
-			}),
+			CurrencyId::Stellar(Asset::AlphaNum4 { code, .. }) => {
+				let _id = match code {
+					b"USDC" => 0u8,
+					b"TZS\0" => 1u8,
+					b"BRL\0" => 2u8,
+					b"XLM\0" => 3u8,
+				};
+				Ok(ZenlinkAssetId {
+					chain_id: PARA_CHAIN_ID,
+					asset_type: LOCAL,
+					asset_index: (disc << 8) + _id,
+				})
+			},
 			CurrencyId::ZenlinkLPToken(token1_id, token1_type, token2_id, token2_type) => {
 				let _index = (disc << 8) +
 					((token1_id as u64) << 16) +
@@ -184,7 +192,16 @@ impl TryFrom<ZenlinkAssetId> for CurrencyId {
 		match disc {
 			0 => Ok(CurrencyId::Native),
 			1 => Ok(CurrencyId::XCM(symbol)),
-			// 2 => Ok(CurrencyId::Stellar()),
+			2 => {
+				let code = match symbol {
+					0 => *b"USDC",
+					1 => *b"TZS\0",
+					2 => *b"BRL\0",
+					3 => *b"XLM\0",
+				};
+				let issuer = 0x00; // Should we hard-code the issuer?
+				Ok(CurrencyId::Stellar(Asset { code, issuer }))
+			},
 			6 => {
 				let token1_id = ((_index & 0x0000_0000_00FF_0000) >> 16) as u8;
 				let token1_type = ((_index & 0x0000_0000_FF00_0000) >> 24) as u8;

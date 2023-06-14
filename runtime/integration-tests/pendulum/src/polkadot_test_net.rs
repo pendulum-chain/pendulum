@@ -1,4 +1,7 @@
-use crate::setup::{units, ExtBuilderPendulum, ExtStatemintBuilder, ALICE, BOB};
+use crate::{
+	setup::{units, ExtBuilderPendulum, ExtStatemintBuilder, ALICE, BOB},
+	PENDULUM_ID, STATEMINT_ID,
+};
 use frame_support::traits::GenesisBuild;
 use polkadot_core_primitives::{AccountId, BlockNumber};
 use polkadot_parachain::primitives::Id as ParaId;
@@ -21,7 +24,7 @@ decl_test_parachain! {
 		RuntimeOrigin = pendulum_runtime::RuntimeOrigin,
 		XcmpMessageHandler = pendulum_runtime::XcmpQueue,
 		DmpMessageHandler = pendulum_runtime::DmpQueue,
-		new_ext = para_ext_pendulum(2094),
+		new_ext = para_ext_pendulum(PENDULUM_ID),
 	}
 }
 
@@ -31,7 +34,7 @@ decl_test_parachain! {
 		RuntimeOrigin = statemint_runtime::RuntimeOrigin,
 		XcmpMessageHandler = statemint_runtime::XcmpQueue,
 		DmpMessageHandler = statemint_runtime::DmpQueue,
-		new_ext = para_ext_statemint(1000),
+		new_ext = para_ext_statemint(STATEMINT_ID),
 	}
 }
 

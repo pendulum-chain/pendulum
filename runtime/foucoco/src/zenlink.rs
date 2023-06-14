@@ -187,7 +187,7 @@ impl TryFrom<ZenlinkAssetId> for CurrencyId {
 			// 2 => Ok(CurrencyId::Stellar()),
 			6 => {
 				let token1_id = ((_index & 0x0000_0000_00FF_0000) >> 16) as u8;
-				let token1_type = ((_index & 0x0000_0000_FF00_0000) >> 20) as u8;
+				let token1_type = ((_index & 0x0000_0000_FF00_0000) >> 24) as u8;
 
 				let token2_id = ((_index & 0x0000_00FF_0000_0000) >> 32) as u8;
 				let token2_type = ((_index & 0x0000_FF00_0000_0000) >> 40) as u8;

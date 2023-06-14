@@ -126,6 +126,8 @@ where
 	}
 }
 
+pub const PARA_CHAIN_ID: u32 = ParachainInfo::parachain_id().into();
+
 fn discriminant(currency: &CurrencyId) -> u8 {
 	match currency {
 		CurrencyId::Native => 0,

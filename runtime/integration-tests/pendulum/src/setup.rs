@@ -1,7 +1,7 @@
+use crate::{PENDULUM_ID, STATEMINT_ID};
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::{PendulumCurrencyId, Runtime, System};
 use polkadot_core_primitives::{AccountId, Balance};
-use crate::{PENDULUM_ID, STATEMINT_ID};
 
 pub fn units(amount: Balance) -> Balance {
 	amount * 10u128.saturating_pow(9)

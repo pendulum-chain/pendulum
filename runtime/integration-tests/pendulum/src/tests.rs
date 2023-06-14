@@ -6,19 +6,17 @@ use frame_support::{
 use pendulum_runtime::{Balances, PendulumCurrencyId, RuntimeOrigin, Tokens, XTokens};
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId, WeightLimit};
-use xcm_emulator::{ParaId, TestExt};
+use xcm_emulator::TestExt;
 
 use pendulum_runtime::{RuntimeEvent, System};
 use polkadot_core_primitives::{AccountId, Balance};
 use polkadot_parachain::primitives::Sibling;
-use xcm::v3::Weight;
 
 const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: Balance = 3200000000; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
 const ASSET_ID: u32 = 1984; //Real USDT Asset ID from Statemint
 const INCORRECT_ASSET_ID: u32 = 0; //Incorrect asset id that pendulum is not supporting pendulum_runtime xcm_config
 pub const UNIT: Balance = 1_000_000_000_000;
 pub const TEN_UNITS: Balance = 10_000_000_000_000;
-const DOT_FEE_WHEN_TRANSFER_TO_RELAY: u128 = 421434140; //This fee will taken to transfer assets(Polkadot) from sovereign parachain account to destination user account;
 
 #[test]
 fn transfer_dot_from_relay_chain_to_pendulum() {
@@ -48,8 +46,6 @@ fn transfer_dot_from_relay_chain_to_pendulum() {
 	});
 
 	PendulumParachain::execute_with(|| {
-		println!("ALL THE EVENTS: {:?}", System::events());
-
 		assert!(System::events().iter().any(|r| matches!(
 			r.event,
 			RuntimeEvent::Tokens(orml_tokens::Event::Deposited { .. })
@@ -90,19 +86,14 @@ fn transfer_dot_from_pendulum_to_relay_chain() {
 			pendulum_runtime::PendulumCurrencyId::XCM(0),
 			transfer_dot_amount,
 			Box::new(
-				MultiLocation {
-					parents: 1,
-					interior: X1(AccountId32 { network: Some(NetworkId::Polkadot), id: BOB })
-				}
-				.into()
+				MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: BOB }) }
+					.into()
 			),
-			WeightLimit::Limited(4_000_000_000.into()),
+			WeightLimit::Unlimited
 		));
 	});
 
 	PendulumParachain::execute_with(|| {
-		println!("all pendulum events: {:#?}", System::events());
-
 		assert!(System::events().iter().any(|r| matches!(
 			r.event,
 			RuntimeEvent::Tokens(orml_tokens::Event::Withdrawn { .. })
@@ -117,29 +108,32 @@ fn transfer_dot_from_pendulum_to_relay_chain() {
 	Relay::execute_with(|| {
 		use polkadot_runtime::{RuntimeEvent, System};
 
-		println!("all polkadot events: {:#?}", System::events());
+		let events = System::events();
+		assert_eq!(events.len(), 3);
 
-		// assert!(System::events().iter().any(|r| matches!(
-		// 	r.event,
-		// 	RuntimeEvent::Balances(pallet_balances::Event::Withdraw { .. })
-		// )));
-		//
-		// assert!(System::events().iter().any(|r| matches!(
-		// 	r.event,
-		// 	RuntimeEvent::Balances(pallet_balances::Event::Deposit { .. })
-		// )));
-		//
-		// assert!(System::events().iter().any(|r| matches!(
-		// 	r.event,
-		// 	RuntimeEvent::Ump(polkadot_runtime_parachains::ump::Event::ExecutedUpward { .. })
-		// )));
-	});
+		let withdrawn_balance = match &events[0].event {
+			RuntimeEvent::Balances(pallet_balances::Event::Withdraw { who: _, amount }) => amount,
+			other => panic!("wrong event: {:#?}", other),
+		};
 
-	Relay::execute_with(|| {
+		let deposited_balance = match &events[1].event {
+			RuntimeEvent::Balances(pallet_balances::Event::Deposit { who: _, amount }) => amount,
+			other => panic!("wrong event: {:#?}", other),
+		};
+
+		match &events[2].event {
+			RuntimeEvent::Ump(polkadot_runtime_parachains::ump::Event::ExecutedUpward(..)) =>
+				assert!(true),
+			other => panic!("wrong event: {:#?}", other),
+		};
+
+		//This fee will taken to transfer assets(Polkadot) from sovereign parachain account to destination user account;
+		let dot_fee_when_transferring_to_relay_chain = withdrawn_balance - deposited_balance;
+
 		let after_bob_free_balance = polkadot_runtime::Balances::free_balance(&BOB.into());
 		assert_eq!(
 			after_bob_free_balance,
-			expected_base_balance + transfer_dot_amount - DOT_FEE_WHEN_TRANSFER_TO_RELAY
+			expected_base_balance + transfer_dot_amount - dot_fee_when_transferring_to_relay_chain
 		);
 	});
 }
@@ -346,12 +340,15 @@ fn statemint_transfer_asset_to_statemint() {
 					1,
 					X2(
 						Parachain(STATEMINT_ID),
-						Junction::AccountId32 { network: None, id: BOB.into() }
+						Junction::AccountId32 {
+							network: Some(NetworkId::Polkadot),
+							id: BOB.into()
+						}
 					)
 				)
 				.into()
 			),
-			WeightLimit::Limited(Weight::from_parts(10_000_000_000, 0)),
+			WeightLimit::Unlimited
 		));
 
 		assert_eq!(

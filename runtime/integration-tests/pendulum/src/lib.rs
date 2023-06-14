@@ -1,3 +1,5 @@
+//extern crate core;
+
 #[cfg(test)]
 mod polkadot_test_net;
 

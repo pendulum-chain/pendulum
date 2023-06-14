@@ -6,6 +6,8 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::marker::PhantomData;
 
+use spacewalk_primitives::CurrencyId;
+
 use zenlink_protocol::{
 	AssetId, AssetIdConverter, Config as ZenlinkConfig, LocalAssetHandler, PairLpGenerate,
 	ZenlinkMultiAssets, LOCAL, NATIVE,
@@ -121,6 +123,77 @@ where
 		}
 
 		Ok(amount)
+	}
+}
+
+fn discriminant(currency: &CurrencyId) -> u8 {
+	match currency {
+		CurrencyId::Native => 0,
+		CurrencyId::XCM(_) => 1,
+		CurrencyId::Stellar(_) => 2,
+		CurrencyId::ZenlinkLPToken(_, _, _, _) => 6,
+	}
+}
+
+impl TryFrom<CurrencyId> for ZenlinkAssetId {
+	type Error = ();
+
+	fn try_from(currency: CurrencyId) -> Result<Self, Self::Error> {
+		let disc = discriminant(&currency);
+		match currency {
+			CurrencyId::Native => Ok(ZenlinkAssetId {
+				chain_id: PARA_CHAIN_ID,
+				asset_type: NATIVE,
+				asset_index: 0 as u64,
+			}),
+			CurrencyId::XCM(token_id) => Ok(ZenlinkAssetId {
+				chain_id: PARA_CHAIN_ID,
+				asset_type: LOCAL,
+				asset_index: (disc << 8) + token_id,
+			}),
+			CurrencyId::Stellar => Ok(ZenlinkAssetId {
+				chain_id: PARA_CHAIN_ID,
+				asset_type: LOCAL,
+				asset_index: (disc << 8) + 1,
+			}),
+			CurrencyId::ZenlinkLPToken(token1_id, token1_type, token2_id, token2_type) => {
+				let _index = (disc << 8) +
+					((token1_id as u64) << 16) +
+					((token1_type as u64) << 24) +
+					((token2_id as u64) << 32) +
+					((token2_type as u64) << 40);
+				Ok(ZenlinkAssetId {
+					chain_id: PARA_CHAIN_ID,
+					asset_type: LOCAL,
+					asset_index: _index,
+				})
+			},
+		}
+	}
+}
+
+impl TryFrom<ZenlinkAssetId> for CurrencyId {
+	type Error = ();
+
+	fn try_from(asset: ZenlinkAssetId) -> Result<Self, Self::Error> {
+		let _index = asset.asset_index;
+		let disc = ((_index & 0x0000_0000_0000_ff00) >> 8) as u8;
+		let symbol = ((_index & 0x0000_0000_0000_00ff) as u8);
+		match disc {
+			0 => Ok(CurrencyId::Native),
+			1 => Ok(CurrencyId::XCM(symbol)),
+			// 2 => Ok(CurrencyId::Stellar()),
+			6 => {
+				let token1_id = ((_index & 0x0000_0000_00FF_0000) >> 16) as u8;
+				let token1_type = ((_index & 0x0000_0000_FF00_0000) >> 20) as u8;
+
+				let token2_id = ((_index & 0x0000_00FF_0000_0000) >> 32) as u8;
+				let token2_type = ((_index & 0x0000_FF00_0000_0000) >> 40) as u8;
+
+				Ok(CurrencyId::ZenlinkLPToken(token1_id, token1_type, token2_id, token2_type))
+			},
+			_ => Err(()),
+		}
 	}
 }
 

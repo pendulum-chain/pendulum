@@ -168,12 +168,15 @@ impl TryFrom<CurrencyId> for ZenlinkAssetId {
 				asset_type: LOCAL,
 				asset_index: (disc << 8) + token_id,
 			}),
-			CurrencyId::Stellar(Asset::AlphaNum4 { code, .. }) => {
-				let _id = match code {
-					b"USDC" => 0u8,
-					b"TZS\0" => 1u8,
-					b"BRL\0" => 2u8,
-					b"XLM\0" => 3u8,
+			CurrencyId::Stellar(asset) => {
+				let _id = match asset {
+					Asset::StellarNative => 0u8,
+					Asset::AlphaNum4 { code, .. } => match code {
+						b"USDC" => 1u8,
+						b"TZS\0" => 2u8,
+						b"BRL\0" => 3u8,
+					},
+					_ => return Err(()),
 				};
 				Ok(ZenlinkAssetId {
 					chain_id: PARA_CHAIN_ID,
@@ -208,13 +211,21 @@ impl TryFrom<ZenlinkAssetId> for CurrencyId {
 			0 => Ok(CurrencyId::Native),
 			1 => Ok(CurrencyId::XCM(symbol)),
 			2 => {
-				let (code, issuer) = match symbol {
-					0 => (*b"USDC", USDC_ISSUER),
-					1 => (*b"TZS\0", TZS_ISSUER),
-					2 => (*b"BRL\0", BRL_ISSUER),
-					3 => (*b"XLM\0", [0u8; 32]),
+				match symbol {
+					0 => Ok(CurrencyId::Stellar::Native),
+					1 => Ok(CurrencyId::Stellar(Asset::AlphaNum4 {
+						code: *b"USDC",
+						issuer: USDC_ISSUER,
+					})),
+					2 => Ok(CurrencyId::Stellar(Asset::AlphaNum4 {
+						code: b"TZS\0",
+						issuer: TZS_ISSUER,
+					})),
+					3 => Ok(CurrencyId::Stellar(Asset::AlphaNum4 {
+						code: b"BRL\0",
+						issuer: BRL_ISSUER,
+					})),
 				};
-				Ok(CurrencyId::Stellar(Asset { code, issuer }))
 			},
 			6 => {
 				let token1_id = ((_index & 0x0000_0000_00FF_0000) >> 16) as u8;

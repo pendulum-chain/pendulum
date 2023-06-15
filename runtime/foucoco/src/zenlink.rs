@@ -225,6 +225,7 @@ impl TryFrom<ZenlinkAssetId> for CurrencyId {
 						code: b"BRL\0",
 						issuer: BRL_ISSUER,
 					})),
+					_ => return Err(()),
 				};
 			},
 			6 => {

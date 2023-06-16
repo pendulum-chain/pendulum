@@ -153,6 +153,20 @@ fn discriminant(currency: &CurrencyId) -> u8 {
 	}
 }
 
+#[derive(
+	Debug,
+	Encode,
+	Decode,
+	Eq,
+	Hash,
+	PartialEq,
+	Copy,
+	Clone,
+	PartialOrd,
+	Ord,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 struct WrappedCurrencyId(CurrencyId);
 
 impl TryFrom<WrappedCurrencyId> for ZenlinkAssetId {
@@ -264,5 +278,138 @@ fn zenlink_id_to_currency_id(asset_id: ZenlinkAssetId) -> Result<CurrencyId, ()>
 	match wrapped_currency {
 		Ok(WrappedCurrencyId(currency)) => Ok(currency),
 		_ => Err(()),
+	}
+}
+
+#[cfg(test)]
+mod zenlink_tests {
+	use super::*;
+	use core::convert::TryFrom;
+
+	#[test]
+	fn convert_zenlink_native_to_native_currency() {
+		// Native ZenlinkAsset index = 0x0000_0000_0000_0000
+		let _index = 0 as u64;
+		let fake_native_asset =
+			ZenlinkAssetId { chain_id: 1000u32, asset_type: NATIVE, asset_index: 0 as u64 };
+		let currency: Result<WrappedCurrencyId, _> = fake_native_asset.try_into();
+		assert_eq!(currency, Ok(WrappedCurrencyId(CurrencyId::Native)));
+	}
+
+	#[test]
+	fn convert_zenlink_xcm_to_xcm_currency() {
+		// XCM(0) ZenlinkAsset index = 0x0000_0000_0000_0100
+		let _index = 0x0100 as u64;
+		let fake_native_asset =
+			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: _index };
+		let currency: Result<WrappedCurrencyId, _> = fake_native_asset.try_into();
+		assert_eq!(currency, Ok(WrappedCurrencyId(CurrencyId::XCM(0))));
+	}
+
+	fn get_stellar_asset(selector: u8) -> spacewalk_primitives::CurrencyId {
+		match selector {
+			0 => CurrencyId::Stellar(Asset::StellarNative),
+			1 => CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"USDC", issuer: USDC_ISSUER }),
+			2 => CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"TZS\0", issuer: TZS_ISSUER }),
+			3 => CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"BRL\0", issuer: BRL_ISSUER }),
+			_ => CurrencyId::Stellar(Asset::StellarNative),
+		}
+	}
+
+	#[test]
+	fn convert_zenlink_stellar_to_stellar_currency() {
+		// Stellar Native ZenlinkAsset index = 0x0000_0000_0000_0200
+		let stellar_native_index = 0x0200 as u64;
+		let fake_native_asset = ZenlinkAssetId {
+			chain_id: 1000u32,
+			asset_type: LOCAL,
+			asset_index: stellar_native_index,
+		};
+		let currency: Result<WrappedCurrencyId, _> = fake_native_asset.try_into();
+		assert_eq!(currency, Ok(WrappedCurrencyId(get_stellar_asset(0u8))));
+
+		// Stellar USDC ZenlinkAsset index = 0x0000_0000_0000_0201
+		let usdc_index = 0x0201 as u64;
+		let fake_native_asset =
+			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: usdc_index };
+		let currency: Result<WrappedCurrencyId, _> = fake_native_asset.try_into();
+		assert_eq!(currency, Ok(WrappedCurrencyId(get_stellar_asset(1u8))));
+
+		// Stellar TZS ZenlinkAsset index = 0x0000_0000_0000_0202
+		let tzs_index = 0x0202 as u64;
+		let fake_native_asset =
+			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: tzs_index };
+		let currency: Result<WrappedCurrencyId, _> = fake_native_asset.try_into();
+		assert_eq!(currency, Ok(WrappedCurrencyId(get_stellar_asset(2u8))));
+
+		// Stellar BRL ZenlinkAsset index = 0x0000_0000_0000_0203
+		let brl_index = 0x0203 as u64;
+		let fake_native_asset =
+			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: brl_index };
+		let currency: Result<WrappedCurrencyId, _> = fake_native_asset.try_into();
+		assert_eq!(currency, Ok(WrappedCurrencyId(get_stellar_asset(3u8))));
+	}
+
+	#[test]
+	fn convert_zenlink_lp_token_to_lp_token_currency() {
+		// Native and XCM(0) LP token Zenlink index = 0x0000_0100_0000_0600
+		let native_xcm_lp_token_index = 0x0000_0100_0000_0600 as u64;
+		let fake_native_asset = ZenlinkAssetId {
+			chain_id: 1000u32,
+			asset_type: LOCAL,
+			asset_index: native_xcm_lp_token_index,
+		};
+		let currency: Result<WrappedCurrencyId, _> = fake_native_asset.try_into();
+		let expected_currency: WrappedCurrencyId =
+			WrappedCurrencyId(CurrencyId::ZenlinkLPToken(0, 0, 0, 1));
+		assert_eq!(currency, Ok(expected_currency));
+
+		// XCM(0) and XCM(1) LP token Zenlink index = 0x0000_0101_0100_0600
+		let xcm0_xcm1_lp_token_index = 0x0000_0101_0100_0600 as u64;
+		let fake_native_asset = ZenlinkAssetId {
+			chain_id: 1000u32,
+			asset_type: LOCAL,
+			asset_index: xcm0_xcm1_lp_token_index,
+		};
+		let currency: Result<WrappedCurrencyId, _> = fake_native_asset.try_into();
+		let expected_currency: WrappedCurrencyId =
+			WrappedCurrencyId(CurrencyId::ZenlinkLPToken(0, 1, 1, 1));
+		assert_eq!(currency, Ok(expected_currency));
+
+		// XCM(0) and Stellar Native LP Token Zenlink index = 0x0000_0200_0100_0600
+		let xcm0_stellar_native_lp_token_index = 0x0000_0200_0100_0600 as u64;
+		let fake_native_asset = ZenlinkAssetId {
+			chain_id: 1000u32,
+			asset_type: LOCAL,
+			asset_index: xcm0_stellar_native_lp_token_index,
+		};
+		let currency: Result<WrappedCurrencyId, _> = fake_native_asset.try_into();
+		let expected_currency: WrappedCurrencyId =
+			WrappedCurrencyId(CurrencyId::ZenlinkLPToken(0, 1, 0, 2));
+		assert_eq!(currency, Ok(expected_currency));
+
+		// XCM(0) and Stellar USDC LP Token Zenlink index = 0x0000_0201_0100_0600
+		let xcm0_stellar_usdc_lp_token_index = 0x0000_0201_0100_0600 as u64;
+		let fake_native_asset = ZenlinkAssetId {
+			chain_id: 1000u32,
+			asset_type: LOCAL,
+			asset_index: xcm0_stellar_usdc_lp_token_index,
+		};
+		let currency: Result<WrappedCurrencyId, _> = fake_native_asset.try_into();
+		let expected_currency: WrappedCurrencyId =
+			WrappedCurrencyId(CurrencyId::ZenlinkLPToken(0, 1, 1, 2));
+		assert_eq!(currency, Ok(expected_currency));
+
+		// Stellar Native and Stellar USDC LP Token Zenlink index = 0x0000_0201_0200_0600
+		let stellar_native_stellar_usdc_lp_token_index = 0x0000_0201_0200_0600 as u64;
+		let fake_native_asset = ZenlinkAssetId {
+			chain_id: 1000u32,
+			asset_type: LOCAL,
+			asset_index: stellar_native_stellar_usdc_lp_token_index,
+		};
+		let currency: Result<WrappedCurrencyId, _> = fake_native_asset.try_into();
+		let expected_currency: WrappedCurrencyId =
+			WrappedCurrencyId(CurrencyId::ZenlinkLPToken(0, 2, 1, 2));
+		assert_eq!(currency, Ok(expected_currency));
 	}
 }

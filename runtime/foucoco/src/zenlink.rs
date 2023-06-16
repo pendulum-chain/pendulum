@@ -6,7 +6,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::marker::PhantomData;
 
-use spacewalk_primitives::{CurrencyId, Asset};
+use spacewalk_primitives::{Asset, CurrencyId};
 
 use zenlink_protocol::{
 	AssetId, Config as ZenlinkConfig, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets, LOCAL,
@@ -174,7 +174,7 @@ impl TryFrom<WrappedCurrencyId> for ZenlinkAssetId {
 						b"USDC" => 1u64,
 						b"TZS\0" => 2u64,
 						b"BRL\0" => 3u64,
-						_ => return Err(())
+						_ => return Err(()),
 					},
 					_ => return Err(()),
 				};
@@ -210,23 +210,21 @@ impl TryFrom<ZenlinkAssetId> for WrappedCurrencyId {
 		match disc {
 			0 => Ok(WrappedCurrencyId(CurrencyId::Native)),
 			1 => Ok(WrappedCurrencyId(CurrencyId::XCM(symbol))),
-			2 => {
-				match symbol {
-					0 => Ok(WrappedCurrencyId(CurrencyId::Stellar(Asset::StellarNative))),
-					1 => Ok(WrappedCurrencyId(CurrencyId::Stellar(Asset::AlphaNum4 {
-						code: *b"USDC",
-						issuer: USDC_ISSUER,
-					}))),
-					2 => Ok(WrappedCurrencyId(CurrencyId::Stellar(Asset::AlphaNum4 {
-						code: *b"TZS\0",
-						issuer: TZS_ISSUER,
-					}))),
-					3 => Ok(WrappedCurrencyId(CurrencyId::Stellar(Asset::AlphaNum4 {
-						code: *b"BRL\0",
-						issuer: BRL_ISSUER,
-					}))),
-					_ => return Err(()),
-				}
+			2 => match symbol {
+				0 => Ok(WrappedCurrencyId(CurrencyId::Stellar(Asset::StellarNative))),
+				1 => Ok(WrappedCurrencyId(CurrencyId::Stellar(Asset::AlphaNum4 {
+					code: *b"USDC",
+					issuer: USDC_ISSUER,
+				}))),
+				2 => Ok(WrappedCurrencyId(CurrencyId::Stellar(Asset::AlphaNum4 {
+					code: *b"TZS\0",
+					issuer: TZS_ISSUER,
+				}))),
+				3 => Ok(WrappedCurrencyId(CurrencyId::Stellar(Asset::AlphaNum4 {
+					code: *b"BRL\0",
+					issuer: BRL_ISSUER,
+				}))),
+				_ => return Err(()),
 			},
 			6 => {
 				let token1_id = ((_index & 0x0000_0000_00FF_0000) >> 16) as u8;
@@ -235,10 +233,23 @@ impl TryFrom<ZenlinkAssetId> for WrappedCurrencyId {
 				let token2_id = ((_index & 0x0000_00FF_0000_0000) >> 32) as u8;
 				let token2_type = ((_index & 0x0000_FF00_0000_0000) >> 40) as u8;
 
-				Ok(WrappedCurrencyId(CurrencyId::ZenlinkLPToken(token1_id, token1_type, token2_id, token2_type)))
+				Ok(WrappedCurrencyId(CurrencyId::ZenlinkLPToken(
+					token1_id,
+					token1_type,
+					token2_id,
+					token2_type,
+				)))
 			},
 			_ => Err(()),
 		}
+	}
+}
+
+impl TryFrom<WrappedCurrencyId> for CurrencyId {
+	type Error = ();
+
+	fn try_from(wrapped_currency: WrappedCurrencyId) -> Result<Self, Self::Error> {
+		Ok(wrapped_currency.0)
 	}
 }
 

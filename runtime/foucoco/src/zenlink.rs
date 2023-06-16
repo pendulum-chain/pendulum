@@ -40,7 +40,8 @@ where
 	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 {
 	fn local_balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
-		if let Ok(currency_id) = zenlink_id_to_currency_id(asset_id) {
+		let currency: Result<CurrencyId, ()> = zenlink_id_to_currency_id(asset_id);
+		if let Ok(currency_id) = currency {
 			return TryInto::<AssetBalance>::try_into(Local::free_balance(currency_id, &who))
 				.unwrap_or_default()
 		}
@@ -48,7 +49,8 @@ where
 	}
 
 	fn local_total_supply(asset_id: ZenlinkAssetId) -> AssetBalance {
-		if let Ok(currency_id) = zenlink_id_to_currency_id(asset_id) {
+		let currency: Result<CurrencyId, ()> = zenlink_id_to_currency_id(asset_id);
+		if let Ok(currency_id) = currency {
 			return TryInto::<AssetBalance>::try_into(Local::total_issuance(currency_id))
 				.unwrap_or_default()
 		}
@@ -56,7 +58,8 @@ where
 	}
 
 	fn local_is_exists(asset_id: ZenlinkAssetId) -> bool {
-		match zenlink_id_to_currency_id(asset_id) {
+		let currency: Result<CurrencyId, ()> = zenlink_id_to_currency_id(asset_id);
+		match currency {
 			Ok(_) => true,
 			Err(_) => false,
 		}
@@ -68,7 +71,8 @@ where
 		target: &AccountId,
 		amount: AssetBalance,
 	) -> DispatchResult {
-		if let Ok(currency_id) = zenlink_id_to_currency_id(asset_id) {
+		let currency: Result<CurrencyId, ()> = zenlink_id_to_currency_id(asset_id);
+		if let Ok(currency_id) = currency {
 			Local::transfer(
 				currency_id,
 				&origin,
@@ -87,7 +91,8 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		if let Ok(currency_id) = zenlink_id_to_currency_id(asset_id) {
+		let currency: Result<CurrencyId, ()> = zenlink_id_to_currency_id(asset_id);
+		if let Ok(currency_id) = currency {
 			Local::deposit(
 				currency_id,
 				&origin,
@@ -107,7 +112,8 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		if let Ok(currency_id) = zenlink_id_to_currency_id(asset_id) {
+		let currency: Result<CurrencyId, ()> = zenlink_id_to_currency_id(asset_id);
+		if let Ok(currency_id) = currency {
 			Local::withdraw(
 				currency_id,
 				&origin,
@@ -254,25 +260,9 @@ impl TryFrom<WrappedCurrencyId> for CurrencyId {
 }
 
 fn zenlink_id_to_currency_id(asset_id: ZenlinkAssetId) -> Result<CurrencyId, ()> {
-	let para_chain_id: u32 = ParachainInfo::parachain_id().into();
-	if asset_id.chain_id != para_chain_id {
-		log::error!("Asset Chain Id {} not compatibile with the Parachain Id.", asset_id.chain_id);
-		return Err(())
-	}
-
-	match asset_id.asset_type {
-		NATIVE => Ok(CurrencyId::Native),
-		LOCAL => {
-			let foreign_id: u8 = asset_id.asset_index.try_into().map_err(|_| {
-				log::error!("{} has no Foreign Currency Id match.", asset_id.asset_index);
-				()
-			})?;
-
-			Ok(XCM(foreign_id))
-		},
-		other => {
-			log::error!("Unsupported asset type index:{other}");
-			Err(())
-		},
+	let wrapped_currency: Result<WrappedCurrencyId, ()> = asset_id.try_into();
+	match wrapped_currency {
+		Ok(WrappedCurrencyId(currency)) => Ok(currency),
+		_ => Err(()),
 	}
 }

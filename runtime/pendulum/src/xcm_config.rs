@@ -19,10 +19,10 @@ use runtime_common::parachains::polkadot::statemint;
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom,
-	ConvertedConcreteId, EnsureXcmOrigin, FixedWeightBounds, FungiblesAdapter, NoChecking,
-	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
+	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
+	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
@@ -191,47 +191,6 @@ match_types! {
 	};
 }
 
-/// A call filter for the XCM Transact instruction. This is a temporary measure until we properly
-/// account for proof size weights.
-///
-/// Calls that are allowed through this filter must:
-/// 1. Have a fixed weight;
-/// 2. Cannot lead to another call being made
-/// 3. Have a defined proof size weight, e.g. no unbounded vecs in call parameters. - TODO: shouldn't max XCM weight handle this?
-pub struct SafeCallFilter;
-
-impl SafeCallFilter {
-	// 1. RuntimeCall::Multisig(..) - contains `Vec` in argument so we should avoid this
-	// 2. RuntimeCall::EVM(..) & RuntimeCall::Ethereum(..) have to be prohibited since we cannot measure PoV size properly
-	// 3. RuntimeCall::Contracts(..) it should be safe to allow for such calls but perhaps it's better to do more delibrate testing on Shibuya/RocStar.
-
-	/// Checks whether the base (non-composite) call is allowed to be executed via `Transact` XCM instruction.
-	pub fn allow_base_call(call: &RuntimeCall) -> bool {
-		match call {
-			RuntimeCall::System(..) |
-			RuntimeCall::Balances(..) |
-			RuntimeCall::PolkadotXcm(..) |
-			RuntimeCall::XcmpQueue(..) |
-			RuntimeCall::DmpQueue(..) |
-			RuntimeCall::Session(..) => true,
-			_ => false,
-		}
-	}
-}
-
-impl Contains<RuntimeCall> for SafeCallFilter {
-	fn contains(call: &RuntimeCall) -> bool {
-		#[cfg(feature = "runtime-benchmarks")]
-		{
-			if matches!(call, RuntimeCall::System(frame_system::Call::remark_with_event { .. })) {
-				return true
-			}
-		}
-
-		Self::allow_base_call(call)
-	}
-}
-
 //TODO: move DenyThenTry to polkadot's xcm module.
 /// Deny executing the xcm message if it matches any of the Deny filter regardless of anything else.
 /// If it passes the Deny, and matches one of the Allow cases then it is let through.
@@ -295,16 +254,6 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
-// pub type Barrier = (
-// 	TakeWeightCredit,
-// 	AllowTopLevelPaidExecutionFrom<Everything>,
-// 	AllowUnpaidExecutionFrom<Everything>,
-// 	// Expected responses are OK.
-// 	AllowKnownQueryResponses<PolkadotXcm>,
-// 	// Subscriptions for version tracking are OK.
-// 	AllowSubscriptionsFrom<Everything>,
-// );
-
 pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;
@@ -353,11 +302,10 @@ impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type CurrencyMatcher = ();
-	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, ()>;
+	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type XcmRouter = XcmRouter;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
-	//type XcmExecuteFilter = Everything;
-	type XcmExecuteFilter = Nothing;
+	type XcmExecuteFilter = Everything;
 	// ^ Disable dispatchable execute on the XCM pallet.
 	// Needs to be `Everything` for local testing.
 	type XcmExecutor = XcmExecutor<XcmConfig>;
@@ -374,9 +322,14 @@ impl pallet_xcm::Config for Runtime {
 	type TrustedLockers = ();
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
-	type WeightInfo = pallet_xcm::TestWeightInfo;
+	type WeightInfo = crate::weights::pallet_xcm::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ();
+	type ReachableDest = ReachableDest;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+parameter_types! {
+	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
 }
 
 parameter_type_with_key! {

@@ -331,7 +331,28 @@ pub fn run() -> Result<()> {
 					.into()),
 				#[cfg(feature = "runtime-benchmarks")]
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
-					let partials = new_partial(&config)?;
+					let partials = match runner.config().chain_spec.identify() {
+						ChainIdentity::Amplitude => new_partial::<
+							amplitude_runtime::RuntimeApi,
+							AmplitudeRuntimeExecutor,
+						>(&config)?,
+
+						ChainIdentity::Foucoco => new_partial::<
+							foucoco_runtime::RuntimeApi,
+							FoucocoRuntimeExecutor,
+						>(&config)?,
+
+						ChainIdentity::Pendulum => new_partial::<
+							pendulum_runtime::RuntimeApi,
+							PendulumRuntimeExecutor,
+						>(&config)?,
+
+						ChainIdentity::Development => new_partial::<
+							development_runtime::RuntimeApi,
+							DevelopmentRuntimeExecutor,
+						>(&config)?,
+					};
+
 					let db = partials.backend.expose_db();
 					let storage = partials.backend.expose_storage();
 

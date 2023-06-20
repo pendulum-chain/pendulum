@@ -991,14 +991,12 @@ where
 					))
 				}
 
-				let result = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
+				<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 					currency_id,
 					&caller,
 					&to,
 					balance,
-				);
-
-				warn!("transfer_result: {:#?}", result);
+				)?;
 			},
 
 			//balance
@@ -1090,26 +1088,12 @@ where
 					))
 				}
 
-				let result = orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
+				orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
 					currency_id,
 					&caller,
 					&to,
 					amount,
-				);
-
-				warn!("approve_transfer : {:#?}", result);
-
-				match result {
-					DispatchResult::Ok(_) => {},
-					DispatchResult::Err(e) => {
-						let err =
-							Result::<(), ChainExtensionError>::Err(ChainExtensionError::from(e));
-						env.write(&err.encode(), false, None).map_err(|_| {
-							error!("ChainExtension failed to call 'approve'");
-							DispatchError::Other("ChainExtension failed to call 'approve'")
-						})?;
-					},
-				}
+				)?;
 			},
 
 			//transfer_approved
@@ -1143,28 +1127,13 @@ where
 					))
 				}
 
-				let result = orml_currencies_allowance_extension::Pallet::<T>::do_transfer_approved(
+				orml_currencies_allowance_extension::Pallet::<T>::do_transfer_approved(
 					currency_id,
 					&owner,
 					&caller,
 					&to,
 					amount,
-				);
-
-				warn!("transfer_from : {:#?}", result);
-
-				match result {
-					DispatchResult::Ok(_) => {},
-					DispatchResult::Err(e) => {
-						let err =
-							Result::<(), ChainExtensionError>::Err(ChainExtensionError::from(e));
-						env.write(&err.encode(), false, None).map_err(|_| {
-							DispatchError::Other(
-								"ChainExtension failed to call 'approved transfer'",
-							)
-						})?;
-					},
-				}
+				)?;
 			},
 
 			//allowance

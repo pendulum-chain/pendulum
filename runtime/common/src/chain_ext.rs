@@ -15,23 +15,6 @@ pub type Blockchain = [u8; 32];
 /// Symbol is a type alias for easier readability of dia blockchain symbol communicated between contract and chain extension.
 pub type Symbol = [u8; 32];
 
-/// OriginType is the origin type that is communicated between contract and chain extension. It implements From<u8> because it is stored as u8 in contract memory.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
-#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub enum OriginType {
-	Caller,
-	Address,
-}
-impl From<u8> for OriginType {
-	fn from(origin: u8) -> OriginType {
-		if origin == 0 {
-			OriginType::Caller
-		} else {
-			OriginType::Address
-		}
-	}
-}
-
 /// ChainExtensionError is almost the same as DispatchError, but with some modifications to make it compatible with being communicated between contract and chain extension. It implements the necessary From<T> conversions with DispatchError and other nested errors.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]

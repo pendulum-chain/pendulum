@@ -965,25 +965,20 @@ where
 			//transfer
 			1105 => {
 				let ext = env.ext();
-				let address = ext.address().clone();
 				let caller = ext.caller().clone();
 
 				let env = env.buf_in_buf_out();
 				let input = env.read(256)?;
-				let (origin_id, currency_id, account_id, balance): (
-					OriginType,
+				let (currency_id, to, balance): (
 					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
 				) = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				let address_account =
-					if origin_id == OriginType::Caller { caller } else { address };
-
 				warn!("currency_id : {:#?}", currency_id);
-				warn!("address_account : {:#?}", address_account);
-				warn!("account_id : {:#?}", account_id);
+				warn!("address_account : {:#?}", caller);
+				warn!("account_id : {:#?}", to);
 				warn!("balance : {:#?}", balance);
 
 				let is_allowed_currency =
@@ -998,8 +993,8 @@ where
 
 				let result = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 					currency_id,
-					&address_account,
-					&account_id,
+					&caller,
+					&to,
 					balance,
 				);
 
@@ -1010,13 +1005,14 @@ where
 			1106 => {
 				let mut env = env.buf_in_buf_out();
 				let input = env.read(256)?;
+				warn!("input : {:#?}", input);
 				let (currency_id, account_id): (CurrencyId, T::AccountId) =
 					chain_ext::decode(input).map_err(|_| {
 						DispatchError::Other("ChainExtension failed to decode input")
 					})?;
 
-				warn!("currency_id : {:#?}", currency_id);
-				warn!("account_id : {:#?}", account_id);
+				warn!("currency_id: {:?}", currency_id);
+				warn!("account_id: {:?}", account_id);
 
 				let is_allowed_currency =
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1071,23 +1067,16 @@ where
 			//approve_transfer
 			1108 => {
 				let ext = env.ext();
-				let address = ext.address().clone();
 				let caller = ext.caller().clone();
 
 				let mut env = env.buf_in_buf_out();
 				let input = env.read(256)?;
-				let (origin_type, currency_id, to, amount): (
-					OriginType,
-					CurrencyId,
-					T::AccountId,
-					BalanceOfForChainExt<T>,
-				) = chain_ext::decode(input)
-					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
+				let (currency_id, to, amount): (CurrencyId, T::AccountId, BalanceOfForChainExt<T>) =
+					chain_ext::decode(input).map_err(|_| {
+						DispatchError::Other("ChainExtension failed to decode input")
+					})?;
 
-				let from = if origin_type == OriginType::Caller { caller } else { address };
-
-				warn!("from : {:#?}", from);
-				warn!("origin_type : {:#?}", origin_type);
+				warn!("from : {:#?}", caller);
 				warn!("to : {:#?}", to);
 				warn!("amount : {:#?}", amount);
 
@@ -1103,7 +1092,7 @@ where
 
 				let result = orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
 					currency_id,
-					&from,
+					&caller,
 					&to,
 					amount,
 				);
@@ -1131,20 +1120,16 @@ where
 
 				let mut env = env.buf_in_buf_out();
 				let input = env.read(256)?;
-				let (owner, origin_type, currency_id, to, amount): (
+				let (owner, currency_id, to, amount): (
 					T::AccountId,
-					OriginType,
 					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
 				) = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				let from = if origin_type == OriginType::Caller { caller } else { address };
-
-				warn!("from : {:#?}", from);
+				warn!("from : {:#?}", caller);
 				warn!("owner : {:#?}", owner);
-				warn!("origin_type : {:#?}", origin_type);
 				warn!("to : {:#?}", to);
 				warn!("amount : {:#?}", amount);
 
@@ -1161,7 +1146,7 @@ where
 				let result = orml_currencies_allowance_extension::Pallet::<T>::do_transfer_approved(
 					currency_id,
 					&owner,
-					&from,
+					&caller,
 					&to,
 					amount,
 				);

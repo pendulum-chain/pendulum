@@ -969,11 +969,13 @@ where
 				let currency_id: CurrencyId = chain_ext::decode(input)
 					.map_err(|_| ChainExtensionCustomTokenError::DecodeFailed)?;
 
+				warn!("Calling totalSupply() for currency {:?}", currency_id);
+
 				ensure!(
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
 						currency_id,
 					),
-					ChainExtensionCustomTokenError::CurrencyNotAllowed
+					DispatchError::Other("ChainExtension failed to decode input")
 				);
 
 				let total_supply =
@@ -981,40 +983,36 @@ where
 						currency_id,
 					);
 
-				env.write(&total_supply.encode(), false, None)
-					.map_err(|_| ChainExtensionCustomTokenError::PalletCallFailed)?;
+				env.write(&total_supply.encode(), false, None).map_err(|_| {
+					DispatchError::Other("ChainExtension failed to call total_issuance")
+				})?;
 			},
 			// balanceOf(currency, account)
 			1102 => {
 				let mut env = env.buf_in_buf_out();
 				let input = env.read(256)?;
-				warn!("input : {:#?}", input);
 				let (currency_id, account_id): (CurrencyId, T::AccountId) =
 					chain_ext::decode(input).map_err(|_| {
 						DispatchError::Other("ChainExtension failed to decode input")
 					})?;
 
-				warn!("currency_id: {:?}", currency_id);
-				warn!("account_id: {:?}", account_id);
+				warn!(
+					"Calling balanceOf() for currency {:?} and account {:?}",
+					currency_id, account_id
+				);
 
-				let is_allowed_currency =
+				ensure!(
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
 						currency_id,
-					);
-				if !is_allowed_currency {
-					warn!("asset_id : {:#?} is_allowed_currency: false", currency_id);
-					return Err(DispatchError::Other(
-						"Currency id is not allowed for chain extension",
-					))
-				}
+					),
+					DispatchError::Other("CurrencyId is not allowed for chain extension",)
+				);
 
 				let balance =
 					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
 						currency_id,
 						&account_id,
 					);
-
-				warn!("balance : {:#?}", balance);
 
 				env.write(&balance.encode(), false, None)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
@@ -1033,20 +1031,17 @@ where
 				) = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				warn!("currency_id : {:#?}", currency_id);
-				warn!("address_account : {:#?}", caller);
-				warn!("account_id : {:#?}", recipient);
-				warn!("balance : {:#?}", balance);
+				warn!(
+					"Calling transfer() sending {:?} {:?}, from {:?} to {:?}",
+					amount, currency_id, caller, recipient
+				);
 
-				let is_allowed_currency =
+				ensure!(
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
 						currency_id,
-					);
-				if !is_allowed_currency {
-					return Err(DispatchError::Other(
-						"Currency id is not allowed for chain extension",
-					))
-				}
+					),
+					DispatchError::Other("CurrencyId is not allowed for chain extension",)
+				);
 
 				<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 					currency_id,
@@ -1064,22 +1059,23 @@ where
 						DispatchError::Other("ChainExtension failed to decode input")
 					})?;
 
-				let is_allowed_currency =
+				warn!(
+					"Calling allowance() for currency {:?}, owner {:?} and spender {:?}",
+					currency_id, owner, spender
+				);
+
+				ensure!(
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
 						currency_id,
-					);
-				if !is_allowed_currency {
-					return Err(DispatchError::Other(
-						"Currency id is not allowed for chain extension",
-					))
-				}
+					),
+					DispatchError::Other("CurrencyId is not allowed for chain extension")
+				);
 
 				let allowance = orml_currencies_allowance_extension::Pallet::<T>::allowance(
 					currency_id,
 					&owner,
 					&spender,
 				);
-				warn!("allowance : {:#?}", allowance);
 
 				env.write(&allowance.encode(), false, None)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
@@ -1098,19 +1094,17 @@ where
 				) = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				warn!("from : {:#?}", caller);
-				warn!("to : {:#?}", spender);
-				warn!("amount : {:#?}", amount);
+				warn!(
+					"Calling approve() allowing spender {:?} to transfer {:?} {:?} from {:?}",
+					spender, amount, currency_id, caller
+				);
 
-				let is_allowed_currency =
+				ensure!(
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
 						currency_id,
-					);
-				if !is_allowed_currency {
-					return Err(DispatchError::Other(
-						"Currency id is not allowed for chain extension",
-					))
-				}
+					),
+					DispatchError::Other("CurrencyId is not allowed for chain extension",)
+				);
 
 				orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
 					currency_id,
@@ -1135,20 +1129,17 @@ where
 				) = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				warn!("from : {:#?}", caller);
-				warn!("owner : {:#?}", owner);
-				warn!("to : {:#?}", recipient);
-				warn!("amount : {:#?}", amount);
+				warn!(
+					"Calling transfer_from() sending {:?} {:?}, from {:?} to {:?}",
+					amount, currency_id, owner, recipient
+				);
 
-				let is_allowed_currency =
+				ensure!(
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
 						currency_id,
-					);
-				if !is_allowed_currency {
-					return Err(DispatchError::Other(
-						"Currency id is not allowed for chain extension",
-					))
-				}
+					),
+					DispatchError::Other("CurrencyId is not allowed for chain extension",)
+				);
 
 				orml_currencies_allowance_extension::Pallet::<T>::do_transfer_approved(
 					currency_id,

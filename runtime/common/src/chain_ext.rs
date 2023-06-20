@@ -121,6 +121,19 @@ impl From<ArithmeticError> for ChainExtensionArithmeticError {
 	}
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+pub enum ChainExtensionCustomTokenError {
+	/// Decoding failed.
+	DecodeFailed,
+	/// Currency not allowed.
+	CurrencyNotAllowed,
+	/// Call to pallet failed.
+	PalletCallFailed,
+	/// Unknown error
+	Unknown,
+}
+
 /// ToTrimmedVec is a trait implemented for [u8; 32] to allow both types Blockchain and Symbol (which are [u8; 32]) to have the trim_trailing_zeros function.
 pub trait ToTrimmedVec {
 	fn to_trimmed_vec(&self) -> Vec<u8>;

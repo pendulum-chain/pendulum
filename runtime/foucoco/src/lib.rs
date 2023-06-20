@@ -967,26 +967,22 @@ where
 				let mut env = env.buf_in_buf_out();
 				let input = env.read(256)?;
 				let currency_id: CurrencyId = chain_ext::decode(input)
-					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
+					.map_err(|_| ChainExtensionCustomTokenError::DecodeFailed)?;
 
-				let is_allowed_currency =
+				ensure!(
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
 						currency_id,
-					);
-				if !is_allowed_currency {
-					return Err(DispatchError::Other(
-						"Currency id is not allowed for chain extension",
-					))
-				}
+					),
+					ChainExtensionCustomTokenError::CurrencyNotAllowed
+				);
 
 				let total_supply =
 					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(
 						currency_id,
 					);
 
-				env.write(&total_supply.encode(), false, None).map_err(|_| {
-					DispatchError::Other("ChainExtension failed to call total_supply")
-				})?;
+				env.write(&total_supply.encode(), false, None)
+					.map_err(|_| ChainExtensionCustomTokenError::PalletCallFailed)?;
 			},
 			// balanceOf(currency, account)
 			1102 => {

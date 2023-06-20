@@ -967,7 +967,7 @@ where
 				let mut env = env.buf_in_buf_out();
 				let input = env.read(256)?;
 				let currency_id: CurrencyId = chain_ext::decode(input)
-					.map_err(|_| ChainExtensionCustomTokenError::DecodeFailed)?;
+					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
 				warn!("Calling totalSupply() for currency {:?}", currency_id);
 
@@ -1024,7 +1024,7 @@ where
 
 				let env = env.buf_in_buf_out();
 				let input = env.read(256)?;
-				let (currency_id, recipient, balance): (
+				let (currency_id, recipient, amount): (
 					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
@@ -1047,7 +1047,7 @@ where
 					currency_id,
 					&caller,
 					&recipient,
-					balance,
+					amount,
 				)?;
 			},
 			// allowance(currency, owner, spender)
@@ -1085,7 +1085,7 @@ where
 				let ext = env.ext();
 				let caller = ext.caller().clone();
 
-				let mut env = env.buf_in_buf_out();
+				let env = env.buf_in_buf_out();
 				let input = env.read(256)?;
 				let (currency_id, spender, amount): (
 					CurrencyId,
@@ -1116,10 +1116,9 @@ where
 			// transfer_from(currency, sender, recipient, amount)
 			1106 => {
 				let ext = env.ext();
-				let address = ext.address().clone();
 				let caller = ext.caller().clone();
 
-				let mut env = env.buf_in_buf_out();
+				let env = env.buf_in_buf_out();
 				let input = env.read(256)?;
 				let (owner, currency_id, recipient, amount): (
 					T::AccountId,

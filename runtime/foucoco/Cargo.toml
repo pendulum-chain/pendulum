@@ -243,7 +243,16 @@ runtime-benchmarks = [
     "xcm-builder/runtime-benchmarks",
     "cumulus-pallet-session-benchmarking/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
-	"pallet-collective/runtime-benchmarks"
+	"pallet-collective/runtime-benchmarks",
+
+	"fee/runtime-benchmarks",
+	"issue/runtime-benchmarks",
+	"nomination/runtime-benchmarks",
+	"oracle/runtime-benchmarks",
+	"redeem/runtime-benchmarks",
+	"replace/runtime-benchmarks",
+	"stellar-relay/runtime-benchmarks",
+	"vault-registry/runtime-benchmarks",
 ]
 
 try-runtime = [

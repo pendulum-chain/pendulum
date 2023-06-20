@@ -510,7 +510,7 @@ impl_runtime_apis! {
 		}
 
 		fn check_inherents(
-			block: xBlock,
+			block: Block,
 			data: sp_inherents::InherentData,
 		) -> sp_inherents::CheckInherentsResult {
 			data.check_extrinsics(&block)

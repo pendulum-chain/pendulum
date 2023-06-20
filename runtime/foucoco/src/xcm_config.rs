@@ -5,7 +5,7 @@ use super::{
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
-	traits::{ConstU32, Contains, ContainsPair, Everything, Nothing},
+	traits::{ConstU32, ContainsPair, Everything, Nothing},
 };
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
@@ -23,7 +23,7 @@ use xcm_builder::{
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
 use xcm_executor::{
-	traits::{JustTry, ShouldExecute, WithOriginFilter},
+	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
 
@@ -319,7 +319,7 @@ impl pallet_xcm::Config for Runtime {
 	type TrustedLockers = ();
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
-	type WeightInfo = pallet_xcm::TestWeightInfo;
+	type WeightInfo = crate::weights::pallet_xcm::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 }

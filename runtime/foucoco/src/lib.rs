@@ -53,7 +53,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{
-	limits::{BlockLxength, BlockWeights},
+	limits::{BlockLength, BlockWeights},
 	EnsureRoot, EnsureSigned,
 };
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
@@ -1346,10 +1346,33 @@ impl staking::Config for Runtime {
 	type CurrencyId = CurrencyId;
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub struct DataFeederBenchmark<K, V, A>(PhantomData<(K, V, A)>);
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<K, V, A> orml_traits::DataFeeder<K, V, A> for DataFeederBenchmark<K, V, A> {
+	fn feed_value(_who: A, _key: K, _value: V) -> DispatchResult {
+		Ok(())
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<K, V, A> orml_traits::DataProvider<K, V> for DataFeederBenchmark<K, V, A> {
+	fn get(_key: &K) -> Option<V> {
+		None
+	}
+}
+
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
 	type DataProvider = DataProviderImpl;
+	#[cfg(feature = "runtime-benchmarks")]
+	type DataFeedProvider = DataFeederBenchmark<
+		oracle::OracleKey,
+		oracle::TimestampedValue<UnsignedFixedPoint, Moment>,
+		Self::AccountId,
+	>;
 }
 
 parameter_types! {

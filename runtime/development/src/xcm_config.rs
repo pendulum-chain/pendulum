@@ -5,7 +5,7 @@ use super::{
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
-	traits::{Contains, Everything, Nothing},
+	traits::{Everything, Nothing},
 	weights::Weight,
 };
 use pallet_xcm::XcmPassthrough;
@@ -20,10 +20,7 @@ use xcm_builder::{
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	UsingComponents,
 };
-use xcm_executor::{
-	traits::{ShouldExecute, WithOriginFilter},
-	XcmExecutor,
-};
+use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();

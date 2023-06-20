@@ -269,10 +269,10 @@ pub fn run() -> Result<()> {
 		Some(Subcommand::Benchmark(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			// Switch on the concrete benchmark sub-command-
-			match cmd {
-				BenchmarkCmd::Pallet(cmd) =>
+			match (cmd, runner.config().chain_spec.identify()) {
+				(BenchmarkCmd::Pallet(cmd), runtime) =>
 					if cfg!(feature = "runtime-benchmarks") {
-						match runner.config().chain_spec.identify() {
+						match runtime {
 							ChainIdentity::Amplitude => runner.sync_run(|config| {
 								cmd.run::<Block, AmplitudeRuntimeExecutor>(config)
 							}),
@@ -291,7 +291,7 @@ pub fn run() -> Result<()> {
 					You can enable it with `--features runtime-benchmarks`."
 							.into())
 					},
-				BenchmarkCmd::Block(cmd) => match runner.config().chain_spec.identify() {
+				(BenchmarkCmd::Block(cmd), runtime) => match runtime {
 					ChainIdentity::Amplitude => runner.sync_run(|config| {
 						let partials = new_partial::<
 							amplitude_runtime::RuntimeApi,
@@ -322,7 +322,7 @@ pub fn run() -> Result<()> {
 					}),
 				},
 				#[cfg(not(feature = "runtime-benchmarks"))]
-				BenchmarkCmd::Storage(_) =>
+				(BenchmarkCmd::Storage(_), _) =>
 					return Err(sc_cli::Error::Input(
 						"Compile with --features=runtime-benchmarks \
 						to enable storage benchmarks."
@@ -330,35 +330,49 @@ pub fn run() -> Result<()> {
 					)
 					.into()),
 				#[cfg(feature = "runtime-benchmarks")]
-				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
-					let partials = match runner.config().chain_spec.identify() {
-						ChainIdentity::Amplitude => new_partial::<
+				(BenchmarkCmd::Storage(cmd), runtime) => match runtime {
+					ChainIdentity::Amplitude => runner.sync_run(|config| {
+						let partials = new_partial::<
 							amplitude_runtime::RuntimeApi,
 							AmplitudeRuntimeExecutor,
-						>(&config)?,
+						>(&config)?;
+						let db = partials.backend.expose_db();
+						let storage = partials.backend.expose_storage();
 
-						ChainIdentity::Foucoco => new_partial::<
+						cmd.run(config, partials.client.clone(), db, storage)
+					}),
+					ChainIdentity::Foucoco => runner.sync_run(|config| {
+						let partials = new_partial::<
 							foucoco_runtime::RuntimeApi,
 							FoucocoRuntimeExecutor,
-						>(&config)?,
+						>(&config)?;
+						let db = partials.backend.expose_db();
+						let storage = partials.backend.expose_storage();
 
-						ChainIdentity::Pendulum => new_partial::<
+						cmd.run(config, partials.client.clone(), db, storage)
+					}),
+					ChainIdentity::Pendulum => runner.sync_run(|config| {
+						let partials = new_partial::<
 							pendulum_runtime::RuntimeApi,
 							PendulumRuntimeExecutor,
-						>(&config)?,
+						>(&config)?;
+						let db = partials.backend.expose_db();
+						let storage = partials.backend.expose_storage();
 
-						ChainIdentity::Development => new_partial::<
+						cmd.run(config, partials.client.clone(), db, storage)
+					}),
+					ChainIdentity::Development => runner.sync_run(|config| {
+						let partials = new_partial::<
 							development_runtime::RuntimeApi,
 							DevelopmentRuntimeExecutor,
-						>(&config)?,
-					};
+						>(&config)?;
+						let db = partials.backend.expose_db();
+						let storage = partials.backend.expose_storage();
 
-					let db = partials.backend.expose_db();
-					let storage = partials.backend.expose_storage();
-
-					cmd.run(config, partials.client.clone(), db, storage)
-				}),
-				BenchmarkCmd::Machine(cmd) =>
+						cmd.run(config, partials.client.clone(), db, storage)
+					}),
+				},
+				(BenchmarkCmd::Machine(cmd), _) =>
 					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())),
 				// NOTE: this allows the Client to leniently implement
 				// new benchmark commands without requiring a companion MR.

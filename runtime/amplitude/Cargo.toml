@@ -228,6 +228,16 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
+
+	"fee/runtime-benchmarks",
+	"issue/runtime-benchmarks",
+	"nomination/runtime-benchmarks",
+	"oracle/runtime-benchmarks",
+	"redeem/runtime-benchmarks",
+	"replace/runtime-benchmarks",
+	"stellar-relay/runtime-benchmarks",
+	"vault-registry/runtime-benchmarks",
+
     "pallet-xcm/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",

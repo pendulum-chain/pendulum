@@ -6,7 +6,7 @@ use crate::ConstU32;
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
-	traits::{Contains, ContainsPair, Everything, Nothing},
+	traits::{ContainsPair, Everything, Nothing},
 };
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},

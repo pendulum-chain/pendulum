@@ -1113,7 +1113,7 @@ where
 					amount,
 				)?;
 			},
-			// transfer_from(currency, sender, recipient, amount)
+			// transfer_from(sender, currency, recipient, amount)
 			1106 => {
 				let ext = env.ext();
 				let caller = ext.caller().clone();
@@ -1149,8 +1149,8 @@ where
 				)?;
 			},
 
-			//dia price feed
-			7777 => {
+			// get_coin_info(blockchain, symbol)
+			1201 => {
 				let mut env = env.buf_in_buf_out();
 				let (blockchain, symbol): (Blockchain, Symbol) = env.read_as()?;
 
@@ -1159,8 +1159,7 @@ where
 					symbol.to_trimmed_vec(),
 				);
 
-				warn!("blockchain: {:#?}, symbol: {:#?}", blockchain, symbol);
-				warn!("price_feed: {:#?}", result);
+				warn!("Calling get_coin_info() for: {:?}:{:?}", blockchain, symbol);
 
 				let result = match result {
 					Ok(coin_info) =>

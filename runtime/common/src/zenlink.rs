@@ -70,10 +70,10 @@ pub fn currency_id_to_zenlink_id(
 		CurrencyId::Stellar(asset) => {
 			let _id = match asset {
 				Asset::StellarNative => 0u64,
-				Asset::AlphaNum4 { code, .. } => match &code {
-					b"USDC" => 1u64,
-					b"TZS\0" => 2u64,
-					b"BRL\0" => 3u64,
+				Asset::AlphaNum4 { code, issuer } => match (&code, &issuer) {
+					(b"USDC", &USDC_ISSUER) => 1u64,
+					(b"TZS\0", &TZS_ISSUER) => 2u64,
+					(b"BRL\0", &BRL_ISSUER) => 3u64,
 					_ => return Err(()),
 				},
 				_ => return Err(()),

@@ -226,6 +226,17 @@ mod zenlink_tests {
 	}
 
 	#[test]
+	fn convert_zenlink_id_to_currency_id_error() {
+		let fake_zenlink_asset = ZenlinkAssetId {
+			chain_id: 1000u32,
+			asset_type: LOCAL,
+			asset_index: 0u64,
+		};
+		// We pass a parachain_id different than the asset chain_id
+		assert_eq!(zenlink_id_to_currency_id(fake_zenlink_asset, 1001u32), Err(()));
+	}
+
+	#[test]
 	fn convert_native_currency_to_zenlink_native() {
 		let fake_currency_id = CurrencyId::Native;
 		let expected_zenlink_asset =

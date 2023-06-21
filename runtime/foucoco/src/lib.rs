@@ -1150,7 +1150,7 @@ where
 			},
 
 			// get_coin_info(blockchain, symbol)
-			1201 => {
+			1200 => {
 				let mut env = env.buf_in_buf_out();
 				let (blockchain, symbol): (Blockchain, Symbol) = env.read_as()?;
 

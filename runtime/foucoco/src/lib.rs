@@ -1129,8 +1129,8 @@ where
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
 				warn!(
-					"Calling transfer_from() sending {:?} {:?}, from {:?} to {:?}",
-					amount, currency_id, owner, recipient
+					"Calling transfer_from() for caller {:?}, sending {:?} {:?}, from {:?} to {:?}",
+					caller, amount, currency_id, owner, recipient
 				);
 
 				ensure!(

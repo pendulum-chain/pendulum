@@ -162,39 +162,87 @@ impl SubstrateCli for RelayChainCli {
 	}
 }
 
+
+macro_rules! construct_sync_run {
+	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $code:expr ) => {{
+		let runner = $cli.create_runner($cmd)?;
+
+		match runner.config().chain_spec.identify() {
+			ChainIdentity::Amplitude => runner.sync_run(|$config| {
+				let $components = new_partial::<
+					amplitude_runtime::RuntimeApi,
+					AmplitudeRuntimeExecutor,
+				>(&$config)?;
+				$code
+			}),
+			ChainIdentity::Foucoco => runner.sync_run(|$config| {
+				let $components = new_partial::<
+					foucoco_runtime::RuntimeApi,
+					FoucocoRuntimeExecutor,
+				>(&$config)?;
+				$code
+			}),
+			ChainIdentity::Pendulum => runner.sync_run(|$config| {
+				let $components = new_partial::<
+					pendulum_runtime::RuntimeApi,
+					PendulumRuntimeExecutor,
+				>(&$config)?;
+				$code
+			}),
+			ChainIdentity::Development => runner.sync_run(|$config| {
+				let $components = new_partial::<
+					development_runtime::RuntimeApi,
+					DevelopmentRuntimeExecutor,
+				>(&$config)?;
+				$code
+			}),
+		}
+	}};
+}
+
+macro_rules! construct_generic_async_run {
+	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $code:expr ) => {{
+		let runner = $cli.create_runner($cmd)?;
+
+		match runner.config().chain_spec.identify() {
+			ChainIdentity::Amplitude => runner.async_run(|$config| {
+				let $components = new_partial::<
+					amplitude_runtime::RuntimeApi,
+					AmplitudeRuntimeExecutor,
+				>(&$config)?;
+				$code
+			}),
+			ChainIdentity::Foucoco => runner.async_run(|$config| {
+				let $components = new_partial::<
+					foucoco_runtime::RuntimeApi,
+					FoucocoRuntimeExecutor,
+				>(&$config)?;
+				$code
+			}),
+			ChainIdentity::Pendulum => runner.async_run(|$config| {
+				let $components = new_partial::<
+					pendulum_runtime::RuntimeApi,
+					PendulumRuntimeExecutor,
+				>(&$config)?;
+				$code
+			}),
+			ChainIdentity::Development => runner.async_run(|$config| {
+				let $components = new_partial::<
+					development_runtime::RuntimeApi,
+					DevelopmentRuntimeExecutor,
+				>(&$config)?;
+				$code
+			}),
+		}
+	}};
+}
+
 macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
-		let runner = $cli.create_runner($cmd)?;
-		match runner.config().chain_spec.identify() {
-			ChainIdentity::Amplitude => {
-				runner.async_run(|$config| {
-					let $components = new_partial::<amplitude_runtime::RuntimeApi, AmplitudeRuntimeExecutor>(&$config)?;
-					let task_manager = $components.task_manager;
+		construct_generic_async_run!(|$components, $cli, $cmd, $config| {
+			let task_manager = $components.task_manager;
 					{ $( $code )* }.map(|v| (v, task_manager))
-				})
-			},
-			ChainIdentity::Foucoco => {
-				runner.async_run(|$config| {
-					let $components = new_partial::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(&$config)?;
-					let task_manager = $components.task_manager;
-					{ $( $code )* }.map(|v| (v, task_manager))
-				})
-			},
-			ChainIdentity::Pendulum => {
-				runner.async_run(|$config| {
-					let $components = new_partial::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(&$config)?;
-					let task_manager = $components.task_manager;
-					{ $( $code )* }.map(|v| (v, task_manager))
-				})
-			},
-			ChainIdentity::Development => {
-				runner.async_run(|$config| {
-					let $components = new_partial::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor>(&$config)?;
-					let task_manager = $components.task_manager;
-					{ $( $code )* }.map(|v| (v, task_manager))
-				})
-			}
-		}
+		})
 	}}
 }
 
@@ -266,120 +314,62 @@ pub fn run() -> Result<()> {
 				cmd.run(&*spec)
 			})
 		},
-		Some(Subcommand::Benchmark(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			// Switch on the concrete benchmark sub-command-
-			match (cmd, runner.config().chain_spec.identify()) {
-				(BenchmarkCmd::Pallet(cmd), runtime) =>
-					if cfg!(feature = "runtime-benchmarks") {
-						match runtime {
-							ChainIdentity::Amplitude => runner.sync_run(|config| {
-								cmd.run::<Block, AmplitudeRuntimeExecutor>(config)
-							}),
-							ChainIdentity::Foucoco => runner.sync_run(|config| {
-								cmd.run::<Block, FoucocoRuntimeExecutor>(config)
-							}),
-							ChainIdentity::Pendulum => runner.sync_run(|config| {
-								cmd.run::<Block, PendulumRuntimeExecutor>(config)
-							}),
-							ChainIdentity::Development => runner.sync_run(|config| {
-								cmd.run::<Block, DevelopmentRuntimeExecutor>(config)
-							}),
-						}
-					} else {
-						Err("Benchmarking wasn't enabled when building the node. \
-					You can enable it with `--features runtime-benchmarks`."
-							.into())
-					},
-				(BenchmarkCmd::Block(cmd), runtime) => match runtime {
-					ChainIdentity::Amplitude => runner.sync_run(|config| {
-						let partials = new_partial::<
-							amplitude_runtime::RuntimeApi,
-							AmplitudeRuntimeExecutor,
-						>(&config)?;
-						cmd.run(partials.client)
-					}),
-					ChainIdentity::Foucoco => runner.sync_run(|config| {
-						let partials = new_partial::<
-							foucoco_runtime::RuntimeApi,
-							FoucocoRuntimeExecutor,
-						>(&config)?;
-						cmd.run(partials.client)
-					}),
-					ChainIdentity::Pendulum => runner.sync_run(|config| {
-						let partials = new_partial::<
-							pendulum_runtime::RuntimeApi,
-							PendulumRuntimeExecutor,
-						>(&config)?;
-						cmd.run(partials.client)
-					}),
-					ChainIdentity::Development => runner.sync_run(|config| {
-						let partials = new_partial::<
-							development_runtime::RuntimeApi,
-							DevelopmentRuntimeExecutor,
-						>(&config)?;
-						cmd.run(partials.client)
-					}),
-				},
-				#[cfg(not(feature = "runtime-benchmarks"))]
-				(BenchmarkCmd::Storage(_), _) =>
-					return Err(sc_cli::Error::Input(
-						"Compile with --features=runtime-benchmarks \
+		Some(Subcommand::Benchmark(bench_cmd)) => match bench_cmd {
+			BenchmarkCmd::Pallet(cmd) => {
+				if cfg!(feature = "runtime-benchmarks") {
+					let runner = cli.create_runner(cmd)?;
+
+					match runner.config().chain_spec.identify() {
+						ChainIdentity::Amplitude => runner.sync_run(|config| {
+							cmd.run::<Block, AmplitudeRuntimeExecutor>(config)
+						}),
+						ChainIdentity::Foucoco => runner.sync_run(|config| {
+							cmd.run::<Block, FoucocoRuntimeExecutor>(config)
+						}),
+						ChainIdentity::Pendulum => runner.sync_run(|config| {
+							cmd.run::<Block, PendulumRuntimeExecutor>(config)
+						}),
+						ChainIdentity::Development => runner.sync_run(|config| {
+							cmd.run::<Block, DevelopmentRuntimeExecutor>(config)
+						}),
+					}
+				} else {
+					Err("Benchmarking wasn't enabled when building the node. \
+				You can enable it with `--features runtime-benchmarks`."
+						.into())
+				}
+			},
+			BenchmarkCmd::Block(cmd) => {
+				construct_sync_run!(|components, cli, cmd, config| {
+					cmd.run(components.client)
+				})
+			},
+			#[cfg(not(feature = "runtime-benchmarks"))]
+			BenchmarkCmd::Storage(_) =>
+				return Err(sc_cli::Error::Input(
+					"Compile with --features=runtime-benchmarks \
 						to enable storage benchmarks."
-							.into(),
-					)
+						.into(),
+				)
 					.into()),
-				#[cfg(feature = "runtime-benchmarks")]
-				(BenchmarkCmd::Storage(cmd), runtime) => match runtime {
-					ChainIdentity::Amplitude => runner.sync_run(|config| {
-						let partials = new_partial::<
-							amplitude_runtime::RuntimeApi,
-							AmplitudeRuntimeExecutor,
-						>(&config)?;
-						let db = partials.backend.expose_db();
-						let storage = partials.backend.expose_storage();
+			#[cfg(feature = "runtime-benchmarks")]
+			BenchmarkCmd::Storage(cmd) => {
+				construct_sync_run!(|components, cli, cmd, config| {
+					let db = components.backend.expose_db();
+					let storage = components.backend.expose_storage();
 
-						cmd.run(config, partials.client.clone(), db, storage)
-					}),
-					ChainIdentity::Foucoco => runner.sync_run(|config| {
-						let partials = new_partial::<
-							foucoco_runtime::RuntimeApi,
-							FoucocoRuntimeExecutor,
-						>(&config)?;
-						let db = partials.backend.expose_db();
-						let storage = partials.backend.expose_storage();
-
-						cmd.run(config, partials.client.clone(), db, storage)
-					}),
-					ChainIdentity::Pendulum => runner.sync_run(|config| {
-						let partials = new_partial::<
-							pendulum_runtime::RuntimeApi,
-							PendulumRuntimeExecutor,
-						>(&config)?;
-						let db = partials.backend.expose_db();
-						let storage = partials.backend.expose_storage();
-
-						cmd.run(config, partials.client.clone(), db, storage)
-					}),
-					ChainIdentity::Development => runner.sync_run(|config| {
-						let partials = new_partial::<
-							development_runtime::RuntimeApi,
-							DevelopmentRuntimeExecutor,
-						>(&config)?;
-						let db = partials.backend.expose_db();
-						let storage = partials.backend.expose_storage();
-
-						cmd.run(config, partials.client.clone(), db, storage)
-					}),
-				},
-				(BenchmarkCmd::Machine(cmd), _) =>
-					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())),
-				// NOTE: this allows the Client to leniently implement
-				// new benchmark commands without requiring a companion MR.
-				#[allow(unreachable_patterns)]
-				_ => Err("Benchmarking sub-command unsupported".into()),
+					cmd.run(config, components.client.clone(), db, storage)
+				})
 			}
-		},
+			BenchmarkCmd::Machine(cmd) => {
+				let runner = cli.create_runner(cmd)?;
+				runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone()))
+			},
+			// NOTE: this allows the Client to leniently implement
+			// new benchmark commands without requiring a companion MR.
+			#[allow(unreachable_patterns)]
+			_ => Err("Benchmarking sub-command unsupported".into()),
+		}
 		#[cfg(feature = "try-runtime")]
 		Some(Subcommand::TryRuntime(cmd)) => {
 			if cfg!(feature = "try-runtime") {

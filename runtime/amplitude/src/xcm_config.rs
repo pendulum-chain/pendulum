@@ -238,7 +238,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
 	type SubscriptionService = PolkadotXcm;
 	type PalletInstancesInfo = crate::AllPalletsWithSystem;
-	type MaxAssetsIntoHolding = ();
+	type MaxAssetsIntoHolding = ConstU32<8>;
 	type FeeManager = ();
 	type MessageExporter = ();
 	type UniversalAliases = Nothing;
@@ -280,7 +280,7 @@ impl pallet_xcm::Config for Runtime {
 	// ^ Override for AdvertisedXcmVersion default
 	type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
 	type TrustedLockers = ();
-	type SovereignAccountOf = ();
+	type SovereignAccountOf = LocationToAccountId;
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = crate::weights::pallet_xcm::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]

@@ -1,5 +1,5 @@
 // KILT Blockchain – https://botlabs.org
-// Copyright (C) 2019-2022 BOTLabs GmbH
+// Copyright (C) 2019-2023 BOTLabs GmbH
 
 // The KILT Blockchain is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,7 +23,6 @@ use sp_runtime::{traits::Zero, SaturatedConversion};
 use sp_std::{
 	cmp::Ordering,
 	convert::TryInto,
-	fmt::Debug,
 	ops::{Index, Range, RangeFull},
 };
 
@@ -38,10 +37,14 @@ use sp_std::prelude::*;
 #[codec(mel_bound(T: MaxEncodedLen))]
 pub struct OrderedSet<T, S: Get<u32>>(BoundedVec<T, S>);
 
-impl<T: Ord + Clone + Debug, S: Get<u32>> OrderedSet<T, S> {
+impl<T: Ord + Clone, S: Get<u32>> OrderedSet<T, S> {
 	/// Create a new empty set.
 	pub fn new() -> Self {
 		Self(BoundedVec::default())
+	}
+
+	pub fn iter(&self) -> sp_std::slice::Iter<'_, T> {
+		self.0.iter()
 	}
 
 	/// Creates an ordered set from a `BoundedVec`.
@@ -52,7 +55,7 @@ impl<T: Ord + Clone + Debug, S: Get<u32>> OrderedSet<T, S> {
 		let mut v = bv.into_inner();
 		v.sort_by(|a, b| b.cmp(a));
 		v.dedup();
-		Self::from_sorted_set(v.try_into().expect("No values were added"))
+		Self::from_sorted_set(v.try_into().map_err(|_| ()).expect("No values were added"))
 	}
 
 	/// Create a set from a `BoundedVec`.
@@ -233,9 +236,9 @@ impl<T: Ord + Clone + Debug, S: Get<u32>> OrderedSet<T, S> {
 	}
 }
 
-impl<T: Ord + Clone + Debug, S: Get<u32>> From<BoundedVec<T, S>> for OrderedSet<T, S> {
+impl<T: Ord + Clone, S: Get<u32>> From<BoundedVec<T, S>> for OrderedSet<T, S> {
 	fn from(bv: BoundedVec<T, S>) -> Self {
-		OrderedSet::<T, S>::from(bv)
+		Self::from(bv)
 	}
 }
 

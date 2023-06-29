@@ -3143,8 +3143,7 @@ fn authorities_per_round() {
 			(11, 100 * stake),
 		])
 		.with_collators(vec![(1, stake), (2, stake), (3, stake), (4, stake)])
-		.build()
-		.execute_with(|| {
+		.build_and_execute_with_sanity_tests(|| {
 			assert_eq!(StakePallet::selected_candidates().into_inner(), vec![1, 2]);
 			// reward 1 once per round
 			let authors: Vec<Option<AccountId>> =
@@ -3168,6 +3167,7 @@ fn authorities_per_round() {
 			// roll to last block of round 2
 			// should multiply with 4 because there are only 4 candidates
 			roll_to_claim_rewards(14, authors.clone());
+
 			let reward_2 = inflation.collator.reward_rate.per_block * stake * 4;
 			assert_eq!(Balances::free_balance(1), stake + reward_0 + reward_1 + reward_2);
 

@@ -6,6 +6,7 @@ use sp_runtime::{
 };
 
 pub mod chain_ext;
+pub mod zenlink;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;

@@ -99,7 +99,7 @@ use spacewalk_primitives::{
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 use frame_support::{
-	log::{error, warn},
+	log::{error, warn, trace},
 	pallet_prelude::*,
 };
 use sp_std::vec::Vec;
@@ -965,6 +965,14 @@ where
 			// totalSupply(currency)
 			1101 => {
 				let mut env = env.buf_in_buf_out();
+
+                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+                env.charge_weight(charged_weight)?;
+				trace!(
+					 target: "runtime",
+					 "[ChainExtension]|call|totalSupply / charge_weight:{:?}",
+					 charged_weight
+				);
 				let input = env.read(256)?;
 				let currency_id: CurrencyId = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
@@ -990,6 +998,13 @@ where
 			// balanceOf(currency, account)
 			1102 => {
 				let mut env = env.buf_in_buf_out();
+                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+                env.charge_weight(charged_weight)?;
+				trace!(
+					 target: "runtime",
+					 "[ChainExtension]|call|balanceOf / charge_weight:{:?}",
+					 charged_weight
+				);
 				let input = env.read(256)?;
 				let (currency_id, account_id): (CurrencyId, T::AccountId) =
 					chain_ext::decode(input).map_err(|_| {
@@ -1022,7 +1037,14 @@ where
 				let ext = env.ext();
 				let caller = ext.caller().clone();
 
-				let env = env.buf_in_buf_out();
+				let mut env = env.buf_in_buf_out();
+                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+                env.charge_weight(charged_weight)?;
+				trace!(
+					 target: "runtime",
+					 "[ChainExtension]|call|transfer / charge_weight:{:?}",
+					 charged_weight
+				);
 				let input = env.read(256)?;
 				let (currency_id, recipient, amount): (
 					CurrencyId,
@@ -1053,6 +1075,13 @@ where
 			// allowance(currency, owner, spender)
 			1104 => {
 				let mut env = env.buf_in_buf_out();
+                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+                env.charge_weight(charged_weight)?;
+				trace!(
+					 target: "runtime",
+					 "[ChainExtension]|call|allowance / charge_weight:{:?}",
+					 charged_weight
+				);
 				let input = env.read(256)?;
 				let (currency_id, owner, spender): (CurrencyId, T::AccountId, T::AccountId) =
 					chain_ext::decode(input).map_err(|_| {
@@ -1085,7 +1114,14 @@ where
 				let ext = env.ext();
 				let caller = ext.caller().clone();
 
-				let env = env.buf_in_buf_out();
+				let mut env = env.buf_in_buf_out();
+                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+                env.charge_weight(charged_weight)?;
+				trace!(
+					 target: "runtime",
+					 "[ChainExtension]|call|approve / charge_weight:{:?}",
+					 charged_weight
+				);
 				let input = env.read(256)?;
 				let (currency_id, spender, amount): (
 					CurrencyId,
@@ -1118,7 +1154,14 @@ where
 				let ext = env.ext();
 				let caller = ext.caller().clone();
 
-				let env = env.buf_in_buf_out();
+				let mut env = env.buf_in_buf_out();
+                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+                env.charge_weight(charged_weight)?;
+				trace!(
+					 target: "runtime",
+					 "[ChainExtension]|call|transfer_from / charge_weight:{:?}",
+					 charged_weight
+				);
 				let input = env.read(256)?;
 				let (owner, currency_id, recipient, amount): (
 					T::AccountId,
@@ -1152,6 +1195,13 @@ where
 			// get_coin_info(blockchain, symbol)
 			1200 => {
 				let mut env = env.buf_in_buf_out();
+                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+                env.charge_weight(charged_weight)?;
+				trace!(
+					 target: "runtime",
+					 "[ChainExtension]|call|get_coin_info / charge_weight:{:?}",
+					 charged_weight
+				);
 				let (blockchain, symbol): (Blockchain, Symbol) = env.read_as()?;
 
 				let result = <dia_oracle::Pallet<T> as DiaOracle>::get_coin_info(

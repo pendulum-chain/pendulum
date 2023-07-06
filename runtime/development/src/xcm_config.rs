@@ -1,19 +1,21 @@
 use super::{
-	AccountId, Balances, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime, RuntimeCall,
-	RuntimeEvent, RuntimeOrigin, WeightToFee, XcmpQueue,
+	AccountId, AllPalletsWithSystem, Balances, ParachainInfo, ParachainSystem, PolkadotXcm,
+	Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, WeightToFee, XcmpQueue,
 };
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
 	traits::{Everything, Nothing},
+	weights::Weight,
 };
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
+use sp_core::ConstU32;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset, ParentIsPreset,
+	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, NativeAsset, ParentIsPreset,
 	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	UsingComponents,
@@ -22,9 +24,10 @@ use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
-	pub const RelayNetwork: NetworkId = NetworkId::Any;
+	pub const RelayNetwork: NetworkId = NetworkId::Rococo;
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
+	pub UniversalLocation: InteriorMultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
@@ -76,7 +79,9 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
-	pub UnitWeightCost: u64 = 1_000_000_000;
+	// The default POV size used by Polkadot/Kusama was 64 kB but that has been updated here: https://github.com/paritytech/polkadot/pull/7081
+	// We should properly benchmark instructions and get rid of fixed weights.
+	pub UnitWeightCost: Weight = Weight::from_parts(1_000_000_000, 1024);
 	pub const MaxInstructions: u32 = 100;
 }
 
@@ -100,27 +105,27 @@ where
 	Deny: ShouldExecute,
 	Allow: ShouldExecute,
 {
-	fn should_execute<Call>(
+	fn should_execute<RuntimeCall>(
 		origin: &MultiLocation,
-		message: &mut Xcm<Call>,
+		instructions: &mut [Instruction<RuntimeCall>],
 		max_weight: XCMWeight,
 		weight_credit: &mut XCMWeight,
 	) -> Result<(), ()> {
-		Deny::should_execute(origin, message, max_weight, weight_credit)?;
-		Allow::should_execute(origin, message, max_weight, weight_credit)
+		Deny::should_execute(origin, instructions, max_weight, weight_credit)?;
+		Allow::should_execute(origin, instructions, max_weight, weight_credit)
 	}
 }
 
 // See issue #5233
 pub struct DenyReserveTransferToRelayChain;
 impl ShouldExecute for DenyReserveTransferToRelayChain {
-	fn should_execute<Call>(
+	fn should_execute<RuntimeCall>(
 		origin: &MultiLocation,
-		message: &mut Xcm<Call>,
+		instructions: &mut [Instruction<RuntimeCall>],
 		_max_weight: XCMWeight,
 		_weight_credit: &mut XCMWeight,
 	) -> Result<(), ()> {
-		if message.0.iter().any(|inst| {
+		if instructions.iter().any(|inst| {
 			matches!(
 				inst,
 				InitiateReserveWithdraw {
@@ -138,7 +143,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 
 		// allow reserve transfers to arrive from relay chain
 		if matches!(origin, MultiLocation { parents: 1, interior: Here }) &&
-			message.0.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
+			instructions.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
 		{
 			log::warn!(
 				target: "xcm::barriers",
@@ -168,16 +173,26 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = NativeAsset;
-	type IsTeleporter = (); // Teleporting is disabled.
-	type LocationInverter = LocationInverter<Ancestry>;
+	// Teleporting is disabled.
+	type IsTeleporter = ();
+	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type Trader =
 		UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>;
 	type ResponseHandler = PolkadotXcm;
 	type AssetTrap = PolkadotXcm;
+	type AssetLocker = ();
+	type AssetExchanger = ();
 	type AssetClaims = PolkadotXcm;
 	type SubscriptionService = PolkadotXcm;
+	type PalletInstancesInfo = AllPalletsWithSystem;
+	type MaxAssetsIntoHolding = ConstU32<8>;
+	type FeeManager = ();
+	type MessageExporter = ();
+	type UniversalAliases = Nothing;
+	type CallDispatcher = RuntimeCall;
+	type SafeCallFilter = Everything;
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -187,13 +202,15 @@ pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, R
 /// queues.
 pub type XcmRouter = (
 	// Two routers - use UMP to communicate with the relay chain:
-	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, ()>,
+	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm, ()>,
 	// ..and XCMP to communicate with the sibling chains.
 	XcmpQueue,
 );
 
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type CurrencyMatcher = ();
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type XcmRouter = XcmRouter;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
@@ -204,13 +221,25 @@ impl pallet_xcm::Config for Runtime {
 	type XcmTeleportFilter = Everything;
 	type XcmReserveTransferFilter = Nothing;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type LocationInverter = LocationInverter<Ancestry>;
+	type UniversalLocation = UniversalLocation;
+
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 
 	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
 	// ^ Override for AdvertisedXcmVersion default
 	type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+	type TrustedLockers = ();
+	type SovereignAccountOf = LocationToAccountId;
+	type MaxLockers = ConstU32<8>;
+	type WeightInfo = pallet_xcm::TestWeightInfo;
+	#[cfg(feature = "runtime-benchmarks")]
+	type ReachableDest = ReachableDest;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+parameter_types! {
+	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {

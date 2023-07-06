@@ -1,3 +1,4 @@
+use crate::{PENDULUM_ID, STATEMINT_ID};
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::{PendulumCurrencyId, Runtime, System};
 use polkadot_core_primitives::{AccountId, Balance};
@@ -17,7 +18,7 @@ pub struct ExtBuilderPendulum {
 
 impl Default for ExtBuilderPendulum {
 	fn default() -> Self {
-		Self { balances: vec![], parachain_id: 2094 }
+		Self { balances: vec![], parachain_id: PENDULUM_ID }
 	}
 }
 
@@ -71,7 +72,7 @@ pub struct ExtStatemintBuilder {
 
 impl Default for ExtStatemintBuilder {
 	fn default() -> Self {
-		Self { balances: vec![], parachain_id: 1000 }
+		Self { balances: vec![], parachain_id: STATEMINT_ID }
 	}
 }
 

@@ -125,6 +125,9 @@ pub(crate) mod mock;
 #[cfg(test)]
 pub(crate) mod tests;
 
+#[cfg(any(feature = "try-runtime", test))]
+mod try_state;
+
 mod inflation;
 mod set;
 mod types;
@@ -179,7 +182,6 @@ pub mod pallet {
 
 	/// Pallet for parachain staking.
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(PhantomData<T>);
 
@@ -2604,10 +2606,6 @@ pub mod pallet {
 				T::DbWeight::get().reads_writes(2, 1),
 				DispatchClass::Mandatory,
 			);
-		}
-
-		fn note_uncle(_author: T::AccountId, _age: T::BlockNumber) {
-			// we too are not caring.
 		}
 	}
 

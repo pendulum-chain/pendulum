@@ -10,7 +10,7 @@ mod weights;
 pub mod xcm_config;
 pub mod zenlink;
 use crate::zenlink::*;
-use xcm::v1::MultiLocation;
+use xcm::v3::MultiLocation;
 use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
@@ -54,13 +54,13 @@ use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureRoot,
+	EnsureRoot, EnsureSigned,
 };
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
 	chain_ext, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
-	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, NANOUNIT, UNIT,
+	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -246,10 +246,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 12,
+	spec_version: 14,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 23,
+	transaction_version: 25,
 	state_version: 1,
 };
 
@@ -281,8 +281,8 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 /// We allow for 0.5 of a second of compute with a 12 second average block time.
 const MAXIMUM_BLOCK_WEIGHT: Weight =
-	Weight::from_ref_time(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2))
-		.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64);
+	Weight::from_parts(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2), 0)
+		.set_proof_size(cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64);
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -339,7 +339,6 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Preimage(_) |
 			RuntimeCall::Timestamp(_) |
 			RuntimeCall::Balances(_) |
-			RuntimeCall::Authorship(_) |
 			RuntimeCall::Session(_) |
 			RuntimeCall::ParachainSystem(_) |
 			RuntimeCall::Sudo(_) |
@@ -442,8 +441,6 @@ parameter_types! {
 
 impl pallet_authorship::Config for Runtime {
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
-	type UncleGenerations = UncleGenerations;
-	type FilterUncle = ();
 	type EventHandler = ParachainStaking;
 }
 
@@ -525,6 +522,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+	type PriceForSiblingDelivery = ();
 	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
 }
 
@@ -616,6 +614,7 @@ impl pallet_democracy::Config for Runtime {
 	type Preimages = Preimage;
 	type MaxDeposits = ConstU32<100>;
 	type MaxBlacklisted = ConstU32<100>;
+	type SubmitOrigin = EnsureSigned<AccountId>;
 }
 
 parameter_types! {
@@ -634,6 +633,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type MaxMembers = CouncilMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type SetMembersOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
@@ -652,6 +652,7 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type MaxMembers = TechnicalMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type SetMembersOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
@@ -932,7 +933,6 @@ parameter_types! {
 		..Default::default()
 	};
 }
-
 #[derive(Default)]
 pub struct Psp22Extension;
 
@@ -962,101 +962,21 @@ where
 		warn!("Calling function with ID {} from Psp22Extension", func_id);
 
 		match func_id {
-			//transfer
-			1105 => {
-				let ext = env.ext();
-				let address = ext.address().clone();
-				let caller = ext.caller().clone();
-
-				let env = env.buf_in_buf_out();
-				let input = env.read(256)?;
-				let (origin_id, currency_id, account_id, balance): (
-					OriginType,
-					CurrencyId,
-					T::AccountId,
-					BalanceOfForChainExt<T>,
-				) = chain_ext::decode(input)
-					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
-
-				let address_account =
-					if origin_id == OriginType::Caller { caller } else { address };
-
-				warn!("currency_id : {:#?}", currency_id);
-				warn!("address_account : {:#?}", address_account);
-				warn!("account_id : {:#?}", account_id);
-				warn!("balance : {:#?}", balance);
-
-				let is_allowed_currency =
-					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-						currency_id,
-					);
-				if !is_allowed_currency {
-					return Err(DispatchError::Other(
-						"Currency id is not allowed for chain extension",
-					))
-				}
-
-				let result = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
-					currency_id,
-					&address_account,
-					&account_id,
-					balance,
-				);
-
-				warn!("transfer_result: {:#?}", result);
-			},
-
-			//balance
-			1106 => {
-				let mut env = env.buf_in_buf_out();
-				let input = env.read(256)?;
-				let (currency_id, account_id): (CurrencyId, T::AccountId) =
-					chain_ext::decode(input).map_err(|_| {
-						DispatchError::Other("ChainExtension failed to decode input")
-					})?;
-
-				warn!("currency_id : {:#?}", currency_id);
-				warn!("account_id : {:#?}", account_id);
-
-				let is_allowed_currency =
-					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-						currency_id,
-					);
-				if !is_allowed_currency {
-					warn!("asset_id : {:#?} is_allowed_currency: false", currency_id);
-					return Err(DispatchError::Other(
-						"Currency id is not allowed for chain extension",
-					))
-				}
-
-				let balance =
-					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
-						currency_id,
-						&account_id,
-					);
-
-				warn!("balance : {:#?}", balance);
-
-				env.write(&balance.encode(), false, None)
-					.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
-			},
-
-			//total_supply
-			1107 => {
+			// totalSupply(currency)
+			1101 => {
 				let mut env = env.buf_in_buf_out();
 				let input = env.read(256)?;
 				let currency_id: CurrencyId = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				let is_allowed_currency =
+				warn!("Calling totalSupply() for currency {:?}", currency_id);
+
+				ensure!(
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
 						currency_id,
-					);
-				if !is_allowed_currency {
-					return Err(DispatchError::Other(
-						"Currency id is not allowed for chain extension",
-					))
-				}
+					),
+					DispatchError::Other("ChainExtension failed to decode input")
+				);
 
 				let total_supply =
 					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(
@@ -1064,156 +984,173 @@ where
 					);
 
 				env.write(&total_supply.encode(), false, None).map_err(|_| {
-					DispatchError::Other("ChainExtension failed to call total_supply")
+					DispatchError::Other("ChainExtension failed to call total_issuance")
 				})?;
 			},
-
-			//approve_transfer
-			1108 => {
-				let ext = env.ext();
-				let address = ext.address().clone();
-				let caller = ext.caller().clone();
-
+			// balanceOf(currency, account)
+			1102 => {
 				let mut env = env.buf_in_buf_out();
 				let input = env.read(256)?;
-				let (origin_type, currency_id, to, amount): (
-					OriginType,
-					CurrencyId,
-					T::AccountId,
-					BalanceOfForChainExt<T>,
-				) = chain_ext::decode(input)
-					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
-
-				let from = if origin_type == OriginType::Caller { caller } else { address };
-
-				warn!("from : {:#?}", from);
-				warn!("origin_type : {:#?}", origin_type);
-				warn!("to : {:#?}", to);
-				warn!("amount : {:#?}", amount);
-
-				let is_allowed_currency =
-					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-						currency_id,
-					);
-				if !is_allowed_currency {
-					return Err(DispatchError::Other(
-						"Currency id is not allowed for chain extension",
-					))
-				}
-
-				let result = orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
-					currency_id,
-					&from,
-					&to,
-					amount,
-				);
-
-				warn!("approve_transfer : {:#?}", result);
-
-				match result {
-					DispatchResult::Ok(_) => {},
-					DispatchResult::Err(e) => {
-						let err =
-							Result::<(), ChainExtensionError>::Err(ChainExtensionError::from(e));
-						env.write(&err.encode(), false, None).map_err(|_| {
-							error!("ChainExtension failed to call 'approve'");
-							DispatchError::Other("ChainExtension failed to call 'approve'")
-						})?;
-					},
-				}
-			},
-
-			//transfer_approved
-			1109 => {
-				let ext = env.ext();
-				let address = ext.address().clone();
-				let caller = ext.caller().clone();
-
-				let mut env = env.buf_in_buf_out();
-				let input = env.read(256)?;
-				let (owner, origin_type, currency_id, to, amount): (
-					T::AccountId,
-					OriginType,
-					CurrencyId,
-					T::AccountId,
-					BalanceOfForChainExt<T>,
-				) = chain_ext::decode(input)
-					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
-
-				let from = if origin_type == OriginType::Caller { caller } else { address };
-
-				warn!("from : {:#?}", from);
-				warn!("owner : {:#?}", owner);
-				warn!("origin_type : {:#?}", origin_type);
-				warn!("to : {:#?}", to);
-				warn!("amount : {:#?}", amount);
-
-				let is_allowed_currency =
-					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-						currency_id,
-					);
-				if !is_allowed_currency {
-					return Err(DispatchError::Other(
-						"Currency id is not allowed for chain extension",
-					))
-				}
-
-				let result = orml_currencies_allowance_extension::Pallet::<T>::do_transfer_approved(
-					currency_id,
-					&owner,
-					&from,
-					&to,
-					amount,
-				);
-
-				warn!("transfer_from : {:#?}", result);
-
-				match result {
-					DispatchResult::Ok(_) => {},
-					DispatchResult::Err(e) => {
-						let err =
-							Result::<(), ChainExtensionError>::Err(ChainExtensionError::from(e));
-						env.write(&err.encode(), false, None).map_err(|_| {
-							DispatchError::Other(
-								"ChainExtension failed to call 'approved transfer'",
-							)
-						})?;
-					},
-				}
-			},
-
-			//allowance
-			1110 => {
-				let mut env = env.buf_in_buf_out();
-				let input = env.read(256)?;
-				let (currency_id, owner, delegate): (CurrencyId, T::AccountId, T::AccountId) =
+				let (currency_id, account_id): (CurrencyId, T::AccountId) =
 					chain_ext::decode(input).map_err(|_| {
 						DispatchError::Other("ChainExtension failed to decode input")
 					})?;
 
-				let is_allowed_currency =
+				warn!(
+					"Calling balanceOf() for currency {:?} and account {:?}",
+					currency_id, account_id
+				);
+
+				ensure!(
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
 						currency_id,
+					),
+					DispatchError::Other("CurrencyId is not allowed for chain extension",)
+				);
+
+				let balance =
+					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
+						currency_id,
+						&account_id,
 					);
-				if !is_allowed_currency {
-					return Err(DispatchError::Other(
-						"Currency id is not allowed for chain extension",
-					))
-				}
+
+				env.write(&balance.encode(), false, None)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
+			},
+			// transfer(currency, recipient, amount)
+			1103 => {
+				let ext = env.ext();
+				let caller = ext.caller().clone();
+
+				let env = env.buf_in_buf_out();
+				let input = env.read(256)?;
+				let (currency_id, recipient, amount): (
+					CurrencyId,
+					T::AccountId,
+					BalanceOfForChainExt<T>,
+				) = chain_ext::decode(input)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
+
+				warn!(
+					"Calling transfer() sending {:?} {:?}, from {:?} to {:?}",
+					amount, currency_id, caller, recipient
+				);
+
+				ensure!(
+					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+						currency_id,
+					),
+					DispatchError::Other("CurrencyId is not allowed for chain extension",)
+				);
+
+				<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
+					currency_id,
+					&caller,
+					&recipient,
+					amount,
+				)?;
+			},
+			// allowance(currency, owner, spender)
+			1104 => {
+				let mut env = env.buf_in_buf_out();
+				let input = env.read(256)?;
+				let (currency_id, owner, spender): (CurrencyId, T::AccountId, T::AccountId) =
+					chain_ext::decode(input).map_err(|_| {
+						DispatchError::Other("ChainExtension failed to decode input")
+					})?;
+
+				warn!(
+					"Calling allowance() for currency {:?}, owner {:?} and spender {:?}",
+					currency_id, owner, spender
+				);
+
+				ensure!(
+					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+						currency_id,
+					),
+					DispatchError::Other("CurrencyId is not allowed for chain extension")
+				);
 
 				let allowance = orml_currencies_allowance_extension::Pallet::<T>::allowance(
 					currency_id,
 					&owner,
-					&delegate,
+					&spender,
 				);
-				warn!("allowance : {:#?}", allowance);
 
 				env.write(&allowance.encode(), false, None)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
 			},
+			// approve(currency, spender, amount)
+			1105 => {
+				let ext = env.ext();
+				let caller = ext.caller().clone();
 
-			//dia price feed
-			7777 => {
+				let env = env.buf_in_buf_out();
+				let input = env.read(256)?;
+				let (currency_id, spender, amount): (
+					CurrencyId,
+					T::AccountId,
+					BalanceOfForChainExt<T>,
+				) = chain_ext::decode(input)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
+
+				warn!(
+					"Calling approve() allowing spender {:?} to transfer {:?} {:?} from {:?}",
+					spender, amount, currency_id, caller
+				);
+
+				ensure!(
+					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+						currency_id,
+					),
+					DispatchError::Other("CurrencyId is not allowed for chain extension",)
+				);
+
+				orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
+					currency_id,
+					&caller,
+					&spender,
+					amount,
+				)?;
+			},
+			// transfer_from(sender, currency, recipient, amount)
+			1106 => {
+				let ext = env.ext();
+				let caller = ext.caller().clone();
+
+				let env = env.buf_in_buf_out();
+				let input = env.read(256)?;
+				let (owner, currency_id, recipient, amount): (
+					T::AccountId,
+					CurrencyId,
+					T::AccountId,
+					BalanceOfForChainExt<T>,
+				) = chain_ext::decode(input)
+					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
+
+				warn!(
+					"Calling transfer_from() for caller {:?}, sending {:?} {:?}, from {:?} to {:?}",
+					caller, amount, currency_id, owner, recipient
+				);
+
+				ensure!(
+					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+						currency_id,
+					),
+					DispatchError::Other("CurrencyId is not allowed for chain extension",)
+				);
+
+				orml_currencies_allowance_extension::Pallet::<T>::do_transfer_approved(
+					currency_id,
+					&owner,
+					&caller,
+					&recipient,
+					amount,
+				)?;
+			},
+
+			// get_coin_info(blockchain, symbol)
+			1200 => {
 				let mut env = env.buf_in_buf_out();
 				let (blockchain, symbol): (Blockchain, Symbol) = env.read_as()?;
 
@@ -1222,8 +1159,7 @@ where
 					symbol.to_trimmed_vec(),
 				);
 
-				warn!("blockchain: {:#?}, symbol: {:#?}", blockchain, symbol);
-				warn!("price_feed: {:#?}", result);
+				warn!("Calling get_coin_info() for: {:?}:{:?}", blockchain, symbol);
 
 				let result = match result {
 					Ok(coin_info) =>
@@ -1272,7 +1208,7 @@ impl pallet_contracts::Config for Runtime {
 	type MaxDebugBufferLen = ConstU32<{ 2 * 1024 * 1024 }>;
 }
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
+impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
 
 impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -1391,10 +1327,10 @@ impl farming::Config for Runtime {
 	type CurrencyId = CurrencyId;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureRoot<AccountId>;
+	type WeightInfo = farming::weights::BifrostWeight<Runtime>;
 	type TreasuryAccount = FoucocoTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
-	type WeightInfo = farming::weights::BifrostWeight<Runtime>;
 }
 
 impl security::Config for Runtime {
@@ -1410,10 +1346,33 @@ impl staking::Config for Runtime {
 	type CurrencyId = CurrencyId;
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub struct DataFeederBenchmark<K, V, A>(PhantomData<(K, V, A)>);
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<K, V, A> orml_traits::DataFeeder<K, V, A> for DataFeederBenchmark<K, V, A> {
+	fn feed_value(_who: A, _key: K, _value: V) -> DispatchResult {
+		Ok(())
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<K, V, A> orml_traits::DataProvider<K, V> for DataFeederBenchmark<K, V, A> {
+	fn get(_key: &K) -> Option<V> {
+		None
+	}
+}
+
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
 	type DataProvider = DataProviderImpl;
+	#[cfg(feature = "runtime-benchmarks")]
+	type DataFeedProvider = DataFeederBenchmark<
+		oracle::OracleKey,
+		oracle::TimestampedValue<UnsignedFixedPoint, Moment>,
+		Self::AccountId,
+	>;
 }
 
 parameter_types! {
@@ -1428,7 +1387,7 @@ impl stellar_relay::Config for Runtime {
 	type OrganizationLimit = OrganizationLimit;
 	type ValidatorLimit = ValidatorLimit;
 	type IsPublicNetwork = IsPublicNetwork;
-	type WeightInfo = ();
+	type WeightInfo = stellar_relay::SubstrateWeight<Runtime>;
 }
 
 impl reward::Config for Runtime {
@@ -1536,12 +1495,14 @@ construct_runtime!(
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 20,
 		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,
 
-		// Collator support. The order of these 4 are important and shall not change.
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 30,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 32,
+		// Consensus support.
+		// The following order MUST NOT be changed: Aura -> Session -> Staking -> Authorship -> AuraExt
+		// Dependencies: AuraExt on Aura, Authorship and Session on ParachainStaking
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 33,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 34,
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 32,
 		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
+		Authorship: pallet_authorship::{Pallet, Storage} = 30,
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 34,
 
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
@@ -1557,7 +1518,7 @@ construct_runtime!(
 		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 54,
 		Identity: pallet_identity::{Pallet, Storage, Call, Event<T>} = 55,
 		Contracts: pallet_contracts::{Pallet, Storage, Call, Event<T>} = 56,
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 57,
+		RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 57,
 		DiaOracleModule: dia_oracle::{Pallet, Storage, Call, Config<T>, Event<T>} = 58,
 
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
@@ -1589,6 +1550,7 @@ extern crate frame_benchmarking;
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
 	define_benchmarks!(
+		[frame_benchmarking, BaselineBench::<Runtime>]
 		[frame_system, SystemBench::<Runtime>]
 		[pallet_balances, Balances]
 		[pallet_session, SessionBench::<Runtime>]
@@ -1603,6 +1565,7 @@ mod benches {
 		[replace, Replace]
 		[stellar_relay, StellarRelay]
 		[vault_registry, VaultRegistry]
+		[pallet_xcm, PolkadotXcm]
 	);
 }
 
@@ -1705,6 +1668,12 @@ impl_runtime_apis! {
 		) -> pallet_transaction_payment::FeeDetails<Balance> {
 			TransactionPayment::query_fee_details(uxt, len)
 		}
+		fn query_weight_to_fee(weight: Weight) -> Balance {
+			TransactionPayment::weight_to_fee(weight)
+		}
+		fn query_length_to_fee(length: u32) -> Balance {
+			TransactionPayment::length_to_fee(length)
+		}
 	}
 
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
@@ -1744,11 +1713,6 @@ impl_runtime_apis! {
 			<Runtime as zenlink_protocol::Config>::MultiAssetsHandler::balance_of(asset_id, &owner)
 		}
 
-		fn get_sovereigns_info(
-			asset_id: ZenlinkAssetId
-		) -> Vec<(u32, AccountId, AssetBalance)> {
-			ZenlinkProtocol::get_sovereigns_info(&asset_id)
-		}
 
 		fn get_pair_by_asset_id(
 			asset_0: ZenlinkAssetId,
@@ -1788,6 +1752,18 @@ impl_runtime_apis! {
 				amount_1_min
 			)
 		}
+
+		fn calculate_remove_liquidity(
+			asset_0: ZenlinkAssetId,
+			asset_1: ZenlinkAssetId,
+			amount: AssetBalance,
+		) -> Option<(AssetBalance, AssetBalance)>{
+			ZenlinkProtocol::calculate_remove_liquidity(
+				asset_0,
+				asset_1,
+				amount,
+			)
+		}
 	}
 
 	impl farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId> for Runtime {
@@ -1819,10 +1795,11 @@ impl_runtime_apis! {
 			Vec<frame_benchmarking::BenchmarkList>,
 			Vec<frame_support::traits::StorageInfo>,
 		) {
-			use frame_benchmarking::{Benchmarking, BenchmarkList};
+			use frame_benchmarking::{baseline, Benchmarking, BenchmarkList};
 			use frame_support::traits::StorageInfoTrait;
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
+			use baseline::Pallet as BaselineBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
 			list_benchmarks!(list, extra);
@@ -1834,10 +1811,13 @@ impl_runtime_apis! {
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+			   use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch, TrackedStorageKey};
 
 			use frame_system_benchmarking::Pallet as SystemBench;
+			use baseline::Pallet as BaselineBench;
+
 			impl frame_system_benchmarking::Config for Runtime {}
+			impl baseline::Config for Runtime {}
 
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 			impl cumulus_pallet_session_benchmarking::Config for Runtime {}

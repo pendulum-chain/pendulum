@@ -1,6 +1,9 @@
 [profile.release]
 panic = "unwind"
 
+[profile.production]
+inherits = "release"
+
 [workspace]
 members = [
 	"node",
@@ -16,16 +19,16 @@ members = [
 
 # need this because of bifrost farming dependency in runtime
 # bifrost farming uses different orml-traits for orml-currencies
-[patch."https://github.com/open-web3-stack/open-runtime-module-library"] 
-orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.37" }
+[patch."https://github.com/open-web3-stack/open-runtime-module-library"]
+orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.40" }
 
 # need this because of bifrost farming dependency in runtime
 # bifrost uses :
 # orml packages { version = "0.4.1-dev" }
 # zenlink packages  { version = "*" }
 [patch.crates-io]
-orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.37" }
-orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.37" }
-orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.37" }
-zenlink-protocol = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "polkadot-v0.9.37" }
-zenlink-protocol-runtime-api = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "polkadot-v0.9.37" }
+orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.40" }
+orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.40" }
+orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.40" }
+zenlink-protocol = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "polkadot-v0.9.40-protocol" }
+zenlink-protocol-runtime-api = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "polkadot-v0.9.40-protocol" }

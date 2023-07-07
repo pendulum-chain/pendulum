@@ -10,7 +10,7 @@ mod weights;
 pub mod xcm_config;
 pub mod zenlink;
 use crate::zenlink::*;
-use xcm::v1::MultiLocation;
+use xcm::v3::MultiLocation;
 use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
@@ -54,7 +54,7 @@ use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureRoot,
+	EnsureRoot, EnsureSigned,
 };
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
@@ -281,8 +281,8 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 /// We allow for 0.5 of a second of compute with a 12 second average block time.
 const MAXIMUM_BLOCK_WEIGHT: Weight =
-	Weight::from_ref_time(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2))
-		.set_proof_size(cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64);
+	Weight::from_parts(WEIGHT_REF_TIME_PER_SECOND.saturating_div(2), 0)
+		.set_proof_size(cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64);
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -339,7 +339,6 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Preimage(_) |
 			RuntimeCall::Timestamp(_) |
 			RuntimeCall::Balances(_) |
-			RuntimeCall::Authorship(_) |
 			RuntimeCall::Session(_) |
 			RuntimeCall::ParachainSystem(_) |
 			RuntimeCall::Sudo(_) |
@@ -442,8 +441,6 @@ parameter_types! {
 
 impl pallet_authorship::Config for Runtime {
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
-	type UncleGenerations = UncleGenerations;
-	type FilterUncle = ();
 	type EventHandler = ParachainStaking;
 }
 
@@ -525,6 +522,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+	type PriceForSiblingDelivery = ();
 	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
 }
 
@@ -616,6 +614,7 @@ impl pallet_democracy::Config for Runtime {
 	type Preimages = Preimage;
 	type MaxDeposits = ConstU32<100>;
 	type MaxBlacklisted = ConstU32<100>;
+	type SubmitOrigin = EnsureSigned<AccountId>;
 }
 
 parameter_types! {
@@ -634,6 +633,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type MaxMembers = CouncilMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type SetMembersOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
@@ -652,6 +652,7 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type MaxMembers = TechnicalMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type SetMembersOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
@@ -932,7 +933,6 @@ parameter_types! {
 		..Default::default()
 	};
 }
-
 #[derive(Default)]
 pub struct Psp22Extension;
 
@@ -1258,7 +1258,7 @@ impl pallet_contracts::Config for Runtime {
 	type MaxDebugBufferLen = ConstU32<{ 2 * 1024 * 1024 }>;
 }
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
+impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
 
 impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -1377,10 +1377,10 @@ impl farming::Config for Runtime {
 	type CurrencyId = CurrencyId;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureRoot<AccountId>;
+	type WeightInfo = farming::weights::BifrostWeight<Runtime>;
 	type TreasuryAccount = FoucocoTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
-	type WeightInfo = farming::weights::BifrostWeight<Runtime>;
 }
 
 impl security::Config for Runtime {
@@ -1396,10 +1396,33 @@ impl staking::Config for Runtime {
 	type CurrencyId = CurrencyId;
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub struct DataFeederBenchmark<K, V, A>(PhantomData<(K, V, A)>);
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<K, V, A> orml_traits::DataFeeder<K, V, A> for DataFeederBenchmark<K, V, A> {
+	fn feed_value(_who: A, _key: K, _value: V) -> DispatchResult {
+		Ok(())
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<K, V, A> orml_traits::DataProvider<K, V> for DataFeederBenchmark<K, V, A> {
+	fn get(_key: &K) -> Option<V> {
+		None
+	}
+}
+
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
 	type DataProvider = DataProviderImpl;
+	#[cfg(feature = "runtime-benchmarks")]
+	type DataFeedProvider = DataFeederBenchmark<
+		oracle::OracleKey,
+		oracle::TimestampedValue<UnsignedFixedPoint, Moment>,
+		Self::AccountId,
+	>;
 }
 
 parameter_types! {
@@ -1414,7 +1437,7 @@ impl stellar_relay::Config for Runtime {
 	type OrganizationLimit = OrganizationLimit;
 	type ValidatorLimit = ValidatorLimit;
 	type IsPublicNetwork = IsPublicNetwork;
-	type WeightInfo = ();
+	type WeightInfo = stellar_relay::SubstrateWeight<Runtime>;
 }
 
 impl reward::Config for Runtime {
@@ -1522,12 +1545,14 @@ construct_runtime!(
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 20,
 		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,
 
-		// Collator support. The order of these 4 are important and shall not change.
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 30,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 32,
+		// Consensus support.
+		// The following order MUST NOT be changed: Aura -> Session -> Staking -> Authorship -> AuraExt
+		// Dependencies: AuraExt on Aura, Authorship and Session on ParachainStaking
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 33,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 34,
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 32,
 		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
+		Authorship: pallet_authorship::{Pallet, Storage} = 30,
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 34,
 
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
@@ -1543,7 +1568,7 @@ construct_runtime!(
 		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 54,
 		Identity: pallet_identity::{Pallet, Storage, Call, Event<T>} = 55,
 		Contracts: pallet_contracts::{Pallet, Storage, Call, Event<T>} = 56,
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 57,
+		RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 57,
 		DiaOracleModule: dia_oracle::{Pallet, Storage, Call, Config<T>, Event<T>} = 58,
 
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
@@ -1575,6 +1600,7 @@ extern crate frame_benchmarking;
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
 	define_benchmarks!(
+		[frame_benchmarking, BaselineBench::<Runtime>]
 		[frame_system, SystemBench::<Runtime>]
 		[pallet_balances, Balances]
 		[pallet_session, SessionBench::<Runtime>]
@@ -1589,6 +1615,7 @@ mod benches {
 		[replace, Replace]
 		[stellar_relay, StellarRelay]
 		[vault_registry, VaultRegistry]
+		[pallet_xcm, PolkadotXcm]
 	);
 }
 
@@ -1691,6 +1718,12 @@ impl_runtime_apis! {
 		) -> pallet_transaction_payment::FeeDetails<Balance> {
 			TransactionPayment::query_fee_details(uxt, len)
 		}
+		fn query_weight_to_fee(weight: Weight) -> Balance {
+			TransactionPayment::weight_to_fee(weight)
+		}
+		fn query_length_to_fee(length: u32) -> Balance {
+			TransactionPayment::length_to_fee(length)
+		}
 	}
 
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
@@ -1730,11 +1763,6 @@ impl_runtime_apis! {
 			<Runtime as zenlink_protocol::Config>::MultiAssetsHandler::balance_of(asset_id, &owner)
 		}
 
-		fn get_sovereigns_info(
-			asset_id: ZenlinkAssetId
-		) -> Vec<(u32, AccountId, AssetBalance)> {
-			ZenlinkProtocol::get_sovereigns_info(&asset_id)
-		}
 
 		fn get_pair_by_asset_id(
 			asset_0: ZenlinkAssetId,
@@ -1774,6 +1802,18 @@ impl_runtime_apis! {
 				amount_1_min
 			)
 		}
+
+		fn calculate_remove_liquidity(
+			asset_0: ZenlinkAssetId,
+			asset_1: ZenlinkAssetId,
+			amount: AssetBalance,
+		) -> Option<(AssetBalance, AssetBalance)>{
+			ZenlinkProtocol::calculate_remove_liquidity(
+				asset_0,
+				asset_1,
+				amount,
+			)
+		}
 	}
 
 	impl farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId> for Runtime {
@@ -1805,10 +1845,11 @@ impl_runtime_apis! {
 			Vec<frame_benchmarking::BenchmarkList>,
 			Vec<frame_support::traits::StorageInfo>,
 		) {
-			use frame_benchmarking::{Benchmarking, BenchmarkList};
+			use frame_benchmarking::{baseline, Benchmarking, BenchmarkList};
 			use frame_support::traits::StorageInfoTrait;
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
+			use baseline::Pallet as BaselineBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
 			list_benchmarks!(list, extra);
@@ -1820,10 +1861,13 @@ impl_runtime_apis! {
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+			   use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch, TrackedStorageKey};
 
 			use frame_system_benchmarking::Pallet as SystemBench;
+			use baseline::Pallet as BaselineBench;
+
 			impl frame_system_benchmarking::Config for Runtime {}
+			impl baseline::Config for Runtime {}
 
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 			impl cumulus_pallet_session_benchmarking::Config for Runtime {}

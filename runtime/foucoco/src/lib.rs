@@ -97,9 +97,10 @@ use spacewalk_primitives::{
 };
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
+use orml_currencies::WeightInfo;
 
 use frame_support::{
-	log::{error, warn, trace},
+	log::{error, trace, warn},
 	pallet_prelude::*,
 };
 use sp_std::vec::Vec;
@@ -965,9 +966,13 @@ where
 			// totalSupply(currency)
 			1101 => {
 				let mut env = env.buf_in_buf_out();
-
-                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
-                env.charge_weight(charged_weight)?;
+				let base_weight = <T as orml_currencies::Config>::WeightInfo::total_supply();
+				// debug_message weight is a good approximation of the additional overhead of going
+				// from contract layer to substrate layer.
+				let overhead = Weight::from_ref_time(
+					<T as pallet_contracts::Config>::Schedule::get().host_fn_weights.debug_message.ref_time(),
+				);
+				let charged_weight = env.charge_weight(base_weight.saturating_add(overhead))?;
 				trace!(
 					 target: "runtime",
 					 "[ChainExtension]|call|totalSupply / charge_weight:{:?}",
@@ -998,8 +1003,13 @@ where
 			// balanceOf(currency, account)
 			1102 => {
 				let mut env = env.buf_in_buf_out();
-                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
-                env.charge_weight(charged_weight)?;
+				let base_weight = <T as orml_currencies::Config>::WeightInfo::balance_of();
+				// debug_message weight is a good approximation of the additional overhead of going
+				// from contract layer to substrate layer.
+				let overhead = Weight::from_ref_time(
+					<T as pallet_contracts::Config>::Schedule::get().host_fn_weights.debug_message.ref_time(),
+				);
+				let charged_weight = env.charge_weight(base_weight.saturating_add(overhead))?;
 				trace!(
 					 target: "runtime",
 					 "[ChainExtension]|call|balanceOf / charge_weight:{:?}",
@@ -1038,8 +1048,14 @@ where
 				let caller = ext.caller().clone();
 
 				let mut env = env.buf_in_buf_out();
-                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
-                env.charge_weight(charged_weight)?;
+				let base_weight =
+					<T as orml_currencies::Config>::WeightInfo::transfer_non_native_currency();
+				// debug_message weight is a good approximation of the additional overhead of going
+				// from contract layer to substrate layer.
+				let overhead = Weight::from_ref_time(
+					<T as pallet_contracts::Config>::Schedule::get().host_fn_weights.debug_message.ref_time(),
+				);
+				let charged_weight = env.charge_weight(base_weight.saturating_add(overhead))?;
 				trace!(
 					 target: "runtime",
 					 "[ChainExtension]|call|transfer / charge_weight:{:?}",
@@ -1075,8 +1091,14 @@ where
 			// allowance(currency, owner, spender)
 			1104 => {
 				let mut env = env.buf_in_buf_out();
-                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
-                env.charge_weight(charged_weight)?;
+				let base_weight =
+					<T as orml_currencies_allowance_extension::Config>::WeightInfo::allowance();
+				// debug_message weight is a good approximation of the additional overhead of going
+				// from contract layer to substrate layer.
+				let overhead = Weight::from_ref_time(
+					<T as pallet_contracts::Config>::Schedule::get().host_fn_weights.debug_message.ref_time(),
+				);
+				let charged_weight = env.charge_weight(base_weight.saturating_add(overhead))?;
 				trace!(
 					 target: "runtime",
 					 "[ChainExtension]|call|allowance / charge_weight:{:?}",
@@ -1115,8 +1137,14 @@ where
 				let caller = ext.caller().clone();
 
 				let mut env = env.buf_in_buf_out();
-                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
-                env.charge_weight(charged_weight)?;
+				let base_weight =
+					<T as orml_currencies_allowance_extension::Config>::WeightInfo::approve();
+				// debug_message weight is a good approximation of the additional overhead of going
+				// from contract layer to substrate layer.
+				let overhead = Weight::from_ref_time(
+					<T as pallet_contracts::Config>::Schedule::get().host_fn_weights.debug_message.ref_time(),
+				);
+				let charged_weight = env.charge_weight(base_weight.saturating_add(overhead))?;
 				trace!(
 					 target: "runtime",
 					 "[ChainExtension]|call|approve / charge_weight:{:?}",
@@ -1155,8 +1183,14 @@ where
 				let caller = ext.caller().clone();
 
 				let mut env = env.buf_in_buf_out();
-                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
-                env.charge_weight(charged_weight)?;
+				let base_weight =
+					<T as orml_currencies::Config>::WeightInfo::transfer_non_native_currency();
+				// debug_message weight is a good approximation of the additional overhead of going
+				// from contract layer to substrate layer.
+				let overhead = Weight::from_ref_time(
+					<T as pallet_contracts::Config>::Schedule::get().host_fn_weights.debug_message.ref_time(),
+				);
+				let charged_weight = env.charge_weight(base_weight.saturating_add(overhead))?;
 				trace!(
 					 target: "runtime",
 					 "[ChainExtension]|call|transfer_from / charge_weight:{:?}",
@@ -1195,8 +1229,13 @@ where
 			// get_coin_info(blockchain, symbol)
 			1200 => {
 				let mut env = env.buf_in_buf_out();
-                let charged_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
-                env.charge_weight(charged_weight)?;
+				let base_weight = <T as dia_oracle::Config>::WeightInfo::get_coin_info();
+				// debug_message weight is a good approximation of the additional overhead of going
+				// from contract layer to substrate layer.
+				let overhead = Weight::from_ref_time(
+					<T as pallet_contracts::Config>::Schedule::get().host_fn_weights.debug_message.ref_time(),
+				);
+				let charged_weight = env.charge_weight(base_weight.saturating_add(overhead))?;
 				trace!(
 					 target: "runtime",
 					 "[ChainExtension]|call|get_coin_info / charge_weight:{:?}",

@@ -52,7 +52,12 @@ use frame_support::{
 	},
 	PalletId,
 };
-use frame_system::{limits::{BlockLength, BlockWeights}, EnsureRoot, EnsureSigned};
+
+use frame_system::{
+	limits::{BlockLength, BlockWeights},
+	EnsureRoot, EnsureSigned,
+};
+
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
@@ -243,7 +248,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 15,
+	spec_version: 18,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 26,
@@ -1343,10 +1348,33 @@ impl staking::Config for Runtime {
 	type CurrencyId = CurrencyId;
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub struct DataFeederBenchmark<K, V, A>(PhantomData<(K, V, A)>);
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<K, V, A> orml_traits::DataFeeder<K, V, A> for DataFeederBenchmark<K, V, A> {
+	fn feed_value(_who: A, _key: K, _value: V) -> DispatchResult {
+		Ok(())
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<K, V, A> orml_traits::DataProvider<K, V> for DataFeederBenchmark<K, V, A> {
+	fn get(_key: &K) -> Option<V> {
+		None
+	}
+}
+
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
 	type DataProvider = DataProviderImpl;
+	#[cfg(feature = "runtime-benchmarks")]
+	type DataFeedProvider = DataFeederBenchmark<
+		oracle::OracleKey,
+		oracle::TimestampedValue<UnsignedFixedPoint, Moment>,
+		Self::AccountId,
+	>;
 }
 
 parameter_types! {
@@ -1524,6 +1552,7 @@ extern crate frame_benchmarking;
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
 	define_benchmarks!(
+		[frame_benchmarking, BaselineBench::<Runtime>]
 		[frame_system, SystemBench::<Runtime>]
 		[pallet_balances, Balances]
 		[pallet_session, SessionBench::<Runtime>]
@@ -1538,6 +1567,7 @@ mod benches {
 		[replace, Replace]
 		[stellar_relay, StellarRelay]
 		[vault_registry, VaultRegistry]
+		[pallet_xcm, PolkadotXcm]
 	);
 }
 
@@ -1767,10 +1797,11 @@ impl_runtime_apis! {
 			Vec<frame_benchmarking::BenchmarkList>,
 			Vec<frame_support::traits::StorageInfo>,
 		) {
-			use frame_benchmarking::{Benchmarking, BenchmarkList};
+			use frame_benchmarking::{baseline, Benchmarking, BenchmarkList};
 			use frame_support::traits::StorageInfoTrait;
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
+			use baseline::Pallet as BaselineBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
 			list_benchmarks!(list, extra);
@@ -1782,10 +1813,13 @@ impl_runtime_apis! {
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+			   use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch, TrackedStorageKey};
 
 			use frame_system_benchmarking::Pallet as SystemBench;
+			use baseline::Pallet as BaselineBench;
+
 			impl frame_system_benchmarking::Config for Runtime {}
+			impl baseline::Config for Runtime {}
 
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 			impl cumulus_pallet_session_benchmarking::Config for Runtime {}

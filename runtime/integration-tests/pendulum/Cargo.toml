@@ -39,3 +39,10 @@ pendulum-runtime = { path = "../../pendulum"}
 statemint-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.40" }
 
 cumulus-pallet-xcmp-queue = {git = "https://github.com/paritytech/cumulus",  branch = "polkadot-v0.9.40"}
+
+[features]
+default = []
+
+runtime-benchmarks = [
+	"statemint-runtime/runtime-benchmarks"
+]

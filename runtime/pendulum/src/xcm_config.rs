@@ -19,10 +19,10 @@ use runtime_common::parachains::polkadot::statemint;
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom,
-	ConvertedConcreteId, EnsureXcmOrigin, FixedWeightBounds, FungiblesAdapter, NoChecking,
-	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
+	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
+	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
@@ -329,7 +329,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
 	type SubscriptionService = PolkadotXcm;
 	type PalletInstancesInfo = crate::AllPalletsWithSystem;
-	type MaxAssetsIntoHolding = ConstU32<64>;
+	type MaxAssetsIntoHolding = ConstU32<8>;
 	type FeeManager = ();
 	type MessageExporter = ();
 	type UniversalAliases = Nothing;
@@ -353,7 +353,7 @@ impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type CurrencyMatcher = ();
-	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, ()>;
+	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type XcmRouter = XcmRouter;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	//type XcmExecuteFilter = Everything;
@@ -372,11 +372,16 @@ impl pallet_xcm::Config for Runtime {
 	// ^ Override for AdvertisedXcmVersion default
 	type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
 	type TrustedLockers = ();
-	type SovereignAccountOf = ();
+	type SovereignAccountOf = LocationToAccountId;
 	type MaxLockers = ConstU32<8>;
-	type WeightInfo = pallet_xcm::TestWeightInfo;
+	type WeightInfo = crate::weights::pallet_xcm::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ();
+	type ReachableDest = ReachableDest;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+parameter_types! {
+	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
 }
 
 parameter_type_with_key! {

@@ -6,28 +6,36 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::marker::PhantomData;
 
-use spacewalk_primitives::{Asset, CurrencyId};
+use spacewalk_primitives::{CurrencyId};
 
 use zenlink_protocol::{
 	AssetId, Config as ZenlinkConfig, GenerateLpAssetId, LocalAssetHandler, ZenlinkMultiAssets,
-	LOCAL, NATIVE,
 };
 pub type ZenlinkAssetId = zenlink_protocol::AssetId;
 
 use runtime_common::{zenlink, zenlink::*};
+
+pub struct ZenlinkLPGenerate<T>(PhantomData<T>);
+impl<T: ZenlinkConfig> GenerateLpAssetId<ZenlinkAssetId> for ZenlinkLPGenerate<T> {
+	fn generate_lp_asset_id(
+		asset_0: ZenlinkAssetId,
+		asset_1: ZenlinkAssetId,
+	) -> Option<ZenlinkAssetId> {
+		zenlink::generate_lp_asset_id(asset_0, asset_1, ParachainInfo::parachain_id().into())
+	}
+}
 
 parameter_types! {
 	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub ZenlinkRegisteredParaChains: Vec<(MultiLocation, u128)> = vec![];
 }
-
 impl ZenlinkConfig for Runtime {
 	type RuntimeEvent = super::RuntimeEvent;
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
 	type AssetId = AssetId;
-	type LpGenerate = SpacewalkPairLPGenerate<Self>;
+	type LpGenerate = ZenlinkLPGenerate<Self>;
 	type TargetChains = ZenlinkRegisteredParaChains;
 	type SelfParaId = SelfParaId;
 	type WeightInfo = ();
@@ -36,16 +44,6 @@ impl ZenlinkConfig for Runtime {
 type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Tokens>>;
 
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
-
-pub struct SpacewalkPairLPGenerate<T>(PhantomData<T>);
-impl<T: ZenlinkConfig> GenerateLpAssetId<ZenlinkAssetId> for SpacewalkPairLPGenerate<T> {
-	fn generate_lp_asset_id(
-		asset_0: ZenlinkAssetId,
-		asset_1: ZenlinkAssetId,
-	) -> Option<ZenlinkAssetId> {
-		zenlink::generate_lp_asset_id(asset_0, asset_1, ParachainInfo::parachain_id().into())
-	}
-}
 
 impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
 where

@@ -6,7 +6,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-mod currency;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
@@ -14,8 +13,8 @@ use crate::zenlink::*;
 use xcm::v3::MultiLocation;
 use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
-pub use currency::CurrencyId as PendulumCurrencyId;
 pub use parachain_staking::InflationInfo;
+pub use spacewalk_primitives::CurrencyId as PendulumCurrencyId;
 
 use codec::Encode;
 
@@ -65,9 +64,9 @@ use dia_oracle::DiaOracle;
 
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
-use currency::CurrencyId;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{currency::MutationHooks, parameter_type_with_key};
+use spacewalk_primitives::CurrencyId;
 
 const CONTRACTS_DEBUG_OUTPUT: bool = true;
 

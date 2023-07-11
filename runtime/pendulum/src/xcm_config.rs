@@ -1,5 +1,5 @@
 use super::{
-	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
+	AccountId, Balance, Balances, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
 	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
 };
 use crate::ConstU32;
@@ -17,6 +17,7 @@ use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use runtime_common::parachains::polkadot::statemint;
 use sp_runtime::traits::Convert;
+use spacewalk_primitives::CurrencyId;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,

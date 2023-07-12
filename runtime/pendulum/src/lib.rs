@@ -14,7 +14,6 @@ use xcm::v3::MultiLocation;
 use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
 pub use parachain_staking::InflationInfo;
-pub use spacewalk_primitives::CurrencyId as PendulumCurrencyId;
 
 use codec::Encode;
 
@@ -27,6 +26,8 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, SaturatedConversion,
 };
+
+pub use spacewalk_primitives::CurrencyId;
 
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -66,7 +67,6 @@ use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{currency::MutationHooks, parameter_type_with_key};
-use spacewalk_primitives::CurrencyId;
 
 const CONTRACTS_DEBUG_OUTPUT: bool = true;
 

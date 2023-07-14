@@ -6,6 +6,8 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::marker::PhantomData;
 
+use spacewalk_primitives::{CurrencyId};
+
 use zenlink_protocol::{
 	AssetId, Config as ZenlinkConfig, GenerateLpAssetId, LocalAssetHandler, ZenlinkMultiAssets,
 };

@@ -59,8 +59,8 @@ use frame_system::{
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	chain_ext, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
-	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
+	asset_registry, chain_ext, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash,
+	Index, PoolId, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -364,7 +364,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::VaultRegistry(_) |
 			RuntimeCall::VaultRewards(_) |
 			RuntimeCall::Farming(_) |
-			RuntimeCall::TokenAllowance(_) => true,
+			RuntimeCall::TokenAllowance(_) |
+			RuntimeCall::AssetRegistry(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -820,6 +821,16 @@ impl orml_currencies::Config for Runtime {
 	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type WeightInfo = ();
+}
+
+impl orml_asset_registry::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type CustomMetadata = asset_registry::CustomMetadata;
+	type AssetId = CurrencyId;
+	type AuthorityOrigin = asset_registry::AssetAuthority<RuntimeOrigin>;
+	type AssetProcessor = asset_registry::CustomAssetProcessor;
+	type Balance = Balance;
+	type WeightInfo = weights::orml_asset_registry::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -1540,6 +1551,7 @@ construct_runtime!(
 		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
 
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
+		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
 	}
 );
 

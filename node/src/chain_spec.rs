@@ -727,6 +727,7 @@ fn foucoco_genesis(
 	);
 
 	foucoco_runtime::GenesisConfig {
+		asset_registry: Default::default(),
 		system: foucoco_runtime::SystemConfig {
 			code: foucoco_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")

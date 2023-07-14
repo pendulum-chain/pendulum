@@ -11,30 +11,39 @@ edition = "2021"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-# Substrate
-parity-scale-codec = {version = "3.1.5", default-features = false, features = ["derive"]}
-scale-info = {version = "2.1.1", default-features = false, features = ["derive"]}
+parity-scale-codec = { version = "3.1.5", default-features = false, features = ["derive"] }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+
+frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
+frame-system = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 sp-consensus-aura = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev =  "06873f16c4a7ab884e4759d98b7b86c712e0c0ae"}
+
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.40" }
+
 dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.40" }
+
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "06873f16c4a7ab884e4759d98b7b86c712e0c0ae" }
 
 [features]
 default = [
-	"std",
+    "std",
 ]
 
 std = [
-	"sp-consensus-aura/std",
-	"sp-runtime/std",
-	"sp-core/std",
-	"spacewalk-primitives/std",
-	"parity-scale-codec/std",
-	"scale-info/std",
-	"dia-oracle/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "frame-support/std",
+    "frame-system/std",
+    "sp-runtime/std",
+    "sp-consensus-aura/std",
+    "sp-core/std",
+    "orml-traits/std",
+    "dia-oracle/std",
+    "spacewalk-primitives/std",
 ]
 
 runtime-benchmarks = [
-	"sp-runtime/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
 ]

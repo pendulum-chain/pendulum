@@ -5,6 +5,7 @@ use sp_runtime::{
 	DispatchError, MultiSignature,
 };
 
+pub mod asset_registry;
 pub mod chain_ext;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.

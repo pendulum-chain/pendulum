@@ -18,7 +18,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", default-features
 sp-consensus-aura = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev =  "daf395f6201a834629f6abad77e062d8aa554f63"}
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev =  "ae95aa32f3cff47c5ff26d27af81540569bf81d3"}
 dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.40" }
 zenlink-protocol = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.40-protocol" }
 

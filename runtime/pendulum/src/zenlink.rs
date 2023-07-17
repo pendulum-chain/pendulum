@@ -6,24 +6,36 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::marker::PhantomData;
 
+use spacewalk_primitives::CurrencyId;
+
 use zenlink_protocol::{
-	AssetId, Config as ZenlinkConfig, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets, LOCAL,
-	NATIVE,
+	AssetId, Config as ZenlinkConfig, GenerateLpAssetId, LocalAssetHandler, ZenlinkMultiAssets,
 };
-pub type ZenlinkAssetId = AssetId;
+pub type ZenlinkAssetId = zenlink_protocol::AssetId;
+
+use runtime_common::{zenlink, zenlink::*};
+
+pub struct ZenlinkLPGenerate<T>(PhantomData<T>);
+impl<T: ZenlinkConfig> GenerateLpAssetId<ZenlinkAssetId> for ZenlinkLPGenerate<T> {
+	fn generate_lp_asset_id(
+		asset_0: ZenlinkAssetId,
+		asset_1: ZenlinkAssetId,
+	) -> Option<ZenlinkAssetId> {
+		zenlink::generate_lp_asset_id(asset_0, asset_1, ParachainInfo::parachain_id().into())
+	}
+}
 
 parameter_types! {
 	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub ZenlinkRegisteredParaChains: Vec<(MultiLocation, u128)> = vec![];
 }
-
 impl ZenlinkConfig for Runtime {
 	type RuntimeEvent = super::RuntimeEvent;
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
 	type AssetId = AssetId;
-	type LpGenerate = PairLpGenerate<Self>;
+	type LpGenerate = ZenlinkLPGenerate<Self>;
 	type TargetChains = ZenlinkRegisteredParaChains;
 	type SelfParaId = SelfParaId;
 	type WeightInfo = ();
@@ -38,7 +50,9 @@ where
 	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 {
 	fn local_balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
-		if let Ok(currency_id) = asset_id.try_into() {
+		if let Ok(currency_id) =
+			zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into())
+		{
 			return TryInto::<AssetBalance>::try_into(Local::free_balance(currency_id, &who))
 				.unwrap_or_default()
 		}
@@ -46,7 +60,9 @@ where
 	}
 
 	fn local_total_supply(asset_id: ZenlinkAssetId) -> AssetBalance {
-		if let Ok(currency_id) = asset_id.try_into() {
+		if let Ok(currency_id) =
+			zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into())
+		{
 			return TryInto::<AssetBalance>::try_into(Local::total_issuance(currency_id))
 				.unwrap_or_default()
 		}
@@ -54,8 +70,7 @@ where
 	}
 
 	fn local_is_exists(asset_id: ZenlinkAssetId) -> bool {
-		let currency_id: Result<CurrencyId, ()> = asset_id.try_into();
-		match currency_id {
+		match zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into()) {
 			Ok(_) => true,
 			Err(_) => false,
 		}
@@ -67,7 +82,9 @@ where
 		target: &AccountId,
 		amount: AssetBalance,
 	) -> DispatchResult {
-		if let Ok(currency_id) = asset_id.try_into() {
+		if let Ok(currency_id) =
+			zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into())
+		{
 			Local::transfer(
 				currency_id,
 				&origin,
@@ -86,7 +103,9 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		if let Ok(currency_id) = asset_id.try_into() {
+		if let Ok(currency_id) =
+			zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into())
+		{
 			Local::deposit(
 				currency_id,
 				&origin,
@@ -106,7 +125,9 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		if let Ok(currency_id) = asset_id.try_into() {
+		if let Ok(currency_id) =
+			zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into())
+		{
 			Local::withdraw(
 				currency_id,
 				&origin,
@@ -119,44 +140,5 @@ where
 		}
 
 		Ok(amount)
-	}
-}
-
-impl TryFrom<CurrencyId> for ZenlinkAssetId {
-	type Error = ();
-
-	fn try_from(currency_id: CurrencyId) -> Result<Self, Self::Error> {
-		let para_chain_id: u32 = ParachainInfo::parachain_id().into();
-		match currency_id {
-			CurrencyId::Native =>
-				Ok(ZenlinkAssetId { chain_id: para_chain_id, asset_type: NATIVE, asset_index: 0 }),
-			CurrencyId::XCM(xcm) => Ok(ZenlinkAssetId {
-				chain_id: para_chain_id,
-				asset_type: LOCAL,
-				asset_index: xcm as u64,
-			}),
-		}
-	}
-}
-
-impl TryFrom<ZenlinkAssetId> for CurrencyId {
-	type Error = ();
-	fn try_from(asset_id: ZenlinkAssetId) -> Result<Self, Self::Error> {
-		let para_chain_id: u32 = ParachainInfo::parachain_id().into();
-		if asset_id.chain_id != para_chain_id {
-			return Err(())
-		}
-
-		match asset_id.asset_type {
-			NATIVE => Ok(CurrencyId::Native),
-			LOCAL => {
-				let foreign_currency_id_option = asset_id.asset_index.try_into();
-				match foreign_currency_id_option {
-					Ok(foreign_currency_id) => Ok(CurrencyId::XCM(foreign_currency_id)),
-					Err(_) => Err(()),
-				}
-			},
-			_ => Err(()),
-		}
 	}
 }

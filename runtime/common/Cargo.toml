@@ -24,8 +24,9 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.40" }
 
 dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.40" }
+zenlink-protocol = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.40-protocol" }
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "06873f16c4a7ab884e4759d98b7b86c712e0c0ae" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "ae95aa32f3cff47c5ff26d27af81540569bf81d3" }
 
 [features]
 default = [
@@ -42,6 +43,7 @@ std = [
     "sp-core/std",
     "orml-traits/std",
     "dia-oracle/std",
+	"zenlink-protocol/std",
     "spacewalk-primitives/std",
 ]
 

@@ -25,11 +25,11 @@ jobs:
           sudo apt-get install -y protobuf-compiler libprotobuf-dev
 
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
         # Steps taken from https://github.com/actions/cache/blob/master/examples.md#rust---cargo
       - name: Cache cargo registry
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry

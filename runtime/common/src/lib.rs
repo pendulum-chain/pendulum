@@ -7,6 +7,8 @@ use sp_runtime::{
 
 pub mod asset_registry;
 pub mod chain_ext;
+pub mod stellar;
+pub mod zenlink;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;

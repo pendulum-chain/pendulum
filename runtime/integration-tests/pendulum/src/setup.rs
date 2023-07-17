@@ -1,6 +1,6 @@
 use crate::{PENDULUM_ID, STATEMINT_ID};
 use frame_support::traits::GenesisBuild;
-use pendulum_runtime::{PendulumCurrencyId, Runtime, System};
+use pendulum_runtime::{CurrencyId, Runtime, System};
 use polkadot_core_primitives::{AccountId, Balance};
 
 pub fn units(amount: Balance) -> Balance {
@@ -12,7 +12,7 @@ pub const BOB: [u8; 32] = [5u8; 32];
 pub const INITIAL_BALANCE: u128 = 1_000_000_000;
 
 pub struct ExtBuilderPendulum {
-	balances: Vec<(AccountId, PendulumCurrencyId, Balance)>,
+	balances: Vec<(AccountId, CurrencyId, Balance)>,
 	parachain_id: u32,
 }
 
@@ -23,7 +23,7 @@ impl Default for ExtBuilderPendulum {
 }
 
 impl ExtBuilderPendulum {
-	pub fn balances(mut self, balances: Vec<(AccountId, PendulumCurrencyId, Balance)>) -> Self {
+	pub fn balances(mut self, balances: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
 		self.balances = balances;
 		self
 	}
@@ -45,7 +45,7 @@ impl ExtBuilderPendulum {
 		.unwrap();
 
 		orml_tokens::GenesisConfig::<Runtime> {
-			balances: vec![(AccountId::from(BOB), PendulumCurrencyId::XCM(0), units(100))],
+			balances: vec![(AccountId::from(BOB), CurrencyId::XCM(0), units(100))],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

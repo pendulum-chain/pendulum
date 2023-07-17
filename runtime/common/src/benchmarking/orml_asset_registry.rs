@@ -2,7 +2,6 @@ use frame_benchmarking::v2::benchmarks;
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use orml_asset_registry::AssetMetadata;
-use primitives::CustomMetadata;
 use sp_std::{vec, vec::Vec};
 use spacewalk_primitives::{CurrencyId, CustomMetadata};
 use xcm::{
@@ -70,7 +69,7 @@ pub mod benchmarks {
 		#[extrinsic_call]
 		update_asset(
 			RawOrigin::Root,
-			1,
+			CurrencyId::Native,
 			Some(123),
 			Some(vec![b'b', 128]),
 			Some(vec![b'b', 128]),

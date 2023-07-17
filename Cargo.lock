@@ -9836,6 +9836,7 @@ name = "runtime-common"
 version = "0.1.0"
 dependencies = [
  "dia-oracle",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "orml-asset-registry",
@@ -9845,7 +9846,9 @@ dependencies = [
  "sp-consensus-aura",
  "sp-core",
  "sp-runtime",
+ "sp-std",
  "spacewalk-primitives",
+ "xcm",
  "zenlink-protocol",
 ]
 

@@ -6,7 +6,7 @@ use crate::ConstU32;
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
-	traits::{Contains, Everything, Nothing},
+	traits::{Everything, Nothing},
 };
 use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key};
 use pallet_xcm::XcmPassthrough;
@@ -21,7 +21,7 @@ use xcm_builder::{
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
 use xcm_executor::{
-	traits::{JustTry, ShouldExecute, WithOriginFilter},
+	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
 
@@ -149,47 +149,6 @@ match_types! {
 		MultiLocation { parents: 1, interior: Here } |
 		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }
 	};
-}
-
-/// A call filter for the XCM Transact instruction. This is a temporary measure until we properly
-/// account for proof size weights.
-///
-/// Calls that are allowed through this filter must:
-/// 1. Have a fixed weight;
-/// 2. Cannot lead to another call being made
-/// 3. Have a defined proof size weight, e.g. no unbounded vecs in call parameters. - TODO: shouldn't max XCM weight handle this?
-pub struct SafeCallFilter;
-
-impl SafeCallFilter {
-	// 1. RuntimeCall::Multisig(..) - contains `Vec` in argument so we should avoid this
-	// 2. RuntimeCall::EVM(..) & RuntimeCall::Ethereum(..) have to be prohibited since we cannot measure PoV size properly
-	// 3. RuntimeCall::Contracts(..) it should be safe to allow for such calls but perhaps it's better to do more delibrate testing on Shibuya/RocStar.
-
-	/// Checks whether the base (non-composite) call is allowed to be executed via `Transact` XCM instruction.
-	pub fn allow_base_call(call: &RuntimeCall) -> bool {
-		match call {
-			RuntimeCall::System(..) |
-			RuntimeCall::Balances(..) |
-			RuntimeCall::PolkadotXcm(..) |
-			RuntimeCall::XcmpQueue(..) |
-			RuntimeCall::DmpQueue(..) |
-			RuntimeCall::Session(..) => true,
-			_ => false,
-		}
-	}
-}
-
-impl Contains<RuntimeCall> for SafeCallFilter {
-	fn contains(call: &RuntimeCall) -> bool {
-		#[cfg(feature = "runtime-benchmarks")]
-		{
-			if matches!(call, RuntimeCall::System(frame_system::Call::remark_with_event { .. })) {
-				return true
-			}
-		}
-
-		Self::allow_base_call(call)
-	}
 }
 
 //TODO: move DenyThenTry to polkadot's xcm module.

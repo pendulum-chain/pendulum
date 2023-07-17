@@ -45,16 +45,6 @@ type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdapt
 
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
-pub struct SpacewalkPairLPGenerate<T>(PhantomData<T>);
-impl<T: ZenlinkConfig> GenerateLpAssetId<ZenlinkAssetId> for SpacewalkPairLPGenerate<T> {
-	fn generate_lp_asset_id(
-		asset_0: ZenlinkAssetId,
-		asset_1: ZenlinkAssetId,
-	) -> Option<ZenlinkAssetId> {
-		zenlink::generate_lp_asset_id(asset_0, asset_1, ParachainInfo::parachain_id().into())
-	}
-}
-
 impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
 where
 	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,

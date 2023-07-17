@@ -255,6 +255,8 @@ runtime-benchmarks = [
 	"replace/runtime-benchmarks",
 	"stellar-relay/runtime-benchmarks",
 	"vault-registry/runtime-benchmarks",
+
+    "runtime-common/runtime-benchmarks"
 ]
 
 try-runtime = [

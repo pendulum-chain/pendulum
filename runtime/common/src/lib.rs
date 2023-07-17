@@ -8,6 +8,9 @@ use sp_runtime::{
 pub mod asset_registry;
 pub mod chain_ext;
 
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
+
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
 

@@ -9837,6 +9837,7 @@ dependencies = [
  "dia-oracle",
  "frame-support",
  "frame-system",
+ "orml-asset-registry",
  "orml-traits",
  "parity-scale-codec",
  "scale-info",

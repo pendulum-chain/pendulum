@@ -269,7 +269,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Contracts(_) |
 			RuntimeCall::ZenlinkProtocol(_) |
 			RuntimeCall::DiaOracleModule(_) |
-			RuntimeCall::VestingManager(_) => true,
+			RuntimeCall::VestingManager(_) |
+			RuntimeCall::AssetRegistry(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}

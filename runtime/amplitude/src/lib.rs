@@ -355,7 +355,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Security(_) |
 			RuntimeCall::StellarRelay(_) |
 			RuntimeCall::VaultRegistry(_) |
-			RuntimeCall::VaultRewards(_) => true,
+			RuntimeCall::VaultRewards(_) |
+			RuntimeCall::AssetRegistry(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}

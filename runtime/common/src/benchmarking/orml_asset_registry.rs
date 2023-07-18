@@ -49,7 +49,7 @@ pub mod benchmarks {
 		let metadata = get_asset_metadata();
 
 		#[extrinsic_call]
-		register_asset(RawOrigin::Root, metadata, None);
+		register_asset(RawOrigin::Root, metadata, Some(CurrencyId::Native));
 	}
 
 	#[benchmark]
@@ -59,7 +59,7 @@ pub mod benchmarks {
 		assert_ok!(orml_asset_registry::Pallet::<T>::register_asset(
 			RawOrigin::Root.into(),
 			metadata,
-			None,
+			Some(CurrencyId::Native),
 		));
 
 		// update values, and make sure to change the actual values in case there is some optimization

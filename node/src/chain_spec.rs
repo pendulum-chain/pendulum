@@ -835,9 +835,9 @@ fn foucoco_genesis(
 		},
 		stellar_relay: foucoco_runtime::StellarRelayConfig::default(),
 		fee: foucoco_runtime::FeeConfig {
-			issue_fee: FixedU128::checked_from_rational(15, 10000).unwrap(), // 0.15%
-			issue_griefing_collateral: FixedU128::checked_from_rational(5, 100000).unwrap(), // 0.005%
-			redeem_fee: FixedU128::checked_from_rational(5, 1000).unwrap(),  // 0.5%
+			issue_fee: FixedU128::checked_from_rational(1, 1000).unwrap(), // 0.1%
+			issue_griefing_collateral: FixedU128::checked_from_rational(5, 1000).unwrap(), // 0.5%
+			redeem_fee: FixedU128::checked_from_rational(1, 1000).unwrap(),  // 0.1%
 			premium_redeem_fee: FixedU128::checked_from_rational(5, 100).unwrap(), // 5%
 			punishment_fee: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%

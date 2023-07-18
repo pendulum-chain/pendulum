@@ -872,15 +872,29 @@ fn foucoco_genesis(
 				),
 			],
 			/* 130% */
-			premium_redeem_threshold: vec![(
-				default_pair(XCM(0)),
-				FixedU128::checked_from_rational(130, 100).unwrap(),
-			)],
+			premium_redeem_threshold: vec![
+				(
+					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
+					FixedU128::checked_from_rational(140, 100).unwrap(),
+				),
+				(
+					get_vault_currency_pair(XCM(0), TESTNET_BRL_CURRENCY_ID),
+					FixedU128::checked_from_rational(140, 100).unwrap(),
+				),
+				(
+					get_vault_currency_pair(XCM(0), TESTNET_TZS_CURRENCY_ID),
+					FixedU128::checked_from_rational(140, 100).unwrap(),
+				),
+				(
+					get_vault_currency_pair(XCM(0), TESTNET_STELLAR_NATIVE_CURRENCY_ID),
+					FixedU128::checked_from_rational(140, 100).unwrap(),
+				),
+			],
 			/* 130% */
 			liquidation_collateral_threshold: vec![
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
-					FixedU128::checked_from_rational(120, 100).unwrap(),
+					FixedU128::checked_from_rational(125, 100).unwrap(),
 				),
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_BRL_CURRENCY_ID),
@@ -892,7 +906,7 @@ fn foucoco_genesis(
 				),
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_STELLAR_NATIVE_CURRENCY_ID),
-					FixedU128::checked_from_rational(120, 100).unwrap(),
+					FixedU128::checked_from_rational(125, 100).unwrap(),
 				),
 			],
 			/* 120% */

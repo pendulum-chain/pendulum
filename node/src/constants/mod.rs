@@ -1,2 +1,2 @@
-pub mod pendulum;
 pub mod amplitude;
+pub mod pendulum;

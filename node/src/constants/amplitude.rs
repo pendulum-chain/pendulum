@@ -30,10 +30,11 @@ pub const INITIAL_AMPLITUDE_VALIDATORS: [&str; 8] = [
 ];
 
 // For Testnet Stellar Native issued by the testnet issuer
-pub const TESTNET_STELLAR_NATIVE_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::StellarNative);
+pub const TESTNET_STELLAR_NATIVE_CURRENCY_ID: CurrencyId =
+	CurrencyId::Stellar(Asset::StellarNative);
 
 // For Testnet USDC issued by the testnet issuer
-pub const TESTNET_USDC_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4{
+pub const TESTNET_USDC_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
 	code: *b"USDC",
 	issuer: [
 		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
@@ -42,7 +43,7 @@ pub const TESTNET_USDC_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::Alph
 });
 
 // For Testnet BRL issued by the testnet issuer
-pub const TESTNET_BRL_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4{
+pub const TESTNET_BRL_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
 	code: *b"BRL\0",
 	issuer: [
 		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
@@ -51,7 +52,7 @@ pub const TESTNET_BRL_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::Alpha
 });
 
 // For Testnet TZS issued by the testnet issuer
-pub const TESTNET_TZS_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4{
+pub const TESTNET_TZS_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
 	code: *b"TZS\0",
 	issuer: [
 		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,

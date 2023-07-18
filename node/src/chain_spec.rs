@@ -801,7 +801,7 @@ fn foucoco_genesis(
 		},
 		issue: foucoco_runtime::IssueConfig {
 			issue_period: foucoco_runtime::DAYS,
-			issue_minimum_transfer_amount: 1000,
+			issue_minimum_transfer_amount: 1_000_000_000,
 			limit_volume_amount: None,
 			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),

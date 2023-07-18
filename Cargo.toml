@@ -9,6 +9,7 @@ members = [
 	"node",
 	"pallets/parachain-staking",
 	"pallets/vesting-manager",
+	"pallets/orml-currencies-allowance-extension",
 	"runtime/common",
 	"runtime/amplitude",
 	"runtime/foucoco",

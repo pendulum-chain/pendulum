@@ -38,7 +38,7 @@ const AMPLITUDE_INITIAL_ISSUANCE: Balance = 200_000_000 * UNIT;
 const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
 const INITIAL_COLLATOR_STAKING: Balance = 10_010 * UNIT;
 
-const OFF_CHAIN_WORKER_ADDRESS = "6m69vWMouLarYCbJGJisVaDDpfNGETkD5hsDWf2T7osW4Cn1";
+const OFF_CHAIN_WORKER_ADDRESS: &str = "6m69vWMouLarYCbJGJisVaDDpfNGETkD5hsDWf2T7osW4Cn1";
 
 const TOKEN_DECIMALS: u32 = 12;
 
@@ -251,9 +251,8 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 
 	let sudo_account =
 		pallet_multisig::Pallet::<foucoco_runtime::Runtime>::multi_account_id(&signatories[..], 3);
-	
-	let offchain_worker_price_feeder =
-		AccountId::from_ss58check(OFF_CHAIN_WORKER_ADDRESS).unwrap();
+
+	let offchain_worker_price_feeder = AccountId::from_ss58check(OFF_CHAIN_WORKER_ADDRESS).unwrap();
 
 	FoucocoChainSpec::from_genesis(
 		// Name
@@ -848,10 +847,7 @@ fn foucoco_genesis(
 			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
-			minimum_collateral_vault: vec![
-				(XCM(0), 3_000_000_000_000),
-				(CurrencyId::Native, 0),
-			],
+			minimum_collateral_vault: vec![(XCM(0), 3_000_000_000_000), (CurrencyId::Native, 0)],
 			punishment_delay: foucoco_runtime::DAYS * 2,
 			secure_collateral_threshold: vec![
 				(

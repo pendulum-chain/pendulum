@@ -1,9 +1,5 @@
 use crate::*;
-use frame_support::{
-	dispatch::RawOrigin,
-	sp_std::marker::PhantomData,
-	traits::{EnsureOrigin, EnsureOriginWithArg},
-};
+use frame_support::traits::AsEnsureOriginWithArg;
 use frame_system::EnsureRoot;
 use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -37,18 +33,4 @@ impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for Cust
 	}
 }
 
-pub struct AssetAuthority<Origin>(PhantomData<Origin>);
-impl<Origin: Into<Result<RawOrigin<AccountId>, Origin>> + From<RawOrigin<AccountId>>>
-	EnsureOriginWithArg<Origin, Option<CurrencyId>> for AssetAuthority<Origin>
-{
-	type Success = ();
-
-	fn try_origin(origin: Origin, _asset_id: &Option<CurrencyId>) -> Result<Self::Success, Origin> {
-		EnsureRoot::try_origin(origin)
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn try_successful_origin(_: &Option<CurrencyId>) -> Result<Origin, ()> {
-		EnsureRoot::try_successful_origin()
-	}
-}
+pub type AssetAuthority = AsEnsureOriginWithArg<EnsureRoot<AccountId>>;

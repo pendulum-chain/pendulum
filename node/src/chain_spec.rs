@@ -828,6 +828,7 @@ fn foucoco_genesis(
 			max_delay: 604_800_000,
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(0)),
+				Key::ExchangeRate(CurrencyId::Native),
 				Key::ExchangeRate(TESTNET_STELLAR_NATIVE_CURRENCY_ID),
 				Key::ExchangeRate(TESTNET_USDC_CURRENCY_ID),
 				Key::ExchangeRate(TESTNET_BRL_CURRENCY_ID),

@@ -15,6 +15,8 @@ use sp_runtime::{
 };
 use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
 
+use crate::constants::amplitude::*;
+
 use crate::constants::pendulum;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
@@ -33,34 +35,6 @@ pub type DevelopmentChainSpec =
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
-const AMPLITUDE_PARACHAIN_ID: u32 = 2124;
-const AMPLITUDE_INITIAL_ISSUANCE: Balance = 200_000_000 * UNIT;
-const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
-const INITIAL_COLLATOR_STAKING: Balance = 10_010 * UNIT;
-
-const OFF_CHAIN_WORKER_ADDRESS: &str = "6m69vWMouLarYCbJGJisVaDDpfNGETkD5hsDWf2T7osW4Cn1";
-
-const TOKEN_DECIMALS: u32 = 12;
-
-const INITIAL_AMPLITUDE_SUDO_SIGNATORIES: [&str; 5] = [
-	"6nJwMD3gk36fe6pMRL2UpbwAEjDdjjxdngQGShe753pyAvCT",
-	"6i4xDEE1Q2Bv8tnJtgD4jse4YTAzzCwCJVUehRQ93hCqKp8f",
-	"6n62KZWvmZHgeyEXTvQFmoHRMqjKfFWvQVsApkePekuNfek5",
-	"6kwxQBRKMadrY9Lq3K8gZXkw1UkjacpqYhcqvX3AqmN9DofF",
-	"6kKHwcpCVC18KepwvdMSME8Q7ZTNr1RoRUrFDH9AdAmhL3Pt",
-];
-
-const INITIAL_AMPLITUDE_VALIDATORS: [&str; 8] = [
-	"6mTATq7Ug9RPk4s8aMv5H7WVZ7RvwrJ1JitbYMXWPhanzqiv",
-	"6n8WiWqjEB8nCNRo5mxXc89FqhuMd2dgXNSrzuPxoZSnatnL",
-	"6ic56zZmjqo746yifWzcNxxzxLe3pRo8WNitotniUQvgKnyU",
-	"6gvFApEyYj4EavJP26mwbVu7YxFBYZ9gaJFB7gv5gA6vNfze",
-	"6mz3ymVAsfHotEhHphVRvLLBhMZ2frnwbuvW5QZiMRwJghxE",
-	"6mpD3zcHcUBkxCjTsGg2tMTfmQZdXLVYZnk4UkN2XAUTLkRe",
-	"6mGcZntk59RK2JfxfdmprgDJeByVUgaffMQYkp1ZeoEKeBJA",
-	"6jq7obxC7AxhWeJNzopwYidKNNe48cLrbGSgB2zs2SuRTWGA",
-];
-
 // For mainnet USDC issued by centre.io
 const MAINNET_DEFAULT_WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
 	code: *b"USDC",
@@ -69,38 +43,6 @@ const MAINNET_DEFAULT_WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asse
 		190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
 	],
 });
-
-// For Testnet Stellar Native issued by the testnet issuer
-const TESTNET_STELLAR_NATIVE_CURRENCY_ID: CurrencyId = CurrencyId::Stellar::StellarNative;
-
-// For Testnet USDC issued by the testnet issuer
-const TESTNET_USDC_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4(
-	*b"USDC",
-	[
-		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
-		108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
-	],
-);
-
-// For Testnet BRL issued by the testnet issuer
-const TESTNET_BRL_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4(
-	*b"BRL\0",
-	[
-		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
-		108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
-	],
-);
-
-// For Testnet BRL issued by the testnet issuer
-const TESTNET_TZS_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4(
-	*b"TZS\0",
-	[
-		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
-		108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
-	],
-);
-
-const FOUCOCO_PARACHAIN_ID: u32 = 2124;
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -265,7 +207,7 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 				// initial collators.
 				invulnerables.clone(),
 				signatories.clone(),
-				vec![sudo_account.clone(), offchain_worker_price_feeder],
+				vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
 				sudo_account.clone(),
 				FOUCOCO_PARACHAIN_ID.into(),
 				false,

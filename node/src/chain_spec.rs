@@ -747,6 +747,10 @@ fn foucoco_genesis(
 		Perquintill::from_percent(9),
 	);
 
+	let account_id = AccountId::from_ss58check("6m69vWMouLarYCbJGJisVaDDpfNGETkD5hsDWf2T7osW4Cn1").unwrap();
+	let mut authorized_accounts = authorized_oracles.clone();
+	authorized_accounts.push(account_id);
+
 	foucoco_runtime::GenesisConfig {
 		system: foucoco_runtime::SystemConfig {
 			code: foucoco_runtime::WASM_BINARY
@@ -869,12 +873,16 @@ fn foucoco_genesis(
 		},
 		nomination: foucoco_runtime::NominationConfig { is_nomination_enabled: false },
 		dia_oracle_module: foucoco_runtime::DiaOracleModuleConfig {
-			authorized_accounts: authorized_oracles,
+			authorized_accounts: authorized_accounts,
 			supported_currencies: vec![foucoco_runtime::AssetId::new(
 				b"Kusama".to_vec(),
 				b"KSM".to_vec(),
+				b"BRL".to_vec(),
+				b"USD".to_vec(),
+				b"TZS".to_vec(),
+				b"MXN".to_vec(),
 			)],
-			batching_api: b"http://dia-00.pendulumchain.tech:8070/currencies".to_vec(),
+			batching_api: b"https://dia-00.pendulumchain.tech/currencies".to_vec(),
 			coin_infos_map: vec![],
 		},
 	}

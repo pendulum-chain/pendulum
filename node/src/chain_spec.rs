@@ -867,7 +867,7 @@ fn foucoco_genesis(
 					FixedU128::checked_from_rational(160, 100).unwrap(),
 				),
 			],
-			/* 130% */
+			/* 140% */
 			premium_redeem_threshold: vec![
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
@@ -886,7 +886,7 @@ fn foucoco_genesis(
 					FixedU128::checked_from_rational(140, 100).unwrap(),
 				),
 			],
-			/* 130% */
+			/* 125% */
 			liquidation_collateral_threshold: vec![
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
@@ -922,15 +922,14 @@ fn foucoco_genesis(
 		},
 		nomination: foucoco_runtime::NominationConfig { is_nomination_enabled: false },
 		dia_oracle_module: foucoco_runtime::DiaOracleModuleConfig {
-			authorized_accounts,
-			supported_currencies: vec![foucoco_runtime::AssetId::new(
-				b"Kusama".to_vec(),
-				b"KSM".to_vec(),
-				b"BRL".to_vec(),
-				b"USD".to_vec(),
-				b"TZS".to_vec(),
-				b"MXN".to_vec(),
-			)],
+			authorized_accounts: authorized_oracles,
+			supported_currencies: vec![
+				foucoco_runtime::AssetId::new(b"Kusama".to_vec(),b"KSM".to_vec()),
+				foucoco_runtime::AssetId::new(b"BRL".to_vec(),b"BRL".to_vec()),
+				foucoco_runtime::AssetId::new(b"USD".to_vec(),b"USD".to_vec()),
+				foucoco_runtime::AssetId::new(b"TZS".to_vec(),b"TZS".to_vec()),
+				foucoco_runtime::AssetId::new(b"MXN".to_vec(),b"MXN".to_vec()),
+			],
 			batching_api: b"https://dia-00.pendulumchain.tech/currencies".to_vec(),
 			coin_infos_map: vec![],
 		},

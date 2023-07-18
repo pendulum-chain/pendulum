@@ -819,7 +819,7 @@ fn foucoco_genesis(
 		},
 		replace: foucoco_runtime::ReplaceConfig {
 			replace_period: foucoco_runtime::DAYS,
-			replace_minimum_transfer_amount: 1000,
+			replace_minimum_transfer_amount: 1_000_000_000,
 		},
 		security: foucoco_runtime::SecurityConfig {
 			initial_status: if start_shutdown {

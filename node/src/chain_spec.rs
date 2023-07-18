@@ -810,7 +810,7 @@ fn foucoco_genesis(
 		},
 		redeem: foucoco_runtime::RedeemConfig {
 			redeem_period: foucoco_runtime::DAYS,
-			redeem_minimum_transfer_amount: 1000,
+			redeem_minimum_transfer_amount: 1_000_000_000,
 			limit_volume_amount: None,
 			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),

@@ -710,7 +710,10 @@ fn foucoco_genesis(
 		VaultCurrencyPair { collateral: currency_id, wrapped: TESTNET_USDC_CURRENCY_ID }
 	}
 
-	fn get_vault_currency_pair(collateral: CurrencyId, wrapped: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
+	fn get_vault_currency_pair(
+		collateral: CurrencyId,
+		wrapped: CurrencyId,
+	) -> VaultCurrencyPair<CurrencyId> {
 		VaultCurrencyPair { collateral, wrapped }
 	}
 
@@ -751,7 +754,8 @@ fn foucoco_genesis(
 		Perquintill::from_percent(9),
 	);
 
-	let account_id = AccountId::from_ss58check("6m69vWMouLarYCbJGJisVaDDpfNGETkD5hsDWf2T7osW4Cn1").unwrap();
+	let account_id =
+		AccountId::from_ss58check("6m69vWMouLarYCbJGJisVaDDpfNGETkD5hsDWf2T7osW4Cn1").unwrap();
 	let mut authorized_accounts = authorized_oracles.clone();
 	authorized_accounts.push(account_id);
 
@@ -861,19 +865,19 @@ fn foucoco_genesis(
 				),
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
-					FixedU128::checked_from_rational(160, 100).unwrap()
+					FixedU128::checked_from_rational(160, 100).unwrap(),
 				),
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_BRL_CURRENCY_ID),
-					FixedU128::checked_from_rational(160, 100).unwrap()
+					FixedU128::checked_from_rational(160, 100).unwrap(),
 				),
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_TZS_CURRENCY_ID),
-					FixedU128::checked_from_rational(160, 100).unwrap()
+					FixedU128::checked_from_rational(160, 100).unwrap(),
 				),
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_STELLAR_NATIVE_CURRENCY_ID),
-					FixedU128::checked_from_rational(160, 100).unwrap()
+					FixedU128::checked_from_rational(160, 100).unwrap(),
 				),
 			],
 			/* 130% */
@@ -889,19 +893,19 @@ fn foucoco_genesis(
 				),
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
-					FixedU128::checked_from_rational(120, 100).unwrap()
+					FixedU128::checked_from_rational(120, 100).unwrap(),
 				),
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_BRL_CURRENCY_ID),
-					FixedU128::checked_from_rational(125, 100).unwrap()
+					FixedU128::checked_from_rational(125, 100).unwrap(),
 				),
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_TZS_CURRENCY_ID),
-					FixedU128::checked_from_rational(125, 100).unwrap()
+					FixedU128::checked_from_rational(125, 100).unwrap(),
 				),
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_STELLAR_NATIVE_CURRENCY_ID),
-					FixedU128::checked_from_rational(120, 100).unwrap()
+					FixedU128::checked_from_rational(120, 100).unwrap(),
 				),
 			],
 			/* 120% */
@@ -914,14 +918,14 @@ fn foucoco_genesis(
 		fee: foucoco_runtime::FeeConfig {
 			issue_fee: FixedU128::checked_from_rational(1, 1000).unwrap(), // 0.1%
 			issue_griefing_collateral: FixedU128::checked_from_rational(5, 1000).unwrap(), // 0.5%
-			redeem_fee: FixedU128::checked_from_rational(1, 1000).unwrap(),  // 0.1%
+			redeem_fee: FixedU128::checked_from_rational(1, 1000).unwrap(), // 0.1%
 			premium_redeem_fee: FixedU128::checked_from_rational(5, 100).unwrap(), // 5%
 			punishment_fee: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 		},
 		nomination: foucoco_runtime::NominationConfig { is_nomination_enabled: false },
 		dia_oracle_module: foucoco_runtime::DiaOracleModuleConfig {
-			authorized_accounts: authorized_accounts,
+			authorized_accounts,
 			supported_currencies: vec![foucoco_runtime::AssetId::new(
 				b"Kusama".to_vec(),
 				b"KSM".to_vec(),

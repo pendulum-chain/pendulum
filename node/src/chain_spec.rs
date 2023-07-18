@@ -38,6 +38,8 @@ const AMPLITUDE_INITIAL_ISSUANCE: Balance = 200_000_000 * UNIT;
 const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
 const INITIAL_COLLATOR_STAKING: Balance = 10_010 * UNIT;
 
+const OFF_CHAIN_WORKER_ADDRESS = "6m69vWMouLarYCbJGJisVaDDpfNGETkD5hsDWf2T7osW4Cn1";
+
 const TOKEN_DECIMALS: u32 = 12;
 
 const INITIAL_AMPLITUDE_SUDO_SIGNATORIES: [&str; 5] = [
@@ -249,6 +251,9 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 
 	let sudo_account =
 		pallet_multisig::Pallet::<foucoco_runtime::Runtime>::multi_account_id(&signatories[..], 3);
+	
+	let offchain_worker_price_feeder =
+		AccountId::from_ss58check(OFF_CHAIN_WORKER_ADDRESS).unwrap();
 
 	FoucocoChainSpec::from_genesis(
 		// Name
@@ -261,7 +266,7 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 				// initial collators.
 				invulnerables.clone(),
 				signatories.clone(),
-				vec![sudo_account.clone()],
+				vec![sudo_account.clone(), offchain_worker_price_feeder],
 				sudo_account.clone(),
 				FOUCOCO_PARACHAIN_ID.into(),
 				false,
@@ -753,11 +758,6 @@ fn foucoco_genesis(
 		Perquintill::from_percent(40),
 		Perquintill::from_percent(9),
 	);
-
-	let account_id =
-		AccountId::from_ss58check("6m69vWMouLarYCbJGJisVaDDpfNGETkD5hsDWf2T7osW4Cn1").unwrap();
-	let mut authorized_accounts = authorized_oracles.clone();
-	authorized_accounts.push(account_id);
 
 	foucoco_runtime::GenesisConfig {
 		system: foucoco_runtime::SystemConfig {

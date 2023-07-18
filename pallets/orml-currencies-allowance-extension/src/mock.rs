@@ -136,7 +136,7 @@ impl orml_currencies::Config for Test {
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
+	type WeightInfo = token_allowance::default_weights::WeightInfo<Test>;
 }
 
 pub struct ExtBuilder;

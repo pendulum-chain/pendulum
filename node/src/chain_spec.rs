@@ -850,19 +850,10 @@ fn foucoco_genesis(
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
 			minimum_collateral_vault: vec![
 				(XCM(0), 3_000_000_000_000),
-				(XCM(0), 0), // Should we remove this repeated line?
 				(CurrencyId::Native, 0),
-				(TESTNET_STELLAR_NATIVE_CURRENCY_ID, 0),
-				(TESTNET_USDC_CURRENCY_ID, 0),
-				(TESTNET_BRL_CURRENCY_ID, 0),
-				(TESTNET_TZS_CURRENCY_ID, 0),
 			],
 			punishment_delay: foucoco_runtime::DAYS * 2,
 			secure_collateral_threshold: vec![
-				(
-					get_vault_currency_pair(CurrencyId::Native, CurrencyId::Native),
-					FixedU128::checked_from_rational(150, 100).unwrap(),
-				),
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
 					FixedU128::checked_from_rational(160, 100).unwrap(),
@@ -887,10 +878,6 @@ fn foucoco_genesis(
 			)],
 			/* 130% */
 			liquidation_collateral_threshold: vec![
-				(
-					get_vault_currency_pair(CurrencyId::Native, CurrencyId::Native),
-					FixedU128::checked_from_rational(120, 100).unwrap(),
-				),
 				(
 					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
 					FixedU128::checked_from_rational(120, 100).unwrap(),

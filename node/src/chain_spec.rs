@@ -68,9 +68,30 @@ const MAINNET_DEFAULT_WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asse
 	],
 });
 
+// For Testnet Stellar Native issued by the testnet issuer
+const TESTNET_STELLAR_NATIVE_CURRENCY_ID: CurrencyId = CurrencyId::Stellar::StellarNative;
+
 // For Testnet USDC issued by the testnet issuer
-const TESTNET_DEFAULT_WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4(
+const TESTNET_USDC_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4(
 	*b"USDC",
+	[
+		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
+		108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
+	],
+);
+
+// For Testnet BRL issued by the testnet issuer
+const TESTNET_BRL_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4(
+	*b"BRL\0",
+	[
+		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
+		108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
+	],
+);
+
+// For Testnet BRL issued by the testnet issuer
+const TESTNET_TZS_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4(
+	*b"TZS\0",
 	[
 		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
 		108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
@@ -686,7 +707,7 @@ fn foucoco_genesis(
 	start_shutdown: bool,
 ) -> foucoco_runtime::GenesisConfig {
 	fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
-		VaultCurrencyPair { collateral: currency_id, wrapped: TESTNET_DEFAULT_WRAPPED_CURRENCY_ID }
+		VaultCurrencyPair { collateral: currency_id, wrapped: TESTNET_USDC_CURRENCY_ID }
 	}
 
 	let mut balances: Vec<_> = signatories
@@ -804,10 +825,13 @@ fn foucoco_genesis(
 			},
 		},
 		oracle: foucoco_runtime::OracleConfig {
-			max_delay: u32::MAX,
+			max_delay: 604_800_000,
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(0)),
-				Key::ExchangeRate(TESTNET_DEFAULT_WRAPPED_CURRENCY_ID),
+				Key::ExchangeRate(TESTNET_STELLAR_NATIVE_CURRENCY_ID),
+				Key::ExchangeRate(TESTNET_USDC_CURRENCY_ID),
+				Key::ExchangeRate(TESTNET_BRL_CURRENCY_ID),
+				Key::ExchangeRate(TESTNET_TZS_CURRENCY_ID),
 			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {

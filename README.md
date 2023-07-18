@@ -22,7 +22,9 @@ A successful build will create a binary under `./target/release/pendulum-node`.
 
 ### How to Generate Chain Spec
 
-There are 4 different [runtime](runtime)s currently in the repo; **amplitude** for the Amplitude parachain, **foucoco** for the Foucoco testnet (running on Rococo), **pendulum** for the Pendulum parachain and **development** for the local development. Any of these runtimes are used depending on the config. The config is created by generating the chain spec:
+There are 4 different [runtime](runtime)s currently in the repo; **amplitude** for the Amplitude parachain, **foucoco**
+for the Foucoco testnet (running on Rococo), **pendulum** for the Pendulum parachain and **development** for the local
+development. Any of these runtimes are used depending on the config. The config is created by generating the chain spec:
 
 ```
 ./target/release/pendulum-node build-spec --disable-default-bootnode > local-parachain-plain.json
@@ -105,9 +107,11 @@ An example for Amplitude will look like this:
 --execution=wasm --sync fast --pruning archive
 ```
 
-You can find the kusama.json [here](https://github.com/paritytech/polkadot/blob/master/node/service/chain-specs/kusama.json).
+You can find the
+kusama.json [here](https://github.com/paritytech/polkadot/blob/master/node/service/chain-specs/kusama.json).
 
-For local testing, you can replace `--name` with predefined keys like `--alice` or `--bob`. You also need to specify the `--bootnode`. Here's an example:
+For local testing, you can replace `--name` with predefined keys like `--alice` or `--bob`. You also need to specify
+the `--bootnode`. Here's an example:
 
 ```
 ./target/release/pendulum-node \
@@ -129,6 +133,62 @@ For local testing, you can replace `--name` with predefined keys like `--alice` 
 ```
 
 where `ALICE_NODE_ID` is the peer id of Alice.
-You can find the rococo-custom-2-raw.json [here](https://github.com/substrate-developer-hub/substrate-docs/blob/314e9cd3bd0ca9426bbfd381b79c3ef4d06b49c2/static/assets/tutorials/cumulus/chain-specs/rococo-custom-2-raw.json).
+You can find the
+rococo-custom-2-raw.json [here](https://github.com/substrate-developer-hub/substrate-docs/blob/314e9cd3bd0ca9426bbfd381b79c3ef4d06b49c2/static/assets/tutorials/cumulus/chain-specs/rococo-custom-2-raw.json).
 
-There are prerequisites in running the collator with a local relay chain. Refer to [how to run Pendulum locally](https://pendulum.gitbook.io/pendulum-docs/build/build-environment/local-pendulum-chain-setup).
+There are prerequisites in running the collator with a local relay chain. Refer
+to [how to run Pendulum locally](https://pendulum.gitbook.io/pendulum-docs/build/build-environment/local-pendulum-chain-setup).
+
+## How to benchmark runtime pallets
+
+Build the node with the `production` profile and the `runtime-benchmarks` feature enabled.
+
+```shell
+cargo build --profile=production --features runtime-benchmarks --package pendulum-node
+```
+
+Run the benchmarks of a registered pallet.
+The pallet has to be added to the list of defined benchmarks that you can find in the `benches` module of each
+runtimes `lib.rs` file.
+
+#### Pendulum
+
+```shell
+./target/production/pendulum-node benchmark pallet \
+    --chain pendulum \
+    --execution=wasm \
+    --wasm-execution=compiled \
+    --pallet "*" \
+    --extrinsic "*" \
+    --steps 50 \
+    --repeat 20 \
+    --output runtime/pendulum/src/weights/
+```
+
+#### Amplitude
+
+```shell
+./target/production/pendulum-node benchmark pallet \
+    --chain amplitude \
+    --execution=wasm \
+    --wasm-execution=compiled \
+    --pallet "*" \
+    --extrinsic "*" \
+    --steps 50 \
+    --repeat 20 \
+    --output runtime/amplitude/src/weights/
+```
+
+#### Foucoco
+
+```shell
+./target/production/pendulum-node benchmark pallet \
+    --chain foucoco \
+    --execution=wasm \
+    --wasm-execution=compiled \
+    --pallet "*" \
+    --extrinsic "*" \
+    --steps 50 \
+    --repeat 20 \
+    --output runtime/foucoco/src/weights/
+```

@@ -778,7 +778,7 @@ fn foucoco_genesis(
 			},
 		},
 		oracle: foucoco_runtime::OracleConfig {
-			max_delay: 604_800_000,
+			max_delay: 604_800_000, // 7 days
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(0)),
 				Key::ExchangeRate(CurrencyId::Native),

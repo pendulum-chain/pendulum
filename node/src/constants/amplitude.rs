@@ -29,10 +29,6 @@ pub const INITIAL_AMPLITUDE_VALIDATORS: [&str; 8] = [
 	"6jq7obxC7AxhWeJNzopwYidKNNe48cLrbGSgB2zs2SuRTWGA",
 ];
 
-// For Testnet Stellar Native issued by the testnet issuer
-pub const TESTNET_STELLAR_NATIVE_CURRENCY_ID: CurrencyId =
-	CurrencyId::Stellar(Asset::StellarNative);
-
 // For Testnet USDC issued by the testnet issuer
 pub const TESTNET_USDC_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
 	code: *b"USDC",

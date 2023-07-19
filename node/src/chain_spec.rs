@@ -782,7 +782,7 @@ fn foucoco_genesis(
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(0)),
 				Key::ExchangeRate(CurrencyId::Native),
-				Key::ExchangeRate(TESTNET_STELLAR_NATIVE_CURRENCY_ID),
+				Key::ExchangeRate(CurrencyId::Stellar(Asset::StellarNative)),
 				Key::ExchangeRate(TESTNET_USDC_CURRENCY_ID),
 				Key::ExchangeRate(TESTNET_BRL_CURRENCY_ID),
 				Key::ExchangeRate(TESTNET_TZS_CURRENCY_ID),
@@ -805,7 +805,7 @@ fn foucoco_genesis(
 					FixedU128::checked_from_rational(160, 100).unwrap(),
 				),
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_STELLAR_NATIVE_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), CurrencyId::Stellar(Asset::StellarNative)),
 					FixedU128::checked_from_rational(160, 100).unwrap(),
 				),
 			],
@@ -824,7 +824,7 @@ fn foucoco_genesis(
 					FixedU128::checked_from_rational(140, 100).unwrap(),
 				),
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_STELLAR_NATIVE_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), CurrencyId::Stellar(Asset::StellarNative)),
 					FixedU128::checked_from_rational(140, 100).unwrap(),
 				),
 			],
@@ -843,7 +843,7 @@ fn foucoco_genesis(
 					FixedU128::checked_from_rational(125, 100).unwrap(),
 				),
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_STELLAR_NATIVE_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), CurrencyId::Stellar(Asset::StellarNative)),
 					FixedU128::checked_from_rational(125, 100).unwrap(),
 				),
 			],
@@ -861,7 +861,7 @@ fn foucoco_genesis(
 					25 * 10u128.pow(TOKEN_DECIMALS),
 				),
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_STELLAR_NATIVE_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), CurrencyId::Stellar(Asset::StellarNative)),
 					50 * 10u128.pow(TOKEN_DECIMALS),
 				),
 			],

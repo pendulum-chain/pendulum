@@ -10,7 +10,7 @@ use frame_support::{dispatch::DispatchResult, ensure, weights::Weight};
 #[cfg(test)]
 use mocktopus::macros::mockable;
 use orml_traits::MultiCurrency;
-use sp_runtime::{traits::*, ArithmeticError};
+use sp_runtime::traits::*;
 use sp_std::{convert::TryInto, prelude::*, vec};
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -245,18 +245,7 @@ impl<T: Config> Pallet<T> {
 		amount: BalanceOf<T>,
 	) -> DispatchResult {
 		ensure!(Self::is_allowed_currency(id), Error::<T>::CurrencyNotLive);
-		Approvals::<T>::try_mutate((id, &owner, &delegate), |maybe_approved| -> DispatchResult {
-			let mut approved = match maybe_approved.take() {
-				// an approval already exists and is being updated
-				Some(a) => a,
-				// a new approval is created
-				None => Default::default(),
-			};
-
-			approved = approved.checked_add(&amount).ok_or(ArithmeticError::Overflow)?;
-			*maybe_approved = Some(approved);
-			Ok(())
-		})?;
+		Approvals::<T>::set((id, &owner, &delegate), Some(amount));
 		Self::deposit_event(Event::TransferApproved {
 			currency_id: id,
 			source: owner.clone(),
@@ -298,7 +287,10 @@ impl<T: Config> Pallet<T> {
 				if remaining.is_zero() {
 					*maybe_approved = None;
 				} else {
-					approved = remaining;
+					//decrement allowance only if it isn't max value (which acts as infinite allowance)
+					if approved.clone().checked_into::<u128>().unwrap_or_default() != u128::MAX {
+						approved = remaining;
+					}
 					*maybe_approved = Some(approved);
 				}
 				Ok(())

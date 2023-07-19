@@ -477,7 +477,7 @@ fn amplitude_genesis(
 		.iter()
 		.cloned()
 		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY))
-		.chain(invulnerables.iter().cloned().map(|k| (k, INITIAL_COLLATOR_STAKING)))
+		.chain(invulnerables.iter().cloned().map(|k| (k, INITIAL_COLLATOR_STAKING + COLLATOR_ADDITIONAL)))
 		.collect();
 
 	balances.push((
@@ -654,7 +654,7 @@ fn foucoco_genesis(
 		.iter()
 		.cloned()
 		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY))
-		.chain(invulnerables.iter().cloned().map(|k| (k, INITIAL_COLLATOR_STAKING)))
+		.chain(invulnerables.iter().cloned().map(|k| (k, INITIAL_COLLATOR_STAKING + COLLATOR_ADDITIONAL)))
 		.collect();
 
 	balances.push((

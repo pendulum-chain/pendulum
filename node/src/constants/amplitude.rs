@@ -4,8 +4,11 @@ use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, Vaul
 pub const AMPLITUDE_PARACHAIN_ID: u32 = 2124;
 pub const FOUCOCO_PARACHAIN_ID: u32 = 2124;
 pub const AMPLITUDE_INITIAL_ISSUANCE: Balance = 200_000_000 * UNIT;
+
 pub const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
-pub const INITIAL_COLLATOR_STAKING: Balance = 10_010 * UNIT;
+
+pub const INITIAL_COLLATOR_STAKING: Balance = 10_000 * UNIT;
+pub const COLLATOR_ADDITIONAL: Balance = 10 * UNIT;
 
 pub const OFF_CHAIN_WORKER_ADDRESS: &str = "6m69vWMouLarYCbJGJisVaDDpfNGETkD5hsDWf2T7osW4Cn1";
 

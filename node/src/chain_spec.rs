@@ -35,15 +35,6 @@ pub type DevelopmentChainSpec =
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
-// For mainnet USDC issued by centre.io
-const MAINNET_DEFAULT_WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
-	code: *b"USDC",
-	issuer: [
-		59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
-		190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
-	],
-});
-
 /// Helper function to generate a crypto pair from seed
 pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
 	<TPublic::Pair as Pair>::from_string(&format!("//{}", seed), None)
@@ -479,7 +470,7 @@ fn amplitude_genesis(
 	start_shutdown: bool,
 ) -> amplitude_runtime::GenesisConfig {
 	fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
-		VaultCurrencyPair { collateral: currency_id, wrapped: MAINNET_DEFAULT_WRAPPED_CURRENCY_ID }
+		VaultCurrencyPair { collateral: currency_id, wrapped: MAINNET_USDC_CURRENCY_ID }
 	}
 
 	let mut balances: Vec<_> = signatories
@@ -596,7 +587,7 @@ fn amplitude_genesis(
 			max_delay: u32::MAX,
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(0)),
-				Key::ExchangeRate(MAINNET_DEFAULT_WRAPPED_CURRENCY_ID),
+				Key::ExchangeRate(MAINNET_USDC_CURRENCY_ID),
 			],
 		},
 		vault_registry: amplitude_runtime::VaultRegistryConfig {
@@ -652,9 +643,6 @@ fn foucoco_genesis(
 	id: ParaId,
 	start_shutdown: bool,
 ) -> foucoco_runtime::GenesisConfig {
-	fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
-		VaultCurrencyPair { collateral: currency_id, wrapped: MAINNET_USDC_CURRENCY_ID }
-	}
 
 	fn get_vault_currency_pair(
 		collateral: CurrencyId,

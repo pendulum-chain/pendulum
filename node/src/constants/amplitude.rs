@@ -1,5 +1,5 @@
 use runtime_common::{Balance, UNIT};
-use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
+use spacewalk_primitives::{Asset, CurrencyId};
 
 pub const AMPLITUDE_PARACHAIN_ID: u32 = 2124;
 pub const FOUCOCO_PARACHAIN_ID: u32 = 2124;

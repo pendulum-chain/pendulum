@@ -847,11 +847,24 @@ fn foucoco_genesis(
 					FixedU128::checked_from_rational(125, 100).unwrap(),
 				),
 			],
-			/* 120% */
-			system_collateral_ceiling: vec![(
-				default_pair(XCM(0)),
-				60_000 * 10u128.pow(TOKEN_DECIMALS),
-			)],
+			system_collateral_ceiling: vec![
+				(
+					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
+					60_000 * 10u128.pow(TOKEN_DECIMALS),
+				),
+				(
+					get_vault_currency_pair(XCM(0), TESTNET_BRL_CURRENCY_ID),
+					25 * 10u128.pow(TOKEN_DECIMALS),
+				),
+				(
+					get_vault_currency_pair(XCM(0), TESTNET_TZS_CURRENCY_ID),
+					25 * 10u128.pow(TOKEN_DECIMALS),
+				),
+				(
+					get_vault_currency_pair(XCM(0), TESTNET_STELLAR_NATIVE_CURRENCY_ID),
+					50 * 10u128.pow(TOKEN_DECIMALS),
+				),
+			],
 		},
 		stellar_relay: foucoco_runtime::StellarRelayConfig::default(),
 		fee: foucoco_runtime::FeeConfig {

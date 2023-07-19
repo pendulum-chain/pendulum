@@ -643,7 +643,6 @@ fn foucoco_genesis(
 	id: ParaId,
 	start_shutdown: bool,
 ) -> foucoco_runtime::GenesisConfig {
-
 	fn get_vault_currency_pair(
 		collateral: CurrencyId,
 		wrapped: CurrencyId,

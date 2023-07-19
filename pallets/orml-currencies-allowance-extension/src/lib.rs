@@ -288,7 +288,7 @@ impl<T: Config> Pallet<T> {
 					*maybe_approved = None;
 				} else {
 					//decrement allowance only if it isn't max value (which acts as infinite allowance)
-					if approved.clone().checked_into::<u128>().unwrap_or_default() != u128::MAX {
+					if approved != BalanceOf::<T>::max_value() {
 						approved = remaining;
 					}
 					*maybe_approved = Some(approved);

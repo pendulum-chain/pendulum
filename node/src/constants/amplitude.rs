@@ -30,6 +30,13 @@ pub const INITIAL_AMPLITUDE_VALIDATORS: [&str; 8] = [
 	"6jq7obxC7AxhWeJNzopwYidKNNe48cLrbGSgB2zs2SuRTWGA",
 ];
 
+pub const INITIAL_FOUCOCO_VALIDATORS: [&str; 4] = [
+	"6ihktBwyFJYjE1LKdqoAWzo5VDPJJGso9D5iASZyhuN5JvGH",
+	"6mbXa9Qca6B6cX51cbtfWWLhup84rMoMFCxNHjso15GBFyGh",
+	"6mMdv2wmb4Cp8PAtDLF1WTh1wLPwPbETwtcjqgJLskdB8EYo",
+	"6kL1dzcBJiLgMdAT1qDFD79CLupX1gCCF8RSg5Dh5qRgQeCx",
+];
+
 // For Mainnet USDC issued by the testnet issuer
 pub const MAINNET_USDC_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
 	code: *b"USDC",

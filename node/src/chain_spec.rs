@@ -177,7 +177,7 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 		.collect();
 	signatories.sort();
 
-	let invulnerables: Vec<_> = INITIAL_AMPLITUDE_VALIDATORS
+	let invulnerables: Vec<_> = INITIAL_FOUCOCO_VALIDATORS
 		.iter()
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();

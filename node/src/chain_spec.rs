@@ -789,7 +789,7 @@ fn foucoco_genesis(
 			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
-			minimum_collateral_vault: vec![(XCM(0), 3_000_000_000_000), (CurrencyId::Native, 0)],
+			minimum_collateral_vault: vec![(XCM(0), 3_000_000_000_000)],
 			punishment_delay: foucoco_runtime::DAYS * 2,
 			secure_collateral_threshold: vec![
 				(

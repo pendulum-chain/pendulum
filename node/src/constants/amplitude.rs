@@ -2,6 +2,7 @@ use runtime_common::{Balance, UNIT};
 use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
 
 pub const AMPLITUDE_PARACHAIN_ID: u32 = 2124;
+pub const FOUCOCO_PARACHAIN_ID: u32 = 2124;
 pub const AMPLITUDE_INITIAL_ISSUANCE: Balance = 200_000_000 * UNIT;
 pub const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
 pub const INITIAL_COLLATOR_STAKING: Balance = 10_010 * UNIT;
@@ -29,31 +30,29 @@ pub const INITIAL_AMPLITUDE_VALIDATORS: [&str; 8] = [
 	"6jq7obxC7AxhWeJNzopwYidKNNe48cLrbGSgB2zs2SuRTWGA",
 ];
 
-// For Testnet USDC issued by the testnet issuer
-pub const TESTNET_USDC_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
+// For Mainnet USDC issued by the testnet issuer
+pub const MAINNET_USDC_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
 	code: *b"USDC",
 	issuer: [
-		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
-		108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
+		59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
+		190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
 	],
 });
 
-// For Testnet BRL issued by the testnet issuer
-pub const TESTNET_BRL_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
+// For Mainnet BRL issued by the testnet issuer
+pub const MAINNET_BRL_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
 	code: *b"BRL\0",
 	issuer: [
-		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
-		108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
+		234, 172, 104, 212, 208, 227, 123, 76, 36, 194, 83, 105, 22, 232, 48, 115, 95, 3, 45, 13,
+		107, 42, 28, 143, 202, 59, 197, 162, 94, 8, 62, 58,
 	],
 });
 
-// For Testnet TZS issued by the testnet issuer
-pub const TESTNET_TZS_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
+// For Mainnet TZS issued by the testnet issuer
+pub const MAINNET_TZS_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
 	code: *b"TZS\0",
 	issuer: [
-		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
-		108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
+		52, 201, 75, 42, 75, 169, 232, 181, 123, 34, 84, 125, 203, 179, 15, 68, 60, 76, 176, 45,
+		163, 130, 154, 137, 170, 27, 212, 120, 14, 68, 102, 186,
 	],
 });
-
-pub const FOUCOCO_PARACHAIN_ID: u32 = 2124;

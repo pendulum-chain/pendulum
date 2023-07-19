@@ -653,7 +653,7 @@ fn foucoco_genesis(
 	start_shutdown: bool,
 ) -> foucoco_runtime::GenesisConfig {
 	fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
-		VaultCurrencyPair { collateral: currency_id, wrapped: TESTNET_USDC_CURRENCY_ID }
+		VaultCurrencyPair { collateral: currency_id, wrapped: MAINNET_USDC_CURRENCY_ID }
 	}
 
 	fn get_vault_currency_pair(
@@ -783,9 +783,9 @@ fn foucoco_genesis(
 				Key::ExchangeRate(CurrencyId::XCM(0)),
 				Key::ExchangeRate(CurrencyId::Native),
 				Key::ExchangeRate(CurrencyId::Stellar(Asset::StellarNative)),
-				Key::ExchangeRate(TESTNET_USDC_CURRENCY_ID),
-				Key::ExchangeRate(TESTNET_BRL_CURRENCY_ID),
-				Key::ExchangeRate(TESTNET_TZS_CURRENCY_ID),
+				Key::ExchangeRate(MAINNET_USDC_CURRENCY_ID),
+				Key::ExchangeRate(MAINNET_BRL_CURRENCY_ID),
+				Key::ExchangeRate(MAINNET_TZS_CURRENCY_ID),
 			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
@@ -793,15 +793,15 @@ fn foucoco_genesis(
 			punishment_delay: foucoco_runtime::DAYS * 2,
 			secure_collateral_threshold: vec![
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), MAINNET_USDC_CURRENCY_ID),
 					FixedU128::checked_from_rational(160, 100).unwrap(),
 				),
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_BRL_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), MAINNET_BRL_CURRENCY_ID),
 					FixedU128::checked_from_rational(160, 100).unwrap(),
 				),
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_TZS_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), MAINNET_TZS_CURRENCY_ID),
 					FixedU128::checked_from_rational(160, 100).unwrap(),
 				),
 				(
@@ -812,15 +812,15 @@ fn foucoco_genesis(
 			/* 140% */
 			premium_redeem_threshold: vec![
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), MAINNET_USDC_CURRENCY_ID),
 					FixedU128::checked_from_rational(140, 100).unwrap(),
 				),
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_BRL_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), MAINNET_BRL_CURRENCY_ID),
 					FixedU128::checked_from_rational(140, 100).unwrap(),
 				),
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_TZS_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), MAINNET_TZS_CURRENCY_ID),
 					FixedU128::checked_from_rational(140, 100).unwrap(),
 				),
 				(
@@ -831,15 +831,15 @@ fn foucoco_genesis(
 			/* 125% */
 			liquidation_collateral_threshold: vec![
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), MAINNET_USDC_CURRENCY_ID),
 					FixedU128::checked_from_rational(125, 100).unwrap(),
 				),
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_BRL_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), MAINNET_BRL_CURRENCY_ID),
 					FixedU128::checked_from_rational(125, 100).unwrap(),
 				),
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_TZS_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), MAINNET_TZS_CURRENCY_ID),
 					FixedU128::checked_from_rational(125, 100).unwrap(),
 				),
 				(
@@ -849,15 +849,15 @@ fn foucoco_genesis(
 			],
 			system_collateral_ceiling: vec![
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
-					60_000 * 10u128.pow(TOKEN_DECIMALS),
+					get_vault_currency_pair(XCM(0), MAINNET_USDC_CURRENCY_ID),
+					50 * 10u128.pow(TOKEN_DECIMALS),
 				),
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_BRL_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), MAINNET_BRL_CURRENCY_ID),
 					25 * 10u128.pow(TOKEN_DECIMALS),
 				),
 				(
-					get_vault_currency_pair(XCM(0), TESTNET_TZS_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), MAINNET_TZS_CURRENCY_ID),
 					25 * 10u128.pow(TOKEN_DECIMALS),
 				),
 				(

@@ -108,6 +108,8 @@ pub fn get_development_session_keys(keys: AuraId) -> development_runtime::Sessio
 }
 
 pub fn amplitude_config() -> AmplitudeChainSpec {
+	sp_core::crypto::set_default_ss58_version(amplitude_runtime::SS58Prefix::get().into());
+
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "AMPE".into());
@@ -166,6 +168,8 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 }
 
 pub fn foucoco_config() -> FoucocoChainSpec {
+	sp_core::crypto::set_default_ss58_version(foucoco_runtime::SS58Prefix::get().into());
+
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "AMPE".into());

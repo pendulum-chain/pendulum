@@ -15,9 +15,10 @@ use sp_runtime::{
 };
 use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
 
-use crate::constants::amplitude::*;
-
-use crate::constants::pendulum;
+use crate::constants::{
+	amplitude, foucoco, pendulum, MAINNET_BRL_CURRENCY_ID, MAINNET_TZS_CURRENCY_ID,
+	MAINNET_USDC_CURRENCY_ID,
+};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type AmplitudeChainSpec =
@@ -110,16 +111,16 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "AMPE".into());
-	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
+	properties.insert("tokenDecimals".into(), amplitude::TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), amplitude_runtime::SS58Prefix::get().into());
 
-	let mut signatories: Vec<_> = INITIAL_AMPLITUDE_SUDO_SIGNATORIES
+	let mut signatories: Vec<_> = amplitude::INITIAL_SUDO_SIGNATORIES
 		.iter()
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
 	signatories.sort();
 
-	let invulnerables: Vec<_> = INITIAL_AMPLITUDE_VALIDATORS
+	let invulnerables: Vec<_> = amplitude::INITIAL_COLLATORS
 		.iter()
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
@@ -142,7 +143,7 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 				signatories.clone(),
 				vec![sudo_account.clone()],
 				sudo_account.clone(),
-				AMPLITUDE_PARACHAIN_ID.into(),
+				amplitude::PARACHAIN_ID.into(),
 				false,
 			)
 		},
@@ -159,7 +160,7 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
-			para_id: AMPLITUDE_PARACHAIN_ID,
+			para_id: amplitude::PARACHAIN_ID,
 		},
 	)
 }
@@ -168,16 +169,16 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "AMPE".into());
-	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
+	properties.insert("tokenDecimals".into(), foucoco::TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), foucoco_runtime::SS58Prefix::get().into());
 
-	let mut signatories: Vec<_> = INITIAL_AMPLITUDE_SUDO_SIGNATORIES
+	let mut signatories: Vec<_> = foucoco::INITIAL_SUDO_SIGNATORIES
 		.iter()
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
 	signatories.sort();
 
-	let invulnerables: Vec<_> = INITIAL_FOUCOCO_VALIDATORS
+	let invulnerables: Vec<_> = foucoco::INITIAL_COLLATORS
 		.iter()
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
@@ -185,7 +186,8 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 	let sudo_account =
 		pallet_multisig::Pallet::<foucoco_runtime::Runtime>::multi_account_id(&signatories[..], 3);
 
-	let offchain_worker_price_feeder = AccountId::from_ss58check(OFF_CHAIN_WORKER_ADDRESS).unwrap();
+	let offchain_worker_price_feeder =
+		AccountId::from_ss58check(foucoco::OFF_CHAIN_WORKER_ADDRESS).unwrap();
 
 	FoucocoChainSpec::from_genesis(
 		// Name
@@ -200,7 +202,7 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 				signatories.clone(),
 				vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
 				sudo_account.clone(),
-				FOUCOCO_PARACHAIN_ID.into(),
+				foucoco::PARACHAIN_ID.into(),
 				false,
 			)
 		},
@@ -217,7 +219,7 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
-			para_id: FOUCOCO_PARACHAIN_ID,
+			para_id: foucoco::PARACHAIN_ID,
 		},
 	)
 }
@@ -229,7 +231,7 @@ pub fn pendulum_config() -> PendulumChainSpec {
 
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "PEN".into());
-	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
+	properties.insert("tokenDecimals".into(), pendulum::TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), pendulum_runtime::SS58Prefix::get().into());
 
 	let multisig_genesis = create_pendulum_multisig_account(pendulum::MULTISIG_ID_GENESIS);
@@ -349,7 +351,7 @@ pub fn development_config() -> DevelopmentChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
+	properties.insert("tokenDecimals".into(), foucoco::TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), 42.into());
 
 	DevelopmentChainSpec::from_genesis(
@@ -404,7 +406,7 @@ pub fn local_testnet_config() -> DevelopmentChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
+	properties.insert("tokenDecimals".into(), foucoco::TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), 42.into());
 
 	DevelopmentChainSpec::from_genesis(
@@ -476,23 +478,25 @@ fn amplitude_genesis(
 	let mut balances: Vec<_> = signatories
 		.iter()
 		.cloned()
-		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY))
+		.map(|k| (k, amplitude::INITIAL_ISSUANCE_PER_SIGNATORY))
 		.chain(
 			invulnerables
 				.iter()
 				.cloned()
-				.map(|k| (k, INITIAL_COLLATOR_STAKING + COLLATOR_ADDITIONAL)),
+				.map(|k| (k, amplitude::INITIAL_COLLATOR_STAKING + amplitude::COLLATOR_ADDITIONAL)),
 		)
 		.collect();
 
 	balances.push((
 		sudo_account.clone(),
-		AMPLITUDE_INITIAL_ISSUANCE
+		amplitude::INITIAL_ISSUANCE
 			.saturating_sub(
-				INITIAL_ISSUANCE_PER_SIGNATORY.saturating_mul(balances.len().try_into().unwrap()),
+				amplitude::INITIAL_ISSUANCE_PER_SIGNATORY
+					.saturating_mul(balances.len().try_into().unwrap()),
 			)
 			.saturating_sub(
-				INITIAL_COLLATOR_STAKING.saturating_mul(invulnerables.len().try_into().unwrap()),
+				amplitude::INITIAL_COLLATOR_STAKING
+					.saturating_mul(invulnerables.len().try_into().unwrap()),
 			),
 	));
 
@@ -501,7 +505,7 @@ fn amplitude_genesis(
 	let stakers: Vec<_> = invulnerables
 		.iter()
 		.cloned()
-		.map(|account_id| (account_id, None, INITIAL_COLLATOR_STAKING))
+		.map(|account_id| (account_id, None, amplitude::INITIAL_COLLATOR_STAKING))
 		.collect();
 
 	let inflation_config = amplitude_runtime::InflationInfo::new(
@@ -615,7 +619,7 @@ fn amplitude_genesis(
 			/* 120% */
 			system_collateral_ceiling: vec![(
 				default_pair(XCM(0)),
-				60_000 * 10u128.pow(TOKEN_DECIMALS),
+				60_000 * 10u128.pow(amplitude::TOKEN_DECIMALS),
 			)],
 		},
 		stellar_relay: amplitude_runtime::StellarRelayConfig::default(),
@@ -658,23 +662,25 @@ fn foucoco_genesis(
 	let mut balances: Vec<_> = signatories
 		.iter()
 		.cloned()
-		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY))
+		.map(|k| (k, foucoco::INITIAL_ISSUANCE_PER_SIGNATORY))
 		.chain(
 			invulnerables
 				.iter()
 				.cloned()
-				.map(|k| (k, INITIAL_COLLATOR_STAKING + COLLATOR_ADDITIONAL)),
+				.map(|k| (k, foucoco::INITIAL_COLLATOR_STAKING + foucoco::COLLATOR_ADDITIONAL)),
 		)
 		.collect();
 
 	balances.push((
 		sudo_account.clone(),
-		AMPLITUDE_INITIAL_ISSUANCE
+		foucoco::INITIAL_ISSUANCE
 			.saturating_sub(
-				INITIAL_ISSUANCE_PER_SIGNATORY.saturating_mul(balances.len().try_into().unwrap()),
+				foucoco::INITIAL_ISSUANCE_PER_SIGNATORY
+					.saturating_mul(balances.len().try_into().unwrap()),
 			)
 			.saturating_sub(
-				INITIAL_COLLATOR_STAKING.saturating_mul(invulnerables.len().try_into().unwrap()),
+				foucoco::INITIAL_COLLATOR_STAKING
+					.saturating_mul(invulnerables.len().try_into().unwrap()),
 			),
 	));
 
@@ -686,7 +692,7 @@ fn foucoco_genesis(
 	let stakers: Vec<_> = invulnerables
 		.iter()
 		.cloned()
-		.map(|account_id| (account_id, None, INITIAL_COLLATOR_STAKING))
+		.map(|account_id| (account_id, None, foucoco::INITIAL_COLLATOR_STAKING))
 		.collect();
 
 	let inflation_config = foucoco_runtime::InflationInfo::new(
@@ -847,19 +853,19 @@ fn foucoco_genesis(
 			system_collateral_ceiling: vec![
 				(
 					get_vault_currency_pair(XCM(0), MAINNET_USDC_CURRENCY_ID),
-					50 * 10u128.pow(TOKEN_DECIMALS),
+					50 * 10u128.pow(foucoco::TOKEN_DECIMALS),
 				),
 				(
 					get_vault_currency_pair(XCM(0), MAINNET_BRL_CURRENCY_ID),
-					25 * 10u128.pow(TOKEN_DECIMALS),
+					25 * 10u128.pow(foucoco::TOKEN_DECIMALS),
 				),
 				(
 					get_vault_currency_pair(XCM(0), MAINNET_TZS_CURRENCY_ID),
-					25 * 10u128.pow(TOKEN_DECIMALS),
+					25 * 10u128.pow(foucoco::TOKEN_DECIMALS),
 				),
 				(
 					get_vault_currency_pair(XCM(0), CurrencyId::Stellar(Asset::StellarNative)),
-					50 * 10u128.pow(TOKEN_DECIMALS),
+					50 * 10u128.pow(foucoco::TOKEN_DECIMALS),
 				),
 			],
 		},

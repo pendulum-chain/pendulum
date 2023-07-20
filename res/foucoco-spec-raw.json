@@ -10,7 +10,7 @@
     "tokenDecimals": 12,
     "tokenSymbol": "AMPE"
   },
-  "relay_chain": "kusama",
+  "relay_chain": "rococo",
   "para_id": 2124,
   "codeSubstitutes": {},
   "genesis": {

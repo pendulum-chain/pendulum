@@ -38,7 +38,7 @@ use core::marker::PhantomData;
 
 /// Weight functions needed for orml_currencies_allowance_extension.
 pub trait WeightInfo {
-	fn add_allowed_currencies() -> Weight;
+	fn add_allowed_currencies(r: u32, ) -> Weight;
 	fn remove_allowed_currencies() -> Weight;
 	fn approve() -> Weight;
 	fn transfer_from() -> Weight;
@@ -49,12 +49,12 @@ pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	/// Storage: TokenAllowance AllowedCurrencies (r:0 w:1)
 	/// Proof Skipped: TokenAllowance AllowedCurrencies (max_values: None, max_size: None, mode: Measured)
-	fn add_allowed_currencies() -> Weight {
+	fn add_allowed_currencies(_r: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 282_000_000 picoseconds.
-		Weight::from_parts(284_000_000, 0)
+		// Minimum execution time: 283_000_000 picoseconds.
+		Weight::from_parts(285_000_000, 0)
 			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
 	/// Storage: TokenAllowance AllowedCurrencies (r:0 w:1)
@@ -64,7 +64,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 9_000_000 picoseconds.
-		Weight::from_parts(10_000_000, 0)
+		Weight::from_parts(9_000_000, 0)
 			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
 	/// Storage: TokenAllowance AllowedCurrencies (r:1 w:0)
@@ -105,8 +105,8 @@ impl WeightInfo for () {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 282_000_000 picoseconds.
-		Weight::from_parts(284_000_000, 0)
+		// Minimum execution time: 283_000_000 picoseconds.
+		Weight::from_parts(285_000_000, 0)
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 	/// Storage: TokenAllowance AllowedCurrencies (r:0 w:1)
@@ -116,7 +116,7 @@ impl WeightInfo for () {
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 9_000_000 picoseconds.
-		Weight::from_parts(10_000_000, 0)
+		Weight::from_parts(9_000_000, 0)
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 	/// Storage: TokenAllowance AllowedCurrencies (r:1 w:0)

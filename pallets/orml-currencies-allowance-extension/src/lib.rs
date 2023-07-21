@@ -5,18 +5,18 @@
 #[cfg(test)]
 extern crate mocktopus;
 
-pub use default_weights::{SubstrateWeight, WeightInfo};
-use frame_support::{dispatch::DispatchResult, ensure};
+use frame_support::{dispatch::DispatchResult, ensure, weights::Weight};
+
 #[cfg(test)]
 use mocktopus::macros::mockable;
 use orml_traits::MultiCurrency;
-use sp_runtime::{traits::*, ArithmeticError};
+use sp_runtime::traits::*;
 use sp_std::{convert::TryInto, prelude::*, vec};
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-mod default_weights;
+pub mod default_weights;
 
 #[cfg(test)]
 mod mock;
@@ -36,10 +36,18 @@ pub(crate) type CurrencyOf<T> =
 		<T as frame_system::Config>::AccountId,
 	>>::CurrencyId;
 
+/// Weight functions needed for orml_currencies_allowance_extension.
+pub trait WeightInfo {
+	fn add_allowed_currencies() -> Weight;
+	fn remove_allowed_currencies() -> Weight;
+	fn approve() -> Weight;
+	fn transfer_from() -> Weight;
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::{pallet_prelude::*, transactional};
-	use frame_system::{ensure_root, pallet_prelude::OriginFor};
+	use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
 
 	use super::*;
 
@@ -166,6 +174,46 @@ pub mod pallet {
 			Self::deposit_event(Event::AllowedCurrenciesDeleted { currencies });
 			Ok(())
 		}
+
+		/// Approve an amount for another account to spend on owner's behalf.
+		///
+		/// # Arguments
+		/// * `id` - the currency_id of the asset to approve
+		/// * `delegate` - the spender account to approve the asset for
+		/// * `amount` - the amount of the asset to approve
+		#[pallet::call_index(2)]
+		#[pallet::weight(<T as Config>::WeightInfo::approve())]
+		#[transactional]
+		pub fn approve(
+			origin: OriginFor<T>,
+			id: CurrencyOf<T>,
+			delegate: T::AccountId,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			let owner = ensure_signed(origin)?;
+			Self::do_approve_transfer(id, &owner, &delegate, amount)
+		}
+
+		/// Execute a pre-approved transfer from another account
+		///
+		/// # Arguments
+		/// * `id` - the currency_id of the asset to transfer
+		/// * `owner` - the owner account of the asset to transfer
+		/// * `destination` - the destination account to transfer to
+		/// * `amount` - the amount of the asset to transfer
+		#[pallet::call_index(3)]
+		#[pallet::weight(<T as Config>::WeightInfo::transfer_from())]
+		#[transactional]
+		pub fn transfer_from(
+			origin: OriginFor<T>,
+			id: CurrencyOf<T>,
+			owner: T::AccountId,
+			destination: T::AccountId,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			let delegate = ensure_signed(origin)?;
+			Self::do_transfer_approved(id, &owner, &delegate, &destination, amount)
+		}
 	}
 }
 
@@ -197,18 +245,7 @@ impl<T: Config> Pallet<T> {
 		amount: BalanceOf<T>,
 	) -> DispatchResult {
 		ensure!(Self::is_allowed_currency(id), Error::<T>::CurrencyNotLive);
-		Approvals::<T>::try_mutate((id, &owner, &delegate), |maybe_approved| -> DispatchResult {
-			let mut approved = match maybe_approved.take() {
-				// an approval already exists and is being updated
-				Some(a) => a,
-				// a new approval is created
-				None => Default::default(),
-			};
-
-			approved = approved.checked_add(&amount).ok_or(ArithmeticError::Overflow)?;
-			*maybe_approved = Some(approved);
-			Ok(())
-		})?;
+		Approvals::<T>::set((id, &owner, &delegate), Some(amount));
 		Self::deposit_event(Event::TransferApproved {
 			currency_id: id,
 			source: owner.clone(),
@@ -250,7 +287,10 @@ impl<T: Config> Pallet<T> {
 				if remaining.is_zero() {
 					*maybe_approved = None;
 				} else {
-					approved = remaining;
+					//decrement allowance only if it isn't max value (which acts as infinite allowance)
+					if approved != BalanceOf::<T>::max_value() {
+						approved = remaining;
+					}
 					*maybe_approved = Some(approved);
 				}
 				Ok(())

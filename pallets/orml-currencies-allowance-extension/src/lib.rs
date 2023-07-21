@@ -5,7 +5,7 @@
 #[cfg(test)]
 extern crate mocktopus;
 
-use frame_support::{dispatch::DispatchResult, ensure, weights::Weight};
+use frame_support::{dispatch::DispatchResult, ensure};
 
 #[cfg(test)]
 use mocktopus::macros::mockable;
@@ -36,16 +36,9 @@ pub(crate) type CurrencyOf<T> =
 		<T as frame_system::Config>::AccountId,
 	>>::CurrencyId;
 
-/// Weight functions needed for orml_currencies_allowance_extension.
-pub trait WeightInfo {
-	fn add_allowed_currencies() -> Weight;
-	fn remove_allowed_currencies() -> Weight;
-	fn approve() -> Weight;
-	fn transfer_from() -> Weight;
-}
-
 #[frame_support::pallet]
 pub mod pallet {
+	use crate::default_weights::WeightInfo;
 	use frame_support::{pallet_prelude::*, transactional};
 	use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
 
@@ -60,6 +53,10 @@ pub mod pallet {
 
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
+
+		/// The maximum number of allowed currencies.
+		#[pallet::constant]
+		type MaxAllowedCurrencies: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -84,6 +81,7 @@ pub mod pallet {
 	pub enum Error<T> {
 		Unapproved,
 		CurrencyNotLive,
+		ExceedsNumberOfAllowedCurrencies,
 	}
 
 	/// Approved balance transfers. Balance is the amount approved for transfer.
@@ -140,16 +138,32 @@ pub mod pallet {
 		/// # Arguments
 		/// * `currencies` - list of currency id allowed to use in chain extension
 		#[pallet::call_index(0)]
-		#[pallet::weight(<T as Config>::WeightInfo::add_allowed_currencies())]
+		#[pallet::weight(<T as Config>::WeightInfo::add_allowed_currencies(T::MaxAllowedCurrencies::get()))]
 		#[transactional]
 		pub fn add_allowed_currencies(
 			origin: OriginFor<T>,
 			currencies: Vec<CurrencyOf<T>>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
+
+			// Check if the supplied amount of currencies is less than the maximum allowed
+			let max_allowed_currencies: usize = T::MaxAllowedCurrencies::get() as usize;
+			ensure!(
+				currencies.len() <= max_allowed_currencies,
+				Error::<T>::ExceedsNumberOfAllowedCurrencies
+			);
+
 			for i in currencies.clone() {
 				AllowedCurrencies::<T>::insert(i, ());
 			}
+
+			// Check if the resulting vector of allowed currencies is less than the maximum allowed.
+			// We check after the insertion to avoid counting duplicates.
+			let allowed_currencies_len: usize = currencies.len();
+			ensure!(
+				allowed_currencies_len <= max_allowed_currencies,
+				Error::<T>::ExceedsNumberOfAllowedCurrencies
+			);
 
 			Self::deposit_event(Event::AllowedCurrenciesAdded { currencies });
 			Ok(())

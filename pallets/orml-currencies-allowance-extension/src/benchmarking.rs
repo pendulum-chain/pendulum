@@ -7,7 +7,10 @@ use sp_std::prelude::*;
 benchmarks! {
 	add_allowed_currencies {
 		let native_currency_id = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
-		let added_currencies: Vec<CurrencyOf<T>> = vec![native_currency_id];
+		let mut added_currencies = vec![];
+		for r in 0 .. T::MaxAllowedCurrencies::get() {
+			added_currencies.push(native_currency_id)
+		};
 	}: add_allowed_currencies(RawOrigin::Root, added_currencies)
 	verify {
 		let native_currency_id = <T as orml_currencies::Config>::GetNativeCurrencyId::get();

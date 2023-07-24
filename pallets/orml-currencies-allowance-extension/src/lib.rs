@@ -174,7 +174,7 @@ pub mod pallet {
 		/// # Arguments
 		/// * `currencies` - list of currency id allowed to use in chain extension
 		#[pallet::call_index(1)]
-		#[pallet::weight(<T as Config>::WeightInfo::remove_allowed_currencies())]
+		#[pallet::weight(<T as Config>::WeightInfo::remove_allowed_currencies(T::MaxAllowedCurrencies::get()))]
 		#[transactional]
 		pub fn remove_allowed_currencies(
 			origin: OriginFor<T>,

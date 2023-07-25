@@ -256,7 +256,8 @@ runtime-benchmarks = [
 	"stellar-relay/runtime-benchmarks",
 	"vault-registry/runtime-benchmarks",
 
-    "runtime-common/runtime-benchmarks"
+    "runtime-common/runtime-benchmarks",
+    "orml-currencies-allowance-extension/runtime-benchmarks"
 ]
 
 try-runtime = [

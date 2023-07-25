@@ -1011,6 +1011,7 @@ construct_runtime!(
 
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
 
+		// Asset Metadata
 		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
 
 		VestingManager: vesting_manager::{Pallet, Call, Event<T>} = 100

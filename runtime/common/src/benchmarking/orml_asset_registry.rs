@@ -37,10 +37,7 @@ pub mod benchmarks {
 			symbol: longest_vec(),
 			existential_deposit: 0,
 			location: Some(longest_multilocation().into()),
-			additional: CustomMetadata {
-				fee_per_second: 1_000_000_000_000,
-				coingecko_id: longest_vec(),
-			},
+			additional: CustomMetadata,
 		}
 	}
 
@@ -75,7 +72,7 @@ pub mod benchmarks {
 			Some(vec![b'b', 128]),
 			Some(1234),
 			Some(Some(location.into())),
-			Some(CustomMetadata { fee_per_second: 123, coingecko_id: vec![b'b', 128] }),
+			Some(CustomMetadata),
 		);
 	}
 

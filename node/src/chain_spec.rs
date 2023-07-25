@@ -15,7 +15,10 @@ use sp_runtime::{
 };
 use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
 
-use crate::constants::pendulum;
+use crate::constants::{
+	amplitude, foucoco, pendulum, MAINNET_BRL_CURRENCY_ID, MAINNET_TZS_CURRENCY_ID,
+	MAINNET_USDC_CURRENCY_ID,
+};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type AmplitudeChainSpec =
@@ -32,52 +35,6 @@ pub type DevelopmentChainSpec =
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
-
-const AMPLITUDE_PARACHAIN_ID: u32 = 2124;
-const AMPLITUDE_INITIAL_ISSUANCE: Balance = 200_000_000 * UNIT;
-const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
-const INITIAL_COLLATOR_STAKING: Balance = 10_010 * UNIT;
-
-const TOKEN_DECIMALS: u32 = 12;
-
-const INITIAL_AMPLITUDE_SUDO_SIGNATORIES: [&str; 5] = [
-	"6nJwMD3gk36fe6pMRL2UpbwAEjDdjjxdngQGShe753pyAvCT",
-	"6i4xDEE1Q2Bv8tnJtgD4jse4YTAzzCwCJVUehRQ93hCqKp8f",
-	"6n62KZWvmZHgeyEXTvQFmoHRMqjKfFWvQVsApkePekuNfek5",
-	"6kwxQBRKMadrY9Lq3K8gZXkw1UkjacpqYhcqvX3AqmN9DofF",
-	"6kKHwcpCVC18KepwvdMSME8Q7ZTNr1RoRUrFDH9AdAmhL3Pt",
-];
-
-const INITIAL_AMPLITUDE_VALIDATORS: [&str; 8] = [
-	"6mTATq7Ug9RPk4s8aMv5H7WVZ7RvwrJ1JitbYMXWPhanzqiv",
-	"6n8WiWqjEB8nCNRo5mxXc89FqhuMd2dgXNSrzuPxoZSnatnL",
-	"6ic56zZmjqo746yifWzcNxxzxLe3pRo8WNitotniUQvgKnyU",
-	"6gvFApEyYj4EavJP26mwbVu7YxFBYZ9gaJFB7gv5gA6vNfze",
-	"6mz3ymVAsfHotEhHphVRvLLBhMZ2frnwbuvW5QZiMRwJghxE",
-	"6mpD3zcHcUBkxCjTsGg2tMTfmQZdXLVYZnk4UkN2XAUTLkRe",
-	"6mGcZntk59RK2JfxfdmprgDJeByVUgaffMQYkp1ZeoEKeBJA",
-	"6jq7obxC7AxhWeJNzopwYidKNNe48cLrbGSgB2zs2SuRTWGA",
-];
-
-// For mainnet USDC issued by centre.io
-const MAINNET_DEFAULT_WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
-	code: *b"USDC",
-	issuer: [
-		59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
-		190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
-	],
-});
-
-// For Testnet USDC issued by the testnet issuer
-const TESTNET_DEFAULT_WRAPPED_CURRENCY_ID: CurrencyId = CurrencyId::AlphaNum4(
-	*b"USDC",
-	[
-		20, 209, 150, 49, 176, 55, 23, 217, 171, 154, 54, 110, 16, 50, 30, 226, 102, 231, 46, 199,
-		108, 171, 97, 144, 240, 161, 51, 109, 72, 34, 159, 139,
-	],
-);
-
-const FOUCOCO_PARACHAIN_ID: u32 = 2124;
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -151,19 +108,21 @@ pub fn get_development_session_keys(keys: AuraId) -> development_runtime::Sessio
 }
 
 pub fn amplitude_config() -> AmplitudeChainSpec {
+	sp_core::crypto::set_default_ss58_version(amplitude_runtime::SS58Prefix::get().into());
+
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "AMPE".into());
-	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
+	properties.insert("tokenDecimals".into(), amplitude::TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), amplitude_runtime::SS58Prefix::get().into());
 
-	let mut signatories: Vec<_> = INITIAL_AMPLITUDE_SUDO_SIGNATORIES
+	let mut signatories: Vec<_> = amplitude::INITIAL_SUDO_SIGNATORIES
 		.iter()
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
 	signatories.sort();
 
-	let invulnerables: Vec<_> = INITIAL_AMPLITUDE_VALIDATORS
+	let invulnerables: Vec<_> = amplitude::INITIAL_COLLATORS
 		.iter()
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
@@ -186,7 +145,7 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 				signatories.clone(),
 				vec![sudo_account.clone()],
 				sudo_account.clone(),
-				AMPLITUDE_PARACHAIN_ID.into(),
+				amplitude::PARACHAIN_ID.into(),
 				false,
 			)
 		},
@@ -203,31 +162,36 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
-			para_id: AMPLITUDE_PARACHAIN_ID,
+			para_id: amplitude::PARACHAIN_ID,
 		},
 	)
 }
 
 pub fn foucoco_config() -> FoucocoChainSpec {
+	sp_core::crypto::set_default_ss58_version(foucoco_runtime::SS58Prefix::get().into());
+
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "AMPE".into());
-	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
+	properties.insert("tokenDecimals".into(), foucoco::TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), foucoco_runtime::SS58Prefix::get().into());
 
-	let mut signatories: Vec<_> = INITIAL_AMPLITUDE_SUDO_SIGNATORIES
+	let mut signatories: Vec<_> = foucoco::INITIAL_SUDO_SIGNATORIES
 		.iter()
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
 	signatories.sort();
 
-	let invulnerables: Vec<_> = INITIAL_AMPLITUDE_VALIDATORS
+	let invulnerables: Vec<_> = foucoco::INITIAL_COLLATORS
 		.iter()
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
 
 	let sudo_account =
 		pallet_multisig::Pallet::<foucoco_runtime::Runtime>::multi_account_id(&signatories[..], 3);
+
+	let offchain_worker_price_feeder =
+		AccountId::from_ss58check(foucoco::OFF_CHAIN_WORKER_ADDRESS).unwrap();
 
 	FoucocoChainSpec::from_genesis(
 		// Name
@@ -240,9 +204,9 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 				// initial collators.
 				invulnerables.clone(),
 				signatories.clone(),
-				vec![sudo_account.clone()],
+				vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
 				sudo_account.clone(),
-				FOUCOCO_PARACHAIN_ID.into(),
+				foucoco::PARACHAIN_ID.into(),
 				false,
 			)
 		},
@@ -259,7 +223,7 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
-			para_id: FOUCOCO_PARACHAIN_ID,
+			para_id: foucoco::PARACHAIN_ID,
 		},
 	)
 }
@@ -271,7 +235,7 @@ pub fn pendulum_config() -> PendulumChainSpec {
 
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "PEN".into());
-	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
+	properties.insert("tokenDecimals".into(), pendulum::TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), pendulum_runtime::SS58Prefix::get().into());
 
 	let multisig_genesis = create_pendulum_multisig_account(pendulum::MULTISIG_ID_GENESIS);
@@ -391,7 +355,7 @@ pub fn development_config() -> DevelopmentChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
+	properties.insert("tokenDecimals".into(), foucoco::TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), 42.into());
 
 	DevelopmentChainSpec::from_genesis(
@@ -446,7 +410,7 @@ pub fn local_testnet_config() -> DevelopmentChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), TOKEN_DECIMALS.into());
+	properties.insert("tokenDecimals".into(), foucoco::TOKEN_DECIMALS.into());
 	properties.insert("ss58Format".into(), 42.into());
 
 	DevelopmentChainSpec::from_genesis(
@@ -512,24 +476,31 @@ fn amplitude_genesis(
 	start_shutdown: bool,
 ) -> amplitude_runtime::GenesisConfig {
 	fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
-		VaultCurrencyPair { collateral: currency_id, wrapped: MAINNET_DEFAULT_WRAPPED_CURRENCY_ID }
+		VaultCurrencyPair { collateral: currency_id, wrapped: MAINNET_USDC_CURRENCY_ID }
 	}
 
 	let mut balances: Vec<_> = signatories
 		.iter()
 		.cloned()
-		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY))
-		.chain(invulnerables.iter().cloned().map(|k| (k, INITIAL_COLLATOR_STAKING)))
+		.map(|k| (k, amplitude::INITIAL_ISSUANCE_PER_SIGNATORY))
+		.chain(
+			invulnerables
+				.iter()
+				.cloned()
+				.map(|k| (k, amplitude::INITIAL_COLLATOR_STAKING + amplitude::COLLATOR_ADDITIONAL)),
+		)
 		.collect();
 
 	balances.push((
 		sudo_account.clone(),
-		AMPLITUDE_INITIAL_ISSUANCE
+		amplitude::INITIAL_ISSUANCE
 			.saturating_sub(
-				INITIAL_ISSUANCE_PER_SIGNATORY.saturating_mul(balances.len().try_into().unwrap()),
+				amplitude::INITIAL_ISSUANCE_PER_SIGNATORY
+					.saturating_mul(balances.len().try_into().unwrap()),
 			)
 			.saturating_sub(
-				INITIAL_COLLATOR_STAKING.saturating_mul(invulnerables.len().try_into().unwrap()),
+				amplitude::INITIAL_COLLATOR_STAKING
+					.saturating_mul(invulnerables.len().try_into().unwrap()),
 			),
 	));
 
@@ -538,7 +509,7 @@ fn amplitude_genesis(
 	let stakers: Vec<_> = invulnerables
 		.iter()
 		.cloned()
-		.map(|account_id| (account_id, None, INITIAL_COLLATOR_STAKING))
+		.map(|account_id| (account_id, None, amplitude::INITIAL_COLLATOR_STAKING))
 		.collect();
 
 	let inflation_config = amplitude_runtime::InflationInfo::new(
@@ -630,7 +601,7 @@ fn amplitude_genesis(
 			max_delay: u32::MAX,
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(0)),
-				Key::ExchangeRate(MAINNET_DEFAULT_WRAPPED_CURRENCY_ID),
+				Key::ExchangeRate(MAINNET_USDC_CURRENCY_ID),
 			],
 		},
 		vault_registry: amplitude_runtime::VaultRegistryConfig {
@@ -653,7 +624,7 @@ fn amplitude_genesis(
 			/* 120% */
 			system_collateral_ceiling: vec![(
 				default_pair(XCM(0)),
-				60_000 * 10u128.pow(TOKEN_DECIMALS),
+				60_000 * 10u128.pow(amplitude::TOKEN_DECIMALS),
 			)],
 		},
 		stellar_relay: amplitude_runtime::StellarRelayConfig::default(),
@@ -686,37 +657,47 @@ fn foucoco_genesis(
 	id: ParaId,
 	start_shutdown: bool,
 ) -> foucoco_runtime::GenesisConfig {
-	fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
-		VaultCurrencyPair { collateral: currency_id, wrapped: TESTNET_DEFAULT_WRAPPED_CURRENCY_ID }
+	fn get_vault_currency_pair(
+		collateral: CurrencyId,
+		wrapped: CurrencyId,
+	) -> VaultCurrencyPair<CurrencyId> {
+		VaultCurrencyPair { collateral, wrapped }
 	}
 
 	let mut balances: Vec<_> = signatories
 		.iter()
 		.cloned()
-		.map(|k| (k, INITIAL_ISSUANCE_PER_SIGNATORY))
-		.chain(invulnerables.iter().cloned().map(|k| (k, INITIAL_COLLATOR_STAKING)))
+		.map(|k| (k, foucoco::INITIAL_ISSUANCE_PER_SIGNATORY))
+		.chain(
+			invulnerables
+				.iter()
+				.cloned()
+				.map(|k| (k, foucoco::INITIAL_COLLATOR_STAKING + foucoco::COLLATOR_ADDITIONAL)),
+		)
 		.collect();
 
 	balances.push((
 		sudo_account.clone(),
-		AMPLITUDE_INITIAL_ISSUANCE
+		foucoco::INITIAL_ISSUANCE
 			.saturating_sub(
-				INITIAL_ISSUANCE_PER_SIGNATORY.saturating_mul(balances.len().try_into().unwrap()),
+				foucoco::INITIAL_ISSUANCE_PER_SIGNATORY
+					.saturating_mul(balances.len().try_into().unwrap()),
 			)
 			.saturating_sub(
-				INITIAL_COLLATOR_STAKING.saturating_mul(invulnerables.len().try_into().unwrap()),
+				foucoco::INITIAL_COLLATOR_STAKING
+					.saturating_mul(invulnerables.len().try_into().unwrap()),
 			),
 	));
 
 	let token_balances = balances
 		.iter()
-		.flat_map(|k| vec![(k.0.clone(), XCM(0), 1 << 60), (k.0.clone(), XCM(1), 1 << 60)])
+		.flat_map(|k| vec![(k.0.clone(), XCM(0), u128::pow(10, 18))])
 		.collect();
 
 	let stakers: Vec<_> = invulnerables
 		.iter()
 		.cloned()
-		.map(|account_id| (account_id, None, INITIAL_COLLATOR_STAKING))
+		.map(|account_id| (account_id, None, foucoco::INITIAL_COLLATOR_STAKING))
 		.collect();
 
 	let inflation_config = foucoco_runtime::InflationInfo::new(
@@ -778,7 +759,7 @@ fn foucoco_genesis(
 		},
 		issue: foucoco_runtime::IssueConfig {
 			issue_period: foucoco_runtime::DAYS,
-			issue_minimum_transfer_amount: 1000,
+			issue_minimum_transfer_amount: 1_000_000_000,
 			limit_volume_amount: None,
 			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
@@ -787,7 +768,7 @@ fn foucoco_genesis(
 		},
 		redeem: foucoco_runtime::RedeemConfig {
 			redeem_period: foucoco_runtime::DAYS,
-			redeem_minimum_transfer_amount: 1000,
+			redeem_minimum_transfer_amount: 1_000_000_000,
 			limit_volume_amount: None,
 			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
@@ -796,7 +777,7 @@ fn foucoco_genesis(
 		},
 		replace: foucoco_runtime::ReplaceConfig {
 			replace_period: foucoco_runtime::DAYS,
-			replace_minimum_transfer_amount: 1000,
+			replace_minimum_transfer_amount: 1_000_000_000,
 		},
 		security: foucoco_runtime::SecurityConfig {
 			initial_status: if start_shutdown {
@@ -806,40 +787,99 @@ fn foucoco_genesis(
 			},
 		},
 		oracle: foucoco_runtime::OracleConfig {
-			max_delay: u32::MAX,
+			max_delay: 604_800_000, // 7 days
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(0)),
-				Key::ExchangeRate(TESTNET_DEFAULT_WRAPPED_CURRENCY_ID),
+				Key::ExchangeRate(CurrencyId::Native),
+				Key::ExchangeRate(CurrencyId::Stellar(Asset::StellarNative)),
+				Key::ExchangeRate(MAINNET_USDC_CURRENCY_ID),
+				Key::ExchangeRate(MAINNET_BRL_CURRENCY_ID),
+				Key::ExchangeRate(MAINNET_TZS_CURRENCY_ID),
 			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
-			minimum_collateral_vault: vec![(XCM(0), 0), (XCM(0), 0)],
-			punishment_delay: foucoco_runtime::DAYS,
-			secure_collateral_threshold: vec![(
-				default_pair(XCM(0)),
-				FixedU128::checked_from_rational(150, 100).unwrap(),
-			)],
-			/* 150% */
-			premium_redeem_threshold: vec![(
-				default_pair(XCM(0)),
-				FixedU128::checked_from_rational(130, 100).unwrap(),
-			)],
-			/* 130% */
-			liquidation_collateral_threshold: vec![(
-				default_pair(XCM(0)),
-				FixedU128::checked_from_rational(120, 100).unwrap(),
-			)],
-			/* 120% */
-			system_collateral_ceiling: vec![(
-				default_pair(XCM(0)),
-				60_000 * 10u128.pow(TOKEN_DECIMALS),
-			)],
+			minimum_collateral_vault: vec![(XCM(0), 3_000_000_000_000)],
+			punishment_delay: foucoco_runtime::DAYS * 2,
+			secure_collateral_threshold: vec![
+				(
+					get_vault_currency_pair(XCM(0), MAINNET_USDC_CURRENCY_ID),
+					FixedU128::checked_from_rational(160, 100).unwrap(),
+				),
+				(
+					get_vault_currency_pair(XCM(0), MAINNET_BRL_CURRENCY_ID),
+					FixedU128::checked_from_rational(160, 100).unwrap(),
+				),
+				(
+					get_vault_currency_pair(XCM(0), MAINNET_TZS_CURRENCY_ID),
+					FixedU128::checked_from_rational(160, 100).unwrap(),
+				),
+				(
+					get_vault_currency_pair(XCM(0), CurrencyId::Stellar(Asset::StellarNative)),
+					FixedU128::checked_from_rational(160, 100).unwrap(),
+				),
+			],
+			/* 140% */
+			premium_redeem_threshold: vec![
+				(
+					get_vault_currency_pair(XCM(0), MAINNET_USDC_CURRENCY_ID),
+					FixedU128::checked_from_rational(140, 100).unwrap(),
+				),
+				(
+					get_vault_currency_pair(XCM(0), MAINNET_BRL_CURRENCY_ID),
+					FixedU128::checked_from_rational(140, 100).unwrap(),
+				),
+				(
+					get_vault_currency_pair(XCM(0), MAINNET_TZS_CURRENCY_ID),
+					FixedU128::checked_from_rational(140, 100).unwrap(),
+				),
+				(
+					get_vault_currency_pair(XCM(0), CurrencyId::Stellar(Asset::StellarNative)),
+					FixedU128::checked_from_rational(140, 100).unwrap(),
+				),
+			],
+			/* 125% */
+			liquidation_collateral_threshold: vec![
+				(
+					get_vault_currency_pair(XCM(0), MAINNET_USDC_CURRENCY_ID),
+					FixedU128::checked_from_rational(125, 100).unwrap(),
+				),
+				(
+					get_vault_currency_pair(XCM(0), MAINNET_BRL_CURRENCY_ID),
+					FixedU128::checked_from_rational(125, 100).unwrap(),
+				),
+				(
+					get_vault_currency_pair(XCM(0), MAINNET_TZS_CURRENCY_ID),
+					FixedU128::checked_from_rational(125, 100).unwrap(),
+				),
+				(
+					get_vault_currency_pair(XCM(0), CurrencyId::Stellar(Asset::StellarNative)),
+					FixedU128::checked_from_rational(125, 100).unwrap(),
+				),
+			],
+			system_collateral_ceiling: vec![
+				(
+					get_vault_currency_pair(XCM(0), MAINNET_USDC_CURRENCY_ID),
+					50 * 10u128.pow(foucoco::TOKEN_DECIMALS),
+				),
+				(
+					get_vault_currency_pair(XCM(0), MAINNET_BRL_CURRENCY_ID),
+					25 * 10u128.pow(foucoco::TOKEN_DECIMALS),
+				),
+				(
+					get_vault_currency_pair(XCM(0), MAINNET_TZS_CURRENCY_ID),
+					25 * 10u128.pow(foucoco::TOKEN_DECIMALS),
+				),
+				(
+					get_vault_currency_pair(XCM(0), CurrencyId::Stellar(Asset::StellarNative)),
+					50 * 10u128.pow(foucoco::TOKEN_DECIMALS),
+				),
+			],
 		},
 		stellar_relay: foucoco_runtime::StellarRelayConfig::default(),
 		fee: foucoco_runtime::FeeConfig {
-			issue_fee: FixedU128::checked_from_rational(15, 10000).unwrap(), // 0.15%
-			issue_griefing_collateral: FixedU128::checked_from_rational(5, 100000).unwrap(), // 0.005%
-			redeem_fee: FixedU128::checked_from_rational(5, 1000).unwrap(),  // 0.5%
+			issue_fee: FixedU128::checked_from_rational(1, 1000).unwrap(), // 0.1%
+			issue_griefing_collateral: FixedU128::checked_from_rational(5, 1000).unwrap(), // 0.5%
+			redeem_fee: FixedU128::checked_from_rational(1, 1000).unwrap(), // 0.1%
 			premium_redeem_fee: FixedU128::checked_from_rational(5, 100).unwrap(), // 5%
 			punishment_fee: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
@@ -847,11 +887,15 @@ fn foucoco_genesis(
 		nomination: foucoco_runtime::NominationConfig { is_nomination_enabled: false },
 		dia_oracle_module: foucoco_runtime::DiaOracleModuleConfig {
 			authorized_accounts: authorized_oracles,
-			supported_currencies: vec![foucoco_runtime::AssetId::new(
-				b"Kusama".to_vec(),
-				b"KSM".to_vec(),
-			)],
-			batching_api: b"http://dia-00.pendulumchain.tech:8070/currencies".to_vec(),
+			supported_currencies: vec![
+				foucoco_runtime::AssetId::new(b"Kusama".to_vec(), b"KSM".to_vec()),
+				foucoco_runtime::AssetId::new(b"Stellar".to_vec(), b"XLM".to_vec()),
+				foucoco_runtime::AssetId::new(b"FIAT".to_vec(), b"BRL-USD".to_vec()),
+				foucoco_runtime::AssetId::new(b"FIAT".to_vec(), b"USD-USD".to_vec()),
+				foucoco_runtime::AssetId::new(b"FIAT".to_vec(), b"TZS-USD".to_vec()),
+				foucoco_runtime::AssetId::new(b"FIAT".to_vec(), b"MXN-USD".to_vec()),
+			],
+			batching_api: b"https://dia-00.pendulumchain.tech/currencies".to_vec(),
 			coin_infos_map: vec![],
 		},
 	}

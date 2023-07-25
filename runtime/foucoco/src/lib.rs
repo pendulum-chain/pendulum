@@ -97,6 +97,9 @@ use spacewalk_primitives::{
 };
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
+use orml_currencies::WeightInfo;
+
+use orml_currencies_allowance_extension::{Config as AllowanceConfig, WeightInfo as AllowanceWeightInfo};
 
 use frame_support::{
 	log::{error, warn},
@@ -243,13 +246,13 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("amplitude"),
-	impl_name: create_runtime_str!("amplitude"),
+	spec_name: create_runtime_str!("foucoco"),
+	impl_name: create_runtime_str!("foucoco"),
 	authoring_version: 1,
-	spec_version: 14,
+	spec_version: 1,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 25,
+	transaction_version: 1,
 	state_version: 1,
 };
 
@@ -972,10 +975,22 @@ where
 
 		warn!("Calling function with ID {} from Psp22Extension", func_id);
 
+		// debug_message weight is a good approximation of the additional overhead of going
+		// from contract layer to substrate layer.
+		let overhead_weight = Weight::from_parts(
+			<T as pallet_contracts::Config>::Schedule::get()
+				.host_fn_weights
+				.debug_message
+				.ref_time(),
+			0,
+		);
+
 		match func_id {
 			// totalSupply(currency)
 			1101 => {
 				let mut env = env.buf_in_buf_out();
+				let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+				env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 				let input = env.read(256)?;
 				let currency_id: CurrencyId = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
@@ -1001,6 +1016,8 @@ where
 			// balanceOf(currency, account)
 			1102 => {
 				let mut env = env.buf_in_buf_out();
+				let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+				env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 				let input = env.read(256)?;
 				let (currency_id, account_id): (CurrencyId, T::AccountId) =
 					chain_ext::decode(input).map_err(|_| {
@@ -1033,7 +1050,11 @@ where
 				let ext = env.ext();
 				let caller = ext.caller().clone();
 
-				let env = env.buf_in_buf_out();
+				let mut env = env.buf_in_buf_out();
+				// Here we use weights for non native currency as worst case scenario, since we can't know whether it's native or not until we've already read from contract env.
+				let base_weight =
+					<T as orml_currencies::Config>::WeightInfo::transfer_non_native_currency();
+				env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 				let input = env.read(256)?;
 				let (currency_id, recipient, amount): (
 					CurrencyId,
@@ -1064,6 +1085,8 @@ where
 			// allowance(currency, owner, spender)
 			1104 => {
 				let mut env = env.buf_in_buf_out();
+				let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+				env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 				let input = env.read(256)?;
 				let (currency_id, owner, spender): (CurrencyId, T::AccountId, T::AccountId) =
 					chain_ext::decode(input).map_err(|_| {
@@ -1096,7 +1119,9 @@ where
 				let ext = env.ext();
 				let caller = ext.caller().clone();
 
-				let env = env.buf_in_buf_out();
+				let mut env = env.buf_in_buf_out();
+				let base_weight = <<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::approve();
+				env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 				let input = env.read(256)?;
 				let (currency_id, spender, amount): (
 					CurrencyId,
@@ -1129,7 +1154,9 @@ where
 				let ext = env.ext();
 				let caller = ext.caller().clone();
 
-				let env = env.buf_in_buf_out();
+				let mut env = env.buf_in_buf_out();
+				let base_weight = <<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::transfer_from();
+				env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 				let input = env.read(256)?;
 				let (owner, currency_id, recipient, amount): (
 					T::AccountId,
@@ -1163,6 +1190,8 @@ where
 			// get_coin_info(blockchain, symbol)
 			1200 => {
 				let mut env = env.buf_in_buf_out();
+				let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+				env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 				let (blockchain, symbol): (Blockchain, Symbol) = env.read_as()?;
 
 				let result = <dia_oracle::Pallet<T> as DiaOracle>::get_coin_info(
@@ -1223,7 +1252,7 @@ impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
 
 impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = orml_currencies_allowance_extension::SubstrateWeight<Runtime>;
+	type WeightInfo = orml_currencies_allowance_extension::default_weights::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -1583,6 +1612,8 @@ mod benches {
 		// Other
 		[orml_asset_registry, runtime_common::benchmarking::orml_asset_registry::Pallet::<Runtime>]
 		[pallet_xcm, PolkadotXcm]
+
+		[orml_currencies_allowance_extension, TokenAllowance]
 	);
 }
 

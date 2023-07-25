@@ -8,6 +8,8 @@ pub const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
 pub const INITIAL_COLLATOR_STAKING: Balance = 5_000 * UNIT;
 pub const COLLATOR_ADDITIONAL: Balance = 10 * UNIT;
 
+pub const TOKEN_DECIMALS: u32 = 12;
+
 pub const SUDO_SIGNATORIES: [&str; 5] = [
 	"6bgxxegcuBCYngSkJqp7bzgVZWd7brVrABEQetFq1R5dNa7T",
 	"6cm5M5JVknj4NQdWpdayqwm92wzvSzjgE5SCRS7HM1EoauLm",

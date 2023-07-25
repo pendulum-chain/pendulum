@@ -45,7 +45,7 @@ For the raw chain spec, just add the option `--raw` and the `--chain` should be 
 ### How to Generate Wasm:
 
 ```
-/target/release/pendulum-node export-genesis-wasm --chain local-parachain-raw.json > para-2000-wasm
+./target/release/pendulum-node export-genesis-wasm --chain local-parachain-raw.json > para-2000-wasm
 ```
 
 ### How to Generate Genesis State:

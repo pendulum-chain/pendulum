@@ -96,10 +96,12 @@ use spacewalk_primitives::{
 	UnsignedFixedPoint, UnsignedInner,
 };
 
-use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use orml_currencies::WeightInfo;
+use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
-use orml_currencies_allowance_extension::{Config as AllowanceConfig, WeightInfo as AllowanceWeightInfo};
+use orml_currencies_allowance_extension::{
+	default_weights::WeightInfo as AllowanceWeightInfo, Config as AllowanceConfig,
+};
 
 use frame_support::{
 	log::{error, warn},
@@ -1109,7 +1111,8 @@ where
 				let caller = ext.caller().clone();
 
 				let mut env = env.buf_in_buf_out();
-				let base_weight = <<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::approve();
+				let base_weight =
+					<<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::approve();
 				env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 				let input = env.read(256)?;
 				let (currency_id, spender, amount): (
@@ -1144,7 +1147,8 @@ where
 				let caller = ext.caller().clone();
 
 				let mut env = env.buf_in_buf_out();
-				let base_weight = <<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::transfer_from();
+				let base_weight =
+					<<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::transfer_from();
 				env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 				let input = env.read(256)?;
 				let (owner, currency_id, recipient, amount): (
@@ -1241,7 +1245,9 @@ impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
 
 impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = orml_currencies_allowance_extension::default_weights::WeightInfo<Runtime>;
+	type WeightInfo =
+		orml_currencies_allowance_extension::default_weights::SubstrateWeight<Runtime>;
+	type MaxAllowedCurrencies = ConstU32<256>;
 }
 
 parameter_types! {

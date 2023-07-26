@@ -6,8 +6,15 @@ use sp_std::prelude::*;
 
 benchmarks! {
 	add_allowed_currencies {
+		// This has to come first. Ranges are inclusive on both sides so we start from 1, see
+		// [here](https://tidelabs.github.io/tidechain/frame_benchmarking/v1/macro.benchmarks.html)
+		let n in 1..T::MaxAllowedCurrencies::get();
+
 		let native_currency_id = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
-		let added_currencies: Vec<CurrencyOf<T>> = vec![native_currency_id];
+
+		// It does not really matter that it's the same currency as the loop of the extrinsic
+		// will iterate over it the same amount of times.
+		let added_currencies = vec![native_currency_id; n as usize];
 	}: add_allowed_currencies(RawOrigin::Root, added_currencies)
 	verify {
 		let native_currency_id = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
@@ -15,10 +22,14 @@ benchmarks! {
 	}
 
 	remove_allowed_currencies {
+		// This has to come first. Ranges are inclusive on both sides so we start from 1, see
+		// [here](https://tidelabs.github.io/tidechain/frame_benchmarking/v1/macro.benchmarks.html)
+		let n in 1..T::MaxAllowedCurrencies::get();
+
 		let native_currency_id = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
 		AllowedCurrencies::<T>::insert(native_currency_id, ());
 
-		let removed_currencies: Vec<CurrencyOf<T>> = vec![native_currency_id];
+		let removed_currencies = vec![native_currency_id; n as usize];
 	}: remove_allowed_currencies(RawOrigin::Root, removed_currencies)
 	verify {
 		let native_currency_id = <T as orml_currencies::Config>::GetNativeCurrencyId::get();

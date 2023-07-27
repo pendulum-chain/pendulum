@@ -58,8 +58,8 @@ use frame_system::{
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, ReserveIdentifier,
-	Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
+	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index,
+	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -355,7 +355,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Security(_) |
 			RuntimeCall::StellarRelay(_) |
 			RuntimeCall::VaultRegistry(_) |
-			RuntimeCall::VaultRewards(_) => true,
+			RuntimeCall::VaultRewards(_) |
+			RuntimeCall::AssetRegistry(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -819,6 +820,16 @@ impl orml_currencies::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl orml_asset_registry::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type CustomMetadata = asset_registry::CustomMetadata;
+	type AssetId = CurrencyId;
+	type AuthorityOrigin = asset_registry::AssetAuthority;
+	type AssetProcessor = asset_registry::CustomAssetProcessor;
+	type Balance = Balance;
+	type WeightInfo = weights::orml_asset_registry::WeightInfo<Runtime>;
+}
+
 parameter_types! {
 	pub const MinBlocksPerRound: BlockNumber = HOURS;
 	pub const DefaultBlocksPerRound: BlockNumber = 2 * HOURS;
@@ -1251,6 +1262,9 @@ construct_runtime!(
 		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 70,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
 
+		// Asset Metadata
+		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
+
 		VestingManager: vesting_manager::{Pallet, Call, Event<T>} = 100
 	}
 );
@@ -1277,6 +1291,9 @@ mod benches {
 		[replace, Replace]
 		[stellar_relay, StellarRelay]
 		[vault_registry, VaultRegistry]
+
+		// Other
+		[orml_asset_registry, runtime_common::benchmarking::orml_asset_registry::Pallet::<Runtime>]
 		[pallet_xcm, PolkadotXcm]
 	);
 }
@@ -1518,6 +1535,7 @@ impl_runtime_apis! {
 
 			impl frame_system_benchmarking::Config for Runtime {}
 			impl baseline::Config for Runtime {}
+			impl runtime_common::benchmarking::orml_asset_registry::Config for Runtime {}
 
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 			impl cumulus_pallet_session_benchmarking::Config for Runtime {}

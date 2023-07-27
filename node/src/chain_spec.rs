@@ -521,6 +521,7 @@ fn amplitude_genesis(
 	);
 
 	amplitude_runtime::GenesisConfig {
+		asset_registry: Default::default(),
 		system: amplitude_runtime::SystemConfig {
 			code: amplitude_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
@@ -708,6 +709,7 @@ fn foucoco_genesis(
 	);
 
 	foucoco_runtime::GenesisConfig {
+		asset_registry: Default::default(),
 		system: foucoco_runtime::SystemConfig {
 			code: foucoco_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
@@ -933,6 +935,7 @@ fn pendulum_genesis(
 		.collect();
 
 	pendulum_runtime::GenesisConfig {
+		asset_registry: Default::default(),
 		system: pendulum_runtime::SystemConfig {
 			code: pendulum_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")

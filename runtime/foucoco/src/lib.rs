@@ -59,8 +59,8 @@ use frame_system::{
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	chain_ext, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
-	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
+	asset_registry, chain_ext, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash,
+	Index, PoolId, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -369,7 +369,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::VaultRegistry(_) |
 			RuntimeCall::VaultRewards(_) |
 			RuntimeCall::Farming(_) |
-			RuntimeCall::TokenAllowance(_) => true,
+			RuntimeCall::TokenAllowance(_) |
+			RuntimeCall::AssetRegistry(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -825,6 +826,16 @@ impl orml_currencies::Config for Runtime {
 	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type WeightInfo = ();
+}
+
+impl orml_asset_registry::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type CustomMetadata = asset_registry::CustomMetadata;
+	type AssetId = CurrencyId;
+	type AuthorityOrigin = asset_registry::AssetAuthority;
+	type AssetProcessor = asset_registry::CustomAssetProcessor;
+	type Balance = Balance;
+	type WeightInfo = weights::orml_asset_registry::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -1575,6 +1586,9 @@ construct_runtime!(
 		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
 
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
+
+		// Asset Metadata
+		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
 	}
 );
 
@@ -1600,6 +1614,9 @@ mod benches {
 		[replace, Replace]
 		[stellar_relay, StellarRelay]
 		[vault_registry, VaultRegistry]
+
+		// Other
+		[orml_asset_registry, runtime_common::benchmarking::orml_asset_registry::Pallet::<Runtime>]
 		[pallet_xcm, PolkadotXcm]
 
 		[orml_currencies_allowance_extension, TokenAllowance]
@@ -1848,13 +1865,13 @@ impl_runtime_apis! {
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			   use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch, TrackedStorageKey};
-
+			use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch, TrackedStorageKey};
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use baseline::Pallet as BaselineBench;
 
 			impl frame_system_benchmarking::Config for Runtime {}
 			impl baseline::Config for Runtime {}
+			impl runtime_common::benchmarking::orml_asset_registry::Config for Runtime {}
 
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 			impl cumulus_pallet_session_benchmarking::Config for Runtime {}

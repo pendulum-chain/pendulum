@@ -5,9 +5,13 @@ use sp_runtime::{
 	DispatchError, MultiSignature,
 };
 
+pub mod asset_registry;
 pub mod chain_ext;
 pub mod stellar;
 pub mod zenlink;
+
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;

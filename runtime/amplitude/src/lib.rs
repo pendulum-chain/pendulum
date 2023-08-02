@@ -11,6 +11,8 @@ pub mod xcm_config;
 pub mod zenlink;
 
 use crate::zenlink::*;
+use bifrost_farming as farming;
+use bifrost_farming_rpc_runtime_api as farming_rpc_runtime_api;
 use xcm::v3::MultiLocation;
 use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 
@@ -58,7 +60,7 @@ use frame_system::{
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index,
+	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
 	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
@@ -356,6 +358,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::StellarRelay(_) |
 			RuntimeCall::VaultRegistry(_) |
 			RuntimeCall::VaultRewards(_) |
+			RuntimeCall::Farming(_) |
 			RuntimeCall::AssetRegistry(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -1190,6 +1193,23 @@ impl replace::Config for Runtime {
 	type WeightInfo = replace::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"am/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"am/fmrir");
+	pub AmplitudeTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
+impl farming::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureRoot<AccountId>;
+	type WeightInfo = farming::weights::BifrostWeight<Runtime>;
+	type TreasuryAccount = AmplitudeTreasuryAccount;
+	type Keeper = FarmingKeeperPalletId;
+	type RewardIssuer = FarmingRewardIssuerPalletId;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -1261,6 +1281,8 @@ construct_runtime!(
 		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 69,
 		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 70,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
+
+		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 
 		// Asset Metadata
 		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
@@ -1492,6 +1514,17 @@ impl_runtime_apis! {
 			)
 		}
 	}
+
+	impl farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId> for Runtime {
+		fn get_farming_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_farming_rewards(&who, pid).unwrap_or(Vec::new())
+		}
+
+		fn get_gauge_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_gauge_rewards(&who, pid).unwrap_or(Vec::new())
+		}
+	}
+
 
 	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {

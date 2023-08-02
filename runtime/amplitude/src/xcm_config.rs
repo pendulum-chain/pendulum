@@ -6,11 +6,12 @@ use crate::ConstU32;
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
-	traits::{Everything, Nothing},
+	traits::{ContainsPair, Everything, Nothing},
 };
-use frame_support::traits::ContainsPair;
-use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
-use orml_traits::location::Reserve;
+use orml_traits::{
+	location::{RelativeReserveProvider, Reserve},
+	parameter_type_with_key,
+};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
@@ -103,8 +104,8 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConv
 /// reserve is same with `origin`.
 pub struct MultiNativeAsset<ReserveProvider>(PhantomData<ReserveProvider>);
 impl<ReserveProvider> ContainsPair<MultiAsset, MultiLocation> for MultiNativeAsset<ReserveProvider>
-	where
-		ReserveProvider: Reserve,
+where
+	ReserveProvider: Reserve,
 {
 	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
 		if let Some(ref reserve) = ReserveProvider::reserve(asset) {

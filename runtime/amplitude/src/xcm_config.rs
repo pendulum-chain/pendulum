@@ -8,7 +8,9 @@ use frame_support::{
 	log, match_types, parameter_types,
 	traits::{Everything, Nothing},
 };
-use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key};
+use frame_support::traits::ContainsPair;
+use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
+use orml_traits::location::Reserve;
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
@@ -94,6 +96,23 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConv
 			return Ok(CurrencyId::XCM(0))
 		}
 		Err(location.clone())
+	}
+}
+
+/// A `FilterAssetLocation` implementation. Filters multi native assets whose
+/// reserve is same with `origin`.
+pub struct MultiNativeAsset<ReserveProvider>(PhantomData<ReserveProvider>);
+impl<ReserveProvider> ContainsPair<MultiAsset, MultiLocation> for MultiNativeAsset<ReserveProvider>
+	where
+		ReserveProvider: Reserve,
+{
+	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+		if let Some(ref reserve) = ReserveProvider::reserve(asset) {
+			if reserve == origin {
+				return true
+			}
+		}
+		false
 	}
 }
 
@@ -223,7 +242,7 @@ impl xcm_executor::Config for XcmConfig {
 	// How to withdraw and deposit an asset.
 	type AssetTransactor = FungiblesTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type IsReserve = NativeAsset;
+	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	// Teleporting is disabled.
 	type IsTeleporter = ();
 	type UniversalLocation = UniversalLocation;
@@ -311,7 +330,7 @@ impl orml_xtokens::Config for Runtime {
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type MinXcmFee = ParachainMinFee; //TODO to support hrmp transfer beetween parachain adjust this parameter
 	type MultiLocationsFilter = Everything;
-	type ReserveProvider = AbsoluteReserveProvider;
+	type ReserveProvider = RelativeReserveProvider;
 	type UniversalLocation = UniversalLocation;
 }
 

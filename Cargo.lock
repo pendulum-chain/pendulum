@@ -189,8 +189,6 @@ checksum = "4436e0292ab1bb631b42973c61205e704475fe8126af845c8d923c0996328127"
 name = "amplitude-runtime"
 version = "0.1.0"
 dependencies = [
- "bifrost-farming",
- "bifrost-farming-rpc-runtime-api",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",

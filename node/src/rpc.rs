@@ -141,7 +141,6 @@ where
 		RedeemRequest<AccountId, BlockNumber, Balance, CurrencyId>,
 	>,
 	C::Api: module_oracle_rpc::OracleRuntimeApi<Block, Balance, CurrencyId>,
-	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
 	C::Api: BlockBuilder<Block>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	P: TransactionPool + Sync + Send + 'static,

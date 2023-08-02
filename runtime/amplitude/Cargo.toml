@@ -128,9 +128,6 @@ parachain-info = { git = "https://github.com/paritytech/cumulus", default-featur
 zenlink-protocol = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.40-protocol" }
 zenlink-protocol-runtime-api = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.40-protocol" }
 
-bifrost-farming = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "polkadot-v0.9.40-farming-add-currencyid-generic" }
-bifrost-farming-rpc-runtime-api = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "polkadot-v0.9.40-farming-add-currencyid-generic" }
-
 [features]
 default = [
     "std",
@@ -204,9 +201,6 @@ std = [
     "xcm/std",
     "zenlink-protocol/std",
     "zenlink-protocol-runtime-api/std",
-	"bifrost-farming/std",
-	"bifrost-farming-rpc-runtime-api/std",
-
     # custom libraries from spacewalk
     "security/std",
     "staking/std",

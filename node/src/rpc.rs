@@ -140,6 +140,7 @@ where
 		H256,
 		RedeemRequest<AccountId, BlockNumber, Balance, CurrencyId>,
 	>,
+	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
 	C::Api: module_oracle_rpc::OracleRuntimeApi<Block, Balance, CurrencyId>,
 	C::Api: BlockBuilder<Block>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
@@ -163,6 +164,7 @@ where
 	module.merge(Replace::new(client.clone()).into_rpc())?;
 	module.merge(VaultRegistry::new(client.clone()).into_rpc())?;
 	module.merge(Oracle::new(client.clone()).into_rpc())?;
+	module.merge(FarmingRpc::new(client.clone()).into_rpc())?;
 	module.merge(ZenlinkProtocol::new(client).into_rpc())?;
 
 	Ok(module)

@@ -2,14 +2,13 @@
 mod mock;
 
 #[cfg(test)]
-mod setup;
-
-#[cfg(test)]
 mod pendulum_tests;
 
 #[cfg(test)]
 mod amplitude_tests;
 
+#[cfg(test)]
+mod test_macros;
 
 pub const PENDULUM_ID: u32 = 2094;
 pub const STATEMINT_ID: u32 = 1000;

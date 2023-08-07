@@ -81,7 +81,7 @@ fn transfer_dot_from_pendulum_to_polkadot() {
 #[test]
 fn assethub_transfer_incorrect_asset_to_pendulum_should_fail() {
 	parachain1_transfer_incorrect_asset_to_parachain2_should_fail!(
-		statemine_runtime,
+		polkadot_asset_hub_runtime,
 		AssetHubParachain,
 		pendulum_runtime,
 		PendulumParachain,
@@ -92,7 +92,7 @@ fn assethub_transfer_incorrect_asset_to_pendulum_should_fail() {
 #[test]
 fn assethub_transfer_asset_to_pendulum() {
 	parachain1_transfer_asset_to_parachain2!(
-		statemine_runtime,
+		polkadot_asset_hub_runtime,
 		AssetHubParachain,
 		USDT_ASSET_ID,
 		pendulum_runtime,
@@ -106,7 +106,7 @@ fn assethub_transfer_asset_to_pendulum_and_back() {
 	let network_id = NetworkId::Polkadot;
 
 	parachain1_transfer_asset_to_parachain2_and_back!(
-		statemine_runtime,
+		polkadot_asset_hub_runtime,
 		AssetHubParachain,
 		POLKADOT_ASSETHUB_ID,
 		USDT_ASSET_ID,

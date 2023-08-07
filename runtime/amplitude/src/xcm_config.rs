@@ -6,9 +6,12 @@ use crate::ConstU32;
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
-	traits::{Everything, Nothing},
+	traits::{ContainsPair, Everything, Nothing},
 };
-use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key};
+use orml_traits::{
+	location::{RelativeReserveProvider, Reserve},
+	parameter_type_with_key,
+};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
@@ -16,20 +19,23 @@ use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
-	FixedWeightBounds, FungiblesAdapter, NativeAsset, NoChecking, ParentIsPreset,
-	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
+	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
+use runtime_common::parachains::kusama::asset_hub;
+
+const XCM_ASSET_RELAY_KSM: u8 = 0;
+const XCM_ASSET_ASSETHUB_USDT: u8 = 1;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
-	pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 	pub UniversalLocation: InteriorMultiLocation =
 		X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
@@ -58,7 +64,15 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		match id {
 			CurrencyId::XCM(index) => match index {
-				0 => Some(MultiLocation::parent()),
+				XCM_ASSET_RELAY_KSM => Some(MultiLocation::parent()),
+				XCM_ASSET_ASSETHUB_USDT => Some(MultiLocation::new(
+					1,
+					X3(
+						Parachain(asset_hub::PARA_ID),
+						PalletInstance(asset_hub::ASSET_PALLET_ID),
+						GeneralIndex(asset_hub::USDT_ASSET_ID),
+					),
+				)),
 				_ => None,
 			},
 			_ => None,
@@ -69,7 +83,16 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
-			MultiLocation { parents: 1, interior: Here } => Some(CurrencyId::XCM(0)),
+			MultiLocation { parents: 1, interior: Here } => Some(CurrencyId::XCM(XCM_ASSET_RELAY_KSM)),
+			MultiLocation {
+				parents: 1,
+				interior:
+					X3(
+						Parachain(asset_hub::PARA_ID),
+						PalletInstance(asset_hub::ASSET_PALLET_ID),
+						GeneralIndex(asset_hub::USDT_ASSET_ID)
+					)
+			} => Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
 			_ => None,
 		}
 	}
@@ -90,10 +113,25 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 /// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		if location == MultiLocation::parent() {
-			return Ok(CurrencyId::XCM(0))
+		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location.clone())
+			.ok_or(location)
+	}
+}
+
+/// A `FilterAssetLocation` implementation. Filters multi native assets whose
+/// reserve is same with `origin`.
+pub struct MultiNativeAsset<ReserveProvider>(PhantomData<ReserveProvider>);
+impl<ReserveProvider> ContainsPair<MultiAsset, MultiLocation> for MultiNativeAsset<ReserveProvider>
+where
+	ReserveProvider: Reserve,
+{
+	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+		if let Some(ref reserve) = ReserveProvider::reserve(asset) {
+			if reserve == origin {
+				return true
+			}
 		}
-		Err(location.clone())
+		false
 	}
 }
 
@@ -223,7 +261,7 @@ impl xcm_executor::Config for XcmConfig {
 	// How to withdraw and deposit an asset.
 	type AssetTransactor = FungiblesTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type IsReserve = NativeAsset;
+	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	// Teleporting is disabled.
 	type IsTeleporter = ();
 	type UniversalLocation = UniversalLocation;
@@ -311,7 +349,7 @@ impl orml_xtokens::Config for Runtime {
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type MinXcmFee = ParachainMinFee; //TODO to support hrmp transfer beetween parachain adjust this parameter
 	type MultiLocationsFilter = Everything;
-	type ReserveProvider = AbsoluteReserveProvider;
+	type ReserveProvider = RelativeReserveProvider;
 	type UniversalLocation = UniversalLocation;
 }
 

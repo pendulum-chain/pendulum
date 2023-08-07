@@ -88,12 +88,12 @@ pub use redeem::{Event as RedeemEvent, RedeemRequest};
 pub use replace::{Event as ReplaceEvent, ReplaceRequest};
 pub use security::StatusCode;
 pub use stellar_relay::traits::{FieldLength, Organization, Validator};
-
+pub use spacewalk_primitives::CurrencyId;
 // Polkadot imports
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use spacewalk_primitives::{
-	self as primitives, CurrencyId, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner,
+	self as primitives, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner,
 	UnsignedFixedPoint, UnsignedInner,
 };
 

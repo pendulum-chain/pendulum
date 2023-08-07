@@ -450,7 +450,7 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 					topics: _,
 				} => {
 					// https://github.com/paritytech/cumulus/pull/1278 support using self sufficient asset
-					// for paying xcm execution fee on Statemint.
+					// for paying xcm execution fee.
 					// 990_000_000_000 for Statemint
 					// 988_423_297_485 for Statemine
 					assert_eq!(amount, Assets::balance($para1_asset_id, &AccountId::from(BOB)));
@@ -461,6 +461,7 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 	}};
 }
 
+// macros defined at the bottom of this file to prevent unresolved imports
 pub(super) use parachain1_transfer_asset_to_parachain2;
 pub(super) use parachain1_transfer_asset_to_parachain2_and_back;
 pub(super) use parachain1_transfer_incorrect_asset_to_parachain2_should_fail;

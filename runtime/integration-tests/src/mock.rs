@@ -1,4 +1,4 @@
-use crate::{AMPLITUDE_ID, PENDULUM_ID, STATEMINE_ID, STATEMINT_ID};
+use crate::{AMPLITUDE_ID, PENDULUM_ID, KUSAMA_ASSETHUB_ID, POLKADOT_ASSETHUB_ID};
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::CurrencyId;
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
@@ -9,13 +9,16 @@ use sp_io::TestExternalities;
 use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::Weight;
 
+use statemint_runtime as polkadot_asset_hub_runtime;
+use statemine_runtime as kusama_asset_hub_runtime;
+
 pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];
 
 pub const UNIT: Balance = 1_000_000_000_000;
 pub const TEN_UNITS: Balance = 10_000_000_000_000;
 
-pub const USDT_ASSET_ID: u32 = 1984; //Real USDT Asset ID both from Statemint and Statemine
+pub const USDT_ASSET_ID: u32 = 1984; //Real USDT Asset ID of both Polkadot's and Kusama's Asset Hub
 pub const INCORRECT_ASSET_ID: u32 = 0; //asset id that pendulum/amplitude does NOT SUPPORT
 
 pub const INITIAL_BALANCE: Balance = 1_000_000_000;
@@ -103,8 +106,8 @@ pub trait Builder<Currency> {
 }
 
 pub enum ParachainType {
-	Statemint,
-	Statemine,
+	PolkadotAssetHub,
+	KusamaAssetHub,
 	Pendulum,
 	Amplitude,
 }
@@ -172,10 +175,10 @@ fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
 
 pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 	match chain {
-		ParachainType::Statemint =>
-			ExtBuilderParachain::statemint_default().balances(vec![]).build(),
-		ParachainType::Statemine =>
-			ExtBuilderParachain::statemine_default().balances(vec![]).build(),
+		ParachainType::PolkadotAssetHub =>
+			ExtBuilderParachain::polkadot_asset_hub_default().balances(vec![]).build(),
+		ParachainType::KusamaAssetHub =>
+			ExtBuilderParachain::kusama_asset_hub_default().balances(vec![]).build(),
 		ParachainType::Pendulum => ExtBuilderParachain::pendulum_default().balances(vec![]).build(),
 		ParachainType::Amplitude =>
 			ExtBuilderParachain::amplitude_default().balances(vec![]).build(),
@@ -185,8 +188,8 @@ pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 impl<Currency> ExtBuilderParachain<Currency> {
 	fn get_parachain_id(&self) -> u32 {
 		match self.chain {
-			ParachainType::Statemint => STATEMINT_ID,
-			ParachainType::Statemine => STATEMINE_ID,
+			ParachainType::PolkadotAssetHub => POLKADOT_ASSETHUB_ID,
+			ParachainType::KusamaAssetHub => KUSAMA_ASSETHUB_ID,
 			ParachainType::Pendulum => PENDULUM_ID,
 			ParachainType::Amplitude => AMPLITUDE_ID,
 		}
@@ -239,12 +242,12 @@ impl Builder<CurrencyId> for ExtBuilderParachain<CurrencyId> {
 
 // ------------------- for Statemint and Statemine -------------------
 impl ExtBuilderParachain<u128> {
-	pub fn statemint_default() -> Self {
-		Self { balances: vec![], chain: ParachainType::Statemint }
+	pub fn polkadot_asset_hub_default() -> Self {
+		Self { balances: vec![], chain: ParachainType::PolkadotAssetHub }
 	}
 
-	pub fn statemine_default() -> Self {
-		Self { balances: vec![], chain: ParachainType::Statemine }
+	pub fn kusama_asset_hub_default() -> Self {
+		Self { balances: vec![], chain: ParachainType::KusamaAssetHub }
 	}
 }
 
@@ -256,12 +259,12 @@ impl Builder<u128> for ExtBuilderParachain<u128> {
 
 	fn build(self) -> TestExternalities {
 		match self.chain {
-			ParachainType::Statemint => {
-				use statemint_runtime::{Runtime, System};
+			ParachainType::PolkadotAssetHub => {
+				use polkadot_asset_hub_runtime::{Runtime, System};
 				build_parachain!(self, Runtime, System)
 			},
-			ParachainType::Statemine => {
-				use statemine_runtime::{Runtime, System};
+			ParachainType::KusamaAssetHub => {
+				use kusama_asset_hub_runtime::{Runtime, System};
 				build_parachain!(self, Runtime, System)
 			},
 			_ => panic!("cannot use this chain to build"),

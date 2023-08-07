@@ -27,10 +27,10 @@ use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
-use runtime_common::parachains::kusama::statemine;
+use runtime_common::parachains::kusama::asset_hub;
 
 const XCM_ASSET_RELAY_KSM: u8 = 0;
-const XCM_ASSET_STATEMINE_USDT: u8 = 1;
+const XCM_ASSET_ASSETHUB_USDT: u8 = 1;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -65,12 +65,12 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 		match id {
 			CurrencyId::XCM(index) => match index {
 				XCM_ASSET_RELAY_KSM => Some(MultiLocation::parent()),
-				XCM_ASSET_STATEMINE_USDT => Some(MultiLocation::new(
+				XCM_ASSET_ASSETHUB_USDT => Some(MultiLocation::new(
 					1,
 					X3(
-						Parachain(statemine::PARA_ID),
-						PalletInstance(statemine::ASSET_PALLET_ID),
-						GeneralIndex(statemine::USDT_ASSET_ID),
+						Parachain(asset_hub::PARA_ID),
+						PalletInstance(asset_hub::ASSET_PALLET_ID),
+						GeneralIndex(asset_hub::USDT_ASSET_ID),
 					),
 				)),
 				_ => None,
@@ -88,11 +88,11 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 				parents: 1,
 				interior:
 					X3(
-						Parachain(statemine::PARA_ID),
-						PalletInstance(statemine::ASSET_PALLET_ID),
-						GeneralIndex(statemine::USDT_ASSET_ID)
+						Parachain(asset_hub::PARA_ID),
+						PalletInstance(asset_hub::ASSET_PALLET_ID),
+						GeneralIndex(asset_hub::USDT_ASSET_ID)
 					)
-			} => Some(CurrencyId::XCM(XCM_ASSET_STATEMINE_USDT)),
+			} => Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
 			_ => None,
 		}
 	}

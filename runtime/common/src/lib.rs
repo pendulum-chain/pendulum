@@ -68,7 +68,7 @@ pub mod opaque {
 
 pub mod parachains {
 	pub mod polkadot {
-		pub mod statemint {
+		pub mod asset_hub {
 			pub const PARA_ID: u32 = 1000;
 			pub const ASSET_PALLET_ID: u8 = 50;
 
@@ -78,7 +78,7 @@ pub mod parachains {
 	}
 
 	pub mod kusama {
-		pub mod statemine {
+		pub mod asset_hub {
 			pub const PARA_ID: u32 = 1000;
 			pub const ASSET_PALLET_ID: u8 = 50;
 

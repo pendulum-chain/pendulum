@@ -159,7 +159,7 @@ pub mod pallet {
 
 			// Check if the resulting vector of allowed currencies is less than the maximum allowed.
 			// We check after the insertion to avoid counting duplicates.
-			let allowed_currencies_len: usize = currencies.len();
+			let allowed_currencies_len: usize = AllowedCurrencies::<T>::iter().count();
 			ensure!(
 				allowed_currencies_len <= max_allowed_currencies,
 				Error::<T>::ExceedsNumberOfAllowedCurrencies
@@ -181,6 +181,16 @@ pub mod pallet {
 			currencies: Vec<CurrencyOf<T>>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
+
+			// Check if the supplied amount of currencies is less than the maximum allowed
+			// Although this is not strictly necessary, it is a good sanity check and prevents callers
+			// from using too large currency vectors.
+			let max_allowed_currencies: usize = T::MaxAllowedCurrencies::get() as usize;
+			ensure!(
+				currencies.len() <= max_allowed_currencies,
+				Error::<T>::ExceedsNumberOfAllowedCurrencies
+			);
+
 			for i in currencies.clone() {
 				AllowedCurrencies::<T>::remove(i);
 			}

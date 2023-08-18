@@ -6,6 +6,7 @@ use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::{info, warn};
 use runtime_common::opaque::Block;
+use sc_chain_spec::GenericChainSpec;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
 	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
@@ -15,7 +16,7 @@ use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 
 use crate::{
-	chain_spec,
+	chain_spec::{self, ParachainExtensions},
 	cli::{Cli, RelayChainCli, Subcommand},
 	service::{
 		new_partial, AmplitudeRuntimeExecutor, DevelopmentRuntimeExecutor, FoucocoRuntimeExecutor,
@@ -31,49 +32,74 @@ enum ChainIdentity {
 	Development,
 }
 
+impl ChainIdentity {
+	fn identify(id: &str) -> Option<Self> {
+		match id {
+			"amplitude" => Some(ChainIdentity::Amplitude),
+			"foucoco" => Some(ChainIdentity::Foucoco),
+			"pendulum" => Some(ChainIdentity::Pendulum),
+			"" | "local" | "dev" => Some(ChainIdentity::Development),
+			_ => None,
+		}
+	}
+
+	fn from_json_file(path: &str) -> std::result::Result<Self, String> {
+		GenericChainSpec::<(), ParachainExtensions>::from_json_file(path.into())
+			.map(|chain_spec| chain_spec.identify())
+			.or_else(|_| {
+				GenericChainSpec::<()>::from_json_file(path.into())
+					.map(|chain_spec| chain_spec.identify())
+			})
+	}
+
+	fn get_runtime_version(&self) -> &'static RuntimeVersion {
+		match self {
+			ChainIdentity::Amplitude => &amplitude_runtime::VERSION,
+			ChainIdentity::Foucoco => &foucoco_runtime::VERSION,
+			ChainIdentity::Pendulum => &pendulum_runtime::VERSION,
+			ChainIdentity::Development => &development_runtime::VERSION,
+		}
+	}
+
+	fn create_chain_spec(&self) -> Box<dyn ChainSpec> {
+		match self {
+			ChainIdentity::Amplitude => Box::new(chain_spec::amplitude_config()),
+			ChainIdentity::Foucoco => Box::new(chain_spec::foucoco_config()),
+			ChainIdentity::Pendulum => Box::new(chain_spec::pendulum_config()),
+			ChainIdentity::Development => Box::new(chain_spec::development_config()),
+		}
+	}
+
+	fn load_chain_spec_from_json_file(
+		&self,
+		path: &str,
+	) -> std::result::Result<Box<dyn ChainSpec>, String> {
+		Ok(match self {
+			ChainIdentity::Amplitude =>
+				Box::new(chain_spec::AmplitudeChainSpec::from_json_file(path.into())?),
+			ChainIdentity::Foucoco =>
+				Box::new(chain_spec::FoucocoChainSpec::from_json_file(path.into())?),
+			ChainIdentity::Pendulum =>
+				Box::new(chain_spec::PendulumChainSpec::from_json_file(path.into())?),
+			ChainIdentity::Development =>
+				Box::new(chain_spec::DevelopmentChainSpec::from_json_file(path.into())?),
+		})
+	}
+}
+
 trait IdentifyChain {
 	fn identify(&self) -> ChainIdentity;
 }
 
 impl IdentifyChain for dyn sc_service::ChainSpec {
 	fn identify(&self) -> ChainIdentity {
-		if self.id().starts_with("amplitude") {
-			ChainIdentity::Amplitude
-		} else if self.id().starts_with("foucoco") {
-			ChainIdentity::Foucoco
-		} else if self.id().starts_with("pendulum") {
-			ChainIdentity::Pendulum
-		} else {
-			ChainIdentity::Development
-		}
+		ChainIdentity::identify(self.id()).unwrap_or(ChainIdentity::Development)
 	}
 }
 
 impl<T: sc_service::ChainSpec + 'static> IdentifyChain for T {
 	fn identify(&self) -> ChainIdentity {
 		<dyn sc_service::ChainSpec>::identify(self)
-	}
-}
-
-fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
-	match id {
-		"amplitude" => Ok(Box::new(chain_spec::amplitude_config())),
-		"foucoco" => Ok(Box::new(chain_spec::foucoco_config())),
-		"pendulum" => Ok(Box::new(chain_spec::pendulum_config())),
-		"dev" => Ok(Box::new(chain_spec::development_config())),
-		"" | "local" => Ok(Box::new(chain_spec::local_testnet_config())),
-		path => {
-			let chain_spec = chain_spec::AmplitudeChainSpec::from_json_file(path.into())?;
-			Ok(match chain_spec.identify() {
-				ChainIdentity::Amplitude =>
-					Box::new(chain_spec::AmplitudeChainSpec::from_json_file(path.into())?),
-				ChainIdentity::Foucoco =>
-					Box::new(chain_spec::FoucocoChainSpec::from_json_file(path.into())?),
-				ChainIdentity::Pendulum =>
-					Box::new(chain_spec::PendulumChainSpec::from_json_file(path.into())?),
-				ChainIdentity::Development => Box::new(chain_spec::development_config()),
-			})
-		},
 	}
 }
 
@@ -109,16 +135,14 @@ impl SubstrateCli for Cli {
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-		load_spec(id)
+		Ok(match ChainIdentity::identify(id) {
+			Some(identitiy) => identitiy.create_chain_spec(),
+			None => ChainIdentity::from_json_file(id)?.load_chain_spec_from_json_file(id)?,
+		})
 	}
 
 	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		match spec.identify() {
-			ChainIdentity::Amplitude => &amplitude_runtime::VERSION,
-			ChainIdentity::Foucoco => &foucoco_runtime::VERSION,
-			ChainIdentity::Pendulum => &pendulum_runtime::VERSION,
-			ChainIdentity::Development => &development_runtime::VERSION,
-		}
+		spec.identify().get_runtime_version()
 	}
 }
 
@@ -162,7 +186,6 @@ impl SubstrateCli for RelayChainCli {
 	}
 }
 
-
 macro_rules! construct_sync_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $code:expr ) => {{
 		let runner = $cli.create_runner($cmd)?;
@@ -176,17 +199,13 @@ macro_rules! construct_sync_run {
 				$code
 			}),
 			ChainIdentity::Foucoco => runner.sync_run(|$config| {
-				let $components = new_partial::<
-					foucoco_runtime::RuntimeApi,
-					FoucocoRuntimeExecutor,
-				>(&$config)?;
+				let $components =
+					new_partial::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(&$config)?;
 				$code
 			}),
 			ChainIdentity::Pendulum => runner.sync_run(|$config| {
-				let $components = new_partial::<
-					pendulum_runtime::RuntimeApi,
-					PendulumRuntimeExecutor,
-				>(&$config)?;
+				let $components =
+					new_partial::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(&$config)?;
 				$code
 			}),
 			ChainIdentity::Development => runner.sync_run(|$config| {
@@ -213,17 +232,13 @@ macro_rules! construct_generic_async_run {
 				$code
 			}),
 			ChainIdentity::Foucoco => runner.async_run(|$config| {
-				let $components = new_partial::<
-					foucoco_runtime::RuntimeApi,
-					FoucocoRuntimeExecutor,
-				>(&$config)?;
+				let $components =
+					new_partial::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(&$config)?;
 				$code
 			}),
 			ChainIdentity::Pendulum => runner.async_run(|$config| {
-				let $components = new_partial::<
-					pendulum_runtime::RuntimeApi,
-					PendulumRuntimeExecutor,
-				>(&$config)?;
+				let $components =
+					new_partial::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(&$config)?;
 				$code
 			}),
 			ChainIdentity::Development => runner.async_run(|$config| {
@@ -315,20 +330,17 @@ pub fn run() -> Result<()> {
 			})
 		},
 		Some(Subcommand::Benchmark(bench_cmd)) => match bench_cmd {
-			BenchmarkCmd::Pallet(cmd) => {
+			BenchmarkCmd::Pallet(cmd) =>
 				if cfg!(feature = "runtime-benchmarks") {
 					let runner = cli.create_runner(cmd)?;
 
 					match runner.config().chain_spec.identify() {
-						ChainIdentity::Amplitude => runner.sync_run(|config| {
-							cmd.run::<Block, AmplitudeRuntimeExecutor>(config)
-						}),
-						ChainIdentity::Foucoco => runner.sync_run(|config| {
-							cmd.run::<Block, FoucocoRuntimeExecutor>(config)
-						}),
-						ChainIdentity::Pendulum => runner.sync_run(|config| {
-							cmd.run::<Block, PendulumRuntimeExecutor>(config)
-						}),
+						ChainIdentity::Amplitude => runner
+							.sync_run(|config| cmd.run::<Block, AmplitudeRuntimeExecutor>(config)),
+						ChainIdentity::Foucoco => runner
+							.sync_run(|config| cmd.run::<Block, FoucocoRuntimeExecutor>(config)),
+						ChainIdentity::Pendulum => runner
+							.sync_run(|config| cmd.run::<Block, PendulumRuntimeExecutor>(config)),
 						ChainIdentity::Development => runner.sync_run(|config| {
 							cmd.run::<Block, DevelopmentRuntimeExecutor>(config)
 						}),
@@ -337,12 +349,9 @@ pub fn run() -> Result<()> {
 					Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`."
 						.into())
-				}
-			},
+				},
 			BenchmarkCmd::Block(cmd) => {
-				construct_sync_run!(|components, cli, cmd, config| {
-					cmd.run(components.client)
-				})
+				construct_sync_run!(|components, cli, cmd, config| cmd.run(components.client))
 			},
 			#[cfg(not(feature = "runtime-benchmarks"))]
 			BenchmarkCmd::Storage(_) =>
@@ -351,7 +360,7 @@ pub fn run() -> Result<()> {
 						to enable storage benchmarks."
 						.into(),
 				)
-					.into()),
+				.into()),
 			#[cfg(feature = "runtime-benchmarks")]
 			BenchmarkCmd::Storage(cmd) => {
 				construct_sync_run!(|components, cli, cmd, config| {
@@ -360,7 +369,7 @@ pub fn run() -> Result<()> {
 
 					cmd.run(config, components.client.clone(), db, storage)
 				})
-			}
+			},
 			BenchmarkCmd::Machine(cmd) => {
 				let runner = cli.create_runner(cmd)?;
 				runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone()))
@@ -369,7 +378,7 @@ pub fn run() -> Result<()> {
 			// new benchmark commands without requiring a companion MR.
 			#[allow(unreachable_patterns)]
 			_ => Err("Benchmarking sub-command unsupported".into()),
-		}
+		},
 		#[cfg(feature = "try-runtime")]
 		Some(Subcommand::TryRuntime(cmd)) => {
 			if cfg!(feature = "try-runtime") {
@@ -413,7 +422,7 @@ pub fn run() -> Result<()> {
 					None
 				};
 
-				let para_id = chain_spec::Extensions::try_get(&*config.chain_spec)
+				let para_id = chain_spec::ParachainExtensions::try_get(&*config.chain_spec)
 					.map(|e| e.para_id)
 					.ok_or_else(|| "Could not find parachain ID in chain-spec.")?;
 
@@ -451,7 +460,7 @@ pub fn run() -> Result<()> {
 						sp_core::crypto::set_default_ss58_version(
 							amplitude_runtime::SS58Prefix::get().into(),
 						);
-						crate::service::start_parachain_node_spacewalk_amplitude::<AmplitudeRuntimeExecutor>(
+						crate::service::start_parachain_node_spacewalk_amplitude(
 							config,
 							polkadot_config,
 							collator_options,
@@ -466,7 +475,7 @@ pub fn run() -> Result<()> {
 						sp_core::crypto::set_default_ss58_version(
 							foucoco_runtime::SS58Prefix::get().into(),
 						);
-						crate::service::start_parachain_node_spacewalk_foucoco::<FoucocoRuntimeExecutor>(
+						crate::service::start_parachain_node_spacewalk_foucoco(
 							config,
 							polkadot_config,
 							collator_options,
@@ -481,7 +490,7 @@ pub fn run() -> Result<()> {
 						sp_core::crypto::set_default_ss58_version(
 							pendulum_runtime::SS58Prefix::get().into(),
 						);
-						crate::service::start_parachain_node_pendulum::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(
+						crate::service::start_parachain_node_pendulum(
 							config,
 							polkadot_config,
 							collator_options,
@@ -493,7 +502,7 @@ pub fn run() -> Result<()> {
 						.map_err(Into::into)
 					},
 
-					ChainIdentity::Development => crate::service::start_parachain_node_development::<development_runtime::RuntimeApi, DevelopmentRuntimeExecutor>(
+					ChainIdentity::Development => crate::service::start_parachain_node_development(
 						config,
 						polkadot_config,
 						collator_options,

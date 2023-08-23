@@ -38,7 +38,7 @@ impl ChainIdentity {
 			"amplitude" => Some(ChainIdentity::Amplitude),
 			"foucoco" => Some(ChainIdentity::Foucoco),
 			"pendulum" => Some(ChainIdentity::Pendulum),
-			"" | "local" | "dev" => Some(ChainIdentity::Development),
+			"" | "dev" => Some(ChainIdentity::Development),
 			_ => None,
 		}
 	}

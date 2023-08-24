@@ -7,28 +7,22 @@
 
 use std::sync::Arc;
 
-use runtime_common::{opaque::Block, AccountId, Balance, Index as Nonce, PoolId};
-
-use sc_client_api::AuxStore;
 pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
 use sc_transaction_pool_api::TransactionPool;
-use sp_api::ProvideRuntimeApi;
-use sp_arithmetic::FixedU128;
-use sp_block_builder::BlockBuilder;
-use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
-use sp_core::H256;
-
-use spacewalk_primitives::{
-	issue::IssueRequest, redeem::RedeemRequest, replace::ReplaceRequest, BlockNumber, CurrencyId,
-	VaultId,
-};
 
 use bifrost_farming_rpc_api::{FarmingRpc, FarmingRpcApiServer};
-use bifrost_farming_rpc_runtime_api::FarmingRuntimeApi;
 
-use zenlink_protocol::AssetId;
 use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApiServer};
-use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
+
+use module_issue_rpc::{Issue, IssueApiServer};
+use module_oracle_rpc::{Oracle, OracleApiServer};
+use module_redeem_rpc::{Redeem, RedeemApiServer};
+use module_replace_rpc::{Replace, ReplaceApiServer};
+use module_vault_registry_rpc::{VaultRegistry, VaultRegistryApiServer};
+use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
+use substrate_frame_rpc_system::{System, SystemApiServer};
+
+use crate::service::{AmplitudeClient, DevelopmentClient, FoucocoClient, PendulumClient};
 
 /// A type representing all RPC extensions.
 pub type RpcExtension = jsonrpsee::RpcModule<()>;
@@ -44,26 +38,12 @@ pub struct FullDeps<C, P> {
 }
 
 /// Instantiate all RPC extensions.
-pub fn create_full_pendulum<C, P>(
-	deps: FullDeps<C, P>,
+pub fn create_full_pendulum<P>(
+	deps: FullDeps<PendulumClient, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
-	C: ProvideRuntimeApi<Block>
-		+ HeaderBackend<Block>
-		+ AuxStore
-		+ HeaderMetadata<Block, Error = BlockChainError>
-		+ Send
-		+ Sync
-		+ 'static,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
-	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: BlockBuilder<Block>,
-	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	P: TransactionPool + Sync + Send + 'static,
 {
-	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
-	use substrate_frame_rpc_system::{System, SystemApiServer};
-
 	let mut module = RpcExtension::new(());
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
@@ -74,25 +54,12 @@ where
 }
 
 /// Instantiate all RPC extensions.
-pub fn create_full_development<C, P>(
-	deps: FullDeps<C, P>,
+pub fn create_full_development<P>(
+	deps: FullDeps<DevelopmentClient, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
-	C: ProvideRuntimeApi<Block>
-		+ HeaderBackend<Block>
-		+ AuxStore
-		+ HeaderMetadata<Block, Error = BlockChainError>
-		+ Send
-		+ Sync
-		+ 'static,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
-	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
-	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
-	use substrate_frame_rpc_system::{System, SystemApiServer};
-
 	let mut module = RpcExtension::new(());
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
@@ -101,59 +68,12 @@ where
 	Ok(module)
 }
 
-pub fn create_full_amplitude<C, P>(
-	deps: FullDeps<C, P>,
+pub fn create_full_amplitude<P>(
+	deps: FullDeps<AmplitudeClient, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
-	C: ProvideRuntimeApi<Block>
-		+ HeaderBackend<Block>
-		+ AuxStore
-		+ HeaderMetadata<Block, Error = BlockChainError>
-		+ Send
-		+ Sync
-		+ 'static,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
-	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: module_vault_registry_rpc::VaultRegistryRuntimeApi<
-		Block,
-		VaultId<AccountId, CurrencyId>,
-		Balance,
-		FixedU128,
-		CurrencyId,
-		AccountId,
-	>,
-	C::Api: module_replace_rpc::ReplaceRuntimeApi<
-		Block,
-		AccountId,
-		H256,
-		ReplaceRequest<AccountId, BlockNumber, Balance, CurrencyId>,
-	>,
-	C::Api: module_issue_rpc::IssueRuntimeApi<
-		Block,
-		AccountId,
-		H256,
-		IssueRequest<AccountId, BlockNumber, Balance, CurrencyId>,
-	>,
-	C::Api: module_redeem_rpc::RedeemRuntimeApi<
-		Block,
-		AccountId,
-		H256,
-		RedeemRequest<AccountId, BlockNumber, Balance, CurrencyId>,
-	>,
-	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
-	C::Api: module_oracle_rpc::OracleRuntimeApi<Block, Balance, CurrencyId>,
-	C::Api: BlockBuilder<Block>,
-	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	P: TransactionPool + Sync + Send + 'static,
 {
-	use module_issue_rpc::{Issue, IssueApiServer};
-	use module_oracle_rpc::{Oracle, OracleApiServer};
-	use module_redeem_rpc::{Redeem, RedeemApiServer};
-	use module_replace_rpc::{Replace, ReplaceApiServer};
-	use module_vault_registry_rpc::{VaultRegistry, VaultRegistryApiServer};
-	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
-	use substrate_frame_rpc_system::{System, SystemApiServer};
-
 	let mut module = RpcExtension::new(());
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
@@ -170,59 +90,12 @@ where
 	Ok(module)
 }
 
-pub fn create_full_foucoco<C, P>(
-	deps: FullDeps<C, P>,
+pub fn create_full_foucoco<P>(
+	deps: FullDeps<FoucocoClient, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
-	C: ProvideRuntimeApi<Block>
-		+ HeaderBackend<Block>
-		+ AuxStore
-		+ HeaderMetadata<Block, Error = BlockChainError>
-		+ Send
-		+ Sync
-		+ 'static,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
-	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: module_vault_registry_rpc::VaultRegistryRuntimeApi<
-		Block,
-		VaultId<AccountId, CurrencyId>,
-		Balance,
-		FixedU128,
-		CurrencyId,
-		AccountId,
-	>,
-	C::Api: module_replace_rpc::ReplaceRuntimeApi<
-		Block,
-		AccountId,
-		H256,
-		ReplaceRequest<AccountId, BlockNumber, Balance, CurrencyId>,
-	>,
-	C::Api: module_issue_rpc::IssueRuntimeApi<
-		Block,
-		AccountId,
-		H256,
-		IssueRequest<AccountId, BlockNumber, Balance, CurrencyId>,
-	>,
-	C::Api: module_redeem_rpc::RedeemRuntimeApi<
-		Block,
-		AccountId,
-		H256,
-		RedeemRequest<AccountId, BlockNumber, Balance, CurrencyId>,
-	>,
-	C::Api: module_oracle_rpc::OracleRuntimeApi<Block, Balance, CurrencyId>,
-	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
-	C::Api: BlockBuilder<Block>,
-	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	P: TransactionPool + Sync + Send + 'static,
 {
-	use module_issue_rpc::{Issue, IssueApiServer};
-	use module_oracle_rpc::{Oracle, OracleApiServer};
-	use module_redeem_rpc::{Redeem, RedeemApiServer};
-	use module_replace_rpc::{Replace, ReplaceApiServer};
-	use module_vault_registry_rpc::{VaultRegistry, VaultRegistryApiServer};
-	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
-	use substrate_frame_rpc_system::{System, SystemApiServer};
-
 	let mut module = RpcExtension::new(());
 	let FullDeps { client, pool, deny_unsafe } = deps;
 

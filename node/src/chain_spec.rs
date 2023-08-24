@@ -22,16 +22,16 @@ use crate::constants::{
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type AmplitudeChainSpec =
-	sc_service::GenericChainSpec<amplitude_runtime::GenesisConfig, Extensions>;
+	sc_service::GenericChainSpec<amplitude_runtime::GenesisConfig, ParachainExtensions>;
 
 pub type FoucocoChainSpec =
-	sc_service::GenericChainSpec<foucoco_runtime::GenesisConfig, Extensions>;
+	sc_service::GenericChainSpec<foucoco_runtime::GenesisConfig, ParachainExtensions>;
 
 pub type PendulumChainSpec =
-	sc_service::GenericChainSpec<pendulum_runtime::GenesisConfig, Extensions>;
+	sc_service::GenericChainSpec<pendulum_runtime::GenesisConfig, ParachainExtensions>;
 
 pub type DevelopmentChainSpec =
-	sc_service::GenericChainSpec<development_runtime::GenesisConfig, Extensions>;
+	sc_service::GenericChainSpec<development_runtime::GenesisConfig, ParachainExtensions>;
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
@@ -57,14 +57,14 @@ pub fn create_pendulum_multisig_account(id: &str) -> AccountId {
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
 #[serde(deny_unknown_fields)]
-pub struct Extensions {
+pub struct ParachainExtensions {
 	/// The relay chain of the Parachain.
 	pub relay_chain: String,
 	/// The id of the Parachain.
 	pub para_id: u32,
 }
 
-impl Extensions {
+impl ParachainExtensions {
 	/// Try to get the extension from the given `ChainSpec`.
 	pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
 		sc_chain_spec::get_extension(chain_spec.extensions())
@@ -160,7 +160,7 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 		// Properties
 		Some(properties),
 		// Extensions
-		Extensions {
+		ParachainExtensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
 			para_id: amplitude::PARACHAIN_ID,
 		},
@@ -221,7 +221,7 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 		// Properties
 		Some(properties),
 		// Extensions
-		Extensions {
+		ParachainExtensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
 			para_id: foucoco::PARACHAIN_ID,
 		},
@@ -344,7 +344,7 @@ pub fn pendulum_config() -> PendulumChainSpec {
 		// Properties
 		Some(properties),
 		// Extensions
-		Extensions {
+		ParachainExtensions {
 			relay_chain: "polkadot".into(), // You MUST set this to the correct network!
 			para_id: pendulum::PARACHAIN_ID,
 		},
@@ -394,61 +394,6 @@ pub fn development_config() -> DevelopmentChainSpec {
 				1000.into(),
 			)
 		},
-		Vec::new(),
-		None,
-		None,
-		None,
-		None,
-		Extensions {
-			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000,
-		},
-	)
-}
-
-pub fn local_testnet_config() -> DevelopmentChainSpec {
-	// Give your base currency a unit name and decimal places
-	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), foucoco::TOKEN_DECIMALS.into());
-	properties.insert("ss58Format".into(), 42.into());
-
-	DevelopmentChainSpec::from_genesis(
-		// Name
-		"Local Testnet",
-		// ID
-		"local_testnet",
-		ChainType::Local,
-		move || {
-			testnet_genesis(
-				// initial collators.
-				vec![
-					(
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
-						get_collator_keys_from_seed("Alice"),
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
-						get_collator_keys_from_seed("Bob"),
-					),
-				],
-				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-				],
-				1000.into(),
-			)
-		},
 		// Bootnodes
 		Vec::new(),
 		// Telemetry
@@ -460,7 +405,7 @@ pub fn local_testnet_config() -> DevelopmentChainSpec {
 		// Properties
 		Some(properties),
 		// Extensions
-		Extensions {
+		ParachainExtensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
 			para_id: 1000,
 		},

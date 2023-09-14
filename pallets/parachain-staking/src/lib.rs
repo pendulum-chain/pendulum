@@ -135,7 +135,7 @@ mod types;
 use frame_support::pallet;
 
 pub use crate::{default_weights::WeightInfo, pallet::*};
-
+use frame_system::pallet_prelude::BlockNumberFor;
 #[pallet]
 pub mod pallet {
 	use super::*;
@@ -147,6 +147,7 @@ pub mod pallet {
 		traits::{
 			Currency, EstimateNextSessionRotation, Get, Imbalance, LockIdentifier,
 			LockableCurrency, OnUnbalanced, ReservableCurrency, StorageVersion, WithdrawReasons,
+			GenesisBuild
 		},
 		BoundedVec,
 	};
@@ -184,6 +185,7 @@ pub mod pallet {
 	#[pallet::pallet]
 	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(PhantomData<T>);
+
 
 	/// Configuration trait of this pallet.
 	#[pallet::config]
@@ -297,7 +299,7 @@ pub mod pallet {
 		/// block number exceeds this start, the beneficiary will receive the
 		/// configured reward in each block.
 		#[pallet::constant]
-		type NetworkRewardStart: Get<<Self as frame_system::Config>::BlockNumber>;
+		type NetworkRewardStart: Get<BlockNumberFor<Self>>;
 
 		/// The rate in percent for the network rewards which are based on the
 		/// maximum number of collators and the maximum amount a collator can

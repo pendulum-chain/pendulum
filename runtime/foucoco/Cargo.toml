@@ -26,6 +26,7 @@ smallvec = "1.9.0"
 runtime-common = { path = "../common", default-features = false }
 
 # custom libraries from spacewalk
+clients-info = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev =  "6a3b14a33da0a97f391a5a7e689ee658da52da84"}
 currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev =  "6a3b14a33da0a97f391a5a7e689ee658da52da84"}
 security = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev =  "6a3b14a33da0a97f391a5a7e689ee658da52da84"}
 staking = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev =  "6a3b14a33da0a97f391a5a7e689ee658da52da84"}

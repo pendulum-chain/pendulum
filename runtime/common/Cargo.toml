@@ -30,7 +30,7 @@ orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-m
 dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.40" }
 zenlink-protocol = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.40-protocol" }
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "eae146c3795debfdab7215fa82ff1ffc4c2cae48" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "6a3b14a33da0a97f391a5a7e689ee658da52da84" }
 
 [features]
 default = [

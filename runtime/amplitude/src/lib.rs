@@ -1762,6 +1762,11 @@ impl_runtime_apis! {
 			let result = Oracle::usd_to_currency(amount.amount, currency_id)?;
 			Ok(BalanceWrapper{amount:result})
 		}
+
+		fn get_exchange_rate(currency_id: CurrencyId) -> Result<UnsignedFixedPoint, DispatchError> {
+			let result = Oracle::get_exchange_rate(currency_id)?;
+			Ok(result)
+		}
 	}
 
 }

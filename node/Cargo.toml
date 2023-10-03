@@ -15,13 +15,14 @@ codec = { package = "parity-scale-codec", version = "3.0.0" }
 serde = { version = "1.0.145", features = ["derive"] }
 jsonrpsee = { version = "0.16.2", features = ["server"] }
 
-module-issue-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "eae146c3795debfdab7215fa82ff1ffc4c2cae48"}
-module-oracle-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "eae146c3795debfdab7215fa82ff1ffc4c2cae48"}
-module-redeem-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "eae146c3795debfdab7215fa82ff1ffc4c2cae48"}
-module-replace-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "eae146c3795debfdab7215fa82ff1ffc4c2cae48"}
-module-vault-registry-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "eae146c3795debfdab7215fa82ff1ffc4c2cae48"}
+module-issue-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "6a3b14a33da0a97f391a5a7e689ee658da52da84"}
+module-oracle-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "6a3b14a33da0a97f391a5a7e689ee658da52da84"}
+module-redeem-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "6a3b14a33da0a97f391a5a7e689ee658da52da84"}
+module-replace-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "6a3b14a33da0a97f391a5a7e689ee658da52da84"}
+module-vault-registry-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "6a3b14a33da0a97f391a5a7e689ee658da52da84"}
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "eae146c3795debfdab7215fa82ff1ffc4c2cae48"}
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", rev =  "6a3b14a33da0a97f391a5a7e689ee658da52da84"}
+dia-oracle-runtime-api = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.40" }
 
 # Local
 amplitude-runtime = {path = "../runtime/amplitude"}

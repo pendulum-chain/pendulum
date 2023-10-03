@@ -332,6 +332,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			// These modules are all allowed to be called by transactions:
 			RuntimeCall::Bounties(_) |
 			RuntimeCall::ChildBounties(_) |
+			RuntimeCall::ClientsInfo(_) |
 			RuntimeCall::Treasury(_) |
 			RuntimeCall::Tokens(_) |
 			RuntimeCall::Currencies(_) |
@@ -1502,6 +1503,13 @@ impl replace::Config for Runtime {
 	type WeightInfo = replace::SubstrateWeight<Runtime>;
 }
 
+impl clients_info::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = clients_info::SubstrateWeight<Runtime>;
+    type MaxNameLength = ConstU32<255>;
+    type MaxUriLength = ConstU32<255>;
+}
+
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
 where
 	RuntimeCall: From<C>,
@@ -1582,6 +1590,7 @@ construct_runtime!(
 		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 69,
 		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 70,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
+		ClientsInfo: clients_info::{Pallet, Call, Storage, Event<T>} = 72,
 
 		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
 

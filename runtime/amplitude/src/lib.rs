@@ -322,6 +322,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			// These modules are all allowed to be called by transactions:
 			RuntimeCall::Bounties(_) |
 			RuntimeCall::ChildBounties(_) |
+			RuntimeCall::ClientsInfo(_) |
 			RuntimeCall::Treasury(_) |
 			RuntimeCall::Tokens(_) |
 			RuntimeCall::Currencies(_) |
@@ -1193,6 +1194,13 @@ impl replace::Config for Runtime {
 	type WeightInfo = replace::SubstrateWeight<Runtime>;
 }
 
+impl clients_info::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = clients_info::SubstrateWeight<Runtime>;
+    type MaxNameLength = ConstU32<255>;
+    type MaxUriLength = ConstU32<255>;
+}
+
 parameter_types! {
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"am/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"am/fmrir");
@@ -1281,6 +1289,7 @@ construct_runtime!(
 		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 69,
 		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 70,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
+		ClientsInfo: clients_info::{Pallet, Call, Storage, Event<T>} = 72,
 
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 

@@ -1,6 +1,7 @@
-use frame_support::{assert_err, assert_ok, error::BadOrigin};
+use frame_support::{assert_err, assert_ok, error::BadOrigin, traits::Get};
+use orml_traits::MultiCurrency;
 
-use crate::{mock::*, AllowedCurrencies, CurrencyOf};
+use crate::{mock::*, AllowedCurrencies, Config, CurrencyOf, Error};
 
 #[test]
 fn should_add_allowed_currencies() {
@@ -9,6 +10,27 @@ fn should_add_allowed_currencies() {
 		let added_currencies: Vec<CurrencyOf<Test>> = vec![native_currency_id];
 		assert_ok!(TokenAllowance::add_allowed_currencies(RuntimeOrigin::root(), added_currencies));
 		assert_eq!(AllowedCurrencies::<Test>::get(native_currency_id), Some(()));
+	})
+}
+
+#[test]
+fn should_not_exceed_allowed_currencies() {
+	run_test(|| {
+		let max_allowed_currencies: u32 = <Test as Config>::MaxAllowedCurrencies::get();
+		let too_many_currencies = (0..(max_allowed_currencies as u64) + 1).collect::<Vec<u64>>();
+
+		assert_err!(
+			TokenAllowance::add_allowed_currencies(
+				RuntimeOrigin::root(),
+				too_many_currencies.clone()
+			),
+			Error::<Test>::ExceedsNumberOfAllowedCurrencies
+		);
+
+		assert_err!(
+			TokenAllowance::remove_allowed_currencies(RuntimeOrigin::root(), too_many_currencies),
+			Error::<Test>::ExceedsNumberOfAllowedCurrencies
+		);
 	})
 }
 
@@ -56,10 +78,9 @@ fn should_not_remove_allowed_currencies_with_not_root_origin() {
 #[test]
 fn should_add_few_allowed_currencies() {
 	run_test(|| {
-		let native_currency_id = <Test as orml_currencies::Config>::GetNativeCurrencyId::get();
-		let added_currencies: Vec<CurrencyOf<Test>> = vec![native_currency_id, 1, 2, 3];
+		let added_currencies: Vec<CurrencyOf<Test>> = vec![0, 1, 2, 3];
 		assert_ok!(TokenAllowance::add_allowed_currencies(RuntimeOrigin::root(), added_currencies));
-		assert_eq!(AllowedCurrencies::<Test>::get(native_currency_id), Some(()));
+		assert_eq!(AllowedCurrencies::<Test>::get(0), Some(()));
 		assert_eq!(AllowedCurrencies::<Test>::get(1), Some(()));
 		assert_eq!(AllowedCurrencies::<Test>::get(2), Some(()));
 		assert_eq!(AllowedCurrencies::<Test>::get(3), Some(()));
@@ -69,27 +90,223 @@ fn should_add_few_allowed_currencies() {
 #[test]
 fn should_remove_few_allowed_currencies() {
 	run_test(|| {
-		let native_currency_id = <Test as orml_currencies::Config>::GetNativeCurrencyId::get();
-		let added_currencies: Vec<CurrencyOf<Test>> = vec![native_currency_id, 1, 2, 3, 4];
+		let added_currencies: Vec<CurrencyOf<Test>> = vec![0, 1, 2, 3, 4];
 		assert_ok!(TokenAllowance::add_allowed_currencies(
 			RuntimeOrigin::root(),
 			added_currencies.clone()
 		));
-		assert_eq!(AllowedCurrencies::<Test>::get(native_currency_id), Some(()));
+		assert_eq!(AllowedCurrencies::<Test>::get(0), Some(()));
 		assert_eq!(AllowedCurrencies::<Test>::get(1), Some(()));
 		assert_eq!(AllowedCurrencies::<Test>::get(2), Some(()));
 		assert_eq!(AllowedCurrencies::<Test>::get(3), Some(()));
 
-		let removed_currencies: Vec<CurrencyOf<Test>> = vec![native_currency_id, 1, 2, 3];
+		let removed_currencies: Vec<CurrencyOf<Test>> = vec![0, 1, 2, 3];
 		assert_ok!(TokenAllowance::remove_allowed_currencies(
 			RuntimeOrigin::root(),
 			removed_currencies
 		));
 
-		assert_eq!(AllowedCurrencies::<Test>::get(native_currency_id), None);
+		assert_eq!(AllowedCurrencies::<Test>::get(0), None);
 		assert_eq!(AllowedCurrencies::<Test>::get(1), None);
 		assert_eq!(AllowedCurrencies::<Test>::get(2), None);
 		assert_eq!(AllowedCurrencies::<Test>::get(3), None);
 		assert_eq!(AllowedCurrencies::<Test>::get(4), Some(()));
+	})
+}
+
+#[test]
+fn should_approve_transfer() {
+	run_test(|| {
+		let currency_id: <Test as orml_tokens::Config>::CurrencyId = 0;
+		let owner: <Test as frame_system::Config>::AccountId = 0;
+		let delegate: <Test as frame_system::Config>::AccountId = 1;
+		let amount: <Test as orml_tokens::Config>::Balance = 1_000_000_000u32 as Balance;
+
+		// Will not work yet
+		assert_err!(
+			TokenAllowance::approve(
+				RuntimeOrigin::signed(owner.clone()),
+				currency_id,
+				delegate.clone(),
+				amount
+			),
+			Error::<Test>::CurrencyNotLive
+		);
+
+		// We need to add the currency first
+		assert_ok!(TokenAllowance::add_allowed_currencies(
+			RuntimeOrigin::root(),
+			vec![currency_id]
+		));
+
+		// Should work now
+		assert_ok!(TokenAllowance::approve(
+			RuntimeOrigin::signed(owner.clone()),
+			currency_id,
+			delegate.clone(),
+			amount
+		));
+	})
+}
+
+#[test]
+fn should_do_approved_transfer() {
+	run_test(|| {
+		let currency_id: <Test as orml_tokens::Config>::CurrencyId = 0;
+		let owner: <Test as frame_system::Config>::AccountId = 0;
+		let delegate: <Test as frame_system::Config>::AccountId = 1;
+		let destination: <Test as frame_system::Config>::AccountId = 2;
+		let amount: <Test as orml_tokens::Config>::Balance = 1_000_000_000u32 as Balance;
+
+		// Mint some tokens
+		assert_ok!(Tokens::deposit(currency_id, &owner, amount));
+
+		// Check the balances
+		assert_eq!(Tokens::free_balance(currency_id, &owner), amount);
+		assert_eq!(Tokens::free_balance(currency_id, &delegate), 0);
+		assert_eq!(Tokens::free_balance(currency_id, &destination), 0);
+
+		// We need to add the currency first
+		assert_ok!(TokenAllowance::add_allowed_currencies(
+			RuntimeOrigin::root(),
+			vec![currency_id]
+		));
+
+		// Approve the amount
+		assert_ok!(TokenAllowance::approve(
+			RuntimeOrigin::signed(owner.clone()),
+			currency_id,
+			delegate.clone(),
+			amount
+		));
+
+		// Transfer the approved amount
+		assert_ok!(TokenAllowance::transfer_from(
+			RuntimeOrigin::signed(delegate.clone()),
+			currency_id,
+			owner.clone(),
+			destination.clone(),
+			amount
+		));
+
+		// Check the balances
+		assert_eq!(Tokens::free_balance(currency_id, &owner), 0);
+		assert_eq!(Tokens::free_balance(currency_id, &delegate), 0);
+		assert_eq!(Tokens::free_balance(currency_id, &destination), amount);
+	})
+}
+
+#[test]
+fn should_transfer_from_keeping_infinite_allowance() {
+	run_test(|| {
+		let currency_id: <Test as orml_tokens::Config>::CurrencyId = 0;
+		let owner: <Test as frame_system::Config>::AccountId = 0;
+		let delegate: <Test as frame_system::Config>::AccountId = 1;
+		let destination: <Test as frame_system::Config>::AccountId = 2;
+		// We use the max value of u128 as the amount to approve because it represents an infinite allowance
+		let allowance_amount: <Test as orml_tokens::Config>::Balance =
+			<Test as orml_tokens::Config>::Balance::max_value();
+
+		// Mint some tokens
+		assert_ok!(Tokens::deposit(currency_id, &owner, allowance_amount));
+
+		// Check the balances
+		assert_eq!(Tokens::free_balance(currency_id, &owner), allowance_amount);
+		assert_eq!(Tokens::free_balance(currency_id, &delegate), 0);
+		assert_eq!(Tokens::free_balance(currency_id, &destination), 0);
+
+		// We need to add the currency first
+		assert_ok!(TokenAllowance::add_allowed_currencies(
+			RuntimeOrigin::root(),
+			vec![currency_id]
+		));
+
+		// Approve infinite spending
+		assert_ok!(TokenAllowance::approve(
+			RuntimeOrigin::signed(owner.clone()),
+			currency_id,
+			delegate.clone(),
+			allowance_amount,
+		));
+
+		// Check the allowance of the delegate
+		assert_eq!(TokenAllowance::allowance(currency_id, &owner, &delegate), allowance_amount);
+
+		// Transfer the approved amount once
+		assert_ok!(TokenAllowance::transfer_from(
+			RuntimeOrigin::signed(delegate.clone()),
+			currency_id,
+			owner.clone(),
+			destination.clone(),
+			allowance_amount
+		));
+
+		// Check the balances
+		assert_eq!(Tokens::free_balance(currency_id, &owner), 0);
+		assert_eq!(Tokens::free_balance(currency_id, &delegate), 0);
+		assert_eq!(Tokens::free_balance(currency_id, &destination), allowance_amount);
+
+		// Check that the allowance of the delegate is still the same since it should be infinite
+		assert_eq!(TokenAllowance::allowance(currency_id, &owner, &delegate), allowance_amount);
+
+		// Move the tokens from `destination` to the `owner` again to avoid overflow but allow for testing the same amount again
+		assert_ok!(Tokens::transfer(
+			RuntimeOrigin::signed(destination.clone()),
+			owner,
+			currency_id,
+			allowance_amount
+		));
+
+		// Transfer the approved amount again
+		assert_ok!(TokenAllowance::transfer_from(
+			RuntimeOrigin::signed(delegate.clone()),
+			currency_id,
+			owner.clone(),
+			destination.clone(),
+			allowance_amount
+		));
+	})
+}
+
+#[test]
+fn should_not_transfer_from_for_invalid_origin() {
+	run_test(|| {
+		let currency_id: <Test as orml_tokens::Config>::CurrencyId = 0;
+		let owner: <Test as frame_system::Config>::AccountId = 0;
+		let destination: <Test as frame_system::Config>::AccountId = 2;
+		let amount: <Test as orml_tokens::Config>::Balance = 1_000_000_000u32 as Balance;
+
+		assert_err!(
+			TokenAllowance::transfer_from(
+				RuntimeOrigin::none(),
+				currency_id,
+				owner.clone(),
+				destination.clone(),
+				amount
+			),
+			BadOrigin
+		);
+	})
+}
+
+#[test]
+fn should_not_transfer_from_for_invalid_currency() {
+	run_test(|| {
+		let currency_id: <Test as orml_tokens::Config>::CurrencyId = 0;
+		let owner: <Test as frame_system::Config>::AccountId = 0;
+		let delegate: <Test as frame_system::Config>::AccountId = 1;
+		let destination: <Test as frame_system::Config>::AccountId = 2;
+		let amount: <Test as orml_tokens::Config>::Balance = 1_000_000_000u32 as Balance;
+
+		assert_err!(
+			TokenAllowance::transfer_from(
+				RuntimeOrigin::signed(delegate.clone()),
+				currency_id,
+				owner.clone(),
+				destination.clone(),
+				amount
+			),
+			Error::<Test>::CurrencyNotLive
+		);
 	})
 }

@@ -7,7 +7,8 @@ use crate::{mock::*, AllowedCurrencies, Config, CurrencyOf, Error};
 fn should_add_allowed_currencies() {
 	run_test(|| {
 		let max_allowed_currencies: u32 = <Test as Config>::MaxAllowedCurrencies::get();
-		let added_currencies = (0..max_allowed_currencies as u64).collect::<Vec<u64>>();
+		let max_allowed_currencies: u64 = max_allowed_currencies as u64;
+		let added_currencies = (0..max_allowed_currencies).collect::<Vec<u64>>();
 
 		assert_ok!(TokenAllowance::add_allowed_currencies(RuntimeOrigin::root(), added_currencies));
 		for i in 0..max_allowed_currencies {
@@ -20,9 +21,13 @@ fn should_add_allowed_currencies() {
 fn should_remove_allowed_currencies() {
 	run_test(|| {
 		let max_allowed_currencies: u32 = <Test as Config>::MaxAllowedCurrencies::get();
-		let mut added_currencies = (0..max_allowed_currencies as u64).collect::<Vec<u64>>();
+		let max_allowed_currencies: u64 = max_allowed_currencies as u64;
+		let mut added_currencies = (0..max_allowed_currencies).collect::<Vec<u64>>();
 
-		assert_ok!(TokenAllowance::add_allowed_currencies(RuntimeOrigin::root(), added_currencies));
+		assert_ok!(TokenAllowance::add_allowed_currencies(
+			RuntimeOrigin::root(),
+			added_currencies.clone()
+		));
 		for i in 0..max_allowed_currencies {
 			assert_eq!(AllowedCurrencies::<Test>::get(i), Some(()));
 		}
@@ -31,10 +36,10 @@ fn should_remove_allowed_currencies() {
 			added_currencies.pop().expect("Should have a currency");
 		assert_ok!(TokenAllowance::remove_allowed_currencies(
 			RuntimeOrigin::root(),
-			added_currencies
+			added_currencies.clone()
 		));
 
-		for i in 0..added_currencies.len() as u32 {
+		for i in 0..added_currencies.len() as u64 {
 			assert_eq!(AllowedCurrencies::<Test>::get(i), None);
 		}
 		// The existing currency should remain
@@ -46,7 +51,8 @@ fn should_remove_allowed_currencies() {
 fn should_not_exceed_allowed_currencies() {
 	run_test(|| {
 		let max_allowed_currencies: u32 = <Test as Config>::MaxAllowedCurrencies::get();
-		let too_many_currencies = (0..(max_allowed_currencies as u64) + 1).collect::<Vec<u64>>();
+		let max_allowed_currencies: u64 = max_allowed_currencies as u64;
+		let too_many_currencies = (0..max_allowed_currencies + 1).collect::<Vec<u64>>();
 
 		// We can't add more than the maximum allowed currencies
 		assert_err!(
@@ -63,8 +69,11 @@ fn should_not_exceed_allowed_currencies() {
 		);
 
 		// Fill the allowed currencies to the maximum
-		let mut added_currencies = (0..max_allowed_currencies as u64).collect::<Vec<u64>>();
-		assert_ok!(TokenAllowance::add_allowed_currencies(RuntimeOrigin::root(), added_currencies));
+		let added_currencies = (0..max_allowed_currencies).collect::<Vec<u64>>();
+		assert_ok!(TokenAllowance::add_allowed_currencies(
+			RuntimeOrigin::root(),
+			added_currencies.clone()
+		));
 		for i in 0..max_allowed_currencies {
 			assert_eq!(AllowedCurrencies::<Test>::get(i), Some(()));
 		}
@@ -73,14 +82,14 @@ fn should_not_exceed_allowed_currencies() {
 		let already_added_currency = added_currencies[0];
 		assert_ok!(TokenAllowance::add_allowed_currencies(
 			RuntimeOrigin::root(),
-			already_added_currency
+			vec![already_added_currency]
 		));
 		assert_eq!(AllowedCurrencies::<Test>::get(already_added_currency), Some(()));
 
 		// Try to add a new distinct currency (should fail since we reached the maximum)
-		let illegal_currency: CurrencyOf<Test> = max_allowed_currencies as u64;
+		let illegal_currency: CurrencyOf<Test> = max_allowed_currencies;
 		assert_err!(
-			TokenAllowance::add_allowed_currencies(RuntimeOrigin::root(), illegal_currency),
+			TokenAllowance::add_allowed_currencies(RuntimeOrigin::root(), vec![illegal_currency]),
 			Error::<Test>::ExceedsNumberOfAllowedCurrencies
 		);
 	})
@@ -92,11 +101,14 @@ fn should_not_add_allowed_currencies_with_non_root_origin() {
 		let native_currency_id = <Test as orml_currencies::Config>::GetNativeCurrencyId::get();
 		let added_currencies: Vec<CurrencyOf<Test>> = vec![native_currency_id];
 		assert_err!(
-			TokenAllowance::add_allowed_currencies(RuntimeOrigin::signed(1), added_currencies),
+			TokenAllowance::add_allowed_currencies(
+				RuntimeOrigin::signed(1),
+				added_currencies.clone()
+			),
 			BadOrigin
 		);
 		assert_err!(
-			TokenAllowance::add_allowed_currencies(RuntimeOrigin::root(), added_currencies),
+			TokenAllowance::add_allowed_currencies(RuntimeOrigin::none(), added_currencies),
 			BadOrigin
 		);
 	})
@@ -108,11 +120,14 @@ fn should_not_remove_allowed_currencies_with_non_root_origin() {
 		let native_currency_id = <Test as orml_currencies::Config>::GetNativeCurrencyId::get();
 		let added_currencies: Vec<CurrencyOf<Test>> = vec![native_currency_id];
 		assert_err!(
-			TokenAllowance::remove_allowed_currencies(RuntimeOrigin::signed(1), added_currencies),
+			TokenAllowance::remove_allowed_currencies(
+				RuntimeOrigin::signed(1),
+				added_currencies.clone()
+			),
 			BadOrigin
 		);
 		assert_err!(
-			TokenAllowance::remove_allowed_currencies(RuntimeOrigin::root(), added_currencies),
+			TokenAllowance::remove_allowed_currencies(RuntimeOrigin::none(), added_currencies),
 			BadOrigin
 		);
 	})
@@ -125,12 +140,6 @@ fn should_return_allowance() {
 		let owner: <Test as frame_system::Config>::AccountId = 0;
 		let delegate: <Test as frame_system::Config>::AccountId = 1;
 		let amount: <Test as orml_tokens::Config>::Balance = 1_000_000_000u32 as Balance;
-
-		// We need to add the currency first
-		assert_ok!(TokenAllowance::add_allowed_currencies(
-			RuntimeOrigin::root(),
-			vec![currency_id]
-		));
 
 		// Check allowance
 		assert_eq!(TokenAllowance::allowance(currency_id, &owner, &delegate), 0);
@@ -230,6 +239,8 @@ fn should_transfer_from_for_approved_transfer() {
 		assert_eq!(Tokens::free_balance(currency_id, &owner), 0);
 		assert_eq!(Tokens::free_balance(currency_id, &delegate), 0);
 		assert_eq!(Tokens::free_balance(currency_id, &destination), amount);
+		// Check that the allowance is now empty since we transferred the whole amount
+		assert_eq!(TokenAllowance::allowance(currency_id, &owner, &delegate), 0);
 
 		// Test again but this time only using a partial amount of what was approved
 		let partial_amount = amount / 2;
@@ -252,6 +263,11 @@ fn should_transfer_from_for_approved_transfer() {
 		assert_eq!(Tokens::free_balance(currency_id, &owner), amount - partial_amount);
 		assert_eq!(Tokens::free_balance(currency_id, &delegate), 0);
 		assert_eq!(Tokens::free_balance(currency_id, &destination), amount + partial_amount);
+		// Check that the allowance is now reduced by the partial amount
+		assert_eq!(
+			TokenAllowance::allowance(currency_id, &owner, &delegate),
+			amount - partial_amount
+		);
 	})
 }
 

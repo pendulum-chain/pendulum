@@ -141,6 +141,12 @@ fn should_return_allowance() {
 		let delegate: <Test as frame_system::Config>::AccountId = 1;
 		let amount: <Test as orml_tokens::Config>::Balance = 1_000_000_000u32 as Balance;
 
+		// We need to add the currency first
+		assert_ok!(TokenAllowance::add_allowed_currencies(
+			RuntimeOrigin::root(),
+			vec![currency_id]
+		));
+
 		// Check allowance
 		assert_eq!(TokenAllowance::allowance(currency_id, &owner, &delegate), 0);
 

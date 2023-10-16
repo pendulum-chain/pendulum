@@ -1504,10 +1504,10 @@ impl replace::Config for Runtime {
 }
 
 impl clients_info::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type WeightInfo = clients_info::SubstrateWeight<Runtime>;
-    type MaxNameLength = ConstU32<255>;
-    type MaxUriLength = ConstU32<255>;
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = clients_info::SubstrateWeight<Runtime>;
+	type MaxNameLength = ConstU32<255>;
+	type MaxUriLength = ConstU32<255>;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -2089,6 +2089,11 @@ impl_runtime_apis! {
 		fn usd_to_currency(amount:BalanceWrapper<Balance>, currency_id: CurrencyId) -> Result<BalanceWrapper<Balance>, DispatchError> {
 			let result = Oracle::usd_to_currency(amount.amount, currency_id)?;
 			Ok(BalanceWrapper{amount:result})
+		}
+
+		fn get_exchange_rate(currency_id: CurrencyId) -> Result<UnsignedFixedPoint, DispatchError> {
+			let result = Oracle::get_exchange_rate(currency_id)?;
+			Ok(result)
 		}
 	}
 

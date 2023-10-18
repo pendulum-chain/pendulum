@@ -45,7 +45,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		ConstBool, ConstU32, Contains, Currency as FrameCurrency, EitherOfDiverse,
-		EqualPrivilegeOnly, Imbalance, OnUnbalanced, WithdrawReasons,
+		EqualPrivilegeOnly, Imbalance, InstanceFilter, OnUnbalanced, WithdrawReasons,
 	},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
@@ -61,7 +61,7 @@ pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
 	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
-	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
+	ProxyType, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -360,7 +360,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::VaultRegistry(_) |
 			RuntimeCall::VaultRewards(_) |
 			RuntimeCall::Farming(_) |
-			RuntimeCall::AssetRegistry(_) => true,
+			RuntimeCall::AssetRegistry(_) |
+			RuntimeCall::Proxy(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -1218,6 +1219,47 @@ impl farming::Config for Runtime {
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 }
 
+impl InstanceFilter<RuntimeCall> for ProxyType {
+	fn filter(&self, c: &RuntimeCall) -> bool {
+		match self {
+			// Always allowed RuntimeCall::Utility no matter type.
+			// Only transactions allowed by Proxy.filter can be executed
+			_ if matches!(c, RuntimeCall::Utility(..)) => true,
+			ProxyType::Any => true,
+		}
+	}
+
+	// Determines whether self matches at least everything that o does.
+	fn is_superset(&self, _o: &Self) -> bool {
+		true
+	}
+}
+
+parameter_types! {
+	// One storage item; key size 32, value size 8; .
+	pub const ProxyDepositBase: Balance = deposit(1, 8);
+	// Additional storage item size of 33 bytes.
+	pub const ProxyDepositFactor: Balance = deposit(0, 33);
+	pub const MaxProxies: u16 = 32;
+	pub const MaxPending: u16 = 32;
+	pub const AnnouncementDepositBase: Balance = deposit(1, 8);
+	pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
+}
+
+impl pallet_proxy::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type Currency = Balances;
+	type ProxyType = ProxyType;
+	type ProxyDepositBase = ProxyDepositBase;
+	type ProxyDepositFactor = ProxyDepositFactor;
+	type MaxProxies = MaxProxies;
+	type WeightInfo = pallet_proxy::weights::SubstrateWeight<Runtime>;
+	type MaxPending = MaxPending;
+	type CallHasher = BlakeTwo256;
+	type AnnouncementDepositBase = AnnouncementDepositBase;
+	type AnnouncementDepositFactor = AnnouncementDepositFactor;
+}
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -1244,6 +1286,7 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 16,
 		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 17,
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 18,
+		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 92,
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>} = 19,
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 20,
 		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,

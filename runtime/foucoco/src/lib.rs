@@ -251,10 +251,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("foucoco"),
 	impl_name: create_runtime_str!("foucoco"),
 	authoring_version: 1,
-	spec_version: 1,
+	spec_version: 2,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 1,
+	transaction_version: 2,
 	state_version: 1,
 };
 
@@ -1504,10 +1504,10 @@ impl replace::Config for Runtime {
 }
 
 impl clients_info::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type WeightInfo = clients_info::SubstrateWeight<Runtime>;
-    type MaxNameLength = ConstU32<255>;
-    type MaxUriLength = ConstU32<255>;
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = clients_info::SubstrateWeight<Runtime>;
+	type MaxNameLength = ConstU32<255>;
+	type MaxUriLength = ConstU32<255>;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime

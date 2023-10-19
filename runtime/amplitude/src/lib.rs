@@ -1195,10 +1195,10 @@ impl replace::Config for Runtime {
 }
 
 impl clients_info::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type WeightInfo = clients_info::SubstrateWeight<Runtime>;
-    type MaxNameLength = ConstU32<255>;
-    type MaxUriLength = ConstU32<255>;
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = clients_info::SubstrateWeight<Runtime>;
+	type MaxNameLength = ConstU32<255>;
+	type MaxUriLength = ConstU32<255>;
 }
 
 parameter_types! {

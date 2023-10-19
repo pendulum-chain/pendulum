@@ -1189,7 +1189,7 @@ checksum = "2da6da31387c7e4ef160ffab6d5e7f00c42626fe39aea70a7b0f1773f7dd6c1b"
 [[package]]
 name = "clients-info"
 version = "0.1.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2060,7 +2060,7 @@ dependencies = [
 [[package]]
 name = "currency"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2848,7 +2848,7 @@ dependencies = [
 [[package]]
 name = "fee"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "currency",
  "frame-benchmarking",
@@ -4145,7 +4145,7 @@ dependencies = [
 [[package]]
 name = "issue"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "base64 0.13.1",
  "currency",
@@ -4172,7 +4172,6 @@ dependencies = [
  "sp-std",
  "spacewalk-primitives",
  "stellar-relay",
- "substrate-stellar-sdk",
  "vault-registry",
 ]
 
@@ -5423,7 +5422,7 @@ dependencies = [
 [[package]]
 name = "module-issue-rpc"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "jsonrpsee",
  "module-issue-rpc-runtime-api",
@@ -5436,7 +5435,7 @@ dependencies = [
 [[package]]
 name = "module-issue-rpc-runtime-api"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5447,7 +5446,7 @@ dependencies = [
 [[package]]
 name = "module-oracle-rpc"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "jsonrpsee",
  "module-oracle-rpc-runtime-api",
@@ -5461,7 +5460,7 @@ dependencies = [
 [[package]]
 name = "module-oracle-rpc-runtime-api"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5474,7 +5473,7 @@ dependencies = [
 [[package]]
 name = "module-redeem-rpc"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "jsonrpsee",
  "module-redeem-rpc-runtime-api",
@@ -5487,7 +5486,7 @@ dependencies = [
 [[package]]
 name = "module-redeem-rpc-runtime-api"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5498,7 +5497,7 @@ dependencies = [
 [[package]]
 name = "module-replace-rpc"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "jsonrpsee",
  "module-replace-rpc-runtime-api",
@@ -5511,7 +5510,7 @@ dependencies = [
 [[package]]
 name = "module-replace-rpc-runtime-api"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5522,7 +5521,7 @@ dependencies = [
 [[package]]
 name = "module-vault-registry-rpc"
 version = "0.3.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "jsonrpsee",
  "module-oracle-rpc-runtime-api",
@@ -5536,7 +5535,7 @@ dependencies = [
 [[package]]
 name = "module-vault-registry-rpc-runtime-api"
 version = "0.3.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "frame-support",
  "module-oracle-rpc-runtime-api",
@@ -5811,7 +5810,7 @@ dependencies = [
 [[package]]
 name = "nomination"
 version = "0.5.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "currency",
  "fee",
@@ -5982,13 +5981,14 @@ checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 [[package]]
 name = "oracle"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "currency",
  "dia-oracle",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "once_cell",
  "orml-oracle",
  "pallet-balances",
  "pallet-timestamp",
@@ -6001,6 +6001,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "spacewalk-primitives",
+ "spin 0.9.8",
  "staking",
 ]
 
@@ -7617,7 +7618,6 @@ dependencies = [
  "cumulus-relay-chain-minimal-node",
  "cumulus-relay-chain-rpc-interface",
  "development-runtime",
- "dia-oracle-runtime-api",
  "foucoco-runtime",
  "frame-benchmarking",
  "frame-benchmarking-cli",
@@ -9504,7 +9504,7 @@ dependencies = [
 [[package]]
 name = "redeem"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "currency",
  "fee",
@@ -9529,7 +9529,6 @@ dependencies = [
  "sp-std",
  "spacewalk-primitives",
  "stellar-relay",
- "substrate-stellar-sdk",
  "vault-registry",
 ]
 
@@ -9666,7 +9665,7 @@ dependencies = [
 [[package]]
 name = "replace"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "currency",
  "fee",
@@ -9692,7 +9691,6 @@ dependencies = [
  "sp-std",
  "spacewalk-primitives",
  "stellar-relay",
- "substrate-stellar-sdk",
  "vault-registry",
 ]
 
@@ -9709,7 +9707,7 @@ dependencies = [
 [[package]]
 name = "reward"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -11455,7 +11453,7 @@ dependencies = [
 [[package]]
 name = "security"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -12497,7 +12495,7 @@ dependencies = [
 [[package]]
 name = "spacewalk-primitives"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "base58",
  "bstringify",
@@ -12523,6 +12521,9 @@ name = "spin"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
+dependencies = [
+ "lock_api",
+]
 
 [[package]]
 name = "spki"
@@ -12558,7 +12559,7 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 [[package]]
 name = "staking"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12764,7 +12765,7 @@ dependencies = [
 [[package]]
 name = "stellar-relay"
 version = "1.0.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "base64 0.13.1",
  "currency",
@@ -12778,7 +12779,6 @@ dependencies = [
  "sp-core",
  "sp-std",
  "spacewalk-primitives",
- "substrate-stellar-sdk",
 ]
 
 [[package]]
@@ -12915,7 +12915,7 @@ dependencies = [
 [[package]]
 name = "substrate-stellar-sdk"
 version = "0.2.4"
-source = "git+https://github.com/pendulum-chain/substrate-stellar-sdk?branch=polkadot-v0.9.40#f306b44f22216e43809e96ad96ae24cf62f6325f"
+source = "git+https://github.com/pendulum-chain/substrate-stellar-sdk?branch=polkadot-v0.9.40#dc4212fc0b9c29d9fd370cde7ba666172de8fb7b"
 dependencies = [
  "base64 0.13.1",
  "hex",
@@ -13744,7 +13744,7 @@ checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
 [[package]]
 name = "vault-registry"
 version = "1.2.0"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=6a3b14a33da0a97f391a5a7e689ee658da52da84#6a3b14a33da0a97f391a5a7e689ee658da52da84"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=468ec562bcee16257335b0ba488c4024983af1c5#468ec562bcee16257335b0ba488c4024983af1c5"
 dependencies = [
  "currency",
  "fee",
@@ -13771,7 +13771,6 @@ dependencies = [
  "sp-std",
  "spacewalk-primitives",
  "staking",
- "substrate-stellar-sdk",
 ]
 
 [[package]]

@@ -115,7 +115,7 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 /// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location.clone())
+		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
 			.ok_or(location)
 	}
 }

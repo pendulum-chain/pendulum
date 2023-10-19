@@ -1045,7 +1045,7 @@ where
 		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
 		let address = account;
 		let (call, extra, _) = raw_payload.deconstruct();
-		Some((call, (sp_runtime::MultiAddress::Id(address), signature.into(), extra)))
+		Some((call, (sp_runtime::MultiAddress::Id(address), signature, extra)))
 	}
 }
 
@@ -1195,10 +1195,10 @@ impl replace::Config for Runtime {
 }
 
 impl clients_info::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type WeightInfo = clients_info::SubstrateWeight<Runtime>;
-    type MaxNameLength = ConstU32<255>;
-    type MaxUriLength = ConstU32<255>;
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = clients_info::SubstrateWeight<Runtime>;
+	type MaxNameLength = ConstU32<255>;
+	type MaxUriLength = ConstU32<255>;
 }
 
 parameter_types! {

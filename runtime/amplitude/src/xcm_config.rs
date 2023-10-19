@@ -15,6 +15,7 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
+use runtime_common::parachains::kusama::asset_hub;
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
@@ -27,7 +28,6 @@ use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
-use runtime_common::parachains::kusama::asset_hub;
 
 const XCM_ASSET_RELAY_KSM: u8 = 0;
 const XCM_ASSET_ASSETHUB_USDT: u8 = 1;
@@ -83,15 +83,16 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
-			MultiLocation { parents: 1, interior: Here } => Some(CurrencyId::XCM(XCM_ASSET_RELAY_KSM)),
+			MultiLocation { parents: 1, interior: Here } =>
+				Some(CurrencyId::XCM(XCM_ASSET_RELAY_KSM)),
 			MultiLocation {
 				parents: 1,
 				interior:
 					X3(
 						Parachain(asset_hub::PARA_ID),
 						PalletInstance(asset_hub::ASSET_PALLET_ID),
-						GeneralIndex(asset_hub::USDT_ASSET_ID)
-					)
+						GeneralIndex(asset_hub::USDT_ASSET_ID),
+					),
 			} => Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
 			_ => None,
 		}
@@ -113,7 +114,7 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 /// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location.clone())
+		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
 			.ok_or(location)
 	}
 }

@@ -1,4 +1,4 @@
-use crate::{AMPLITUDE_ID, PENDULUM_ID, KUSAMA_ASSETHUB_ID, POLKADOT_ASSETHUB_ID};
+use crate::{AMPLITUDE_ID, KUSAMA_ASSETHUB_ID, PENDULUM_ID, POLKADOT_ASSETHUB_ID};
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::CurrencyId;
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
@@ -9,8 +9,8 @@ use sp_io::TestExternalities;
 use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::Weight;
 
-use statemint_runtime as polkadot_asset_hub_runtime;
 use statemine_runtime as kusama_asset_hub_runtime;
+use statemint_runtime as polkadot_asset_hub_runtime;
 
 pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];

@@ -198,9 +198,7 @@ mod tests {
 		let expected = <Test as Config>::CurrencyBalance::from(15210282150733u64);
 		assert!(
 			almost_equal(reward, expected, Perbill::from_perthousand(1)),
-			"left {:?}, right {:?}",
-			reward,
-			expected
+			"left {reward:?}, right {expected:?}"
 		);
 	}
 

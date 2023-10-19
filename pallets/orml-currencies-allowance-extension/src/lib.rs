@@ -246,7 +246,7 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	// Check the amount approved to be spent by an owner to a delegate
 	pub fn is_allowed_currency(asset: CurrencyOf<T>) -> bool {
-		return AllowedCurrencies::<T>::get(asset) == Some(())
+		AllowedCurrencies::<T>::get(asset) == Some(())
 	}
 
 	// Check the amount approved to be spent by an owner to a delegate
@@ -303,8 +303,8 @@ impl<T: Config> Pallet<T> {
 
 				<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 					id,
-					&owner,
-					&destination,
+					owner,
+					destination,
 					amount,
 				)?;
 

@@ -949,7 +949,7 @@ where
 		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
 		let address = account;
 		let (call, extra, _) = raw_payload.deconstruct();
-		Some((call, (sp_runtime::MultiAddress::Id(address), signature.into(), extra)))
+		Some((call, (sp_runtime::MultiAddress::Id(address), signature, extra)))
 	}
 }
 

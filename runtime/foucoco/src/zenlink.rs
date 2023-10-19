@@ -53,7 +53,7 @@ where
 		if let Ok(currency_id) =
 			zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into())
 		{
-			return TryInto::<AssetBalance>::try_into(Local::free_balance(currency_id, &who))
+			return TryInto::<AssetBalance>::try_into(Local::free_balance(currency_id, who))
 				.unwrap_or_default()
 		}
 		AssetBalance::default()
@@ -70,10 +70,7 @@ where
 	}
 
 	fn local_is_exists(asset_id: ZenlinkAssetId) -> bool {
-		match zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into()) {
-			Ok(_) => true,
-			Err(_) => false,
-		}
+		zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into()).is_ok()
 	}
 
 	fn local_transfer(
@@ -87,8 +84,8 @@ where
 		{
 			Local::transfer(
 				currency_id,
-				&origin,
-				&target,
+				origin,
+				target,
 				amount
 					.try_into()
 					.map_err(|_| DispatchError::Other("convert amount in local transfer"))?,
@@ -108,7 +105,7 @@ where
 		{
 			Local::deposit(
 				currency_id,
-				&origin,
+				origin,
 				amount
 					.try_into()
 					.map_err(|_| DispatchError::Other("convert amount in local deposit"))?,
@@ -130,7 +127,7 @@ where
 		{
 			Local::withdraw(
 				currency_id,
-				&origin,
+				origin,
 				amount
 					.try_into()
 					.map_err(|_| DispatchError::Other("convert amount in local withdraw"))?,

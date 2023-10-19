@@ -2012,7 +2012,7 @@ pub mod pallet {
 
 			// Snapshot exposure for round for weighting reward distribution
 			for account in collators.iter() {
-				let state = CandidatePool::<T>::get(&account)
+				let state = CandidatePool::<T>::get(account)
 					.expect("all members of TopCandidates must be candidates q.e.d");
 				num_of_delegators =
 					num_of_delegators.max(state.delegators.len().saturated_into::<u32>());
@@ -2314,7 +2314,7 @@ pub mod pallet {
 				// FIXME: Does not prevent the collator from being able to author a block in this (or potentially the next) session. See https://github.com/paritytech/substrate/issues/8004
 				.map(pallet_session::Pallet::<T>::disable_index);
 
-			CandidatePool::<T>::remove(&collator);
+			CandidatePool::<T>::remove(collator);
 			Ok(())
 		}
 

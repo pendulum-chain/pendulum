@@ -59,10 +59,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		match id {
 			// CurrencyId::KSM => Some(MultiLocation::parent()),
-			CurrencyId::XCM(f) => match f {
-				0 => Some(MultiLocation::parent()),
-				_ => None,
-			},
+			CurrencyId::XCM(0) => Some(MultiLocation::parent()),
 			_ => None,
 		}
 	}
@@ -95,7 +92,7 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConv
 		if location == MultiLocation::parent() {
 			return Ok(CurrencyId::XCM(0))
 		}
-		Err(location.clone())
+		Err(location)
 	}
 }
 

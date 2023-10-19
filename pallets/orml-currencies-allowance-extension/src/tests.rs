@@ -71,10 +71,7 @@ fn should_remove_few_allowed_currencies() {
 	run_test(|| {
 		let native_currency_id = <Test as orml_currencies::Config>::GetNativeCurrencyId::get();
 		let added_currencies: Vec<CurrencyOf<Test>> = vec![native_currency_id, 1, 2, 3, 4];
-		assert_ok!(TokenAllowance::add_allowed_currencies(
-			RuntimeOrigin::root(),
-			added_currencies.clone()
-		));
+		assert_ok!(TokenAllowance::add_allowed_currencies(RuntimeOrigin::root(), added_currencies));
 		assert_eq!(AllowedCurrencies::<Test>::get(native_currency_id), Some(()));
 		assert_eq!(AllowedCurrencies::<Test>::get(1), Some(()));
 		assert_eq!(AllowedCurrencies::<Test>::get(2), Some(()));

@@ -45,7 +45,7 @@ pub fn zenlink_id_to_currency_id(
 			1 => Ok(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"USDC", issuer: USDC_ISSUER })),
 			2 => Ok(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"TZS\0", issuer: TZS_ISSUER })),
 			3 => Ok(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"BRL\0", issuer: BRL_ISSUER })),
-			_ => return Err(()),
+			_ => Err(()),
 		},
 		(3, LOCAL) => {
 			let token1_id = ((index & 0x0000_0000_00FF_0000) >> 16) as u8;
@@ -67,11 +67,11 @@ pub fn currency_id_to_zenlink_id(
 	let disc = discriminant(&currency_id) as u64;
 	match currency_id {
 		CurrencyId::Native =>
-			Ok(ZenlinkAssetId { chain_id: parachain_id, asset_type: NATIVE, asset_index: 0 as u64 }),
+			Ok(ZenlinkAssetId { chain_id: parachain_id, asset_type: NATIVE, asset_index: 0_u64 }),
 		CurrencyId::XCM(token_id) => Ok(ZenlinkAssetId {
 			chain_id: parachain_id,
 			asset_type: LOCAL,
-			asset_index: ((disc << 8) + token_id as u64) as u64,
+			asset_index: ((disc << 8) + token_id as u64),
 		}),
 		CurrencyId::Stellar(asset) => {
 			let _id = match asset {
@@ -87,11 +87,11 @@ pub fn currency_id_to_zenlink_id(
 			Ok(ZenlinkAssetId {
 				chain_id: parachain_id,
 				asset_type: LOCAL,
-				asset_index: ((disc << 8) + _id) as u64,
+				asset_index: ((disc << 8) + _id),
 			})
 		},
 		CurrencyId::ZenlinkLPToken(token1_id, token1_type, token2_id, token2_type) => {
-			let index = ((disc as u64) << 8) +
+			let index = ((disc) << 8) +
 				((token1_id as u64) << 16) +
 				((token1_type as u64) << 24) +
 				((token2_id as u64) << 32) +
@@ -109,7 +109,7 @@ mod zenlink_tests {
 	fn convert_zenlink_native_to_native_currency() {
 		// Native ZenlinkAsset index = 0x0000_0000_0000_0000
 		let fake_zenlink_asset =
-			ZenlinkAssetId { chain_id: 1000u32, asset_type: NATIVE, asset_index: 0 as u64 };
+			ZenlinkAssetId { chain_id: 1000u32, asset_type: NATIVE, asset_index: 0_u64 };
 		let currency: Result<CurrencyId, _> =
 			zenlink_id_to_currency_id(fake_zenlink_asset, 1000u32);
 		assert_eq!(currency, Ok(CurrencyId::Native));
@@ -118,7 +118,7 @@ mod zenlink_tests {
 	#[test]
 	fn convert_zenlink_xcm_to_xcm_currency() {
 		// XCM(0) ZenlinkAsset index = 0x0000_0000_0000_0100
-		let index = 0x0100 as u64;
+		let index = 0x0100_u64;
 		let fake_zenlink_asset =
 			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: index };
 		let currency: Result<CurrencyId, _> =
@@ -139,7 +139,7 @@ mod zenlink_tests {
 	#[test]
 	fn convert_zenlink_stellar_to_stellar_currency() {
 		// Stellar Native ZenlinkAsset index = 0x0000_0000_0000_0200
-		let stellar_native_index = 0x0200 as u64;
+		let stellar_native_index = 0x0200_u64;
 		let fake_zenlink_asset = ZenlinkAssetId {
 			chain_id: 1000u32,
 			asset_type: LOCAL,
@@ -150,7 +150,7 @@ mod zenlink_tests {
 		assert_eq!(currency, Ok(get_stellar_asset(0u8)));
 
 		// Stellar USDC ZenlinkAsset index = 0x0000_0000_0000_0201
-		let usdc_index = 0x0201 as u64;
+		let usdc_index = 0x0201_u64;
 		let fake_zenlink_asset =
 			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: usdc_index };
 		let currency: Result<CurrencyId, _> =
@@ -158,7 +158,7 @@ mod zenlink_tests {
 		assert_eq!(currency, Ok(get_stellar_asset(1u8)));
 
 		// Stellar TZS ZenlinkAsset index = 0x0000_0000_0000_0202
-		let tzs_index = 0x0202 as u64;
+		let tzs_index = 0x0202_u64;
 		let fake_zenlink_asset =
 			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: tzs_index };
 		let currency: Result<CurrencyId, _> =
@@ -166,7 +166,7 @@ mod zenlink_tests {
 		assert_eq!(currency, Ok(get_stellar_asset(2u8)));
 
 		// Stellar BRL ZenlinkAsset index = 0x0000_0000_0000_0203
-		let brl_index = 0x0203 as u64;
+		let brl_index = 0x0203_u64;
 		let fake_zenlink_asset =
 			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: brl_index };
 		let currency: Result<CurrencyId, _> =
@@ -177,7 +177,7 @@ mod zenlink_tests {
 	#[test]
 	fn convert_zenlink_lp_token_to_lp_token_currency() {
 		// Native and XCM(0) LP token Zenlink index = 0x0000_0100_0000_0300
-		let native_xcm_lp_token_index = 0x0000_0100_0000_0300 as u64;
+		let native_xcm_lp_token_index = 0x0000_0100_0000_0300_u64;
 		let fake_zenlink_asset = ZenlinkAssetId {
 			chain_id: 1000u32,
 			asset_type: LOCAL,
@@ -189,7 +189,7 @@ mod zenlink_tests {
 		assert_eq!(currency, Ok(expected_currency));
 
 		// XCM(0) and XCM(1) LP token Zenlink index = 0x0000_0101_0100_0300
-		let xcm0_xcm1_lp_token_index = 0x0000_0101_0100_0300 as u64;
+		let xcm0_xcm1_lp_token_index = 0x0000_0101_0100_0300_u64;
 		let fake_zenlink_asset = ZenlinkAssetId {
 			chain_id: 1000u32,
 			asset_type: LOCAL,
@@ -201,7 +201,7 @@ mod zenlink_tests {
 		assert_eq!(currency, Ok(expected_currency));
 
 		// XCM(0) and Stellar Native LP Token Zenlink index = 0x0000_0200_0100_0300
-		let xcm0_stellar_native_lp_token_index = 0x0000_0200_0100_0300 as u64;
+		let xcm0_stellar_native_lp_token_index = 0x0000_0200_0100_0300_u64;
 		let fake_zenlink_asset = ZenlinkAssetId {
 			chain_id: 1000u32,
 			asset_type: LOCAL,
@@ -213,7 +213,7 @@ mod zenlink_tests {
 		assert_eq!(currency, Ok(expected_currency));
 
 		// XCM(0) and Stellar USDC LP Token Zenlink index = 0x0000_0201_0100_0300
-		let xcm0_stellar_usdc_lp_token_index = 0x0000_0201_0100_0300 as u64;
+		let xcm0_stellar_usdc_lp_token_index = 0x0000_0201_0100_0300_u64;
 		let fake_zenlink_asset = ZenlinkAssetId {
 			chain_id: 1000u32,
 			asset_type: LOCAL,
@@ -225,7 +225,7 @@ mod zenlink_tests {
 		assert_eq!(currency, Ok(expected_currency));
 
 		// Stellar Native and Stellar USDC LP Token Zenlink index = 0x0000_0201_0200_0300
-		let stellar_native_stellar_usdc_lp_token_index = 0x0000_0201_0200_0300 as u64;
+		let stellar_native_stellar_usdc_lp_token_index = 0x0000_0201_0200_0300_u64;
 		let fake_zenlink_asset = ZenlinkAssetId {
 			chain_id: 1000u32,
 			asset_type: LOCAL,
@@ -241,7 +241,7 @@ mod zenlink_tests {
 	fn convert_fake_zenlink_native_to_currency_id_error() {
 		// Native ZenlinkAsset index = 0x0000_0000_0000_0000
 		let fake_zenlink_asset =
-			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: 0 as u64 };
+			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: 0_u64 };
 		let currency: Result<CurrencyId, _> =
 			zenlink_id_to_currency_id(fake_zenlink_asset, 1000u32);
 		assert_eq!(currency, Err(()));
@@ -267,7 +267,7 @@ mod zenlink_tests {
 	fn convert_xcm_currency_to_zenlink_xcm() {
 		let fake_currency_id = CurrencyId::XCM(0);
 		let expected_zenlink_asset =
-			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: 0x0100 as u64 };
+			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: 0x0100_u64 };
 		assert_eq!(currency_id_to_zenlink_id(fake_currency_id, 1000), Ok(expected_zenlink_asset));
 	}
 
@@ -275,13 +275,10 @@ mod zenlink_tests {
 	fn convert_stellar_currency_to_stellar_zenlink() {
 		let stellar_assets_indexes: [u64; 4] = [0x0200u64, 0x0201u64, 0x0202u64, 0x0203u64];
 
-		for i in 0..=3usize {
+		for (i, asset) in stellar_assets_indexes.iter().enumerate() {
 			let fake_currency_id = get_stellar_asset(i as u8);
-			let expected_zenlink_asset = ZenlinkAssetId {
-				chain_id: 1000u32,
-				asset_type: LOCAL,
-				asset_index: stellar_assets_indexes[i],
-			};
+			let expected_zenlink_asset =
+				ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: asset };
 			assert_eq!(
 				currency_id_to_zenlink_id(fake_currency_id, 1000),
 				Ok(expected_zenlink_asset)

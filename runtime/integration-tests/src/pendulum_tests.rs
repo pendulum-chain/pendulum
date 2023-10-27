@@ -5,6 +5,7 @@ use crate::{
 		parachain1_transfer_incorrect_asset_to_parachain2_should_fail,
 		transfer_10_relay_token_from_parachain_to_relay_chain,
 		transfer_20_relay_token_from_relay_chain_to_parachain,
+		transfer_native_token_from_pendulum_to_assethub,
 	},
 	PENDULUM_ID, POLKADOT_ASSETHUB_ID,
 };
@@ -115,4 +116,17 @@ fn assethub_transfer_asset_to_pendulum_and_back() {
 		PENDULUM_ID,
 		network_id
 	);
+}
+
+#[test]
+fn transfer_native_token_to_assethub() {
+    transfer_native_token_from_pendulum_to_assethub!(
+        PolkadotMockNet,
+        pendulum_runtime,
+        PendulumParachain,
+        polkadot_asset_hub_runtime,
+        AssetHubParachain,
+        PENDULUM_ID,
+        POLKADOT_ASSETHUB_ID
+    );
 }

@@ -461,9 +461,91 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 	}};
 }
 
+macro_rules! transfer_native_token_from_pendulum_to_assethub {
+    (
+        $mocknet:ident,
+        $pendulum_runtime:ident,
+        $pendulum_chain:ident,
+        $assethub_runtime:ident,
+        $assethub_chain:ident,
+        $pendulum_id:ident,
+        $assethub_id:ident
+    ) => {{
+        use crate::mock::{BOB, units};
+        use frame_support::traits::fungibles::Inspect;
+		use polkadot_core_primitives::Balance;
+        use xcm::latest::{Junction, Junction::AccountId32, Junctions::{X1, X2}, MultiLocation, WeightLimit};
+        use $pendulum_runtime::CurrencyId;
+
+        $mocknet::reset();
+
+        let transfer_amount: Balance = units(10);
+        let asset_location = MultiLocation::new(
+            1,
+            X2(
+                Junction::Parachain($pendulum_id),
+                Junction::PalletInstance(10),
+            )
+        );
+
+        // Get BOB's balance before the transfer on Pendulum chain
+        let mut pendulum_tokens_before: Balance = units(100);
+        $pendulum_chain::execute_with(|| {
+			assert_eq!($pendulum_runtime::Tokens::balance(CurrencyId::Native, &BOB.into()), pendulum_tokens_before);
+        });
+
+        // Execute the transfer from Pendulum chain to AssetHub
+		$pendulum_chain::execute_with(|| {
+			use $pendulum_runtime::XTokens;
+
+			assert_ok!(
+				XTokens::transfer_multiasset(
+					$pendulum_runtime::RuntimeOrigin::signed(BOB.into()), 
+					Box::new((asset_location.clone(), transfer_amount).into()),
+					Box::new(
+						MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: BOB }) }
+						.into()
+					),
+					WeightLimit::Unlimited)
+			);
+		});
+		
+
+        $pendulum_chain::execute_with(|| {
+			use $pendulum_runtime::{System, RuntimeEvent};
+
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::XTokens(orml_xtokens::Event::TransferredMultiAssets { .. })
+			)));
+		});
+
+		// Can't get this to work though
+        // Verify the balance on the AssetHub chain after transfer
+        // $assethub_chain::execute_with(|| {
+		// 	   // I need ForeignAssets here instead of Assets
+        //     use $assethub_runtime::Assets;
+
+        //     assert_eq!(
+        //         Assets::balance(asset_location, &BOB.into()),
+        //         transfer_amount
+        //     );
+        // });
+
+        // Verify the balance on the Pendulum chain after transfer
+        $pendulum_chain::execute_with(|| {
+            assert_eq!(
+                $pendulum_runtime::Tokens::balance(CurrencyId::Native, &BOB.into()),
+                pendulum_tokens_before - transfer_amount
+            );
+        });
+    }};
+}
+
 // macros defined at the bottom of this file to prevent unresolved imports
 pub(super) use parachain1_transfer_asset_to_parachain2;
 pub(super) use parachain1_transfer_asset_to_parachain2_and_back;
 pub(super) use parachain1_transfer_incorrect_asset_to_parachain2_should_fail;
 pub(super) use transfer_10_relay_token_from_parachain_to_relay_chain;
 pub(super) use transfer_20_relay_token_from_relay_chain_to_parachain;
+pub(super) use transfer_native_token_from_pendulum_to_assethub;

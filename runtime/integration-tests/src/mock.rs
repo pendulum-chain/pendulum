@@ -69,7 +69,8 @@ macro_rules! build_parachain_with_orml {
 		.unwrap();
 
 		orml_tokens::GenesisConfig::<$runtime> {
-			balances: vec![(AccountId::from(BOB), CurrencyId::XCM(0), units($orml_balance))],
+			//Changed this temporarily in order to have PEN into BOB's account
+			balances: vec![(AccountId::from(BOB), CurrencyId::Native, units($orml_balance))],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

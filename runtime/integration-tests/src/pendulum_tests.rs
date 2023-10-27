@@ -120,13 +120,13 @@ fn assethub_transfer_asset_to_pendulum_and_back() {
 
 #[test]
 fn transfer_native_token_to_assethub() {
-    transfer_native_token_from_pendulum_to_assethub!(
-        PolkadotMockNet,
-        pendulum_runtime,
-        PendulumParachain,
-        polkadot_asset_hub_runtime,
-        AssetHubParachain,
-        PENDULUM_ID,
-        POLKADOT_ASSETHUB_ID
-    );
+	transfer_native_token_from_pendulum_to_assethub!(
+		PolkadotMockNet,
+		pendulum_runtime,
+		PendulumParachain,
+		polkadot_asset_hub_runtime,
+		AssetHubParachain,
+		PENDULUM_ID,
+		POLKADOT_ASSETHUB_ID
+	);
 }

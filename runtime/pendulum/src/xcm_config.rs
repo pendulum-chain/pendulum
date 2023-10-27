@@ -17,7 +17,7 @@ use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use runtime_common::parachains::polkadot::asset_hub;
 use sp_runtime::traits::Convert;
-use xcm::{latest::{prelude::*, Weight as XCMWeight}};
+use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
 	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
@@ -76,7 +76,10 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				)),
 				_ => None,
 			},
-			CurrencyId::Native => Some(MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()), PalletInstance(10)))),
+			CurrencyId::Native => Some(MultiLocation::new(
+				1,
+				X2(Parachain(ParachainInfo::parachain_id().into()), PalletInstance(10)),
+			)),
 			_ => None,
 		}
 	}
@@ -96,14 +99,9 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 						GeneralIndex(asset_hub::USDT_ASSET_ID),
 					),
 			} => Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
-			MultiLocation {
-				parents: 1,
-				interior: 
-					X2(
-						Parachain(id), 
-						PalletInstance(10),
-					),
-            } if id == u32::from(ParachainInfo::parachain_id()) => Some(CurrencyId::Native),
+			MultiLocation { parents: 1, interior: X2(Parachain(id), PalletInstance(10)) }
+				if id == u32::from(ParachainInfo::parachain_id()) =>
+				Some(CurrencyId::Native),
 			_ => None,
 		}
 	}

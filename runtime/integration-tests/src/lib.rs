@@ -10,6 +10,8 @@ mod amplitude_tests;
 #[cfg(test)]
 mod test_macros;
 
+mod sibling;
+
 pub const PENDULUM_ID: u32 = 2094;
 pub const POLKADOT_ASSETHUB_ID: u32 = 1000;
 

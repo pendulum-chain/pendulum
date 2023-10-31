@@ -6186,6 +6186,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-xcm"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.40#19afb58a300faac6ceb0e6e4e341859282897c53"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
 name = "orml-xcm-support"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.40#19afb58a300faac6ceb0e6e4e341859282897c53"
@@ -9947,11 +9961,16 @@ version = "0.1.0"
 dependencies = [
  "amplitude-runtime",
  "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
  "frame-support",
  "frame-system",
  "kusama-runtime",
  "orml-tokens",
+ "orml-traits",
+ "orml-xcm",
+ "orml-xcm-support",
  "orml-xtokens",
  "pallet-assets",
  "pallet-balances",
@@ -9970,6 +9989,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "sp-tracing",
  "statemine-runtime",
  "statemint-runtime",
  "xcm",

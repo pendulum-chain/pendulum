@@ -17,6 +17,7 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+sp-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
 
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.40" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.40" }
@@ -34,11 +35,16 @@ xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", rev = "bea35c
 
 cumulus-pallet-dmp-queue = {git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.40"}
 cumulus-pallet-xcmp-queue = {git = "https://github.com/paritytech/cumulus",  branch = "polkadot-v0.9.40"}
+cumulus-pallet-xcm = {git = "https://github.com/paritytech/cumulus",  branch = "polkadot-v0.9.40"}
+cumulus-primitives-core = {git = "https://github.com/paritytech/cumulus",  branch = "polkadot-v0.9.40"}
 parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.40" }
 
 statemint-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.40" }
 statemine-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.40" }
 
+orml-xcm = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git",  branch = "polkadot-v0.9.40" }
+orml-xcm-support = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git",  branch = "polkadot-v0.9.40" }
+orml-traits = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git",  branch = "polkadot-v0.9.40" }
 orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git",  branch = "polkadot-v0.9.40" }
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library",  branch = "polkadot-v0.9.40" }
 

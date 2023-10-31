@@ -115,8 +115,8 @@ pub enum ParachainType {
 	PolkadotAssetHub,
 	KusamaAssetHub,
 	Pendulum,
-	Pendulum2,
 	Amplitude,
+	Sibling,
 }
 
 pub struct ExtBuilderParachain<Currency> {
@@ -187,11 +187,9 @@ pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 		ParachainType::KusamaAssetHub =>
 			ExtBuilderParachain::kusama_asset_hub_default().balances(vec![]).build(),
 		ParachainType::Pendulum => ExtBuilderParachain::pendulum_default().balances(vec![]).build(),
-		// for second Pendulum instance used for transferring native token
-		ParachainType::Pendulum2 =>
-			ExtBuilderParachain::pendulum2_default().balances(vec![]).build(),
 		ParachainType::Amplitude =>
 			ExtBuilderParachain::amplitude_default().balances(vec![]).build(),
+		ParachainType::Sibling => ExtBuilderParachain::sibling_default().balances(vec![]).build(),
 	}
 }
 
@@ -212,13 +210,13 @@ impl ExtBuilderParachain<CurrencyId> {
 	pub fn pendulum_default() -> Self {
 		Self { balances: vec![], chain: ParachainType::Pendulum }
 	}
-	// for second Pendulum instance used for transferring native token
-	pub fn pendulum2_default() -> Self {
-		Self { balances: vec![], chain: ParachainType::Pendulum2 }
-	}
 
 	pub fn amplitude_default() -> Self {
 		Self { balances: vec![], chain: ParachainType::Amplitude }
+	}
+
+	pub fn sibling_default() -> Self {
+		Self { balances: vec![], chain: ParachainType::Sibling }
 	}
 }
 
@@ -240,9 +238,8 @@ impl Builder<CurrencyId> for ExtBuilderParachain<CurrencyId> {
 					ORML_INITIAL_BALANCE
 				)
 			},
-			// for second Pendulum instance used for transferring native token
-			ParachainType::Pendulum2 => {
-				use pendulum_runtime::{Runtime, System};
+			ParachainType::Amplitude => {
+				use amplitude_runtime::{Runtime, System};
 				build_parachain_with_orml!(
 					self,
 					Runtime,
@@ -251,8 +248,8 @@ impl Builder<CurrencyId> for ExtBuilderParachain<CurrencyId> {
 					ORML_INITIAL_BALANCE
 				)
 			},
-			ParachainType::Amplitude => {
-				use amplitude_runtime::{Runtime, System};
+			ParachainType::Sibling => {
+				use pendulum_runtime::{Runtime, System};
 				build_parachain_with_orml!(
 					self,
 					Runtime,

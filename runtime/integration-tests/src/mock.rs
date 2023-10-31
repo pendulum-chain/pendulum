@@ -1,4 +1,4 @@
-use crate::{AMPLITUDE_ID, PENDULUM_ID, KUSAMA_ASSETHUB_ID, POLKADOT_ASSETHUB_ID};
+use crate::{AMPLITUDE_ID, KUSAMA_ASSETHUB_ID, PENDULUM_ID, POLKADOT_ASSETHUB_ID};
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::CurrencyId;
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
@@ -7,10 +7,11 @@ use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sp_io::TestExternalities;
 use sp_runtime::traits::AccountIdConversion;
+use sp_tracing;
 use xcm_emulator::Weight;
 
-use statemint_runtime as polkadot_asset_hub_runtime;
 use statemine_runtime as kusama_asset_hub_runtime;
+use statemint_runtime as polkadot_asset_hub_runtime;
 
 pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];
@@ -61,6 +62,8 @@ macro_rules! build_relaychain {
 
 macro_rules! build_parachain_with_orml {
 	($self:ident, $runtime:ty, $system:tt, $balance:tt, $orml_balance:tt) => {{
+		sp_tracing::try_init_simple();
+
 		let mut t = frame_system::GenesisConfig::default().build_storage::<$runtime>().unwrap();
 		pallet_balances::GenesisConfig::<$runtime> {
 			balances: vec![(AccountId::from(ALICE), $balance), (AccountId::from(BOB), $balance)],
@@ -69,8 +72,10 @@ macro_rules! build_parachain_with_orml {
 		.unwrap();
 
 		orml_tokens::GenesisConfig::<$runtime> {
-			//Changed this temporarily in order to have PEN into BOB's account
-			balances: vec![(AccountId::from(BOB), CurrencyId::Native, units($orml_balance))],
+			balances: vec![
+				(AccountId::from(BOB), CurrencyId::XCM(0), units($orml_balance)),
+				(AccountId::from(ALICE), CurrencyId::Native, units($orml_balance)),
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -110,6 +115,7 @@ pub enum ParachainType {
 	PolkadotAssetHub,
 	KusamaAssetHub,
 	Pendulum,
+	Pendulum2,
 	Amplitude,
 }
 
@@ -181,6 +187,9 @@ pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 		ParachainType::KusamaAssetHub =>
 			ExtBuilderParachain::kusama_asset_hub_default().balances(vec![]).build(),
 		ParachainType::Pendulum => ExtBuilderParachain::pendulum_default().balances(vec![]).build(),
+		// for second Pendulum instance used for transferring native token
+		ParachainType::Pendulum2 =>
+			ExtBuilderParachain::pendulum2_default().balances(vec![]).build(),
 		ParachainType::Amplitude =>
 			ExtBuilderParachain::amplitude_default().balances(vec![]).build(),
 	}
@@ -192,6 +201,7 @@ impl<Currency> ExtBuilderParachain<Currency> {
 			ParachainType::PolkadotAssetHub => POLKADOT_ASSETHUB_ID,
 			ParachainType::KusamaAssetHub => KUSAMA_ASSETHUB_ID,
 			ParachainType::Pendulum => PENDULUM_ID,
+			ParachainType::Pendulum2 => PENDULUM_ID + 1,
 			ParachainType::Amplitude => AMPLITUDE_ID,
 		}
 	}
@@ -201,6 +211,10 @@ impl<Currency> ExtBuilderParachain<Currency> {
 impl ExtBuilderParachain<CurrencyId> {
 	pub fn pendulum_default() -> Self {
 		Self { balances: vec![], chain: ParachainType::Pendulum }
+	}
+	// for second Pendulum instance used for transferring native token
+	pub fn pendulum2_default() -> Self {
+		Self { balances: vec![], chain: ParachainType::Pendulum2 }
 	}
 
 	pub fn amplitude_default() -> Self {
@@ -217,6 +231,17 @@ impl Builder<CurrencyId> for ExtBuilderParachain<CurrencyId> {
 	fn build(self) -> TestExternalities {
 		match self.chain {
 			ParachainType::Pendulum => {
+				use pendulum_runtime::{Runtime, System};
+				build_parachain_with_orml!(
+					self,
+					Runtime,
+					System,
+					INITIAL_BALANCE,
+					ORML_INITIAL_BALANCE
+				)
+			},
+			// for second Pendulum instance used for transferring native token
+			ParachainType::Pendulum2 => {
 				use pendulum_runtime::{Runtime, System};
 				build_parachain_with_orml!(
 					self,

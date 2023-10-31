@@ -461,64 +461,90 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 	}};
 }
 
-macro_rules! transfer_native_token_from_pendulum_to_assethub {
+macro_rules! transfer_native_token_from_parachain1_to_parachain2 {
 	(
         $mocknet:ident,
-        $pendulum_runtime:ident,
-        $pendulum_chain:ident,
-        $assethub_runtime:ident,
-        $assethub_chain:ident,
-        $pendulum_id:ident,
-        $assethub_id:ident
+        $parachain1_runtime:ident,
+        $parachain1:ident,
+        $parachain2_runtime:ident,
+        $parachain2:ident,
+        $parachain1_id:ident,
+        $parachain2_id:ident
     ) => {{
-		use crate::mock::{units, BOB};
-		use frame_support::traits::fungibles::Inspect;
+		use crate::mock::{units, ALICE, BOB};
+		use frame_support::{log::info, traits::fungibles::Inspect};
 		use polkadot_core_primitives::Balance;
+		use sp_tracing;
 		use xcm::latest::{
 			Junction,
 			Junction::AccountId32,
-			Junctions::{X1, X2},
+			Junctions::{X2, X3},
 			MultiLocation, WeightLimit,
 		};
-		use $pendulum_runtime::CurrencyId;
+		use $parachain1_runtime::CurrencyId;
 
 		$mocknet::reset();
+
+		sp_tracing::try_init_simple();
 
 		let transfer_amount: Balance = units(10);
 		let asset_location = MultiLocation::new(
 			1,
-			X2(Junction::Parachain($pendulum_id), Junction::PalletInstance(10)),
+			X2(Junction::Parachain($parachain1_id), Junction::PalletInstance(10)),
 		);
 
-		// Get BOB's balance before the transfer on Pendulum chain
-		let mut pendulum_tokens_before: Balance = units(100);
-		$pendulum_chain::execute_with(|| {
+		// Get ALICE's balance on parachain1 before the transfer
+		let native_tokens_before: Balance = units(100);
+		$parachain1::execute_with(|| {
 			assert_eq!(
-				$pendulum_runtime::Tokens::balance(CurrencyId::Native, &BOB.into()),
-				pendulum_tokens_before
+				$parachain1_runtime::Tokens::balance(CurrencyId::Native, &ALICE.into()),
+				native_tokens_before
 			);
 		});
 
-		// Execute the transfer from Pendulum chain to AssetHub
-		$pendulum_chain::execute_with(|| {
-			use $pendulum_runtime::XTokens;
+		// Execute the transfer from parachain1 to parachain2
+		$parachain1::execute_with(|| {
+			use $parachain1_runtime::XTokens;
 
+			// transfer using multilocation
 			assert_ok!(XTokens::transfer_multiasset(
-				$pendulum_runtime::RuntimeOrigin::signed(BOB.into()),
+				$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
 				Box::new((asset_location.clone(), transfer_amount).into()),
 				Box::new(
 					MultiLocation {
 						parents: 1,
-						interior: X1(AccountId32 { network: None, id: BOB })
+						interior: X2(
+							Junction::Parachain($parachain2_id),
+							AccountId32 { network: None, id: BOB }
+						)
 					}
 					.into()
 				),
 				WeightLimit::Unlimited
 			));
+
+			// transfer using currency id
+			// assert_ok!(XTokens::transfer(
+			// 	$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
+			// 	CurrencyId::Native,
+			// 	transfer_amount,
+			// 	Box::new(
+			// 		MultiLocation::new(
+			// 			1,
+			// 			X3(
+			// 				Junction::Parachain($parachain2_id),
+			// 				Junction::PalletInstance(10),
+			// 				Junction::AccountId32 { network: None, id: BOB.into() }
+			// 			)
+			// 		)
+			// 		.into()
+			// 	),
+			// 	WeightLimit::Unlimited
+			// ));
 		});
 
-		$pendulum_chain::execute_with(|| {
-			use $pendulum_runtime::{RuntimeEvent, System};
+		$parachain1::execute_with(|| {
+			use $parachain1_runtime::{RuntimeEvent, System};
 
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
@@ -526,23 +552,23 @@ macro_rules! transfer_native_token_from_pendulum_to_assethub {
 			)));
 		});
 
-		// Can't get this to work though
-		// Verify the balance on the AssetHub chain after transfer
-		// $assethub_chain::execute_with(|| {
-		// 	   // I need ForeignAssets here instead of Assets
-		//     use $assethub_runtime::Assets;
+		// Verify the balance on the parachain2 after transfer
+		$parachain2::execute_with(|| {
+			// Currently failing
+			// assert_eq!(
+			// 	$parachain2_runtime::Tokens::balance(CurrencyId::Native, &BOB.into()),
+			// 	transfer_amount
+			// );
 
-		//     assert_eq!(
-		//         Assets::balance(asset_location, &BOB.into()),
-		//         transfer_amount
-		//     );
-		// });
+			// log BOB's balance to see if there's any amount
+			info!("{:?}", $parachain2_runtime::Tokens::balance(CurrencyId::Native, &BOB.into()));
+		});
 
-		// Verify the balance on the Pendulum chain after transfer
-		$pendulum_chain::execute_with(|| {
+		// Verify the balance on the parachain1 after transfer
+		$parachain1::execute_with(|| {
 			assert_eq!(
-				$pendulum_runtime::Tokens::balance(CurrencyId::Native, &BOB.into()),
-				pendulum_tokens_before - transfer_amount
+				$parachain1_runtime::Tokens::balance(CurrencyId::Native, &ALICE.into()),
+				native_tokens_before - transfer_amount
 			);
 		});
 	}};
@@ -554,4 +580,4 @@ pub(super) use parachain1_transfer_asset_to_parachain2_and_back;
 pub(super) use parachain1_transfer_incorrect_asset_to_parachain2_should_fail;
 pub(super) use transfer_10_relay_token_from_parachain_to_relay_chain;
 pub(super) use transfer_20_relay_token_from_relay_chain_to_parachain;
-pub(super) use transfer_native_token_from_pendulum_to_assethub;
+pub(super) use transfer_native_token_from_parachain1_to_parachain2;

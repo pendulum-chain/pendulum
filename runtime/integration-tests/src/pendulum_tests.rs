@@ -5,7 +5,7 @@ use crate::{
 		parachain1_transfer_incorrect_asset_to_parachain2_should_fail,
 		transfer_10_relay_token_from_parachain_to_relay_chain,
 		transfer_20_relay_token_from_relay_chain_to_parachain,
-		transfer_native_token_from_pendulum_to_assethub,
+		transfer_native_token_from_parachain1_to_parachain2,
 	},
 	PENDULUM_ID, POLKADOT_ASSETHUB_ID,
 };
@@ -36,6 +36,16 @@ decl_test_parachain! {
 }
 
 decl_test_parachain! {
+	pub struct Pendulum2Parachain {
+		Runtime = pendulum_runtime::Runtime,
+		RuntimeOrigin = pendulum_runtime::RuntimeOrigin,
+		XcmpMessageHandler = pendulum_runtime::XcmpQueue,
+		DmpMessageHandler = pendulum_runtime::DmpQueue,
+		new_ext = para_ext(ParachainType::Pendulum2),
+	}
+}
+
+decl_test_parachain! {
 	pub struct AssetHubParachain {
 		Runtime = polkadot_asset_hub_runtime::Runtime,
 		RuntimeOrigin = polkadot_asset_hub_runtime::RuntimeOrigin,
@@ -51,6 +61,7 @@ decl_test_network! {
 		parachains = vec![
 			(1000, AssetHubParachain),
 			(2094, PendulumParachain),
+			(2095, Pendulum2Parachain),
 		],
 	}
 }
@@ -119,14 +130,17 @@ fn assethub_transfer_asset_to_pendulum_and_back() {
 }
 
 #[test]
-fn transfer_native_token_to_assethub() {
-	transfer_native_token_from_pendulum_to_assethub!(
+fn transfer_pendulum_native_token_to_pendulum() {
+	// ID for Pendulum's second instance
+	pub const PENDULUM2_ID: u32 = PENDULUM_ID + 1;
+
+	transfer_native_token_from_parachain1_to_parachain2!(
 		PolkadotMockNet,
 		pendulum_runtime,
 		PendulumParachain,
-		polkadot_asset_hub_runtime,
-		AssetHubParachain,
+		pendulum_runtime,
+		Pendulum2Parachain,
 		PENDULUM_ID,
-		POLKADOT_ASSETHUB_ID
+		PENDULUM2_ID
 	);
 }

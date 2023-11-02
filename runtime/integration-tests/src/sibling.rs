@@ -3,66 +3,32 @@
 #![allow(warnings)]
 #![cfg(test)]
 
-
+use codec::{Decode, Encode, MaxEncodedLen};
+use cumulus_primitives_core::GetChannelInfo;
 use frame_support::{
-	construct_runtime, match_types, parameter_types,
-	traits::{ConstU128, ConstU32, ConstU64, Everything, Get, Nothing},
-	weights::constants::WEIGHT_REF_TIME_PER_SECOND,
+	match_types, parameter_types,
+	traits::{ConstU32, Everything, Get},
 };
-use crate::
-	mock::{para_ext, polkadot_relay_ext, ParachainType};
-use frame_system::EnsureRoot;
-use pendulum_runtime::{ParachainInfo, Tokens};
-use sp_core::H256;
-use sp_runtime::traits::{Convert, IdentityLookup};
-use codec::{Encode, Decode, MaxEncodedLen};
+use orml_traits::parameter_type_with_key;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
-use sp_runtime::{AccountId32, BoundedVec, BuildStorage};
-use xcm::CreateMatcher;
-use xcm::MatchXcm;
+use sp_core::H256;
+use sp_debug_derive::RuntimeDebug;
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, Convert, IdentityLookup},
+	AccountId32, BoundedVec, BuildStorage,
+};
+use xcm::{v3::prelude::*, CreateMatcher, MatchXcm};
+use xcm_emulator::TestExt;
 use xcm_executor::{
 	traits::{ShouldExecute, WeightTrader},
-	Assets,
+	Config,
 };
-use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
-use frame_support::traits::ProcessMessageError;
-use sp_debug_derive::RuntimeDebug;
-use cumulus_primitives_core::{ChannelStatus, GetChannelInfo, ParaId};
-use pallet_xcm::XcmPassthrough;
-use xcm::v3::{prelude::*, Weight};
-use xcm_builder::{
-	AccountId32Aliases, EnsureXcmOrigin, FixedWeightBounds, NativeAsset, ParentIsPreset,
-	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
-};
-use xcm_executor::{Config, XcmExecutor};
-use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key};
-use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
-use sp_io::TestExternalities;
+
+use pendulum_runtime::ParachainInfo;
+
 pub type AccountId = AccountId32;
-
-type Block = frame_system::mocking::MockBlock<Runtime>;
-//type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
-
-construct_runtime!(
-	pub enum Runtime 
-	{
-		System: frame_system,
-		Balances: pallet_balances,
-
-		//ParachainInfo: parachain_info,
-		// XcmpQueue: cumulus_pallet_xcmp_queue,
-		// DmpQueue: cumulus_pallet_dmp_queue,
-		// CumulusXcm: cumulus_pallet_xcm,
-
-		// Tokens: orml_tokens,
-		// XTokens: orml_xtokens,
-
-		// PolkadotXcm: pallet_xcm,
-		// OrmlXcm: orml_xcm,
-	}
-);
 
 #[derive(
 	Encode,
@@ -222,9 +188,6 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 	}
 }
 
-pub type Balance = u128;
-pub type Amount = i128;
-
 // decl_test_parachain! {
 // 	pub struct SiblingParachain {
 // 		Runtime = Runtime,
@@ -265,49 +228,6 @@ pub type Amount = i128;
 // 		],
 // 	}
 // }
-
-impl frame_system::Config for Runtime {
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type Hash = H256;
-	type Hashing = ::sp_runtime::traits::BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Block = Block;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = ConstU64<250>;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type DbWeight = ();
-	type BaseCallFilter = Everything;
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
-	type OnSetCode = ();
-	type MaxConsumers = ConstU32<16>;
-}
-
-impl pallet_balances::Config for Runtime {
-	type MaxLocks = ConstU32<50>;
-	type Balance = Balance;
-	type RuntimeEvent = RuntimeEvent;
-	type DustRemoval = ();
-	type ExistentialDeposit = ConstU128<1>;
-	type AccountStore = System;
-	type WeightInfo = ();
-	type MaxReserves = ConstU32<50>;
-	type ReserveIdentifier = [u8; 8];
-}
-
-parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		Default::default()
-	};
-}
 
 // impl orml_tokens::Config for Runtime {
 // 	type RuntimeEvent = RuntimeEvent;
@@ -521,7 +441,113 @@ parameter_type_with_key! {
 // 	type SovereignOrigin = EnsureRoot<AccountId>;
 // }
 
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
+// Configure a mock runtime to test the pallet.
+frame_support::construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
+		Tokens: orml_tokens::{Pallet, Storage, Config<T>, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+	}
+);
 
+pub type Balance = u128;
+pub type BlockNumber = u64;
+pub type Index = u64;
+pub type Amount = i64;
 
+parameter_types! {
+	pub const BlockHashCount: u64 = 250;
+	pub const SS58Prefix: u8 = 42;
+}
+impl frame_system::Config for Test {
+	type BaseCallFilter = Everything;
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type Index = Index;
+	type BlockNumber = BlockNumber;
+	type Hash = H256;
+	type Hashing = BlakeTwo256;
+	type AccountId = AccountId;
+	type Lookup = IdentityLookup<Self::AccountId>;
+	type Header = Header;
+	type RuntimeEvent = TestEvent;
+	type BlockHashCount = BlockHashCount;
+	type Version = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = pallet_balances::AccountData<Balance>;
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
+	type SystemWeightInfo = ();
+	type SS58Prefix = SS58Prefix;
+	type OnSetCode = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
+}
 
+pub type TestEvent = RuntimeEvent;
+
+parameter_types! {
+	pub const MaxLocks: u32 = 50;
+}
+
+parameter_type_with_key! {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+		0
+	};
+}
+
+pub struct CurrencyHooks<T>(sp_std::marker::PhantomData<T>);
+impl<T: orml_tokens::Config>
+	orml_traits::currency::MutationHooks<T::AccountId, T::CurrencyId, T::Balance> for CurrencyHooks<T>
+{
+	type OnDust = orml_tokens::BurnDust<T>;
+	type OnSlash = ();
+	type PreDeposit = ();
+	type PostDeposit = ();
+	type PreTransfer = ();
+	type PostTransfer = ();
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
+}
+
+impl orml_tokens::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type Amount = Amount;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type CurrencyHooks = CurrencyHooks<Self>;
+	type MaxLocks = MaxLocks;
+	type MaxReserves = ConstU32<0>;
+	type ReserveIdentifier = ();
+	type DustRemovalWhitelist = Everything;
+}
+
+parameter_types! {
+	pub const ExistentialDeposit: Balance = 1000;
+	pub const MaxReserves: u32 = 50;
+}
+
+impl pallet_balances::Config for Test {
+	type MaxLocks = MaxLocks;
+	/// The type for recording an account's balance.
+	type Balance = Balance;
+	/// The ubiquitous event type.
+	type RuntimeEvent = RuntimeEvent;
+	type DustRemoval = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
+	type MaxReserves = MaxReserves;
+	type ReserveIdentifier = ();
+}

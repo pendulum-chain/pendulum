@@ -52,3 +52,9 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 
 pendulum-runtime = { path = "../pendulum" }
 amplitude-runtime = {path = "../amplitude" }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+]

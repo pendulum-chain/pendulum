@@ -199,7 +199,7 @@ impl<Currency> ExtBuilderParachain<Currency> {
 			ParachainType::PolkadotAssetHub => POLKADOT_ASSETHUB_ID,
 			ParachainType::KusamaAssetHub => KUSAMA_ASSETHUB_ID,
 			ParachainType::Pendulum => PENDULUM_ID,
-			ParachainType::Pendulum2 => PENDULUM_ID + 1,
+			ParachainType::Sibling => PENDULUM_ID + 1,
 			ParachainType::Amplitude => AMPLITUDE_ID,
 		}
 	}

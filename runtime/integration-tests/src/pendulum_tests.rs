@@ -36,12 +36,12 @@ decl_test_parachain! {
 }
 
 decl_test_parachain! {
-	pub struct Pendulum2Parachain {
+	pub struct SiblingParachain {
 		Runtime = pendulum_runtime::Runtime,
 		RuntimeOrigin = pendulum_runtime::RuntimeOrigin,
 		XcmpMessageHandler = pendulum_runtime::XcmpQueue,
 		DmpMessageHandler = pendulum_runtime::DmpQueue,
-		new_ext = para_ext(ParachainType::Pendulum2),
+		new_ext = para_ext(ParachainType::Sibling),
 	}
 }
 
@@ -61,7 +61,7 @@ decl_test_network! {
 		parachains = vec![
 			(1000, AssetHubParachain),
 			(2094, PendulumParachain),
-			(2095, Pendulum2Parachain),
+			(2095, SiblingParachain),
 		],
 	}
 }
@@ -132,15 +132,15 @@ fn assethub_transfer_asset_to_pendulum_and_back() {
 #[test]
 fn transfer_pendulum_native_token_to_pendulum() {
 	// ID for Pendulum's second instance
-	pub const PENDULUM2_ID: u32 = PENDULUM_ID + 1;
+	pub const SIBLING_ID: u32 = PENDULUM_ID + 1;
 
 	transfer_native_token_from_parachain1_to_parachain2!(
 		PolkadotMockNet,
 		pendulum_runtime,
 		PendulumParachain,
 		pendulum_runtime,
-		Pendulum2Parachain,
+		SiblingParachain,
 		PENDULUM_ID,
-		PENDULUM2_ID
+		SIBLING_ID
 	);
 }

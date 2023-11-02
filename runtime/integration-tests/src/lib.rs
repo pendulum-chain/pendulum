@@ -10,6 +10,7 @@ mod amplitude_tests;
 #[cfg(test)]
 mod test_macros;
 
+#[cfg(test)]
 mod sibling;
 
 pub const PENDULUM_ID: u32 = 2094;

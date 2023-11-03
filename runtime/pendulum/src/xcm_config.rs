@@ -102,6 +102,8 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			MultiLocation { parents: 1, interior: X2(Parachain(id), PalletInstance(10)) }
 				if id == u32::from(ParachainInfo::parachain_id()) =>
 				Some(CurrencyId::Native),
+			MultiLocation { parents: 0, interior: X1(PalletInstance(10)) } =>
+				Some(CurrencyId::Native),
 			_ => None,
 		}
 	}

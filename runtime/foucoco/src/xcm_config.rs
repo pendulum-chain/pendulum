@@ -63,6 +63,10 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				0 => Some(MultiLocation::parent()),
 				_ => None,
 			},
+			CurrencyId::Native => Some(MultiLocation::new(
+				1,
+				X2(Parachain(ParachainInfo::parachain_id().into()), PalletInstance(10)),
+			)),
 			_ => None,
 		}
 	}
@@ -72,6 +76,11 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
 			MultiLocation { parents: 1, interior: Here } => Some(CurrencyId::XCM(0)),
+			MultiLocation { parents: 1, interior: X2(Parachain(id), PalletInstance(10)) }
+				if id == u32::from(ParachainInfo::parachain_id()) =>
+				Some(CurrencyId::Native),
+			MultiLocation { parents: 0, interior: X1(PalletInstance(10)) } =>
+				Some(CurrencyId::Native),
 			_ => None,
 		}
 	}

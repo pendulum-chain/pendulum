@@ -369,18 +369,6 @@ parameter_types! {
 	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
 }
 
-match_types! {
-	pub type ParentOrParachains: impl Contains<MultiLocation> = {
-		MultiLocation { parents: 0, interior: X1(Junction::AccountId32 { .. }) } |
-		MultiLocation { parents: 1, interior: X1(Junction::AccountId32 { .. }) } |
-		MultiLocation { parents: 1, interior: X2(Parachain(1), Junction::AccountId32 { .. }) } |
-		MultiLocation { parents: 1, interior: X2(Parachain(2), Junction::AccountId32 { .. }) } |
-		MultiLocation { parents: 1, interior: X2(Parachain(3), Junction::AccountId32 { .. }) } |
-		MultiLocation { parents: 1, interior: X2(Parachain(4), Junction::AccountId32 { .. }) } |
-		MultiLocation { parents: 1, interior: X2(Parachain(100), Junction::AccountId32 { .. }) }
-	};
-}
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
 

@@ -9,6 +9,11 @@ version = "0.1.0"
 codec = { package = "parity-scale-codec", version = "3.0.0" }
 scale-info = { version = "2.1.2", features = ["derive"] }
 serde = { version = "1.0.144", features = ["derive"] }
+log = { version = "0.4.17", default-features = false }
+smallvec = "1.9.0"
+
+# Spacewalk libraries
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "58983d2695c309665c9c017a022436aaee088f3d"}
 
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
@@ -39,6 +44,7 @@ cumulus-pallet-dmp-queue = {git = "https://github.com/paritytech/cumulus", branc
 cumulus-pallet-xcmp-queue = {git = "https://github.com/paritytech/cumulus",  branch = "polkadot-v0.9.40"}
 cumulus-pallet-xcm = {git = "https://github.com/paritytech/cumulus",  branch = "polkadot-v0.9.40"}
 cumulus-primitives-core = {git = "https://github.com/paritytech/cumulus",  branch = "polkadot-v0.9.40"}
+cumulus-primitives-utility = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.40"}
 parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.40" }
 
 statemint-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.40" }
@@ -49,6 +55,9 @@ orml-xcm-support = {git = "https://github.com/open-web3-stack/open-runtime-modul
 orml-traits = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git",  branch = "polkadot-v0.9.40" }
 orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git",  branch = "polkadot-v0.9.40" }
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library",  branch = "polkadot-v0.9.40" }
+
+# Local
+runtime-common = {path = "../common", default-features = false}
 
 pendulum-runtime = { path = "../pendulum" }
 amplitude-runtime = {path = "../amplitude" }

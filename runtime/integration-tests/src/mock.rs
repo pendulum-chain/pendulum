@@ -1,4 +1,6 @@
-use crate::{AMPLITUDE_ID, KUSAMA_ASSETHUB_ID, PENDULUM_ID, POLKADOT_ASSETHUB_ID};
+use crate::{
+	sibling, AMPLITUDE_ID, KUSAMA_ASSETHUB_ID, PENDULUM_ID, POLKADOT_ASSETHUB_ID, SIBLING_ID,
+};
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::CurrencyId;
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
@@ -74,6 +76,8 @@ macro_rules! build_parachain_with_orml {
 		orml_tokens::GenesisConfig::<$runtime> {
 			balances: vec![
 				(AccountId::from(BOB), CurrencyId::XCM(0), units($orml_balance)),
+				(AccountId::from(ALICE), CurrencyId::XCM(0), units($orml_balance)),
+				(AccountId::from(BOB), CurrencyId::Native, units($orml_balance)),
 				(AccountId::from(ALICE), CurrencyId::Native, units($orml_balance)),
 			],
 		}
@@ -199,7 +203,7 @@ impl<Currency> ExtBuilderParachain<Currency> {
 			ParachainType::PolkadotAssetHub => POLKADOT_ASSETHUB_ID,
 			ParachainType::KusamaAssetHub => KUSAMA_ASSETHUB_ID,
 			ParachainType::Pendulum => PENDULUM_ID,
-			ParachainType::Sibling => PENDULUM_ID + 1,
+			ParachainType::Sibling => SIBLING_ID,
 			ParachainType::Amplitude => AMPLITUDE_ID,
 		}
 	}
@@ -249,7 +253,7 @@ impl Builder<CurrencyId> for ExtBuilderParachain<CurrencyId> {
 				)
 			},
 			ParachainType::Sibling => {
-				use pendulum_runtime::{Runtime, System};
+				use sibling::{Runtime, System};
 				build_parachain_with_orml!(
 					self,
 					Runtime,

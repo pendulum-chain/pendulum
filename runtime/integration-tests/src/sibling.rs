@@ -15,6 +15,7 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::MAXIMUM_BLOCK_WEIGHT;
+use runtime_common::parachains::polkadot::asset_hub;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
@@ -42,7 +43,7 @@ use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation,
 };
 
-use crate::{AMPLITUDE_ID, KUSAMA_ASSETHUB_ID, PENDULUM_ID, POLKADOT_ASSETHUB_ID};
+use crate::{AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
 
 const XCM_ASSET_RELAY_DOT: u8 = 0;
 const XCM_ASSET_ASSETHUB_USDT: u8 = 1;
@@ -99,7 +100,7 @@ impl From<u32> for CurrencyId {
 		match id {
 			PENDULUM_ID => CurrencyId::Pendulum,
 			AMPLITUDE_ID => CurrencyId::Amplitude,
-			KUSAMA_ASSETHUB_ID | POLKADOT_ASSETHUB_ID => CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT),
+			ASSETHUB_ID => CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT),
 			id if id == u32::from(ParachainInfo::parachain_id()) => CurrencyId::Native,
 			// Relay
 			_ => CurrencyId::XCM(XCM_ASSET_RELAY_DOT),
@@ -125,8 +126,19 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				Some(MultiLocation::new(1, X2(Parachain(PENDULUM_ID), PalletInstance(10)))),
 			CurrencyId::Amplitude =>
 				Some(MultiLocation::new(1, X2(Parachain(AMPLITUDE_ID), PalletInstance(10)))),
-			// TODO see how to use KUSAMA/POLKADOT asset hub based on the XCM sender chain (PENDULUM/AMPLITUDE) if needed
-			_ => None,
+			CurrencyId::XCM(f) => match f {
+				XCM_ASSET_RELAY_DOT => Some(MultiLocation::parent()),
+				// Handles both Kusama and Polkadot asset hub
+				XCM_ASSET_ASSETHUB_USDT => Some(MultiLocation::new(
+					1,
+					X3(
+						Parachain(asset_hub::PARA_ID),
+						PalletInstance(asset_hub::ASSET_PALLET_ID),
+						GeneralIndex(asset_hub::USDT_ASSET_ID),
+					),
+				)),
+				_ => None,
+			},
 		}
 	}
 }
@@ -144,7 +156,18 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			} => Some(CurrencyId::Amplitude),
 			MultiLocation { parents: 0, interior: X1(PalletInstance(10)) } =>
 				Some(CurrencyId::Native),
-			// TODO see how to use KUSAMA/POLKADOT asset hub based on the XCM sender chain (PENDULUM/AMPLITUDE) if needed
+			// Handles both Kusama and Polkadot asset hub
+			MultiLocation {
+				parents: 1,
+				interior:
+					X3(
+						Parachain(asset_hub::PARA_ID),
+						PalletInstance(asset_hub::ASSET_PALLET_ID),
+						GeneralIndex(asset_hub::USDT_ASSET_ID),
+					),
+			} => Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
+			MultiLocation { parents: 1, interior: Here } =>
+				Some(CurrencyId::XCM(XCM_ASSET_RELAY_DOT)),
 			_ => None,
 		}
 	}

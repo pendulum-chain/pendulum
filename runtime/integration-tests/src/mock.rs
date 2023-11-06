@@ -1,6 +1,4 @@
-use crate::{
-	sibling, AMPLITUDE_ID, KUSAMA_ASSETHUB_ID, PENDULUM_ID, POLKADOT_ASSETHUB_ID, SIBLING_ID,
-};
+use crate::{sibling, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID};
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::CurrencyId as PendulumCurrencyId;
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
@@ -199,8 +197,8 @@ pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 impl<Currency> ExtBuilderParachain<Currency> {
 	fn get_parachain_id(&self) -> u32 {
 		match self.chain {
-			ParachainType::PolkadotAssetHub => POLKADOT_ASSETHUB_ID,
-			ParachainType::KusamaAssetHub => KUSAMA_ASSETHUB_ID,
+			ParachainType::PolkadotAssetHub => ASSETHUB_ID,
+			ParachainType::KusamaAssetHub => ASSETHUB_ID,
 			ParachainType::Pendulum => PENDULUM_ID,
 			ParachainType::Sibling => SIBLING_ID,
 			ParachainType::Amplitude => AMPLITUDE_ID,

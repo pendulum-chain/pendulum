@@ -14,9 +14,6 @@ mod test_macros;
 mod sibling;
 
 pub const PENDULUM_ID: u32 = 2094;
-pub const POLKADOT_ASSETHUB_ID: u32 = 1000;
-
 pub const AMPLITUDE_ID: u32 = 2124;
-pub const KUSAMA_ASSETHUB_ID: u32 = 1000;
-
+pub const ASSETHUB_ID: u32 = 1000;
 pub const SIBLING_ID: u32 = 9999;

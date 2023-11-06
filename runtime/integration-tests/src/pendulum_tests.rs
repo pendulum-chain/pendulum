@@ -8,7 +8,7 @@ use crate::{
 		transfer_20_relay_token_from_relay_chain_to_parachain,
 		transfer_native_token_from_parachain1_to_parachain2_and_back,
 	},
-	PENDULUM_ID, POLKADOT_ASSETHUB_ID, SIBLING_ID,
+	ASSETHUB_ID, PENDULUM_ID, SIBLING_ID,
 };
 
 use frame_support::assert_ok;
@@ -121,7 +121,7 @@ fn assethub_transfer_asset_to_pendulum_and_back() {
 	parachain1_transfer_asset_to_parachain2_and_back!(
 		polkadot_asset_hub_runtime,
 		AssetHubParachain,
-		POLKADOT_ASSETHUB_ID,
+		ASSETHUB_ID,
 		USDT_ASSET_ID,
 		pendulum_runtime,
 		PendulumParachain,

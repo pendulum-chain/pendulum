@@ -1519,61 +1519,18 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			// Always allowed RuntimeCall::Utility no matter type.
 			// Only transactions allowed by Proxy.filter can be executed
 			_ if matches!(c, RuntimeCall::Utility(..)) => true,
-			ProxyType::Any => true,
-			// ProxyType::NonTransfer => {
-			// 	matches!(
-			//         c,
-			//         RuntimeCall::System(..)
-			//             | RuntimeCall::Identity(..)
-			//             | RuntimeCall::Timestamp(..)
-			//             | RuntimeCall::Multisig(..)
-			//             | RuntimeCall::Proxy(..)
-			//             | RuntimeCall::ParachainSystem(..)
-			//             | RuntimeCall::ParachainInfo(..)
-			//             // Skip entire Balances pallet
-			//             | RuntimeCall::Vesting(pallet_vesting::Call::vest{..})
-			// 	        | RuntimeCall::Vesting(pallet_vesting::Call::vest_other{..})
-			// 	        // Specifically omitting Vesting `vested_transfer`, and `force_vested_transfer`
-			//             | RuntimeCall::Session(..)
-			//             | RuntimeCall::XcmpQueue(..)
-			//             | RuntimeCall::PolkadotXcm(..)
-			//             | RuntimeCall::DmpQueue(..)
-			//     )
-			// }
-			// ProxyType::Balances => {
-			// 	matches!(c, RuntimeCall::Balances(..))
-			// }
-			// ProxyType::IdentityJudgement => {
-			// 	matches!(
-			//         c,
-			//         RuntimeCall::Identity(pallet_identity::Call::provide_judgement { .. })
-			//     )
-			// }
-			// ProxyType::CancelProxy => {
-			// 	matches!(
-			//         c,
-			//         RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. })
-			//     )
-			// }
-			// ProxyType::StakerRewardClaim => {
-			// 	matches!(
-			//         c,
-			//         RuntimeCall::DappsStaking(parachain_staking::Call::claim_rewards { .. })
-			//     )
-			// }
+			ProxyType::Any => true
 		}
 	}
 
 	// Determines whether self matches at least everything that o does.
-	fn is_superset(&self, _o: &Self) -> bool {
-		true
-		// match (self, o) {
-		// 	(x, y) if x == y => true,
-		// 	(ProxyType::Any, _) => true,
-		// 	(_, ProxyType::Any) => false,
-		// 	(_, ProxyType::StakerRewardClaim) => true,
-		// 	_ => false,
-		// }
+	fn is_superset(&self, o: &Self) -> bool {
+		match (self, o) {
+			(x, y) if x == y => true,
+			(ProxyType::Any, _) => true,
+			(_, ProxyType::Any) => false,
+			_ => false,
+		}
 	}
 }
 

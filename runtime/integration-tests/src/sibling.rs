@@ -1,10 +1,8 @@
 // Based on https://github.com/open-web3-stack/open-runtime-module-library/blob/83a76c2bf66c0b1236c31077e6fb24bb760a3535/xtokens/src/mock/para.rs
 #![cfg(test)]
 
+use codec::{Decode, Encode, MaxEncodedLen};
 use core::marker::PhantomData;
-use runtime_common::parachains::kusama::asset_hub;
-use serde::{Serialize, Deserialize};
-use codec::{MaxEncodedLen, Decode, Encode};
 use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ConstU32, ContainsPair, Everything, Nothing},
@@ -17,7 +15,9 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::MAXIMUM_BLOCK_WEIGHT;
+use runtime_common::parachains::kusama::asset_hub;
 use scale_info::TypeInfo;
+use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use sp_debug_derive::RuntimeDebug;
 use sp_runtime::{
@@ -43,7 +43,7 @@ use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation,
 };
 
-use crate::{AMPLITUDE_ID, PENDULUM_ID, KUSAMA_ASSETHUB_ID, POLKADOT_ASSETHUB_ID};
+use crate::{AMPLITUDE_ID, KUSAMA_ASSETHUB_ID, PENDULUM_ID, POLKADOT_ASSETHUB_ID};
 
 const XCM_ASSET_RELAY_DOT: u8 = 0;
 const XCM_ASSET_ASSETHUB_USDT: u8 = 1;
@@ -96,16 +96,16 @@ pub enum CurrencyId {
 // Convert from u32 parachain id to CurrencyId
 // Needed for the test macro so it works regardless of the XCM sender parachain
 impl From<u32> for CurrencyId {
-    fn from(id: u32) -> Self {
-        match id {
-            PENDULUM_ID => CurrencyId::Pendulum,
-            AMPLITUDE_ID => CurrencyId::Amplitude,
+	fn from(id: u32) -> Self {
+		match id {
+			PENDULUM_ID => CurrencyId::Pendulum,
+			AMPLITUDE_ID => CurrencyId::Amplitude,
 			KUSAMA_ASSETHUB_ID | POLKADOT_ASSETHUB_ID => CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT),
 			id if id == u32::from(ParachainInfo::parachain_id()) => CurrencyId::Native,
 			// Relay
 			_ => CurrencyId::XCM(XCM_ASSET_RELAY_DOT),
-        }
-    }
+		}
+	}
 }
 
 /// CurrencyIdConvert
@@ -122,14 +122,10 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				1,
 				X2(Parachain(ParachainInfo::parachain_id().into()), PalletInstance(10)),
 			)),
-			CurrencyId::Pendulum => Some(MultiLocation::new(
-				1,
-				X2(Parachain(PENDULUM_ID), PalletInstance(10)),
-			)),
-			CurrencyId::Amplitude => Some(MultiLocation::new(
-				1,
-				X2(Parachain(AMPLITUDE_ID), PalletInstance(10)),
-			)),
+			CurrencyId::Pendulum =>
+				Some(MultiLocation::new(1, X2(Parachain(PENDULUM_ID), PalletInstance(10)))),
+			CurrencyId::Amplitude =>
+				Some(MultiLocation::new(1, X2(Parachain(AMPLITUDE_ID), PalletInstance(10)))),
 			// TODO see how to use KUSAMA/POLKADOT asset hub based on the XCM sender chain (PENDULUM/AMPLITUDE) if needed
 			_ => None,
 		}
@@ -139,10 +135,14 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
-			MultiLocation { parents: 1, interior: X2(Parachain(PENDULUM_ID), PalletInstance(10)) } =>
-				Some(CurrencyId::Pendulum),
-            MultiLocation { parents: 1, interior: X2(Parachain(AMPLITUDE_ID), PalletInstance(10)) } =>
-				Some(CurrencyId::Amplitude),
+			MultiLocation {
+				parents: 1,
+				interior: X2(Parachain(PENDULUM_ID), PalletInstance(10)),
+			} => Some(CurrencyId::Pendulum),
+			MultiLocation {
+				parents: 1,
+				interior: X2(Parachain(AMPLITUDE_ID), PalletInstance(10)),
+			} => Some(CurrencyId::Amplitude),
 			MultiLocation { parents: 0, interior: X1(PalletInstance(10)) } =>
 				Some(CurrencyId::Native),
 			// TODO see how to use KUSAMA/POLKADOT asset hub based on the XCM sender chain (PENDULUM/AMPLITUDE) if needed

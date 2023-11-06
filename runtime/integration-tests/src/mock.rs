@@ -3,11 +3,11 @@ use crate::{
 };
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::CurrencyId as PendulumCurrencyId;
-use sibling::CurrencyId as SiblingCurrencyId;
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
 use polkadot_parachain::primitives::Id as ParaId;
 use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
+use sibling::CurrencyId as SiblingCurrencyId;
 use sp_io::TestExternalities;
 use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::Weight;

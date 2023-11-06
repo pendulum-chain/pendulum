@@ -490,7 +490,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		);
 		// This is needed in order to have the correct mapping regardless of the XCM sender parachain provided
 		let para1_native_currency_on_para2 = Parachain2CurrencyId::from($parachain1_id);
-		
+
 		// Get ALICE's balance on parachain1 before the transfer
 		let native_tokens_before: Balance = units(100);
 		$parachain1::execute_with(|| {

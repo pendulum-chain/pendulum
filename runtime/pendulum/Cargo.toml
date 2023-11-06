@@ -26,7 +26,7 @@ smallvec = "1.9.0"
 runtime-common = {path = "../common", default-features = false}
 
 # Spacewalk libraries
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "58983d2695c309665c9c017a022436aaee088f3d"}
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e5c6acdfdc2482183ad064d1a27f75b61adf2546"}
 
 # Substrate
 frame-benchmarking = {git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.40"}

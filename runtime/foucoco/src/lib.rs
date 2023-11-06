@@ -371,7 +371,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::VaultRewards(_) |
 			RuntimeCall::Farming(_) |
 			RuntimeCall::TokenAllowance(_) |
-			RuntimeCall::AssetRegistry(_) => true,
+			RuntimeCall::AssetRegistry(_) |
+			RuntimeCall::RewardDistribution(_)=> true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -1385,12 +1386,18 @@ impl security::Config for Runtime {
 	type WeightInfo = security::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+	pub const MaxRewardCurrencies: u32= 10;
+}
+
+
 impl staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type SignedInner = SignedInner;
 	type SignedFixedPoint = SignedFixedPoint;
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type CurrencyId = CurrencyId;
+	type MaxRewardCurrencies = MaxRewardCurrencies;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -1437,13 +1444,6 @@ impl stellar_relay::Config for Runtime {
 	type WeightInfo = stellar_relay::SubstrateWeight<Runtime>;
 }
 
-impl reward::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type SignedFixedPoint = SignedFixedPoint;
-	type RewardId = VaultId;
-	type CurrencyId = CurrencyId;
-	type GetNativeCurrencyId = NativeCurrencyId;
-}
 
 parameter_types! {
 	pub const FeePalletId: PalletId = PalletId(*b"mod/fees");
@@ -1464,6 +1464,7 @@ impl fee::Config for Runtime {
 	type VaultStaking = VaultStaking;
 	type OnSweep = currency::SweepFunds<Runtime, FeeAccount>;
 	type MaxExpectedValue = MaxExpectedValue;
+	type RewardDistribution = RewardDistribution;
 }
 
 impl vault_registry::Config for Runtime {
@@ -1508,6 +1509,35 @@ impl clients_info::Config for Runtime {
 	type WeightInfo = clients_info::SubstrateWeight<Runtime>;
 	type MaxNameLength = ConstU32<255>;
 	type MaxUriLength = ConstU32<255>;
+}
+
+parameter_types! {
+	pub const DecayRate: Perquintill = Perquintill::from_percent(5);
+	pub const MaxCurrencies: u32 = 10;
+}
+
+impl reward_distribution::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = reward_distribution::SubstrateWeight<Runtime>;
+	type Balance = Balance;
+	type DecayInterval = ConstU32<100>;
+	type DecayRate = DecayRate;
+	type VaultRewards = VaultRewards;
+	type MaxCurrencies = MaxCurrencies;
+	type OracleApi = Oracle;
+	type Balances = Balances;
+	type VaultStaking = VaultStaking;
+	type FeePalletId = FeePalletId;
+}
+
+
+impl pooled_rewards::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type SignedFixedPoint = SignedFixedPoint;
+	type PoolId = CurrencyId;
+	type PoolRewardsCurrencyId = CurrencyId;
+	type StakeId = VaultId;
+	type MaxRewardCurrencies = MaxRewardCurrencies;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -1588,9 +1618,10 @@ construct_runtime!(
 		Security: security::{Pallet, Call, Config, Storage, Event<T>} = 67,
 		StellarRelay: stellar_relay::{Pallet, Call, Config<T>, Storage, Event<T>} = 68,
 		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 69,
-		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 70,
+		VaultRewards: pooled_rewards::{Pallet, Call, Storage, Event<T>} = 70,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
 		ClientsInfo: clients_info::{Pallet, Call, Storage, Event<T>} = 72,
+		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,
 
 		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
 

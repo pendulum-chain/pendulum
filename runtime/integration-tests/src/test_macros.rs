@@ -489,6 +489,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 			X2(Junction::Parachain($parachain1_id), Junction::PalletInstance(10)),
 		);
 		// This is needed in order to have the correct mapping regardless of the XCM sender parachain provided
+		// Used for checking BOB's balance
 		let para1_native_currency_on_para2 = Parachain2CurrencyId::from($parachain1_id);
 
 		// Get ALICE's balance on parachain1 before the transfer

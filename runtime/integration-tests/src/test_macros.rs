@@ -477,7 +477,9 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		use xcm::latest::{
 			Junction, Junction::AccountId32, Junctions::X2, MultiLocation, WeightLimit,
 		};
-		use $parachain1_runtime::CurrencyId;
+		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;
+		use $parachain2_runtime::CurrencyId as Parachain2CurrencyId;
+
 
 		$mocknet::reset();
 
@@ -486,19 +488,21 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 			1,
 			X2(Junction::Parachain($parachain1_id), Junction::PalletInstance(10)),
 		);
-
+		// This is needed in order to have the correct mapping regardless of the XCM sender parachain provided
+		let para1_native_currency_on_para2 = Parachain2CurrencyId::from($parachain1_id);
+		
 		// Get ALICE's balance on parachain1 before the transfer
 		let native_tokens_before: Balance = units(100);
 		$parachain1::execute_with(|| {
 			assert_eq!(
-				$parachain1_runtime::Tokens::balance(CurrencyId::Native, &ALICE.into()),
+				$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::Native, &ALICE.into()),
 				native_tokens_before
 			);
 		});
 		$parachain2::execute_with(|| {
 			assert_eq!(
-				$parachain2_runtime::Tokens::balance(CurrencyId::Native, &BOB.into()),
-				native_tokens_before
+				$parachain2_runtime::Tokens::balance(para1_native_currency_on_para2, &BOB.into()),
+				0
 			);
 		});
 
@@ -533,15 +537,15 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Should increase by the transfer amount
 		$parachain2::execute_with(|| {
 			assert_eq!(
-				$parachain2_runtime::Tokens::balance(CurrencyId::Native, &BOB.into()),
-				native_tokens_before + transfer_amount
+				$parachain2_runtime::Tokens::balance(para1_native_currency_on_para2, &BOB.into()),
+				transfer_amount
 			);
 		});
 
 		// Verify ALICE's balance on parachain1 after transfer
 		$parachain1::execute_with(|| {
 			assert_eq!(
-				$parachain1_runtime::Tokens::balance(CurrencyId::Native, &ALICE.into()),
+				$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::Native, &ALICE.into()),
 				native_tokens_before - transfer_amount
 			);
 		});
@@ -577,8 +581,8 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Should become the same amount as initial balance before both transfers
 		$parachain2::execute_with(|| {
 			assert_eq!(
-				$parachain2_runtime::Tokens::balance(CurrencyId::Native, &BOB.into()),
-				native_tokens_before
+				$parachain2_runtime::Tokens::balance(para1_native_currency_on_para2, &BOB.into()),
+				0
 			);
 		});
 
@@ -586,7 +590,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Should become the same amount as initial balance before both transfers
 		$parachain1::execute_with(|| {
 			assert_eq!(
-				$parachain1_runtime::Tokens::balance(CurrencyId::Native, &ALICE.into()),
+				$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::Native, &ALICE.into()),
 				native_tokens_before
 			);
 		});

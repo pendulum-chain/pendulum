@@ -131,7 +131,7 @@ fn assethub_transfer_asset_to_pendulum_and_back() {
 }
 
 #[test]
-fn transfer_native_token_to_sibling_parachain_and_back() {
+fn transfer_native_token_from_pendulum_to_sibling_parachain_and_back() {
 	transfer_native_token_from_parachain1_to_parachain2_and_back!(
 		PolkadotMockNet,
 		pendulum_runtime,

@@ -9987,6 +9987,7 @@ dependencies = [
  "polkadot-runtime-parachains",
  "runtime-common",
  "scale-info",
+ "serde",
  "sp-core",
  "sp-debug-derive",
  "sp-io",

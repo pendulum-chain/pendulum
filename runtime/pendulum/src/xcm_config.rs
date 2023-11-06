@@ -99,9 +99,12 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 						GeneralIndex(asset_hub::USDT_ASSET_ID),
 					),
 			} => Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
+			// Our native currency location without re-anchoring
 			MultiLocation { parents: 1, interior: X2(Parachain(id), PalletInstance(10)) }
 				if id == u32::from(ParachainInfo::parachain_id()) =>
 				Some(CurrencyId::Native),
+			// Our native currency location with re-anchoring
+			// The XCM pallet will try to re-anchor the location before it reaches here
 			MultiLocation { parents: 0, interior: X1(PalletInstance(10)) } =>
 				Some(CurrencyId::Native),
 			_ => None,

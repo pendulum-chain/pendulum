@@ -1291,10 +1291,10 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 16,
 		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 17,
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 18,
-		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 92,
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>} = 19,
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 20,
 		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,
+		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 81,
 
 		// Consensus support.
 		// The following order MUST NOT be changed: Aura -> Session -> Staking -> Authorship -> AuraExt

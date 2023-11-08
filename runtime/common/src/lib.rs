@@ -77,6 +77,24 @@ pub mod parachains {
 			pub const USDC_ASSET_ID: u128 = 1337;
 			pub const USDT_ASSET_ID: u128 = 1984;
 		}
+
+		pub mod equilibrium {
+			pub const PARA_ID: u32 = 2011;
+			pub const ASSET_PALLET_ID: u8 = 11;
+
+			pub const EQ_ASSET_ID: u128 = 25_969;
+			pub const EQD_ASSET_ID: u128 = 6_648_164;
+		}
+
+		pub mod moonbeam {
+			pub const PARA_ID: u32 = 2004;
+			pub const ASSET_PALLET_ID: u8 = 104;
+		}
+
+		pub mod polkadex {
+			pub const PARA_ID: u32 = 2040;
+			pub const ASSET_PALLET_ID: u8 = 25;
+		}
 	}
 
 	pub mod kusama {

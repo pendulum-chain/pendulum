@@ -15,7 +15,7 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
-use runtime_common::parachains::polkadot::asset_hub;
+use runtime_common::parachains::polkadot::{asset_hub, equilibrium};
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
@@ -31,6 +31,9 @@ use xcm_executor::{
 
 const XCM_ASSET_RELAY_DOT: u8 = 0;
 const XCM_ASSET_ASSETHUB_USDT: u8 = 1;
+const XCM_ASSET_ASSETHUB_USDC: u8 = 2;
+const XCM_ASSET_EQUILIBRIUM_EQD: u8 = 3;
+const XCM_ASSET_EQUILIBRIUM_EQ: u8 = 4;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -40,6 +43,19 @@ parameter_types! {
 	pub UniversalLocation: InteriorMultiLocation =
 		X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
 
+}
+
+macro_rules! parachain_asset_loc {
+	($module:ident, $asset_id:path) => {
+		MultiLocation {
+			parents: 1,
+			interior: X3(
+				Parachain($module::PARA_ID),
+				PalletInstance($module::ASSET_PALLET_ID),
+				GeneralIndex($asset_id),
+			),
+		}
+	};
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
@@ -66,14 +82,14 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 			// CurrencyId::KSM => Some(MultiLocation::parent()),
 			CurrencyId::XCM(f) => match f {
 				XCM_ASSET_RELAY_DOT => Some(MultiLocation::parent()),
-				XCM_ASSET_ASSETHUB_USDT => Some(MultiLocation::new(
-					1,
-					X3(
-						Parachain(asset_hub::PARA_ID),
-						PalletInstance(asset_hub::ASSET_PALLET_ID),
-						GeneralIndex(asset_hub::USDT_ASSET_ID),
-					),
-				)),
+				XCM_ASSET_ASSETHUB_USDT =>
+					Some(parachain_asset_loc!(asset_hub, asset_hub::USDT_ASSET_ID)),
+				XCM_ASSET_ASSETHUB_USDC =>
+					Some(parachain_asset_loc!(asset_hub, asset_hub::USDC_ASSET_ID)),
+				XCM_ASSET_EQUILIBRIUM_EQD =>
+					Some(parachain_asset_loc!(equilibrium, equilibrium::EQD_ASSET_ID)),
+				XCM_ASSET_EQUILIBRIUM_EQ =>
+					Some(parachain_asset_loc!(equilibrium, equilibrium::EQ_ASSET_ID)),
 				_ => None,
 			},
 			CurrencyId::Native => Some(MultiLocation::new(
@@ -90,15 +106,14 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 		match location {
 			MultiLocation { parents: 1, interior: Here } =>
 				Some(CurrencyId::XCM(XCM_ASSET_RELAY_DOT)),
-			MultiLocation {
-				parents: 1,
-				interior:
-					X3(
-						Parachain(asset_hub::PARA_ID),
-						PalletInstance(asset_hub::ASSET_PALLET_ID),
-						GeneralIndex(asset_hub::USDT_ASSET_ID),
-					),
-			} => Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
+			parachain_asset_loc!(asset_hub, asset_hub::USDT_ASSET_ID) =>
+				Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
+			parachain_asset_loc!(asset_hub, asset_hub::USDC_ASSET_ID) =>
+				Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDC)),
+			parachain_asset_loc!(equilibrium, equilibrium::EQD_ASSET_ID) =>
+				Some(CurrencyId::XCM(XCM_ASSET_EQUILIBRIUM_EQD)),
+			parachain_asset_loc!(equilibrium, equilibrium::EQ_ASSET_ID) =>
+				Some(CurrencyId::XCM(XCM_ASSET_EQUILIBRIUM_EQ)),
 			// Our native currency location without re-anchoring
 			MultiLocation { parents: 1, interior: X2(Parachain(id), PalletInstance(10)) }
 				if id == u32::from(ParachainInfo::parachain_id()) =>

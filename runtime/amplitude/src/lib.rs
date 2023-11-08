@@ -1204,7 +1204,7 @@ impl clients_info::Config for Runtime {
 }
 
 parameter_types! {
-	pub const DecayRate: Perquintill = Perquintill::from_percent(5);
+	pub const DecayRate: Perquintill = Perquintill::from_parts(37567400000000000u64);
 	pub const MaxCurrencies: u32 = 10;
 }
 
@@ -1212,7 +1212,7 @@ impl reward_distribution::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = reward_distribution::SubstrateWeight<Runtime>;
 	type Balance = Balance;
-	type DecayInterval = ConstU32<100>;
+	type DecayInterval = ConstU32<216_000>;
 	type DecayRate = DecayRate;
 	type VaultRewards = VaultRewards;
 	type MaxCurrencies = MaxCurrencies;

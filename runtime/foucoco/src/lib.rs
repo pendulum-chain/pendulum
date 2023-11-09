@@ -1510,7 +1510,9 @@ impl clients_info::Config for Runtime {
 	type MaxNameLength = ConstU32<255>;
 	type MaxUriLength = ConstU32<255>;
 }
-
+// Choice of parameters: Perquintill::from_parts(37567400000000000u64) represents a value of
+// 0.0375674 = 37567400000000000 / 1×10¹⁸
+// The decay interval 216000 equates to a month when considering 1 block every 12 seconds
 parameter_types! {
 	pub const DecayRate: Perquintill = Perquintill::from_parts(37567400000000000u64);
 	pub const MaxCurrencies: u32 = 10;

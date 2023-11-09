@@ -1,6 +1,5 @@
 use crate::stellar::{BRL_ISSUER, TZS_ISSUER, USDC_ISSUER};
 use spacewalk_primitives::{Asset, CurrencyId};
-
 use zenlink_protocol::{LOCAL, NATIVE};
 pub type ZenlinkAssetId = zenlink_protocol::AssetId;
 
@@ -57,9 +56,7 @@ pub fn zenlink_id_to_currency_id(
 
 			Ok(CurrencyId::ZenlinkLPToken(token1_id, token1_type, token2_id, token2_type))
 		},
-		(4, LOCAL) =>{
-			Ok(CurrencyId::Token(symbol.into()))
-		}
+		(4, LOCAL) => Ok(CurrencyId::Token(symbol.into())),
 		_ => Err(()),
 	}
 }
@@ -102,11 +99,16 @@ pub fn currency_id_to_zenlink_id(
 				((token2_type as u64) << 40);
 			Ok(ZenlinkAssetId { chain_id: parachain_id, asset_type: LOCAL, asset_index: index })
 		},
-		CurrencyId::Token(token_id) => Ok(ZenlinkAssetId {
-			chain_id: parachain_id,
-			asset_type: LOCAL,
-			asset_index: ((disc << 8) + token_id as u64) as u64,
-		})
+		CurrencyId::Token(token_id) =>
+			if token_id < 256 {
+				Ok(ZenlinkAssetId {
+					chain_id: parachain_id,
+					asset_type: LOCAL,
+					asset_index: ((disc << 8) + token_id as u64) as u64,
+				})
+			} else {
+				return Err(())
+			},
 	}
 }
 
@@ -337,7 +339,6 @@ mod zenlink_tests {
 		assert_eq!(currency_id_to_zenlink_id(fake_currency_id, 1000), Ok(expected_zenlink_asset));
 	}
 
-
 	#[test]
 	fn convert_token_currency_to_zenlink_token_2() {
 		let fake_currency_id = CurrencyId::Token(6);
@@ -347,10 +348,19 @@ mod zenlink_tests {
 	}
 
 	#[test]
-	fn convert_ZenlinkLPToken_currency_to_zenlink_lp_representation() {
-		let fake_currency_id = CurrencyId::ZenlinkLPToken(158,4,101,1);
-		let expected_zenlink_asset =
-			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: 0x0000_0165_049E_0300 as u64 };
+	fn convert_zenlink_lp_token_currency_to_zenlink_lp_representation() {
+		let fake_currency_id = CurrencyId::ZenlinkLPToken(158, 4, 101, 1);
+		let expected_zenlink_asset = ZenlinkAssetId {
+			chain_id: 1000u32,
+			asset_type: LOCAL,
+			asset_index: 0x0000_0165_049E_0300 as u64,
+		};
 		assert_eq!(currency_id_to_zenlink_id(fake_currency_id, 1000), Ok(expected_zenlink_asset));
+	}
+
+	#[test]
+	fn convert_token_currency_to_zenlink_token_error_out_of_range() {
+		let fake_currency_id = CurrencyId::Token(258);
+		assert_eq!(currency_id_to_zenlink_id(fake_currency_id, 1000),Err(()))
 	}
 }

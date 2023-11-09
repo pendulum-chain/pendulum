@@ -361,7 +361,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::VaultRewards(_) |
 			RuntimeCall::Farming(_) |
 			RuntimeCall::AssetRegistry(_) |
-			RuntimeCall::RewardDistribution(_)=> true,
+			RuntimeCall::RewardDistribution(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -1084,7 +1084,6 @@ parameter_types! {
 	pub const MaxRewardCurrencies: u32= 10;
 }
 
-
 impl staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type SignedInner = SignedInner;
@@ -1137,7 +1136,6 @@ impl stellar_relay::Config for Runtime {
 	type IsPublicNetwork = IsPublicNetwork;
 	type WeightInfo = stellar_relay::SubstrateWeight<Runtime>;
 }
-
 
 parameter_types! {
 	pub const FeePalletId: PalletId = PalletId(*b"mod/fees");
@@ -1223,7 +1221,6 @@ impl reward_distribution::Config for Runtime {
 	type VaultStaking = VaultStaking;
 	type FeePalletId = FeePalletId;
 }
-
 
 impl pooled_rewards::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;

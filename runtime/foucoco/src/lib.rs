@@ -368,7 +368,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Security(_) |
 			RuntimeCall::StellarRelay(_) |
 			RuntimeCall::VaultRegistry(_) |
-			RuntimeCall::VaultRewards(_) |
+			RuntimeCall::PooledVaultRewards(_) |
 			RuntimeCall::Farming(_) |
 			RuntimeCall::TokenAllowance(_) |
 			RuntimeCall::AssetRegistry(_) |
@@ -1460,7 +1460,7 @@ impl fee::Config for Runtime {
 	type SignedInner = SignedInner;
 	type UnsignedFixedPoint = UnsignedFixedPoint;
 	type UnsignedInner = UnsignedInner;
-	type VaultRewards = VaultRewards;
+	type VaultRewards = PooledVaultRewards;
 	type VaultStaking = VaultStaking;
 	type OnSweep = currency::SweepFunds<Runtime, FeeAccount>;
 	type MaxExpectedValue = MaxExpectedValue;
@@ -1510,7 +1510,9 @@ impl clients_info::Config for Runtime {
 	type MaxNameLength = ConstU32<255>;
 	type MaxUriLength = ConstU32<255>;
 }
-
+// Choice of parameters: Perquintill::from_parts(37567400000000000u64) represents a value of
+// 0.0375674 = 37567400000000000 / 1×10¹⁸
+// The decay interval 216000 equates to a month when considering 1 block every 12 seconds
 parameter_types! {
 	pub const DecayRate: Perquintill = Perquintill::from_parts(37567400000000000u64);
 	pub const MaxCurrencies: u32 = 10;
@@ -1522,7 +1524,7 @@ impl reward_distribution::Config for Runtime {
 	type Balance = Balance;
 	type DecayInterval = ConstU32<216_000>;
 	type DecayRate = DecayRate;
-	type VaultRewards = VaultRewards;
+	type VaultRewards = PooledVaultRewards;
 	type MaxCurrencies = MaxCurrencies;
 	type OracleApi = Oracle;
 	type Balances = Balances;
@@ -1618,7 +1620,7 @@ construct_runtime!(
 		Security: security::{Pallet, Call, Config, Storage, Event<T>} = 67,
 		StellarRelay: stellar_relay::{Pallet, Call, Config<T>, Storage, Event<T>} = 68,
 		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 69,
-		VaultRewards: pooled_rewards::{Pallet, Call, Storage, Event<T>} = 70,
+		PooledVaultRewards: pooled_rewards::{Pallet, Call, Storage, Event<T>} = 70,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
 		ClientsInfo: clients_info::{Pallet, Call, Storage, Event<T>} = 72,
 		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,

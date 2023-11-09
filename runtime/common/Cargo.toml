@@ -50,6 +50,7 @@ std = [
     "xcm/std",
     "orml-traits/std",
     "dia-oracle/std",
+    "orml-asset-registry/std",
 	"zenlink-protocol/std",
     "spacewalk-primitives/std",
 ]

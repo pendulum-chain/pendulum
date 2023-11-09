@@ -10008,6 +10008,7 @@ dependencies = [
  "orml-asset-registry",
  "orml-traits",
  "parity-scale-codec",
+ "paste",
  "scale-info",
  "sp-consensus-aura",
  "sp-core",

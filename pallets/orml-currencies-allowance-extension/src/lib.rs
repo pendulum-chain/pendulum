@@ -102,8 +102,6 @@ pub mod pallet {
 	pub(super) type AllowedCurrencies<T: Config> =
 		StorageMap<_, Blake2_128Concat, CurrencyOf<T>, ()>;
 
-	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {

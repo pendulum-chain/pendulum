@@ -1598,7 +1598,7 @@ construct_runtime!(
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>} = 19,
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 20,
 		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,
-		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 81,
+		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 22,
 
 		// Consensus support.
 		// The following order MUST NOT be changed: Aura -> Session -> Staking -> Authorship -> AuraExt

@@ -66,6 +66,7 @@ pallet-democracy = { git = "https://github.com/paritytech/substrate", default-fe
 pallet-identity = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 pallet-preimage = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
+pallet-proxy = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 pallet-insecure-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 pallet-session = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
@@ -172,6 +173,7 @@ std = [
     "pallet-identity/std",
 	"pallet-multisig/std",
     "pallet-preimage/std",
+	"pallet-proxy/std",
     "pallet-insecure-randomness-collective-flip/std",
     "pallet-scheduler/std",
     "pallet-session/std",

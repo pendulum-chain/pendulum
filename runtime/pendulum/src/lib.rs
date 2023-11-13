@@ -40,7 +40,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		ConstBool, ConstU32, Contains, Currency, EitherOfDiverse, EqualPrivilegeOnly, Imbalance,
-		OnUnbalanced, WithdrawReasons,
+		InstanceFilter, OnUnbalanced, WithdrawReasons,
 	},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
@@ -56,7 +56,7 @@ pub use sp_runtime::{traits::AccountIdConversion, MultiAddress, Perbill, Permill
 
 use runtime_common::{
 	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index,
-	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
+	ProxyType, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -269,7 +269,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::ZenlinkProtocol(_) |
 			RuntimeCall::DiaOracleModule(_) |
 			RuntimeCall::VestingManager(_) |
-			RuntimeCall::AssetRegistry(_) => true,
+			RuntimeCall::AssetRegistry(_) |
+			RuntimeCall::Proxy(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -953,6 +954,53 @@ where
 	}
 }
 
+impl InstanceFilter<RuntimeCall> for ProxyType {
+	fn filter(&self, c: &RuntimeCall) -> bool {
+		match self {
+			// Always allowed RuntimeCall::Utility no matter type.
+			// Only transactions allowed by Proxy.filter can be executed
+			_ if matches!(c, RuntimeCall::Utility(..)) => true,
+			ProxyType::Any => true,
+		}
+	}
+
+	// Determines whether self matches at least everything that o does.
+	fn is_superset(&self, o: &Self) -> bool {
+		match (self, o) {
+			(x, y) if x == y => true,
+			(ProxyType::Any, _) => true,
+			(_, ProxyType::Any) => false,
+			_ => false,
+		}
+	}
+}
+
+parameter_types! {
+	// One storage item; key size 32, value size 8; .
+	pub const ProxyDepositBase: Balance = deposit(1, 8);
+	// Additional storage item size of 33 bytes.
+	pub const ProxyDepositFactor: Balance = deposit(0, 33);
+	pub const MaxProxies: u16 = 32;
+	pub const MaxPending: u16 = 32;
+	pub const AnnouncementDepositBase: Balance = deposit(1, 8);
+	pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
+}
+
+impl pallet_proxy::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type Currency = Balances;
+	type ProxyType = ProxyType;
+	type ProxyDepositBase = ProxyDepositBase;
+	type ProxyDepositFactor = ProxyDepositFactor;
+	type MaxProxies = MaxProxies;
+	type WeightInfo = pallet_proxy::weights::SubstrateWeight<Runtime>;
+	type MaxPending = MaxPending;
+	type CallHasher = BlakeTwo256;
+	type AnnouncementDepositBase = AnnouncementDepositBase;
+	type AnnouncementDepositFactor = AnnouncementDepositFactor;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -982,6 +1030,7 @@ construct_runtime!(
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>} = 19,
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 20,
 		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,
+		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 22,
 
 		// Consensus support.
 		// The following order MUST NOT be changed: Aura -> Session -> Staking -> Authorship -> AuraExt

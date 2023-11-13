@@ -104,7 +104,7 @@ use orml_currencies_allowance_extension::{
 };
 
 use frame_support::{
-	log::{error, warn},
+	log::{error, trace},
 	pallet_prelude::*,
 	traits::InstanceFilter,
 };
@@ -979,7 +979,7 @@ where
 	{
 		let func_id = env.func_id();
 
-		warn!("Calling function with ID {} from Psp22Extension", func_id);
+		trace!("Calling function with ID {} from Psp22Extension", func_id);
 
 		// debug_message weight is a good approximation of the additional overhead of going
 		// from contract layer to substrate layer.
@@ -1001,7 +1001,7 @@ where
 				let currency_id: CurrencyId = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				warn!("Calling totalSupply() for currency {:?}", currency_id);
+				trace!("Calling totalSupply() for currency {:?}", currency_id);
 
 				ensure!(
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1030,7 +1030,7 @@ where
 						DispatchError::Other("ChainExtension failed to decode input")
 					})?;
 
-				warn!(
+				trace!(
 					"Calling balanceOf() for currency {:?} and account {:?}",
 					currency_id, account_id
 				);
@@ -1069,7 +1069,7 @@ where
 				) = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				warn!(
+				trace!(
 					"Calling transfer() sending {:?} {:?}, from {:?} to {:?}",
 					amount, currency_id, caller, recipient
 				);
@@ -1099,7 +1099,7 @@ where
 						DispatchError::Other("ChainExtension failed to decode input")
 					})?;
 
-				warn!(
+				trace!(
 					"Calling allowance() for currency {:?}, owner {:?} and spender {:?}",
 					currency_id, owner, spender
 				);
@@ -1137,7 +1137,7 @@ where
 				) = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				warn!(
+				trace!(
 					"Calling approve() allowing spender {:?} to transfer {:?} {:?} from {:?}",
 					spender, amount, currency_id, caller
 				);
@@ -1174,7 +1174,7 @@ where
 				) = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				warn!(
+				trace!(
 					"Calling transfer_from() for caller {:?}, sending {:?} {:?}, from {:?} to {:?}",
 					caller, amount, currency_id, owner, recipient
 				);
@@ -1207,7 +1207,7 @@ where
 					symbol.to_trimmed_vec(),
 				);
 
-				warn!("Calling get_coin_info() for: {:?}:{:?}", blockchain, symbol);
+				trace!("Calling get_coin_info() for: {:?}:{:?}", blockchain, symbol);
 
 				let result = match result {
 					Ok(coin_info) =>

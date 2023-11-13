@@ -240,6 +240,7 @@ dependencies = [
  "pallet-insecure-randomness-collective-flip",
  "pallet-multisig",
  "pallet-preimage",
+ "pallet-proxy",
  "pallet-scheduler",
  "pallet-session",
  "pallet-timestamp",
@@ -275,7 +276,7 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
  "staking",
  "stellar-relay",
  "substrate-wasm-builder",
@@ -2075,7 +2076,7 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
 ]
 
 [[package]]
@@ -2868,7 +2869,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
  "staking",
 ]
 
@@ -3053,6 +3054,7 @@ dependencies = [
  "pallet-insecure-randomness-collective-flip",
  "pallet-multisig",
  "pallet-preimage",
+ "pallet-proxy",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",
@@ -3089,7 +3091,7 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
  "staking",
  "stellar-relay",
  "substrate-wasm-builder",
@@ -4176,7 +4178,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
  "stellar-relay",
  "vault-registry",
 ]
@@ -5460,7 +5462,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
 ]
 
 [[package]]
@@ -5473,7 +5475,7 @@ dependencies = [
  "serde",
  "sp-api",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
 ]
 
 [[package]]
@@ -5840,7 +5842,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
  "staking",
  "vault-registry",
 ]
@@ -6007,7 +6009,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
  "spin 0.9.8",
  "staking",
 ]
@@ -6190,6 +6192,20 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "orml-xcm"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.40#19afb58a300faac6ceb0e6e4e341859282897c53"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-std",
+ "xcm",
 ]
 
 [[package]]
@@ -7672,7 +7688,7 @@ dependencies = [
  "sp-session",
  "sp-timestamp",
  "sp-transaction-pool",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
  "substrate-build-script-utils",
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
@@ -7725,6 +7741,7 @@ dependencies = [
  "pallet-insecure-randomness-collective-flip",
  "pallet-multisig",
  "pallet-preimage",
+ "pallet-proxy",
  "pallet-scheduler",
  "pallet-session",
  "pallet-timestamp",
@@ -7755,7 +7772,7 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
  "substrate-wasm-builder",
  "vesting-manager",
  "xcm",
@@ -9102,7 +9119,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
 ]
 
 [[package]]
@@ -9556,7 +9573,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
  "stellar-relay",
  "vault-registry",
 ]
@@ -9720,7 +9737,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
  "stellar-relay",
  "vault-registry",
 ]
@@ -9751,7 +9768,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
 ]
 
 [[package]]
@@ -9779,7 +9796,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
  "staking",
 ]
 
@@ -9996,7 +10013,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
  "xcm",
  "zenlink-protocol",
 ]
@@ -10007,11 +10024,17 @@ version = "0.1.0"
 dependencies = [
  "amplitude-runtime",
  "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "cumulus-primitives-utility",
  "frame-support",
  "frame-system",
  "kusama-runtime",
  "orml-tokens",
+ "orml-traits",
+ "orml-xcm",
+ "orml-xcm-support",
  "orml-xtokens",
  "pallet-assets",
  "pallet-balances",
@@ -10025,11 +10048,16 @@ dependencies = [
  "polkadot-runtime",
  "polkadot-runtime-common",
  "polkadot-runtime-parachains",
+ "runtime-common",
  "scale-info",
+ "serde",
  "sp-core",
+ "sp-debug-derive",
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "sp-tracing",
+ "spacewalk-primitives 1.2.0",
  "statemine-runtime",
  "statemint-runtime",
  "xcm",
@@ -12571,6 +12599,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "spacewalk-primitives"
+version = "1.2.0"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=58983d2695c309665c9c017a022436aaee088f3d#58983d2695c309665c9c017a022436aaee088f3d"
+dependencies = [
+ "base58",
+ "bstringify",
+ "frame-support",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "substrate-stellar-sdk",
+]
+
+[[package]]
 name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12634,7 +12678,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
 ]
 
 [[package]]
@@ -12838,7 +12882,7 @@ dependencies = [
  "sha2 0.10.7",
  "sp-core",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
 ]
 
 [[package]]
@@ -13831,7 +13875,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.0",
  "staking",
 ]
 

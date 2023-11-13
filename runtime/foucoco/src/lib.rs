@@ -106,6 +106,7 @@ use orml_currencies_allowance_extension::{
 use frame_support::{
 	log::{error, warn},
 	pallet_prelude::*,
+	traits::InstanceFilter,
 };
 use sp_std::vec::Vec;
 
@@ -251,10 +252,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("foucoco"),
 	impl_name: create_runtime_str!("foucoco"),
 	authoring_version: 1,
-	spec_version: 2,
+	spec_version: 3,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 2,
+	transaction_version: 3,
 	state_version: 1,
 };
 
@@ -372,6 +373,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Farming(_) |
 			RuntimeCall::TokenAllowance(_) |
 			RuntimeCall::AssetRegistry(_) |
+			RuntimeCall::Proxy(_) |
 			RuntimeCall::RewardDistribution(_)=> true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -954,7 +956,8 @@ parameter_types! {
 #[derive(Default)]
 pub struct Psp22Extension;
 
-use runtime_common::chain_ext::*;
+use runtime_common::{chain_ext::*, ProxyType};
+
 pub(crate) type BalanceOfForChainExt<T> =
 	<<T as orml_currencies::Config>::MultiCurrency as orml_traits::MultiCurrency<
 		<T as frame_system::Config>::AccountId,
@@ -1542,6 +1545,53 @@ impl pooled_rewards::Config for Runtime {
 	type MaxRewardCurrencies = MaxRewardCurrencies;
 }
 
+impl InstanceFilter<RuntimeCall> for ProxyType {
+	fn filter(&self, c: &RuntimeCall) -> bool {
+		match self {
+			// Always allowed RuntimeCall::Utility no matter type.
+			// Only transactions allowed by Proxy.filter can be executed
+			_ if matches!(c, RuntimeCall::Utility(..)) => true,
+			ProxyType::Any => true
+		}
+	}
+
+	// Determines whether self matches at least everything that o does.
+	fn is_superset(&self, o: &Self) -> bool {
+		match (self, o) {
+			(x, y) if x == y => true,
+			(ProxyType::Any, _) => true,
+			(_, ProxyType::Any) => false,
+			_ => false,
+		}
+	}
+}
+
+parameter_types! {
+	// One storage item; key size 32, value size 8; .
+	pub const ProxyDepositBase: Balance = deposit(1, 8);
+	// Additional storage item size of 33 bytes.
+	pub const ProxyDepositFactor: Balance = deposit(0, 33);
+	pub const MaxProxies: u16 = 32;
+	pub const MaxPending: u16 = 32;
+	pub const AnnouncementDepositBase: Balance = deposit(1, 8);
+	pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
+}
+
+impl pallet_proxy::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type Currency = Balances;
+	type ProxyType = ProxyType;
+	type ProxyDepositBase = ProxyDepositBase;
+	type ProxyDepositFactor = ProxyDepositFactor;
+	type MaxProxies = MaxProxies;
+	type WeightInfo = pallet_proxy::weights::SubstrateWeight<Runtime>;
+	type MaxPending = MaxPending;
+	type CallHasher = BlakeTwo256;
+	type AnnouncementDepositBase = AnnouncementDepositBase;
+	type AnnouncementDepositFactor = AnnouncementDepositFactor;
+}
+
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
 where
 	RuntimeCall: From<C>,
@@ -1580,6 +1630,7 @@ construct_runtime!(
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>} = 19,
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 20,
 		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,
+		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 22,
 
 		// Consensus support.
 		// The following order MUST NOT be changed: Aura -> Session -> Staking -> Authorship -> AuraExt

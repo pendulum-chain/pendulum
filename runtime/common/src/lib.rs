@@ -140,8 +140,20 @@ pub mod parachains {
 		}
 
 		pub mod polkadex {
+			use xcm::latest::{
+				Junction::{PalletInstance, Parachain},
+				Junctions::X1,
+				MultiLocation,
+			};
+
 			pub const PARA_ID: u32 = 2040;
-			pub const ASSET_PALLET_ID: u8 = 25;
+
+			pub fn PDEX_location() -> MultiLocation {
+				MultiLocation {
+					parents: 1,
+					interior: X1(Parachain(PARA_ID))
+				}
+			}
 		}
 	}
 

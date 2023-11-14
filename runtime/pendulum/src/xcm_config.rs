@@ -15,7 +15,7 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
-use runtime_common::parachains::polkadot::{asset_hub, equilibrium, moonbeam};
+use runtime_common::parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex};
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
@@ -34,6 +34,7 @@ const XCM_ASSET_ASSETHUB_USDT: u8 = 1;
 const XCM_ASSET_ASSETHUB_USDC: u8 = 2;
 const XCM_ASSET_EQUILIBRIUM_EQD: u8 = 3;
 const XCM_ASSET_MOONBEAM_BRZ: u8 = 4;
+const XCM_ASSET_POLKADEX_PDEX: u8 = 5;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -42,21 +43,8 @@ parameter_types! {
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 	pub UniversalLocation: InteriorMultiLocation =
 		X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
-
 }
 
-// macro_rules! parachain_asset_loc {
-// 	($module:ident, $asset_id:path) => {
-// 		MultiLocation {
-// 			parents: 1,
-// 			interior: X3(
-// 				Parachain($module::PARA_ID),
-// 				PalletInstance($module::ASSET_PALLET_ID),
-// 				GeneralIndex($asset_id),
-// 			),
-// 		}
-// 	};
-// }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
 /// when determining ownership of accounts for asset transacting and when attempting to use XCM
@@ -86,6 +74,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				XCM_ASSET_ASSETHUB_USDC => Some(asset_hub::USDC_location()),
 				XCM_ASSET_EQUILIBRIUM_EQD => Some(equilibrium::EQD_location()),
 				XCM_ASSET_MOONBEAM_BRZ => Some(moonbeam::BRZ_location()),
+				XCM_ASSET_POLKADEX_PDEX => Some(polkadex::PDEX_location()),
 				_ => None,
 			},
 			CurrencyId::Native => Some(MultiLocation::new(
@@ -108,7 +97,10 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 				Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDC)),
 			loc if loc == equilibrium::EQD_location() =>
 				Some(CurrencyId::XCM(XCM_ASSET_EQUILIBRIUM_EQD)),
-			loc if loc == moonbeam::BRZ_location() => Some(CurrencyId::XCM(XCM_ASSET_MOONBEAM_BRZ)),
+			loc if loc == moonbeam::BRZ_location() =>
+				Some(CurrencyId::XCM(XCM_ASSET_MOONBEAM_BRZ)),
+			loc if loc == polkadex::PDEX_location() =>
+				Some(CurrencyId::XCM(XCM_ASSET_POLKADEX_PDEX)),
 			// Our native currency location without re-anchoring
 			MultiLocation { parents: 1, interior: X2(Parachain(id), PalletInstance(10)) }
 				if id == u32::from(ParachainInfo::parachain_id()) =>

@@ -62,6 +62,11 @@ type ParachainBlockImport<RuntimeApi, Executor> = TParachainBlockImport<
 	TFullBackend<Block>,
 >;
 
+type TransactionPool<RuntimeApi, Executor> = sc_transaction_pool::FullPool<
+	Block,
+	TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+>;
+
 pub trait ParachainRuntimeApiImpl:
 	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 	+ sp_api::Metadata<Block>
@@ -501,6 +506,7 @@ where
 	.map_err(Into::into)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_consensus<RuntimeApi, Executor>(
 	client: Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
 	block_import: ParachainBlockImport<RuntimeApi, Executor>,
@@ -508,12 +514,7 @@ fn build_consensus<RuntimeApi, Executor>(
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 	relay_chain_interface: Arc<dyn RelayChainInterface>,
-	transaction_pool: Arc<
-		sc_transaction_pool::FullPool<
-			Block,
-			TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
-		>,
-	>,
+	transaction_pool: Arc<TransactionPool<RuntimeApi, Executor>>,
 	sync_oracle: Arc<SyncingService<Block>>,
 	keystore: SyncCryptoStorePtr,
 	force_authoring: bool,

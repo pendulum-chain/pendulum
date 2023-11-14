@@ -363,7 +363,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Farming(_) |
 			RuntimeCall::AssetRegistry(_) |
 			RuntimeCall::Proxy(_) |
-			RuntimeCall::RewardDistribution(_)=> true,
+			RuntimeCall::RewardDistribution(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -1086,7 +1086,6 @@ parameter_types! {
 	pub const MaxRewardCurrencies: u32= 10;
 }
 
-
 impl staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type SignedInner = SignedInner;
@@ -1117,12 +1116,6 @@ impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
 	type DataProvider = DataProviderImpl;
-	#[cfg(feature = "runtime-benchmarks")]
-	type DataFeedProvider = DataFeederBenchmark<
-		oracle::OracleKey,
-		oracle::TimestampedValue<UnsignedFixedPoint, Moment>,
-		Self::AccountId,
-	>;
 }
 
 parameter_types! {
@@ -1139,7 +1132,6 @@ impl stellar_relay::Config for Runtime {
 	type IsPublicNetwork = IsPublicNetwork;
 	type WeightInfo = stellar_relay::SubstrateWeight<Runtime>;
 }
-
 
 parameter_types! {
 	pub const FeePalletId: PalletId = PalletId(*b"mod/fees");
@@ -1225,7 +1217,6 @@ impl reward_distribution::Config for Runtime {
 	type VaultStaking = VaultStaking;
 	type FeePalletId = FeePalletId;
 }
-
 
 impl pooled_rewards::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -1620,14 +1611,23 @@ impl_runtime_apis! {
 
 	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {
-		fn on_runtime_upgrade() -> (Weight, Weight) {
-			log::info!("try-runtime::on_runtime_upgrade amplitude.");
-			let weight = Executive::try_runtime_upgrade().unwrap();
+		fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
+			// NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+			// have a backtrace here. If any of the pre/post migration checks fail, we shall stop
+			// right here and right now.
+			let weight = Executive::try_runtime_upgrade(checks).unwrap();
 			(weight, RuntimeBlockWeights::get().max_block)
 		}
 
-		fn execute_block_no_check(block: Block) -> Weight {
-			Executive::execute_block_no_check(block)
+		fn execute_block(
+			block: Block,
+			state_root_check: bool,
+			signature_check: bool,
+			select: frame_try_runtime::TryStateSelect
+		) -> Weight {
+			// NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+			// have a backtrace here.
+			Executive::try_execute_block(block, state_root_check, signature_check, select).expect("execute-block failed")
 		}
 	}
 

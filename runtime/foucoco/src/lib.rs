@@ -104,8 +104,9 @@ use orml_currencies_allowance_extension::{
 };
 
 use frame_support::{
-	log::{error, warn},
+	log::{error, trace},
 	pallet_prelude::*,
+	traits::InstanceFilter,
 };
 use sp_std::vec::Vec;
 
@@ -251,10 +252,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("foucoco"),
 	impl_name: create_runtime_str!("foucoco"),
 	authoring_version: 1,
-	spec_version: 2,
+	spec_version: 3,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 2,
+	transaction_version: 3,
 	state_version: 1,
 };
 
@@ -368,11 +369,12 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Security(_) |
 			RuntimeCall::StellarRelay(_) |
 			RuntimeCall::VaultRegistry(_) |
-			RuntimeCall::VaultRewards(_) |
+			RuntimeCall::PooledVaultRewards(_) |
 			RuntimeCall::Farming(_) |
 			RuntimeCall::TokenAllowance(_) |
 			RuntimeCall::AssetRegistry(_) |
-			RuntimeCall::RewardDistribution(_) => true,
+			RuntimeCall::Proxy(_) |
+			RuntimeCall::RewardDistribution(_)=> true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -954,7 +956,8 @@ parameter_types! {
 #[derive(Default)]
 pub struct Psp22Extension;
 
-use runtime_common::chain_ext::*;
+use runtime_common::{chain_ext::*, ProxyType};
+
 pub(crate) type BalanceOfForChainExt<T> =
 	<<T as orml_currencies::Config>::MultiCurrency as orml_traits::MultiCurrency<
 		<T as frame_system::Config>::AccountId,
@@ -977,7 +980,7 @@ where
 	{
 		let func_id = env.func_id();
 
-		warn!("Calling function with ID {} from Psp22Extension", func_id);
+		trace!("Calling function with ID {} from Psp22Extension", func_id);
 
 		// debug_message weight is a good approximation of the additional overhead of going
 		// from contract layer to substrate layer.
@@ -999,7 +1002,7 @@ where
 				let currency_id: CurrencyId = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				warn!("Calling totalSupply() for currency {:?}", currency_id);
+				trace!("Calling totalSupply() for currency {:?}", currency_id);
 
 				ensure!(
 					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
@@ -1028,7 +1031,7 @@ where
 						DispatchError::Other("ChainExtension failed to decode input")
 					})?;
 
-				warn!(
+				trace!(
 					"Calling balanceOf() for currency {:?} and account {:?}",
 					currency_id, account_id
 				);
@@ -1067,7 +1070,7 @@ where
 				) = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				warn!(
+				trace!(
 					"Calling transfer() sending {:?} {:?}, from {:?} to {:?}",
 					amount, currency_id, caller, recipient
 				);
@@ -1097,7 +1100,7 @@ where
 						DispatchError::Other("ChainExtension failed to decode input")
 					})?;
 
-				warn!(
+				trace!(
 					"Calling allowance() for currency {:?}, owner {:?} and spender {:?}",
 					currency_id, owner, spender
 				);
@@ -1135,7 +1138,7 @@ where
 				) = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				warn!(
+				trace!(
 					"Calling approve() allowing spender {:?} to transfer {:?} {:?} from {:?}",
 					spender, amount, currency_id, caller
 				);
@@ -1172,7 +1175,7 @@ where
 				) = chain_ext::decode(input)
 					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
-				warn!(
+				trace!(
 					"Calling transfer_from() for caller {:?}, sending {:?} {:?}, from {:?} to {:?}",
 					caller, amount, currency_id, owner, recipient
 				);
@@ -1205,7 +1208,7 @@ where
 					symbol.to_trimmed_vec(),
 				);
 
-				warn!("Calling get_coin_info() for: {:?}:{:?}", blockchain, symbol);
+				trace!("Calling get_coin_info() for: {:?}:{:?}", blockchain, symbol);
 
 				let result = match result {
 					Ok(coin_info) =>
@@ -1390,6 +1393,7 @@ parameter_types! {
 	pub const MaxRewardCurrencies: u32= 10;
 }
 
+
 impl staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type SignedInner = SignedInner;
@@ -1443,6 +1447,7 @@ impl stellar_relay::Config for Runtime {
 	type WeightInfo = stellar_relay::SubstrateWeight<Runtime>;
 }
 
+
 parameter_types! {
 	pub const FeePalletId: PalletId = PalletId(*b"mod/fees");
 	pub const VaultRegistryPalletId: PalletId = PalletId(*b"mod/vreg");
@@ -1458,7 +1463,7 @@ impl fee::Config for Runtime {
 	type SignedInner = SignedInner;
 	type UnsignedFixedPoint = UnsignedFixedPoint;
 	type UnsignedInner = UnsignedInner;
-	type VaultRewards = VaultRewards;
+	type VaultRewards = PooledVaultRewards;
 	type VaultStaking = VaultStaking;
 	type OnSweep = currency::SweepFunds<Runtime, FeeAccount>;
 	type MaxExpectedValue = MaxExpectedValue;
@@ -1522,13 +1527,14 @@ impl reward_distribution::Config for Runtime {
 	type Balance = Balance;
 	type DecayInterval = ConstU32<216_000>;
 	type DecayRate = DecayRate;
-	type VaultRewards = VaultRewards;
+	type VaultRewards = PooledVaultRewards;
 	type MaxCurrencies = MaxCurrencies;
 	type OracleApi = Oracle;
 	type Balances = Balances;
 	type VaultStaking = VaultStaking;
 	type FeePalletId = FeePalletId;
 }
+
 
 impl pooled_rewards::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -1537,6 +1543,53 @@ impl pooled_rewards::Config for Runtime {
 	type PoolRewardsCurrencyId = CurrencyId;
 	type StakeId = VaultId;
 	type MaxRewardCurrencies = MaxRewardCurrencies;
+}
+
+impl InstanceFilter<RuntimeCall> for ProxyType {
+	fn filter(&self, c: &RuntimeCall) -> bool {
+		match self {
+			// Always allowed RuntimeCall::Utility no matter type.
+			// Only transactions allowed by Proxy.filter can be executed
+			_ if matches!(c, RuntimeCall::Utility(..)) => true,
+			ProxyType::Any => true
+		}
+	}
+
+	// Determines whether self matches at least everything that o does.
+	fn is_superset(&self, o: &Self) -> bool {
+		match (self, o) {
+			(x, y) if x == y => true,
+			(ProxyType::Any, _) => true,
+			(_, ProxyType::Any) => false,
+			_ => false,
+		}
+	}
+}
+
+parameter_types! {
+	// One storage item; key size 32, value size 8; .
+	pub const ProxyDepositBase: Balance = deposit(1, 8);
+	// Additional storage item size of 33 bytes.
+	pub const ProxyDepositFactor: Balance = deposit(0, 33);
+	pub const MaxProxies: u16 = 32;
+	pub const MaxPending: u16 = 32;
+	pub const AnnouncementDepositBase: Balance = deposit(1, 8);
+	pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
+}
+
+impl pallet_proxy::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type Currency = Balances;
+	type ProxyType = ProxyType;
+	type ProxyDepositBase = ProxyDepositBase;
+	type ProxyDepositFactor = ProxyDepositFactor;
+	type MaxProxies = MaxProxies;
+	type WeightInfo = pallet_proxy::weights::SubstrateWeight<Runtime>;
+	type MaxPending = MaxPending;
+	type CallHasher = BlakeTwo256;
+	type AnnouncementDepositBase = AnnouncementDepositBase;
+	type AnnouncementDepositFactor = AnnouncementDepositFactor;
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -1577,6 +1630,7 @@ construct_runtime!(
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>} = 19,
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 20,
 		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,
+		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 22,
 
 		// Consensus support.
 		// The following order MUST NOT be changed: Aura -> Session -> Staking -> Authorship -> AuraExt
@@ -1617,7 +1671,7 @@ construct_runtime!(
 		Security: security::{Pallet, Call, Config, Storage, Event<T>} = 67,
 		StellarRelay: stellar_relay::{Pallet, Call, Config<T>, Storage, Event<T>} = 68,
 		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 69,
-		VaultRewards: pooled_rewards::{Pallet, Call, Storage, Event<T>} = 70,
+		PooledVaultRewards: pooled_rewards::{Pallet, Call, Storage, Event<T>} = 70,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
 		ClientsInfo: clients_info::{Pallet, Call, Storage, Event<T>} = 72,
 		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,

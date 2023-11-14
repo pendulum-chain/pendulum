@@ -7,6 +7,7 @@ use sp_runtime::{
 
 pub mod asset_registry;
 pub mod chain_ext;
+mod proxy_type;
 pub mod stellar;
 pub mod zenlink;
 
@@ -23,6 +24,7 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 /// Type for IDs of farming pools
 pub type PoolId = u32;
 
+pub use proxy_type::*;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 
 /// Balance of an account.

@@ -678,7 +678,7 @@ impl pallet_scheduler::Config for Runtime {
 
 parameter_types! {
 	pub const PreimageMaxSize: u32 = 4096 * 1024;
-	pub const PreimageBaseDeposit: Balance = 1 * UNIT;
+	pub const PreimageBaseDeposit: Balance = UNIT;
 	// One cent: $10,000 / MB
 	pub const PreimageByteDeposit: Balance = 10 * MILLIUNIT;
 }
@@ -733,9 +733,9 @@ impl pallet_treasury::Config for Runtime {
 parameter_types! {
 	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
 	pub const BountyValueMinimum: Balance = 5 * UNIT;
-	pub const BountyDepositBase: Balance = 1 * UNIT;
+	pub const BountyDepositBase: Balance = UNIT;
 	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
-	pub const CuratorDepositMin: Balance = 1 * UNIT;
+	pub const CuratorDepositMin: Balance = UNIT;
 	pub const CuratorDepositMax: Balance = 100 * UNIT;
 	pub const DataDepositPerByte: Balance = 30 * MILLIUNIT;
 	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
@@ -759,7 +759,7 @@ impl pallet_bounties::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ChildBountyValueMinimum: Balance = 1 * UNIT;
+	pub const ChildBountyValueMinimum: Balance = UNIT;
 }
 
 impl pallet_child_bounties::Config for Runtime {
@@ -1048,7 +1048,7 @@ where
 		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
 		let address = account;
 		let (call, extra, _) = raw_payload.deconstruct();
-		Some((call, (sp_runtime::MultiAddress::Id(address), signature.into(), extra)))
+		Some((call, (sp_runtime::MultiAddress::Id(address), signature, extra)))
 	}
 }
 
@@ -1259,7 +1259,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 		match (self, o) {
 			(x, y) if x == y => true,
 			(ProxyType::Any, _) => true,
-			(_, ProxyType::Any) => false,
+			#[allow(unreachable_patterns)]
 			_ => false,
 		}
 	}

@@ -38,7 +38,7 @@ const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-	<TPublic::Pair as Pair>::from_string(&format!("//{}", seed), None)
+	<TPublic::Pair as Pair>::from_string(&format!("//{seed}"), None)
 		.expect("static values are valid; qed")
 		.public()
 }
@@ -437,7 +437,7 @@ fn amplitude_genesis(
 		.collect();
 
 	balances.push((
-		sudo_account.clone(),
+		sudo_account,
 		amplitude::INITIAL_ISSUANCE
 			.saturating_sub(
 				amplitude::INITIAL_ISSUANCE_PER_SIGNATORY
@@ -506,7 +506,7 @@ fn amplitude_genesis(
 		},
 		democracy: Default::default(),
 		technical_committee: amplitude_runtime::TechnicalCommitteeConfig {
-			members: signatories.clone(),
+			members: signatories,
 			..Default::default()
 		},
 		tokens: amplitude_runtime::TokensConfig {
@@ -519,8 +519,8 @@ fn amplitude_genesis(
 			limit_volume_amount: None,
 			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
-			interval_length: (60u32 * 60 * 24).into(),
-			last_interval_index: 0u32.into(),
+			interval_length: (60u32 * 60 * 24),
+			last_interval_index: 0u32,
 		},
 		redeem: amplitude_runtime::RedeemConfig {
 			redeem_period: foucoco_runtime::DAYS,
@@ -528,8 +528,8 @@ fn amplitude_genesis(
 			limit_volume_amount: None,
 			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
-			interval_length: (60u32 * 60 * 24).into(),
-			last_interval_index: 0u32.into(),
+			interval_length: (60u32 * 60 * 24),
+			last_interval_index: 0u32,
 		},
 		replace: amplitude_runtime::ReplaceConfig {
 			replace_period: foucoco_runtime::DAYS,
@@ -693,9 +693,9 @@ fn foucoco_genesis(
 			..Default::default()
 		},
 		democracy: Default::default(),
-		sudo: foucoco_runtime::SudoConfig { key: Some(sudo_account.clone()) },
+		sudo: foucoco_runtime::SudoConfig { key: Some(sudo_account) },
 		technical_committee: foucoco_runtime::TechnicalCommitteeConfig {
-			members: signatories.clone(),
+			members: signatories,
 			..Default::default()
 		},
 		tokens: foucoco_runtime::TokensConfig {
@@ -708,8 +708,8 @@ fn foucoco_genesis(
 			limit_volume_amount: None,
 			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
-			interval_length: (60u32 * 60 * 24).into(),
-			last_interval_index: 0u32.into(),
+			interval_length: (60u32 * 60 * 24),
+			last_interval_index: 0u32,
 		},
 		redeem: foucoco_runtime::RedeemConfig {
 			redeem_period: foucoco_runtime::DAYS,
@@ -717,8 +717,8 @@ fn foucoco_genesis(
 			limit_volume_amount: None,
 			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
-			interval_length: (60u32 * 60 * 24).into(),
-			last_interval_index: 0u32.into(),
+			interval_length: (60u32 * 60 * 24),
+			last_interval_index: 0u32,
 		},
 		replace: foucoco_runtime::ReplaceConfig {
 			replace_period: foucoco_runtime::DAYS,
@@ -858,7 +858,7 @@ fn pendulum_genesis(
 		genesis_issuance -= balance.1;
 	}
 
-	balances.push((sudo_account.clone(), genesis_issuance));
+	balances.push((sudo_account, genesis_issuance));
 
 	let stakers: Vec<_> = collators
 		.iter()

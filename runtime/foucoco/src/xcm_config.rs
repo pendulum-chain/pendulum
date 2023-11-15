@@ -30,6 +30,7 @@ use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
+
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const RelayNetwork: NetworkId = NetworkId::Rococo;
@@ -103,7 +104,7 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConv
 		if location == MultiLocation::parent() {
 			return Ok(CurrencyId::XCM(0))
 		}
-		Err(location.clone())
+		Err(location)
 	}
 }
 

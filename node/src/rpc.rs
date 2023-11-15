@@ -25,7 +25,10 @@ use substrate_frame_rpc_system::{System, SystemApiServer};
 use crate::service::{AmplitudeClient, DevelopmentClient, FoucocoClient, PendulumClient};
 
 /// A type representing all RPC extensions.
-pub type RpcExtension = jsonrpsee::RpcModule<()>;
+type RpcExtension = jsonrpsee::RpcModule<()>;
+
+/// RpcExtension wrapped in Result<>
+pub type ResultRpcExtension = Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>;
 
 /// Full client dependencies
 pub struct FullDeps<C, P> {
@@ -38,9 +41,7 @@ pub struct FullDeps<C, P> {
 }
 
 /// Instantiate all RPC extensions.
-pub fn create_full_pendulum<P>(
-	deps: FullDeps<PendulumClient, P>,
-) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
+pub fn create_full_pendulum<P>(deps: FullDeps<PendulumClient, P>) -> ResultRpcExtension
 where
 	P: TransactionPool + Sync + Send + 'static,
 {
@@ -68,9 +69,7 @@ where
 	Ok(module)
 }
 
-pub fn create_full_amplitude<P>(
-	deps: FullDeps<AmplitudeClient, P>,
-) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
+pub fn create_full_amplitude<P>(deps: FullDeps<AmplitudeClient, P>) -> ResultRpcExtension
 where
 	P: TransactionPool + Sync + Send + 'static,
 {
@@ -90,9 +89,7 @@ where
 	Ok(module)
 }
 
-pub fn create_full_foucoco<P>(
-	deps: FullDeps<FoucocoClient, P>,
-) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
+pub fn create_full_foucoco<P>(deps: FullDeps<FoucocoClient, P>) -> ResultRpcExtension
 where
 	P: TransactionPool + Sync + Send + 'static,
 {

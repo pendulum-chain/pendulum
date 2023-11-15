@@ -1016,9 +1016,12 @@ where
 						currency_id,
 					);
 
-				env.write(&total_supply.encode(), false, None).map_err(|_| {
-					DispatchError::Other("ChainExtension failed to call total_issuance")
-				})?;
+				//TODO something like this
+				if let Err(_) = env.write(&total_supply.encode(), false, None){
+					let mapped_error: ChainExtensionReturnValue = ChainExtensionError::CannotLookup.into();
+					return Ok(RetVal::Converging(mapped_error as u32))
+				};
+
 			},
 			// balanceOf(currency, account)
 			1102 => {

@@ -174,3 +174,24 @@ pub fn decode<T: Decode>(input: Vec<u8>) -> Result<T, codec::Error> {
 	let mut input = input.as_slice();
 	T::decode(&mut input)
 }
+
+
+
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+#[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, Debug)]
+pub enum ChainExtensionReturnValue {
+	Success = 0,
+	Underflow = 1,
+	Overflow = 2,
+	DivisionByZero = 3,
+	CannotLookup = 4
+}
+
+impl From<ChainExtensionError> for ChainExtensionReturnValue {
+	fn from(e: ChainExtensionError) -> Self {
+		match e {
+			ChainExtensionError::CannotLookup => ChainExtensionReturnValue::CannotLookup,
+			_ => unimplemented!()
+		}
+	}
+}

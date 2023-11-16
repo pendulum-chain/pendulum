@@ -964,6 +964,7 @@ pub(crate) type BalanceOfForChainExt<T> =
 	>>::Balance;
 
 // Enum that handles all supported function id options
+#[derive(Debug)]
 enum FuncId {
 	// totalSupply(currency)
 	TotalSupply,
@@ -1018,7 +1019,7 @@ where
 	{
 		let func_id = FuncId::try_from(env.func_id())?;
 
-		trace!("Calling function with ID {} from Psp22Extension", env.func_id());
+		trace!("Calling function with ID {:?} from Psp22Extension", &func_id);
 
 		// debug_message weight is a good approximation of the additional overhead of going
 		// from contract layer to substrate layer.
@@ -1062,7 +1063,7 @@ where
 	}
 }
 
-fn get_coin_info<E: Ext, T>(
+fn total_supply<E: Ext, T>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<(), DispatchError>
@@ -1078,18 +1079,172 @@ where
 	let mut env = env.buf_in_buf_out();
 	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
 	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
-	let (blockchain, symbol): (Blockchain, Symbol) = env.read_as()?;
-	let result = <dia_oracle::Pallet<T> as DiaOracle>::get_coin_info(
-		blockchain.to_trimmed_vec(),
-		symbol.to_trimmed_vec(),
+	let input = env.read(256)?;
+	let currency_id: CurrencyId = chain_ext::decode(input)
+		.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
+	trace!("Calling totalSupply() for currency {:?}", currency_id);
+	ensure!(
+		orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id,),
+		DispatchError::Other("ChainExtension failed to decode input")
 	);
-	trace!("Calling get_coin_info() for: {:?}:{:?}", blockchain, symbol);
-	let result = match result {
-		Ok(coin_info) => Result::<CoinInfo, ChainExtensionError>::Ok(CoinInfo::from(coin_info)),
-		Err(e) => Result::<CoinInfo, ChainExtensionError>::Err(ChainExtensionError::from(e)),
-	};
-	env.write(&result.encode(), false, None)
-		.map_err(|_| DispatchError::Other("ChainExtension failed to call 'price feed'"))?;
+	let total_supply =
+		<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(currency_id);
+	env.write(&total_supply.encode(), false, None)
+		.map_err(|_| DispatchError::Other("ChainExtension failed to call total_issuance"))?;
+	Ok(())
+}
+
+fn balance_of<E: Ext, T>(
+	env: Environment<'_, '_, E, InitState>,
+	overhead_weight: Weight,
+) -> Result<(), DispatchError>
+where
+	T: SysConfig
+		+ orml_tokens::Config<CurrencyId = CurrencyId>
+		+ pallet_contracts::Config
+		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
+		+ orml_currencies_allowance_extension::Config
+		+ dia_oracle::Config,
+	E: Ext<T = T>,
+{
+	let mut env = env.buf_in_buf_out();
+	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
+	let input = env.read(256)?;
+	let (currency_id, account_id): (CurrencyId, T::AccountId) = chain_ext::decode(input)
+		.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
+	trace!("Calling balanceOf() for currency {:?} and account {:?}", currency_id, account_id);
+	ensure!(
+		orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id,),
+		DispatchError::Other("CurrencyId is not allowed for chain extension",)
+	);
+	let balance = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
+		currency_id,
+		&account_id,
+	);
+	env.write(&balance.encode(), false, None)
+		.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
+	Ok(())
+}
+
+fn transfer<E: Ext, T>(
+	mut env: Environment<'_, '_, E, InitState>,
+	overhead_weight: Weight,
+) -> Result<(), DispatchError>
+where
+	T: SysConfig
+		+ orml_tokens::Config<CurrencyId = CurrencyId>
+		+ pallet_contracts::Config
+		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
+		+ orml_currencies_allowance_extension::Config
+		+ dia_oracle::Config,
+	E: Ext<T = T>,
+{
+	let ext = env.ext();
+	let caller = ext.caller().clone();
+	let mut env = env.buf_in_buf_out();
+	let base_weight = <T as orml_currencies::Config>::WeightInfo::transfer_non_native_currency();
+	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
+	let input = env.read(256)?;
+	let (currency_id, recipient, amount): (CurrencyId, T::AccountId, BalanceOfForChainExt<T>) =
+		chain_ext::decode(input)
+			.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
+	trace!(
+		"Calling transfer() sending {:?} {:?}, from {:?} to {:?}",
+		amount,
+		currency_id,
+		caller,
+		recipient
+	);
+	ensure!(
+		orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id,),
+		DispatchError::Other("CurrencyId is not allowed for chain extension",)
+	);
+	<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
+		currency_id,
+		&caller,
+		&recipient,
+		amount,
+	)?;
+	Ok(())
+}
+
+fn allowance<E: Ext, T>(
+	env: Environment<'_, '_, E, InitState>,
+	overhead_weight: Weight,
+) -> Result<(), DispatchError>
+where
+	T: SysConfig
+		+ orml_tokens::Config<CurrencyId = CurrencyId>
+		+ pallet_contracts::Config
+		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
+		+ orml_currencies_allowance_extension::Config
+		+ dia_oracle::Config,
+	E: Ext<T = T>,
+{
+	let mut env = env.buf_in_buf_out();
+	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
+	let input = env.read(256)?;
+	let (currency_id, owner, spender): (CurrencyId, T::AccountId, T::AccountId) =
+		chain_ext::decode(input)
+			.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
+	trace!(
+		"Calling allowance() for currency {:?}, owner {:?} and spender {:?}",
+		currency_id,
+		owner,
+		spender
+	);
+	ensure!(
+		orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id,),
+		DispatchError::Other("CurrencyId is not allowed for chain extension")
+	);
+	let allowance =
+		orml_currencies_allowance_extension::Pallet::<T>::allowance(currency_id, &owner, &spender);
+	env.write(&allowance.encode(), false, None)
+		.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
+	Ok(())
+}
+
+fn approve<E: Ext, T>(
+	mut env: Environment<'_, '_, E, InitState>,
+	overhead_weight: Weight,
+) -> Result<(), DispatchError>
+where
+	T: SysConfig
+		+ orml_tokens::Config<CurrencyId = CurrencyId>
+		+ pallet_contracts::Config
+		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
+		+ orml_currencies_allowance_extension::Config
+		+ dia_oracle::Config,
+	E: Ext<T = T>,
+{
+	let ext = env.ext();
+	let caller = ext.caller().clone();
+	let mut env = env.buf_in_buf_out();
+	let base_weight = <<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::approve();
+	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
+	let input = env.read(256)?;
+	let (currency_id, spender, amount): (CurrencyId, T::AccountId, BalanceOfForChainExt<T>) =
+		chain_ext::decode(input)
+			.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
+	trace!(
+		"Calling approve() allowing spender {:?} to transfer {:?} {:?} from {:?}",
+		spender,
+		amount,
+		currency_id,
+		caller
+	);
+	ensure!(
+		orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id,),
+		DispatchError::Other("CurrencyId is not allowed for chain extension",)
+	);
+	orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
+		currency_id,
+		&caller,
+		&spender,
+		amount,
+	)?;
 	Ok(())
 }
 
@@ -1141,49 +1296,7 @@ where
 	Ok(())
 }
 
-fn approve<E: Ext, T>(
-	mut env: Environment<'_, '_, E, InitState>,
-	overhead_weight: Weight,
-) -> Result<(), DispatchError>
-where
-	T: SysConfig
-		+ orml_tokens::Config<CurrencyId = CurrencyId>
-		+ pallet_contracts::Config
-		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
-		+ orml_currencies_allowance_extension::Config
-		+ dia_oracle::Config,
-	E: Ext<T = T>,
-{
-	let ext = env.ext();
-	let caller = ext.caller().clone();
-	let mut env = env.buf_in_buf_out();
-	let base_weight = <<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::approve();
-	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
-	let input = env.read(256)?;
-	let (currency_id, spender, amount): (CurrencyId, T::AccountId, BalanceOfForChainExt<T>) =
-		chain_ext::decode(input)
-			.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
-	trace!(
-		"Calling approve() allowing spender {:?} to transfer {:?} {:?} from {:?}",
-		spender,
-		amount,
-		currency_id,
-		caller
-	);
-	ensure!(
-		orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id,),
-		DispatchError::Other("CurrencyId is not allowed for chain extension",)
-	);
-	orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
-		currency_id,
-		&caller,
-		&spender,
-		amount,
-	)?;
-	Ok(())
-}
-
-fn allowance<E: Ext, T>(
+fn get_coin_info<E: Ext, T>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<(), DispatchError>
@@ -1199,130 +1312,18 @@ where
 	let mut env = env.buf_in_buf_out();
 	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
 	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
-	let input = env.read(256)?;
-	let (currency_id, owner, spender): (CurrencyId, T::AccountId, T::AccountId) =
-		chain_ext::decode(input)
-			.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
-	trace!(
-		"Calling allowance() for currency {:?}, owner {:?} and spender {:?}",
-		currency_id,
-		owner,
-		spender
+	let (blockchain, symbol): (Blockchain, Symbol) = env.read_as()?;
+	let result = <dia_oracle::Pallet<T> as DiaOracle>::get_coin_info(
+		blockchain.to_trimmed_vec(),
+		symbol.to_trimmed_vec(),
 	);
-	ensure!(
-		orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id,),
-		DispatchError::Other("CurrencyId is not allowed for chain extension")
-	);
-	let allowance =
-		orml_currencies_allowance_extension::Pallet::<T>::allowance(currency_id, &owner, &spender);
-	env.write(&allowance.encode(), false, None)
-		.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
-	Ok(())
-}
-
-fn transfer<E: Ext, T>(
-	mut env: Environment<'_, '_, E, InitState>,
-	overhead_weight: Weight,
-) -> Result<(), DispatchError>
-where
-	T: SysConfig
-		+ orml_tokens::Config<CurrencyId = CurrencyId>
-		+ pallet_contracts::Config
-		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
-		+ orml_currencies_allowance_extension::Config
-		+ dia_oracle::Config,
-	E: Ext<T = T>,
-{
-	let ext = env.ext();
-	let caller = ext.caller().clone();
-	let mut env = env.buf_in_buf_out();
-	let base_weight = <T as orml_currencies::Config>::WeightInfo::transfer_non_native_currency();
-	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
-	let input = env.read(256)?;
-	let (currency_id, recipient, amount): (CurrencyId, T::AccountId, BalanceOfForChainExt<T>) =
-		chain_ext::decode(input)
-			.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
-	trace!(
-		"Calling transfer() sending {:?} {:?}, from {:?} to {:?}",
-		amount,
-		currency_id,
-		caller,
-		recipient
-	);
-	ensure!(
-		orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id,),
-		DispatchError::Other("CurrencyId is not allowed for chain extension",)
-	);
-	<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
-		currency_id,
-		&caller,
-		&recipient,
-		amount,
-	)?;
-	Ok(())
-}
-
-fn balance_of<E: Ext, T>(
-	env: Environment<'_, '_, E, InitState>,
-	overhead_weight: Weight,
-) -> Result<(), DispatchError>
-where
-	T: SysConfig
-		+ orml_tokens::Config<CurrencyId = CurrencyId>
-		+ pallet_contracts::Config
-		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
-		+ orml_currencies_allowance_extension::Config
-		+ dia_oracle::Config,
-	E: Ext<T = T>,
-{
-	let mut env = env.buf_in_buf_out();
-	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
-	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
-	let input = env.read(256)?;
-	let (currency_id, account_id): (CurrencyId, T::AccountId) = chain_ext::decode(input)
-		.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
-	trace!("Calling balanceOf() for currency {:?} and account {:?}", currency_id, account_id);
-	ensure!(
-		orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id,),
-		DispatchError::Other("CurrencyId is not allowed for chain extension",)
-	);
-	let balance = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
-		currency_id,
-		&account_id,
-	);
-	env.write(&balance.encode(), false, None)
-		.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
-	Ok(())
-}
-
-fn total_supply<E: Ext, T>(
-	env: Environment<'_, '_, E, InitState>,
-	overhead_weight: Weight,
-) -> Result<(), DispatchError>
-where
-	T: SysConfig
-		+ orml_tokens::Config<CurrencyId = CurrencyId>
-		+ pallet_contracts::Config
-		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
-		+ orml_currencies_allowance_extension::Config
-		+ dia_oracle::Config,
-	E: Ext<T = T>,
-{
-	let mut env = env.buf_in_buf_out();
-	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
-	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
-	let input = env.read(256)?;
-	let currency_id: CurrencyId = chain_ext::decode(input)
-		.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
-	trace!("Calling totalSupply() for currency {:?}", currency_id);
-	ensure!(
-		orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id,),
-		DispatchError::Other("ChainExtension failed to decode input")
-	);
-	let total_supply =
-		<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(currency_id);
-	env.write(&total_supply.encode(), false, None)
-		.map_err(|_| DispatchError::Other("ChainExtension failed to call total_issuance"))?;
+	trace!("Calling get_coin_info() for: {:?}:{:?}", blockchain, symbol);
+	let result = match result {
+		Ok(coin_info) => Result::<CoinInfo, ChainExtensionError>::Ok(CoinInfo::from(coin_info)),
+		Err(e) => Result::<CoinInfo, ChainExtensionError>::Err(ChainExtensionError::from(e)),
+	};
+	env.write(&result.encode(), false, None)
+		.map_err(|_| DispatchError::Other("ChainExtension failed to call 'price feed'"))?;
 	Ok(())
 }
 

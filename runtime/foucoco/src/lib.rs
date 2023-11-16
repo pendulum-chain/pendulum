@@ -999,27 +999,27 @@ where
 				let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
 				env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 				let input = env.read(256)?;
-				let currency_id: CurrencyId = chain_ext::decode(input)
-					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
 
+				let currency_id: CurrencyId = match chain_ext::decode(input) {
+					Ok(value) => value,
+					Err(_) => return Ok(RetVal::Converging(ChainExtensionError::DecodingError.as_u32())), 
+				};
+		
 				trace!("Calling totalSupply() for currency {:?}", currency_id);
 
-				ensure!(
-					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-						currency_id,
-					),
-					DispatchError::Other("ChainExtension failed to decode input")
-				);
+				if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+					currency_id,
+				){
+					return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
+				}
 
 				let total_supply =
 					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(
 						currency_id,
 					);
 
-				//TODO something like this
 				if let Err(_) = env.write(&total_supply.encode(), false, None){
-					let mapped_error: ChainExtensionReturnValue = ChainExtensionError::CannotLookup.into();
-					return Ok(RetVal::Converging(mapped_error as u32))
+					return Ok(RetVal::Converging(ChainExtensionError::WriteError.as_u32()))
 				};
 
 			},
@@ -1029,22 +1029,21 @@ where
 				let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
 				env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 				let input = env.read(256)?;
-				let (currency_id, account_id): (CurrencyId, T::AccountId) =
-					chain_ext::decode(input).map_err(|_| {
-						DispatchError::Other("ChainExtension failed to decode input")
-					})?;
+				let (currency_id, account_id): (CurrencyId, T::AccountId) = match chain_ext::decode(input) {
+					Ok(value) => value,
+					Err(_) => return Ok(RetVal::Converging(ChainExtensionError::DecodingError.as_u32())), 
+				};
 
 				trace!(
 					"Calling balanceOf() for currency {:?} and account {:?}",
 					currency_id, account_id
 				);
 
-				ensure!(
-					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-						currency_id,
-					),
-					DispatchError::Other("CurrencyId is not allowed for chain extension",)
-				);
+				if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+					currency_id,
+				){
+					return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
+				}
 
 				let balance =
 					<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
@@ -1052,8 +1051,10 @@ where
 						&account_id,
 					);
 
-				env.write(&balance.encode(), false, None)
-					.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
+				if let Err(_) = env.write(&balance.encode(), false, None){
+					return Ok(RetVal::Converging(ChainExtensionError::WriteError.as_u32()))
+				};
+				
 			},
 			// transfer(currency, recipient, amount)
 			1103 => {
@@ -1070,20 +1071,21 @@ where
 					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
-				) = chain_ext::decode(input)
-					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
+				) = match chain_ext::decode(input) {
+					Ok(value) => value,
+					Err(_) => return Ok(RetVal::Converging(ChainExtensionError::DecodingError.as_u32())), 
+				};
 
 				trace!(
 					"Calling transfer() sending {:?} {:?}, from {:?} to {:?}",
 					amount, currency_id, caller, recipient
 				);
 
-				ensure!(
-					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-						currency_id,
-					),
-					DispatchError::Other("CurrencyId is not allowed for chain extension",)
-				);
+				if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+					currency_id,
+				){
+					return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
+				}
 
 				<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 					currency_id,
@@ -1098,22 +1100,21 @@ where
 				let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
 				env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 				let input = env.read(256)?;
-				let (currency_id, owner, spender): (CurrencyId, T::AccountId, T::AccountId) =
-					chain_ext::decode(input).map_err(|_| {
-						DispatchError::Other("ChainExtension failed to decode input")
-					})?;
+				let (currency_id, owner, spender): (CurrencyId, T::AccountId, T::AccountId) = match chain_ext::decode(input) {
+					Ok(value) => value,
+					Err(_) => return Ok(RetVal::Converging(ChainExtensionError::DecodingError.as_u32())), 
+				};
 
 				trace!(
 					"Calling allowance() for currency {:?}, owner {:?} and spender {:?}",
 					currency_id, owner, spender
 				);
 
-				ensure!(
-					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-						currency_id,
-					),
-					DispatchError::Other("CurrencyId is not allowed for chain extension")
-				);
+				if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+					currency_id,
+				){
+					return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
+				}
 
 				let allowance = orml_currencies_allowance_extension::Pallet::<T>::allowance(
 					currency_id,
@@ -1121,8 +1122,9 @@ where
 					&spender,
 				);
 
-				env.write(&allowance.encode(), false, None)
-					.map_err(|_| DispatchError::Other("ChainExtension failed to call balance"))?;
+				if let Err(_) = env.write(&allowance.encode(), false, None){
+					return Ok(RetVal::Converging(ChainExtensionError::WriteError.as_u32()))
+				};
 			},
 			// approve(currency, spender, amount)
 			1105 => {
@@ -1138,20 +1140,21 @@ where
 					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
-				) = chain_ext::decode(input)
-					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
+				) =  match chain_ext::decode(input) {
+					Ok(value) => value,
+					Err(_) => return Ok(RetVal::Converging(ChainExtensionError::DecodingError.as_u32())), 
+				};
 
 				trace!(
 					"Calling approve() allowing spender {:?} to transfer {:?} {:?} from {:?}",
 					spender, amount, currency_id, caller
 				);
 
-				ensure!(
-					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-						currency_id,
-					),
-					DispatchError::Other("CurrencyId is not allowed for chain extension",)
-				);
+				if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+					currency_id,
+				){
+					return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
+				}
 
 				orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
 					currency_id,
@@ -1175,20 +1178,21 @@ where
 					CurrencyId,
 					T::AccountId,
 					BalanceOfForChainExt<T>,
-				) = chain_ext::decode(input)
-					.map_err(|_| DispatchError::Other("ChainExtension failed to decode input"))?;
+				) = match chain_ext::decode(input) {
+					Ok(value) => value,
+					Err(_) => return Ok(RetVal::Converging(ChainExtensionError::DecodingError.as_u32())), 
+				};
 
 				trace!(
 					"Calling transfer_from() for caller {:?}, sending {:?} {:?}, from {:?} to {:?}",
 					caller, amount, currency_id, owner, recipient
 				);
 
-				ensure!(
-					orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-						currency_id,
-					),
-					DispatchError::Other("CurrencyId is not allowed for chain extension",)
-				);
+				if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
+					currency_id,
+				){
+					return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
+				}
 
 				orml_currencies_allowance_extension::Pallet::<T>::do_transfer_approved(
 					currency_id,
@@ -1217,15 +1221,17 @@ where
 					Ok(coin_info) =>
 						Result::<CoinInfo, ChainExtensionError>::Ok(CoinInfo::from(coin_info)),
 					Err(e) =>
-						Result::<CoinInfo, ChainExtensionError>::Err(ChainExtensionError::from(e)),
+						return Ok(RetVal::Converging(ChainExtensionError::from(e).as_u32())),
 				};
-				env.write(&result.encode(), false, None).map_err(|_| {
-					DispatchError::Other("ChainExtension failed to call 'price feed'")
-				})?;
+
+				if let Err(_) = env.write(&result.encode(), false, None){
+					return Ok(RetVal::Converging(ChainExtensionError::WriteError.as_u32()))
+				};
+	
 			},
 			_ => {
 				error!("Called an unregistered `func_id`: {:}", func_id);
-				return Err(DispatchError::Other("Unimplemented func_id"))
+				return Ok(RetVal::Converging(ChainExtensionError::UnimplementedFuncId.as_u32()))
 			},
 		}
 

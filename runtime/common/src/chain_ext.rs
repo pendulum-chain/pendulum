@@ -33,6 +33,12 @@ pub enum ChainExtensionError {
 	NoProviders,
 	/// There are too many consumers so the account cannot be created.
 	TooManyConsumers,
+	/// Cannot decode
+	DecodingError,
+	/// Failed to save some data
+	WriteError,
+	/// Function id not implemented for chain extension
+	UnimplementedFuncId,
 	/// An error to do with tokens.
 	Token(ChainExtensionTokenError),
 	/// An arithmetic error.
@@ -175,23 +181,48 @@ pub fn decode<T: Decode>(input: Vec<u8>) -> Result<T, codec::Error> {
 	T::decode(&mut input)
 }
 
-
-
-#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-#[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, Debug)]
-pub enum ChainExtensionReturnValue {
-	Success = 0,
-	Underflow = 1,
-	Overflow = 2,
-	DivisionByZero = 3,
-	CannotLookup = 4
+impl ChainExtensionError {
+    pub fn as_u32(&self) -> u32 {
+        match self {
+            ChainExtensionError::Other => 0,
+            ChainExtensionError::CannotLookup => 1,
+            ChainExtensionError::BadOrigin => 2,
+            ChainExtensionError::Module => 3,
+            ChainExtensionError::ConsumerRemaining => 4,
+            ChainExtensionError::NoProviders => 5,
+            ChainExtensionError::TooManyConsumers => 6,
+			ChainExtensionError::DecodingError => 7,
+			ChainExtensionError::WriteError =>8,
+			ChainExtensionError::UnimplementedFuncId => 9,
+            ChainExtensionError::Token(token_error) => 1000 + token_error.as_u32(),
+            ChainExtensionError::Arithmetic(arithmetic_error) => 2000 + arithmetic_error.as_u32(),
+            ChainExtensionError::Unknown => 999,
+        }
+    }
 }
 
-impl From<ChainExtensionError> for ChainExtensionReturnValue {
-	fn from(e: ChainExtensionError) -> Self {
-		match e {
-			ChainExtensionError::CannotLookup => ChainExtensionReturnValue::CannotLookup,
-			_ => unimplemented!()
-		}
-	}
+impl ChainExtensionTokenError {
+    pub fn as_u32(&self) -> u32 {
+        match self {
+            ChainExtensionTokenError::NoFunds => 0,
+            ChainExtensionTokenError::WouldDie => 1,
+            ChainExtensionTokenError::BelowMinimum => 2,
+            ChainExtensionTokenError::CannotCreate => 3,
+            ChainExtensionTokenError::UnknownAsset => 4,
+            ChainExtensionTokenError::Frozen => 5,
+            ChainExtensionTokenError::Unsupported => 6,
+            ChainExtensionTokenError::Unknown => 999,
+        }
+    }
+}
+
+impl ChainExtensionArithmeticError {
+    pub fn as_u32(&self) -> u32 {
+        match self {
+            ChainExtensionArithmeticError::Underflow => 0,
+            ChainExtensionArithmeticError::Overflow => 1,
+            ChainExtensionArithmeticError::DivisionByZero => 2,
+            ChainExtensionArithmeticError::Unknown => 999,
+        }
+    }
 }

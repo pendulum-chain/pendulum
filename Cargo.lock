@@ -217,6 +217,7 @@ dependencies = [
  "log",
  "module-issue-rpc-runtime-api",
  "module-oracle-rpc-runtime-api",
+ "module-pallet-staking-rpc-runtime-api",
  "module-redeem-rpc-runtime-api",
  "module-replace-rpc-runtime-api",
  "module-vault-registry-rpc-runtime-api",
@@ -3030,6 +3031,7 @@ dependencies = [
  "log",
  "module-issue-rpc-runtime-api",
  "module-oracle-rpc-runtime-api",
+ "module-pallet-staking-rpc-runtime-api",
  "module-redeem-rpc-runtime-api",
  "module-replace-rpc-runtime-api",
  "module-vault-registry-rpc-runtime-api",
@@ -5479,6 +5481,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "module-pallet-staking-rpc"
+version = "1.0.0"
+dependencies = [
+ "jsonrpsee",
+ "module-oracle-rpc-runtime-api",
+ "module-pallet-staking-rpc-runtime-api",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "module-pallet-staking-rpc-runtime-api"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "module-oracle-rpc-runtime-api",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-std",
+]
+
+[[package]]
 name = "module-redeem-rpc"
 version = "1.0.0"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=e5c6acdfdc2482183ad064d1a27f75b61adf2546#e5c6acdfdc2482183ad064d1a27f75b61adf2546"
@@ -7416,6 +7444,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "module-pallet-staking-rpc-runtime-api",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -7648,6 +7677,7 @@ dependencies = [
  "log",
  "module-issue-rpc",
  "module-oracle-rpc",
+ "module-pallet-staking-rpc",
  "module-redeem-rpc",
  "module-replace-rpc",
  "module-vault-registry-rpc",
@@ -7723,6 +7753,8 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal",
  "log",
+ "module-oracle-rpc-runtime-api",
+ "module-pallet-staking-rpc-runtime-api",
  "orml-asset-registry",
  "orml-currencies",
  "orml-tokens",

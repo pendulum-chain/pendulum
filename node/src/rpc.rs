@@ -18,6 +18,7 @@ use module_issue_rpc::{Issue, IssueApiServer};
 use module_oracle_rpc::{Oracle, OracleApiServer};
 use module_redeem_rpc::{Redeem, RedeemApiServer};
 use module_replace_rpc::{Replace, ReplaceApiServer};
+use module_pallet_staking_rpc::{Staking, ParachainStakingApiServer};
 use module_vault_registry_rpc::{VaultRegistry, VaultRegistryApiServer};
 use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 use substrate_frame_rpc_system::{System, SystemApiServer};
@@ -48,6 +49,7 @@ where
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
+	module.merge(Staking::new(client.clone()).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 	module.merge(ZenlinkProtocol::new(client).into_rpc())?;
 	Ok(module)
@@ -78,6 +80,7 @@ where
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
+	module.merge(Staking::new(client.clone()).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 	module.merge(Issue::new(client.clone()).into_rpc())?;
 	module.merge(Redeem::new(client.clone()).into_rpc())?;
@@ -100,6 +103,7 @@ where
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
+	module.merge(Staking::new(client.clone()).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 	module.merge(Issue::new(client.clone()).into_rpc())?;
 	module.merge(Redeem::new(client.clone()).into_rpc())?;

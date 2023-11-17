@@ -3,6 +3,7 @@ use super::{
 	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
 };
 use crate::ConstU32;
+use crate::assets::{self, xcm_assets};
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
@@ -28,13 +29,9 @@ use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
+use crate::assets::locations::{EURC_location_external_pov, EURC_location_local_pov, native_location_external_pov, native_location_local_pov};
 
-const XCM_ASSET_RELAY_DOT: u8 = 0;
-const XCM_ASSET_ASSETHUB_USDT: u8 = 1;
-const XCM_ASSET_ASSETHUB_USDC: u8 = 2;
-const XCM_ASSET_EQUILIBRIUM_EQD: u8 = 3;
-const XCM_ASSET_MOONBEAM_BRZ: u8 = 4;
-const XCM_ASSET_POLKADEX_PDEX: u8 = 5;
+
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -67,20 +64,19 @@ pub struct CurrencyIdConvert;
 impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		match id {
-			// CurrencyId::KSM => Some(MultiLocation::parent()),
+			// CurrencyId::KSM 				=> Some(MultiLoca tion::parent()),
 			CurrencyId::XCM(f) => match f {
-				XCM_ASSET_RELAY_DOT => Some(MultiLocation::parent()),
-				XCM_ASSET_ASSETHUB_USDT => Some(asset_hub::USDT_location()),
-				XCM_ASSET_ASSETHUB_USDC => Some(asset_hub::USDC_location()),
-				XCM_ASSET_EQUILIBRIUM_EQD => Some(equilibrium::EQD_location()),
-				XCM_ASSET_MOONBEAM_BRZ => Some(moonbeam::BRZ_location()),
-				XCM_ASSET_POLKADEX_PDEX => Some(polkadex::PDEX_location()),
+				xcm_assets::RELAY_DOT 		=> Some(MultiLocation::parent()),
+				xcm_assets::ASSETHUB_USDT 	=> Some(asset_hub::USDT_location()),
+				xcm_assets::ASSETHUB_USDC 	=> Some(asset_hub::USDC_location()),
+				xcm_assets::EQUILIBRIUM_EQD => Some(equilibrium::EQD_location()),
+				xcm_assets::MOONBEAM_BRZ 	=> Some(moonbeam::BRZ_location()),
+				xcm_assets::POLKADEX_PDEX 	=> Some(polkadex::PDEX_location()),
 				_ => None,
 			},
-			CurrencyId::Native => Some(MultiLocation::new(
-				1,
-				X2(Parachain(ParachainInfo::parachain_id().into()), PalletInstance(10)),
-			)),
+
+			CurrencyId::Native 				=> Some(native_location_external_pov()),
+			assets::tokens::EURC_ID 		=> Some(EURC_location_external_pov()),
 			_ => None,
 		}
 	}
@@ -89,26 +85,21 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
-			MultiLocation { parents: 1, interior: Here } =>
-				Some(CurrencyId::XCM(XCM_ASSET_RELAY_DOT)),
-			loc if loc == asset_hub::USDT_location() =>
-				Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
-			loc if loc == asset_hub::USDC_location() =>
-				Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDC)),
-			loc if loc == equilibrium::EQD_location() =>
-				Some(CurrencyId::XCM(XCM_ASSET_EQUILIBRIUM_EQD)),
-			loc if loc == moonbeam::BRZ_location() =>
-				Some(CurrencyId::XCM(XCM_ASSET_MOONBEAM_BRZ)),
-			loc if loc == polkadex::PDEX_location() =>
-				Some(CurrencyId::XCM(XCM_ASSET_POLKADEX_PDEX)),
+			MultiLocation { parents: 1, interior: Here } => Some(xcm_assets::RELAY_DOT_id()),
+
+			loc if loc == asset_hub::USDT_location() 	 => Some(xcm_assets::ASSETHUB_USDT_id()),
+			loc if loc == asset_hub::USDC_location() 	 => Some(xcm_assets::ASSETHUB_USDC_id()),
+			loc if loc == equilibrium::EQD_location() 	 => Some(xcm_assets::EQUILIBRIUM_EQD_id()),
+			loc if loc == moonbeam::BRZ_location() 	 	 => Some(xcm_assets::MOONBEAM_BRZ_id()),
+			loc if loc == polkadex::PDEX_location() 	 => Some(xcm_assets::POLKADEX_PDEX_id()),
+
 			// Our native currency location without re-anchoring
-			MultiLocation { parents: 1, interior: X2(Parachain(id), PalletInstance(10)) }
-				if id == u32::from(ParachainInfo::parachain_id()) =>
-				Some(CurrencyId::Native),
+			loc if loc == native_location_external_pov() => Some(CurrencyId::Native),
 			// Our native currency location with re-anchoring
 			// The XCM pallet will try to re-anchor the location before it reaches here
-			MultiLocation { parents: 0, interior: X1(PalletInstance(10)) } =>
-				Some(CurrencyId::Native),
+			loc if loc == native_location_local_pov() => Some(CurrencyId::Native),
+			loc if loc == EURC_location_external_pov()   => Some(assets::tokens::EURC_ID),
+			loc if loc == EURC_location_local_pov()   => Some(assets::tokens::EURC_ID),
 			_ => None,
 		}
 	}

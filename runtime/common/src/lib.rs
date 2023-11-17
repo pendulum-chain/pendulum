@@ -141,7 +141,7 @@ pub mod parachains {
 
 		pub mod polkadex {
 			use xcm::latest::{
-				Junction::{PalletInstance, Parachain},
+				Junction::Parachain,
 				Junctions::X1,
 				MultiLocation,
 			};

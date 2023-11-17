@@ -7754,6 +7754,7 @@ dependencies = [
  "parachain-info",
  "parachain-staking",
  "parity-scale-codec",
+ "paste",
  "polkadot-parachain",
  "polkadot-runtime-common",
  "runtime-common",

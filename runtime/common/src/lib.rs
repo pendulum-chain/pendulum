@@ -70,19 +70,39 @@ pub mod opaque {
 }
 
 pub mod parachains {
-	macro_rules! parachain_asset_loc {
-		($fn_name:ident) => {
+	/// Creates a location for the given asset in this format: `fn <asset_name>_location() -> MultiLocation`
+	macro_rules! parachain_asset_location {
+		// Also declares a constant variable <asset_name>_ASSET_ID with <asset_value>.
+		// This assumes that the following constant variables exist:
+		// * `PARA_ID` - the parachain id
+		// * `ASSET_PALLET_INDEX` - the index of the Assets Pallet
+		($asset_name:ident, $asset_index: literal) => {
 			paste::item! {
-				pub fn [< $fn_name _location >] () -> xcm::latest::MultiLocation {
-				xcm::latest::MultiLocation {
-					parents: 1,
-					interior: xcm::latest::Junctions:: X3(
-						xcm::latest::Junction::Parachain(PARA_ID),
-						xcm::latest::Junction::PalletInstance(ASSET_PALLET_ID),
-						xcm::latest::Junction::GeneralIndex([< $fn_name _ASSET_ID >])
-					),
+				pub const [< $asset_name _ASSET_ID >] : u128 = $asset_index;
+
+				pub fn [< $asset_name _location >] () -> xcm::latest::MultiLocation {
+					xcm::latest::MultiLocation {
+						parents: 1,
+						interior: xcm::latest::Junctions::X3(
+							xcm::latest::Junction::Parachain(PARA_ID),
+							xcm::latest::Junction::PalletInstance(ASSET_PALLET_INDEX),
+							xcm::latest::Junction::GeneralIndex($asset_index)
+						),
+					}
 				}
 			}
+		};
+
+		// Accepts the asset name AND the interior of the location
+		// mostly for locations that do not use a `GeneralIndex`
+		($asset_name:ident, $interiors: expr) => {
+			paste::item! {
+				pub fn [< $asset_name _location >] () -> xcm::latest::MultiLocation {
+					xcm::latest::MultiLocation {
+							parents: 1,
+							interior: $interiors
+						}
+				}
 
 			}
 		};
@@ -91,35 +111,28 @@ pub mod parachains {
 	pub mod polkadot {
 		pub mod asset_hub {
 			pub const PARA_ID: u32 = 1000;
-			pub const ASSET_PALLET_ID: u8 = 50;
+			pub const ASSET_PALLET_INDEX: u8 = 50;
 
-			pub const USDC_ASSET_ID: u128 = 1337;
-			pub const USDT_ASSET_ID: u128 = 1984;
-
-			parachain_asset_loc!(USDC);
-			parachain_asset_loc!(USDT);
+			parachain_asset_location!(USDC, 1337);
+			parachain_asset_location!(USDT, 1984);
 		}
 
 		pub mod equilibrium {
 			pub const PARA_ID: u32 = 2011;
-			pub const ASSET_PALLET_ID: u8 = 11;
+			pub const ASSET_PALLET_INDEX: u8 = 11;
 
-			pub const EQ_ASSET_ID: u128 = 25_969;
-			pub const EQD_ASSET_ID: u128 = 6_648_164;
-
-			parachain_asset_loc!(EQ);
-			parachain_asset_loc!(EQD);
+			parachain_asset_location!(EQ, 25_969);
+			parachain_asset_location!(EQD, 6_648_164);
 		}
 
 		pub mod moonbeam {
 			use xcm::latest::{
 				Junction::{AccountKey20, PalletInstance, Parachain},
 				Junctions::X3,
-				MultiLocation,
 			};
 
 			pub const PARA_ID: u32 = 2004;
-			pub const ASSET_PALLET_ID: u8 = 110;
+			pub const ASSET_PALLET_INDEX: u8 = 110;
 			// 0xD65A1872f2E2E26092A443CB86bb5d8572027E6E
 			// extracted using `H160::from_str("...")` then `as_bytes()`
 			pub const BRZ_ASSET_ACCOUNT_IN_BYTES: [u8; 20] = [
@@ -127,43 +140,72 @@ pub mod parachains {
 				126, 110,
 			];
 
-			pub fn BRZ_location() -> MultiLocation {
-				MultiLocation {
-					parents: 1,
-					interior: X3(
-						Parachain(PARA_ID),
-						PalletInstance(ASSET_PALLET_ID),
-						AccountKey20 { network: None, key: BRZ_ASSET_ACCOUNT_IN_BYTES },
-					),
-				}
-			}
+			parachain_asset_location!(
+				BRZ,
+				X3(
+					Parachain(PARA_ID),
+					PalletInstance(ASSET_PALLET_INDEX),
+					AccountKey20 { network: None, key: BRZ_ASSET_ACCOUNT_IN_BYTES }
+				)
+			);
 		}
 
 		pub mod polkadex {
-			use xcm::latest::{
-				Junction::Parachain,
-				Junctions::X1,
-				MultiLocation,
-			};
+			use xcm::latest::{Junction::Parachain, Junctions::X1};
 
 			pub const PARA_ID: u32 = 2040;
 
-			pub fn PDEX_location() -> MultiLocation {
-				MultiLocation {
-					parents: 1,
-					interior: X1(Parachain(PARA_ID))
-				}
-			}
+			parachain_asset_location!(PDEX, X1(Parachain(PARA_ID)));
 		}
 	}
 
 	pub mod kusama {
 		pub mod asset_hub {
 			pub const PARA_ID: u32 = 1000;
-			pub const ASSET_PALLET_ID: u8 = 50;
+			pub const ASSET_PALLET_INDEX: u8 = 50;
 
 			pub const USDC_ASSET_ID: u128 = 1337;
 			pub const USDT_ASSET_ID: u128 = 1984;
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::parachains::polkadot::*;
+	use xcm::{
+		latest::prelude::{AccountKey20, PalletInstance, Parachain},
+		prelude::GeneralIndex,
+	};
+
+	#[test]
+	fn test_BRZ() {
+		let brz_loc = moonbeam::BRZ_location();
+		let mut junctions = brz_loc.interior().clone().into_iter();
+
+		assert_eq!(junctions.next(), Some(Parachain(moonbeam::PARA_ID)));
+		assert_eq!(junctions.next(), Some(PalletInstance(moonbeam::ASSET_PALLET_INDEX)));
+		assert_eq!(
+			junctions.next(),
+			Some(AccountKey20 { network: None, key: moonbeam::BRZ_ASSET_ACCOUNT_IN_BYTES })
+		);
+		assert_eq!(junctions.next(), None);
+	}
+
+	#[test]
+	fn test_constants() {
+		let expected_EQ_value = 25_969;
+		assert_eq!(equilibrium::EQ_ASSET_ID, expected_EQ_value);
+
+		let eq_interior = equilibrium::EQ_location().interior;
+		let mut junctions = eq_interior.clone().into_iter();
+
+		assert_eq!(junctions.next(), Some(Parachain(equilibrium::PARA_ID)));
+		assert_eq!(junctions.next(), Some(PalletInstance(equilibrium::ASSET_PALLET_INDEX)));
+		assert_eq!(junctions.next(), Some(GeneralIndex(equilibrium::EQ_ASSET_ID)));
+		assert_eq!(junctions.next(), None);
+
+		let expected_USDT_value = 1984;
+		assert_eq!(asset_hub::USDT_ASSET_ID, expected_USDT_value);
 	}
 }

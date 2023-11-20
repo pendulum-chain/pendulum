@@ -26,36 +26,37 @@ pub mod xcm_assets {
 		};
 	}
 
-	create_id!(RELAY_DOT,		0);
-	create_id!(ASSETHUB_USDT,	1);
-	create_id!(ASSETHUB_USDC,	2);
-	create_id!(EQUILIBRIUM_EQD,	3);
-	create_id!(MOONBEAM_BRZ,	4);
-	create_id!(POLKADEX_PDEX,	5);
+	create_id!(RELAY_DOT, 0);
+	create_id!(ASSETHUB_USDT, 1);
+	create_id!(ASSETHUB_USDC, 2);
+	create_id!(EQUILIBRIUM_EQD, 3);
+	create_id!(MOONBEAM_BRZ, 4);
+	create_id!(POLKADEX_PDEX, 5);
 }
 
 /// Locations for native currency and all natively issued tokens
-pub mod locations {
-	use xcm::latest::{
-		Junctions::{X1,X2,X3,X4},
-		Junction::{GeneralIndex, PalletInstance, Parachain},
-		MultiLocation
-	};
-	use frame_support::traits::PalletInfoAccess;
+pub mod native_locations {
 	use crate::ParachainInfo;
+	use frame_support::traits::PalletInfoAccess;
+	use xcm::latest::{
+		Junction::{GeneralIndex, PalletInstance, Parachain},
+		Junctions::{X1, X2, X3, X4},
+		MultiLocation,
+	};
 
 	const TOKEN_IN_CURRENCY_ID: u128 = 4;
 
-	fn tokens_pallet_id() -> u8 { crate::Tokens::index() as u8 }
+	fn tokens_pallet_id() -> u8 {
+		crate::Tokens::index() as u8
+	}
 
-	fn balances_pallet_id() -> u8 { crate::Balances::index() as u8 }
+	fn balances_pallet_id() -> u8 {
+		crate::Balances::index() as u8
+	}
 
 	/// location of the native currency from the point of view of Pendulum parachain
 	pub fn native_location_local_pov() -> MultiLocation {
-		MultiLocation {
-			parents: 0,
-			interior: X1(PalletInstance(balances_pallet_id()))
-		}
+		MultiLocation { parents: 0, interior: X1(PalletInstance(balances_pallet_id())) }
 	}
 
 	/// location of the native currency from the point of view of other parachains(external)
@@ -64,7 +65,7 @@ pub mod locations {
 			parents: 1,
 			interior: X2(
 				Parachain(ParachainInfo::parachain_id().into()),
-				PalletInstance(balances_pallet_id())
+				PalletInstance(balances_pallet_id()),
 			),
 		}
 	}
@@ -77,7 +78,7 @@ pub mod locations {
 				PalletInstance(tokens_pallet_id()),
 				GeneralIndex(TOKEN_IN_CURRENCY_ID), // index of the Token variant of CurrencyId enum
 				GeneralIndex(super::tokens::EURC_TOKEN_INDEX as u128),
-			)
+			),
 		}
 	}
 
@@ -90,7 +91,7 @@ pub mod locations {
 				PalletInstance(tokens_pallet_id()),
 				GeneralIndex(TOKEN_IN_CURRENCY_ID),
 				GeneralIndex(super::tokens::EURC_TOKEN_INDEX as u128),
-			)
+			),
 		}
 	}
 }

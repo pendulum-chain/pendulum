@@ -85,7 +85,7 @@ pub use stellar_relay::traits::{FieldLength, Organization, Validator};
 
 const CONTRACTS_DEBUG_OUTPUT: bool = true;
 
-pub use module_oracle_rpc_runtime_api::BalanceWrapper;
+use module_oracle_rpc_runtime_api::BalanceWrapper;
 use oracle::dia::{DiaOracleAdapter, XCMCurrencyConversion};
 
 // Polkadot imports
@@ -374,7 +374,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::TokenAllowance(_) |
 			RuntimeCall::AssetRegistry(_) |
 			RuntimeCall::Proxy(_) |
-			RuntimeCall::RewardDistribution(_)=> true,
+			RuntimeCall::RewardDistribution(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -1033,7 +1033,8 @@ where
 
 				trace!(
 					"Calling balanceOf() for currency {:?} and account {:?}",
-					currency_id, account_id
+					currency_id,
+					account_id
 				);
 
 				ensure!(
@@ -1072,7 +1073,10 @@ where
 
 				trace!(
 					"Calling transfer() sending {:?} {:?}, from {:?} to {:?}",
-					amount, currency_id, caller, recipient
+					amount,
+					currency_id,
+					caller,
+					recipient
 				);
 
 				ensure!(
@@ -1102,7 +1106,9 @@ where
 
 				trace!(
 					"Calling allowance() for currency {:?}, owner {:?} and spender {:?}",
-					currency_id, owner, spender
+					currency_id,
+					owner,
+					spender
 				);
 
 				ensure!(
@@ -1140,7 +1146,10 @@ where
 
 				trace!(
 					"Calling approve() allowing spender {:?} to transfer {:?} {:?} from {:?}",
-					spender, amount, currency_id, caller
+					spender,
+					amount,
+					currency_id,
+					caller
 				);
 
 				ensure!(
@@ -1177,7 +1186,11 @@ where
 
 				trace!(
 					"Calling transfer_from() for caller {:?}, sending {:?} {:?}, from {:?} to {:?}",
-					caller, amount, currency_id, owner, recipient
+					caller,
+					amount,
+					currency_id,
+					owner,
+					recipient
 				);
 
 				ensure!(
@@ -1393,7 +1406,6 @@ parameter_types! {
 	pub const MaxRewardCurrencies: u32= 10;
 }
 
-
 impl staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type SignedInner = SignedInner;
@@ -1446,7 +1458,6 @@ impl stellar_relay::Config for Runtime {
 	type IsPublicNetwork = IsPublicNetwork;
 	type WeightInfo = stellar_relay::SubstrateWeight<Runtime>;
 }
-
 
 parameter_types! {
 	pub const FeePalletId: PalletId = PalletId(*b"mod/fees");
@@ -1535,7 +1546,6 @@ impl reward_distribution::Config for Runtime {
 	type FeePalletId = FeePalletId;
 }
 
-
 impl pooled_rewards::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type SignedFixedPoint = SignedFixedPoint;
@@ -1551,7 +1561,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			// Always allowed RuntimeCall::Utility no matter type.
 			// Only transactions allowed by Proxy.filter can be executed
 			_ if matches!(c, RuntimeCall::Utility(..)) => true,
-			ProxyType::Any => true
+			ProxyType::Any => true,
 		}
 	}
 

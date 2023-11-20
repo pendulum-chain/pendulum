@@ -168,7 +168,6 @@ impl From<dia::CoinInfo> for CoinInfo {
 	}
 }
 
-
 /// decode gets the slice from a Vec<u8> to decode it into its scale encoded type.
 pub fn decode<T: Decode>(input: Vec<u8>) -> Result<T, codec::Error> {
 	let mut input = input.as_slice();

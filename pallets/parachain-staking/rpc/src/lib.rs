@@ -6,21 +6,20 @@ use jsonrpsee::{
 	proc_macros::rpc,
 	types::error::{CallError, ErrorCode, ErrorObject},
 };
-use sp_api::{ProvideRuntimeApi};
-use sp_blockchain::HeaderBackend;
-use sp_runtime::{
-	traits::{Block as BlockT, MaybeDisplay, MaybeFromStr}
-	
-};
-use std::sync::Arc;
-pub use module_pallet_staking_rpc_runtime_api::{StakingRates, ParachainStakingApi as ParachainStakingRuntimeApi};
 use module_oracle_rpc_runtime_api::BalanceWrapper;
+use module_pallet_staking_rpc_runtime_api::{
+	ParachainStakingApi as ParachainStakingRuntimeApi, StakingRates,
+};
+use sp_api::ProvideRuntimeApi;
+use sp_blockchain::HeaderBackend;
+use sp_runtime::traits::{Block as BlockT, MaybeDisplay, MaybeFromStr};
+use std::sync::Arc;
 
 #[rpc(client, server)]
 pub trait ParachainStakingApi<BlockHash, AccountId, Balance>
-where 
-Balance: Codec + MaybeDisplay + MaybeFromStr,
-AccountId: Codec,
+where
+	Balance: Codec + MaybeDisplay + MaybeFromStr,
+	AccountId: Codec,
 {
 	#[method(name = "staking_getUnclaimedStakingRewards")]
 	fn get_unclaimed_staking_rewards(
@@ -30,11 +29,7 @@ AccountId: Codec,
 	) -> RpcResult<BalanceWrapper<Balance>>;
 
 	#[method(name = "staking_getStakingRates")]
-	fn get_staking_rates(
-		&self,
-		at: Option<BlockHash>,
-	) -> RpcResult<StakingRates>;
-
+	fn get_staking_rates(&self, at: Option<BlockHash>) -> RpcResult<StakingRates>;
 }
 
 fn internal_err<T: ToString>(message: T) -> JsonRpseeError {
@@ -58,16 +53,15 @@ impl<C, B> Staking<C, B> {
 	}
 }
 
-
 #[async_trait]
-impl<C, Block,  AccountId, Balance> ParachainStakingApiServer<<Block as BlockT>::Hash, AccountId, Balance>
-	for Staking<C, Block>
+impl<C, Block, AccountId, Balance>
+	ParachainStakingApiServer<<Block as BlockT>::Hash, AccountId, Balance> for Staking<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
 	C::Api: ParachainStakingRuntimeApi<Block, AccountId, Balance>,
 	Balance: Codec + MaybeDisplay + MaybeFromStr,
-	AccountId:  Codec,
+	AccountId: Codec,
 {
 	fn get_unclaimed_staking_rewards(
 		&self,
@@ -78,20 +72,14 @@ where
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
 		api.get_unclaimed_staking_rewards(at, account)
-				.map_err(|_e| internal_err(format!("Unable to get unclaimed staking rewards")))
-
+			.map_err(|_e| internal_err(format!("Unable to get unclaimed staking rewards")))
 	}
 
-	fn get_staking_rates(
-		&self,
-		at: Option<<Block as BlockT>::Hash>,
-	) -> RpcResult<StakingRates> {
+	fn get_staking_rates(&self, at: Option<<Block as BlockT>::Hash>) -> RpcResult<StakingRates> {
 		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
 		api.get_staking_rates(at)
 			.map_err(|_e| internal_err(format!("Unable to get staking rates")))
-
 	}
-
 }

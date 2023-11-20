@@ -65,9 +65,9 @@ use dia_oracle::DiaOracle;
 
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
+use module_oracle_rpc_runtime_api::BalanceWrapper;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{currency::MutationHooks, parameter_type_with_key};
-pub use module_oracle_rpc_runtime_api::BalanceWrapper;
 const CONTRACTS_DEBUG_OUTPUT: bool = true;
 
 #[cfg(any(feature = "std", test))]

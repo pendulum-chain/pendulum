@@ -16,9 +16,9 @@ use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApiServer};
 
 use module_issue_rpc::{Issue, IssueApiServer};
 use module_oracle_rpc::{Oracle, OracleApiServer};
+use module_pallet_staking_rpc::{ParachainStakingApiServer, Staking};
 use module_redeem_rpc::{Redeem, RedeemApiServer};
 use module_replace_rpc::{Replace, ReplaceApiServer};
-use module_pallet_staking_rpc::{Staking, ParachainStakingApiServer};
 use module_vault_registry_rpc::{VaultRegistry, VaultRegistryApiServer};
 use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 use substrate_frame_rpc_system::{System, SystemApiServer};

@@ -102,7 +102,6 @@ pub mod pallet {
 	pub(super) type AllowedCurrencies<T: Config> =
 		StorageMap<_, Blake2_128Concat, CurrencyOf<T>, ()>;
 
-
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub allowed_currencies: Vec<CurrencyOf<T>>,

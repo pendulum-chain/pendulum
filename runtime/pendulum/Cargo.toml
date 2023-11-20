@@ -24,7 +24,6 @@ smallvec = "1.9.0"
 
 # Local
 runtime-common = {path = "../common", default-features = false}
-module-pallet-staking-rpc-runtime-api = { path = "../../pallets/parachain-staking/rpc/runtime-api", default-features = false }
 
 # Spacewalk libraries
 spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e5c6acdfdc2482183ad064d1a27f75b61adf2546"}
@@ -38,6 +37,7 @@ frame-system-benchmarking = {git = "https://github.com/paritytech/substrate", de
 frame-system-rpc-runtime-api = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40"}
 frame-try-runtime = {git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.40"}
 module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e5c6acdfdc2482183ad064d1a27f75b61adf2546"}
+module-pallet-staking-rpc-runtime-api = { path = "../../pallets/parachain-staking/rpc/runtime-api", default-features = false }
 pallet-aura = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40"}
 pallet-authorship = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40"}
 pallet-balances = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40"}

@@ -113,7 +113,7 @@ mod zenlink_tests {
 	fn convert_zenlink_native_to_native_currency() {
 		// Native ZenlinkAsset index = 0x0000_0000_0000_0000
 		let fake_zenlink_asset =
-			ZenlinkAssetId { chain_id: 1000, asset_type: NATIVE, asset_index: 0 as u64 };
+			ZenlinkAssetId { chain_id: 1000, asset_type: NATIVE, asset_index: 0 };
 		let currency = zenlink_id_to_currency_id(fake_zenlink_asset, 1000);
 		assert_eq!(currency, Some(CurrencyId::Native));
 	}
@@ -152,21 +152,21 @@ mod zenlink_tests {
 		assert_eq!(currency, Some(get_stellar_asset(0)));
 
 		// Stellar USDC ZenlinkAsset index = 0x0000_0000_0000_0201
-		let usdc_index = 0x0201 as u64;
+		let usdc_index = 0x0201_u64;
 		let fake_zenlink_asset =
 			ZenlinkAssetId { chain_id: 1000, asset_type: LOCAL, asset_index: usdc_index };
 		let currency = zenlink_id_to_currency_id(fake_zenlink_asset, 1000);
 		assert_eq!(currency, Some(get_stellar_asset(1)));
 
 		// Stellar TZS ZenlinkAsset index = 0x0000_0000_0000_0202
-		let tzs_index = 0x0202 as u64;
+		let tzs_index = 0x0202_u64;
 		let fake_zenlink_asset =
 			ZenlinkAssetId { chain_id: 1000, asset_type: LOCAL, asset_index: tzs_index };
 		let currency = zenlink_id_to_currency_id(fake_zenlink_asset, 1000);
 		assert_eq!(currency, Some(get_stellar_asset(2)));
 
 		// Stellar BRL ZenlinkAsset index = 0x0000_0000_0000_0203
-		let brl_index = 0x0203 as u64;
+		let brl_index = 0x0203_u64;
 		let fake_zenlink_asset =
 			ZenlinkAssetId { chain_id: 1000, asset_type: LOCAL, asset_index: brl_index };
 		let currency = zenlink_id_to_currency_id(fake_zenlink_asset, 1000);
@@ -276,12 +276,12 @@ mod zenlink_tests {
 	fn convert_stellar_currency_to_stellar_zenlink() {
 		let stellar_assets_indexes: [u64; 4] = [0x0200u64, 0x0201u64, 0x0202u64, 0x0203u64];
 
-		for i in 0..=3usize {
-			let fake_currency_id = get_stellar_asset(i as u8);
+		for (idx,item) in stellar_assets_indexes.iter().enumerate() {
+			let fake_currency_id = get_stellar_asset(idx as u8);
 			let expected_zenlink_asset = ZenlinkAssetId {
 				chain_id: 1000,
 				asset_type: LOCAL,
-				asset_index: stellar_assets_indexes[i],
+				asset_index: *item,
 			};
 			assert_eq!(
 				currency_id_to_zenlink_id(fake_currency_id, 1000),

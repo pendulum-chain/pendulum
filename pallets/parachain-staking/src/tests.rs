@@ -1673,7 +1673,7 @@ fn should_not_reward_delegators_below_min_stake() {
 			let impossible_bond =
 				StakeOf::<Test> { owner: 4u64, amount: delegator_stake_below_min };
 			assert_eq!(state.delegators.try_insert(impossible_bond), Ok(true));
-			<crate::CandidatePool<Test>>::insert(&1u64, state);
+			<crate::CandidatePool<Test>>::insert(1u64, state);
 
 			let authors: Vec<Option<AccountId>> =
 				vec![Some(1u64), Some(1u64), Some(1u64), Some(1u64)];
@@ -2630,7 +2630,7 @@ fn adjust_reward_rates() {
 			let d_rewards_1 = Balances::free_balance(&2)
 				.saturating_sub(90_000_000 * DECIMALS)
 				.saturating_sub(d_rewards_0);
-			assert!(c_rewards_0 > c_rewards_1, "left {:?}, right {:?}", c_rewards_0, c_rewards_1);
+			assert!(c_rewards_0 > c_rewards_1, "left {c_rewards_0:?}, right {c_rewards_1:?}",);
 			assert!(d_rewards_0 > d_rewards_1);
 
 			// finish 2nd year
@@ -3610,14 +3610,14 @@ fn rewards_candidate_stake_more() {
 			assert!(StakePallet::reward_count(2).is_zero());
 			assert!(StakePallet::reward_count(3).is_zero());
 			(1..=3).for_each(|id| {
-				assert!(StakePallet::rewards(id).is_zero(), "acc_id {:?}", id);
+				assert!(StakePallet::rewards(id).is_zero(), "acc_id {id:?}");
 			});
 
 			// stake more to trigger reward incrementing
 			assert_ok!(StakePallet::candidate_stake_more(Origin::signed(1), DECIMALS));
 			(1..=3).for_each(|id| {
-				assert!(!StakePallet::rewards(id).is_zero(), "acc_id {:?}", id);
-				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {:?}", id);
+				assert!(!StakePallet::rewards(id).is_zero(), "acc_id {id:?}");
+				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {id:?}");
 			});
 		});
 }
@@ -3642,8 +3642,8 @@ fn rewards_candidate_stake_less() {
 			// stake less to trigger reward incrementing
 			assert_ok!(StakePallet::candidate_stake_less(Origin::signed(1), DECIMALS));
 			(1..=3).for_each(|id| {
-				assert!(!StakePallet::rewards(id).is_zero(), "acc_id {:?}", id);
-				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {:?}", id);
+				assert!(!StakePallet::rewards(id).is_zero(), "acc_id {id:?}");
+				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {id:?}");
 			});
 		});
 }
@@ -3695,8 +3695,8 @@ fn rewards_candidate_leave_network() {
 			// execute leave intent to trigger reward incrementing
 			assert_ok!(StakePallet::execute_leave_candidates(Origin::signed(1), 1));
 			(1..=3).for_each(|id| {
-				assert!(!StakePallet::rewards(id).is_zero(), "acc_id {:?}", id);
-				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {:?}", id);
+				assert!(!StakePallet::rewards(id).is_zero(), "acc_id {id:?}");
+				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {id:?}");
 			});
 		});
 }
@@ -3722,12 +3722,12 @@ fn rewards_force_remove_candidate() {
 			// removing triggers reward increment for collator 1 and delegators 4, 5
 			assert_ok!(StakePallet::force_remove_candidate(Origin::root(), 1));
 			(1..=3).for_each(|id| {
-				assert!(!StakePallet::rewards(id).is_zero(), "acc_id {:?}", id);
-				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {:?}", id);
+				assert!(!StakePallet::rewards(id).is_zero(), "acc_id {id:?}");
+				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {id:?}");
 			});
 			(4..=5).for_each(|id| {
-				assert!(StakePallet::rewards(id).is_zero(), "acc_id {:?}", id);
-				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {:?}", id);
+				assert!(StakePallet::rewards(id).is_zero(), "acc_id {id:?}");
+				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {id:?}");
 			});
 		});
 }
@@ -3762,7 +3762,7 @@ fn rewards_delegator_stake_more() {
 			assert!(StakePallet::reward_count(2).is_zero());
 			assert!(StakePallet::reward_count(3).is_zero());
 			(1..=3).for_each(|id| {
-				assert!(StakePallet::rewards(id).is_zero(), "acc_id {:?}", id);
+				assert!(StakePallet::rewards(id).is_zero(), "acc_id {id:?}");
 			});
 
 			// stake more to trigger reward incrementing just for 3
@@ -3793,7 +3793,7 @@ fn rewards_delegator_stake_less() {
 			assert!(StakePallet::reward_count(2).is_zero());
 			assert!(StakePallet::reward_count(3).is_zero());
 			(1..=3).for_each(|id| {
-				assert!(StakePallet::rewards(id).is_zero(), "acc_id {:?}", id);
+				assert!(StakePallet::rewards(id).is_zero(), "acc_id {id:?}");
 			});
 
 			// stake less to trigger reward incrementing just for 3
@@ -3859,7 +3859,7 @@ fn rewards_delegator_leaves() {
 			assert!(StakePallet::reward_count(2).is_zero());
 			assert!(StakePallet::reward_count(3).is_zero());
 			(1..=3).for_each(|id| {
-				assert!(StakePallet::rewards(id).is_zero(), "acc_id {:?}", id);
+				assert!(StakePallet::rewards(id).is_zero(), "acc_id {id:?}");
 			});
 
 			// only 3 should have non-zero rewards and their counter reset
@@ -3903,8 +3903,8 @@ fn rewards_set_inflation() {
 			));
 			// rewards should be set and counter reset
 			(1..=5).for_each(|id| {
-				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {:?}", id);
-				assert!(!StakePallet::rewards(id).is_zero(), "acc_id {:?}", id);
+				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {id:?}");
+				assert!(!StakePallet::rewards(id).is_zero(), "acc_id {id:?}");
 			});
 		});
 }
@@ -3931,14 +3931,14 @@ fn rewards_yearly_inflation_adjustment() {
 
 			// rewards should not be triggered before executing pending adjustment
 			(1..=5).for_each(|id| {
-				assert!(StakePallet::rewards(id).is_zero(), "acc_id {:?}", id);
+				assert!(StakePallet::rewards(id).is_zero(), "acc_id {id:?}");
 			});
 
 			// execute to trigger reward increment
 			assert_ok!(StakePallet::execute_scheduled_reward_change(Origin::signed(1)));
 			(1..=5).for_each(|id| {
-				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {:?}", id);
-				assert!(!StakePallet::rewards(id).is_zero(), "acc_id {:?}", id);
+				assert!(StakePallet::reward_count(id).is_zero(), "acc_id {id:?}");
+				assert!(!StakePallet::rewards(id).is_zero(), "acc_id {id:?}");
 			});
 		});
 }

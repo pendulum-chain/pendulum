@@ -1,6 +1,6 @@
 [package]
-authors = ["Interlay <contact@interlay.io>"]
-edition = "2021"
+authors = ["Pendulum"]
+edition = "2023"
 name = "module-pallet-staking-rpc"
 version = "1.0.0"
 

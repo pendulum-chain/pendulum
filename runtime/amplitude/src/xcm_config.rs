@@ -65,14 +65,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 		match id {
 			CurrencyId::XCM(index) => match index {
 				XCM_ASSET_RELAY_KSM => Some(MultiLocation::parent()),
-				XCM_ASSET_ASSETHUB_USDT => Some(MultiLocation::new(
-					1,
-					X3(
-						Parachain(asset_hub::PARA_ID),
-						PalletInstance(asset_hub::ASSET_PALLET_ID),
-						GeneralIndex(asset_hub::USDT_ASSET_ID),
-					),
-				)),
+				XCM_ASSET_ASSETHUB_USDT => Some(asset_hub::USDT_location()),
 				_ => None,
 			},
 			CurrencyId::Native => Some(MultiLocation::new(
@@ -89,15 +82,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 		match location {
 			MultiLocation { parents: 1, interior: Here } =>
 				Some(CurrencyId::XCM(XCM_ASSET_RELAY_KSM)),
-			MultiLocation {
-				parents: 1,
-				interior:
-					X3(
-						Parachain(asset_hub::PARA_ID),
-						PalletInstance(asset_hub::ASSET_PALLET_ID),
-						GeneralIndex(asset_hub::USDT_ASSET_ID),
-					),
-			} => Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
+			loc if loc == asset_hub::USDT_location() => Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
 			// Our native currency location without re-anchoring
 			MultiLocation { parents: 1, interior: X2(Parachain(id), PalletInstance(10)) }
 				if id == u32::from(ParachainInfo::parachain_id()) =>

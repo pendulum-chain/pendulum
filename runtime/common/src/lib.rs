@@ -160,12 +160,9 @@ pub mod parachains {
 	}
 
 	pub mod kusama {
+		/// values of kusama asset_hub is similar to polkadot's asset_hub
 		pub mod asset_hub {
-			pub const PARA_ID: u32 = 1000;
-			pub const ASSET_PALLET_INDEX: u8 = 50;
-
-			pub const USDC_ASSET_ID: u128 = 1337;
-			pub const USDT_ASSET_ID: u128 = 1984;
+			pub use super::super::polkadot::asset_hub::*;
 		}
 	}
 }

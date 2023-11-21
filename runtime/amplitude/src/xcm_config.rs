@@ -4,10 +4,10 @@ use super::{
 };
 use crate::{
 	assets::{
-		native_locations::{ native_location_external_pov },
-		xcm_assets
+		native_locations::{native_location_external_pov, native_location_local_pov},
+		xcm_assets,
 	},
-	ConstU32
+	ConstU32,
 };
 use core::marker::PhantomData;
 use frame_support::{
@@ -34,9 +34,6 @@ use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
-use crate::assets::native_locations::native_location_local_pov;
-
-
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -84,8 +81,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
 			loc if loc == MultiLocation::parent() => Some(xcm_assets::RELAY_KSM_id()),
-			loc if loc == asset_hub::USDT_location() =>
-				Some(xcm_assets::ASSETHUB_USDT_id()),
+			loc if loc == asset_hub::USDT_location() => Some(xcm_assets::ASSETHUB_USDT_id()),
 			// Our native currency location without re-anchoring
 			loc if loc == native_location_external_pov() => Some(CurrencyId::Native),
 			// Our native currency location with re-anchoring

@@ -9,7 +9,7 @@ fn discriminant(currency: &CurrencyId) -> u8 {
 		CurrencyId::XCM(_) => 1,
 		CurrencyId::Stellar(_) => 2,
 		CurrencyId::ZenlinkLPToken(_, _, _, _) => 3,
-		_=>0
+		_ => 0,
 	}
 }
 
@@ -98,7 +98,7 @@ pub fn currency_id_to_zenlink_id(
 				((token2_type as u64) << 40);
 			Ok(ZenlinkAssetId { chain_id: parachain_id, asset_type: LOCAL, asset_index: index })
 		},
-		CurrencyId::Token(_)=> Err(()),
+		CurrencyId::Token(_) => Err(()),
 	}
 }
 
@@ -235,7 +235,7 @@ mod zenlink_tests {
 		let currency: Result<CurrencyId, _> =
 			zenlink_id_to_currency_id(fake_zenlink_asset, 1000u32);
 		let expected_currency: CurrencyId = CurrencyId::ZenlinkLPToken(0, 2, 1, 2);
-		assert_eq!(currency, Ok(expected_currency));	
+		assert_eq!(currency, Ok(expected_currency));
 	}
 
 	#[test]

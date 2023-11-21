@@ -5,7 +5,6 @@ pub mod xcm_assets {
 	create_xcm_id!(RELAY, 0);
 }
 
-
 /// Locations for native currency and all natively issued tokens
 pub mod native_locations {
 	use crate::ParachainInfo;

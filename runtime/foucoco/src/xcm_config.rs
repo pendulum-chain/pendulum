@@ -2,6 +2,10 @@ use super::{
 	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
 	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
 };
+use crate::assets::{
+	native_locations::{native_location_external_pov, native_location_local_pov},
+	xcm_assets,
+};
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
@@ -26,8 +30,6 @@ use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
-use crate::assets::native_locations::{native_location_external_pov, native_location_local_pov};
-use crate::assets::xcm_assets;
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const RelayNetwork: NetworkId = NetworkId::Rococo;
@@ -74,12 +76,10 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 		match location {
 			loc if loc == MultiLocation::parent() => Some(xcm_assets::RELAY_id()),
 			// Our native currency location without re-anchoring
-			loc if loc == native_location_external_pov() =>
-				Some(CurrencyId::Native),
+			loc if loc == native_location_external_pov() => Some(CurrencyId::Native),
 			// Our native currency location with re-anchoring
 			// The XCM pallet will try to re-anchor the location before it reaches here
-			loc if loc == native_location_local_pov() =>
-				Some(CurrencyId::Native),
+			loc if loc == native_location_local_pov() => Some(CurrencyId::Native),
 			_ => None,
 		}
 	}

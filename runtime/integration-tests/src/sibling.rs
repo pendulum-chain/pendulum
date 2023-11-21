@@ -150,7 +150,8 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			MultiLocation { parents: 0, interior: X1(PalletInstance(10)) } =>
 				Some(CurrencyId::Native),
 			// Handles both Kusama and Polkadot asset hub
-			loc if loc == asset_hub::USDT_location() => Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
+			loc if loc == asset_hub::USDT_location() =>
+				Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
 			MultiLocation { parents: 1, interior: Here } =>
 				Some(CurrencyId::XCM(XCM_ASSET_RELAY_DOT)),
 			_ => None,

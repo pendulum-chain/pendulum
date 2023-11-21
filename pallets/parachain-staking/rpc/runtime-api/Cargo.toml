@@ -1,6 +1,6 @@
 [package]
 authors = ["Pendulum"]
-edition = "2023"
+edition = "2021"
 name = "module-pallet-staking-rpc-runtime-api"
 version = "1.0.0"
 

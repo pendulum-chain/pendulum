@@ -2,6 +2,10 @@ use super::{
 	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
 	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
 };
+use crate::assets::{
+	native_locations::{native_location_external_pov, native_location_local_pov},
+	xcm_assets,
+};
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
@@ -26,7 +30,6 @@ use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
-
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const RelayNetwork: NetworkId = NetworkId::Rococo;
@@ -58,15 +61,11 @@ pub struct CurrencyIdConvert;
 impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		match id {
-			// CurrencyId::KSM => Some(MultiLocation::parent()),
 			CurrencyId::XCM(f) => match f {
-				0 => Some(MultiLocation::parent()),
+				xcm_assets::RELAY => Some(MultiLocation::parent()),
 				_ => None,
 			},
-			CurrencyId::Native => Some(MultiLocation::new(
-				1,
-				X2(Parachain(ParachainInfo::parachain_id().into()), PalletInstance(10)),
-			)),
+			CurrencyId::Native => Some(native_location_external_pov()),
 			_ => None,
 		}
 	}
@@ -75,15 +74,12 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
-			MultiLocation { parents: 1, interior: Here } => Some(CurrencyId::XCM(0)),
+			loc if loc == MultiLocation::parent() => Some(xcm_assets::RELAY_id()),
 			// Our native currency location without re-anchoring
-			MultiLocation { parents: 1, interior: X2(Parachain(id), PalletInstance(10)) }
-				if id == u32::from(ParachainInfo::parachain_id()) =>
-				Some(CurrencyId::Native),
+			loc if loc == native_location_external_pov() => Some(CurrencyId::Native),
 			// Our native currency location with re-anchoring
 			// The XCM pallet will try to re-anchor the location before it reaches here
-			MultiLocation { parents: 0, interior: X1(PalletInstance(10)) } =>
-				Some(CurrencyId::Native),
+			loc if loc == native_location_local_pov() => Some(CurrencyId::Native),
 			_ => None,
 		}
 	}

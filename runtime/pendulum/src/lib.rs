@@ -6,9 +6,11 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+mod assets;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
+
 use crate::zenlink::*;
 use xcm::v3::MultiLocation;
 use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};

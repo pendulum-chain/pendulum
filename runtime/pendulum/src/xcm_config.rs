@@ -89,7 +89,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
-			MultiLocation { parents: 1, interior: Here } => Some(xcm_assets::RELAY_DOT_id()),
+			loc if loc == MultiLocation::parent() => Some(xcm_assets::RELAY_DOT_id()),
 
 			loc if loc == asset_hub::USDT_location() => Some(xcm_assets::ASSETHUB_USDT_id()),
 			loc if loc == asset_hub::USDC_location() => Some(xcm_assets::ASSETHUB_USDC_id()),

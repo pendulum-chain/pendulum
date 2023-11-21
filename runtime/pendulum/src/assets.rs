@@ -1,37 +1,14 @@
 #![allow(non_snake_case)]
 
 pub mod xcm_assets {
-	/// Creates a function and a const u8 representation of the value.
-	/// # Examples
-	/// `create_id!(PARACHAIN_ASSET,100);`
-	///
-	/// will look like:
-	/// ```
-	/// use spacewalk_primitives::CurrencyId;
-	///
-	/// pub const PARACHAIN_ASSET : u8 = 100;
-	/// pub fn PARACHAIN_ASSET_id() -> CurrencyId {
-	/// 	CurrencyId::XCM(PARACHAIN_ASSET)
-	/// }
-	/// ```
-	macro_rules! create_id {
-		($asset_name:ident, $u8_repr:literal) => {
-			paste::item! {
-				pub const $asset_name :u8 = $u8_repr;
+	use runtime_common::create_xcm_id;
 
-				pub fn [< $asset_name _id >]() -> crate::CurrencyId {
-					crate::CurrencyId::XCM($asset_name)
-				}
-			}
-		};
-	}
-
-	create_id!(RELAY_DOT, 0);
-	create_id!(ASSETHUB_USDT, 1);
-	create_id!(ASSETHUB_USDC, 2);
-	create_id!(EQUILIBRIUM_EQD, 3);
-	create_id!(MOONBEAM_BRZ, 4);
-	create_id!(POLKADEX_PDEX, 5);
+	create_xcm_id!(RELAY_DOT, 0);
+	create_xcm_id!(ASSETHUB_USDT, 1);
+	create_xcm_id!(ASSETHUB_USDC, 2);
+	create_xcm_id!(EQUILIBRIUM_EQD, 3);
+	create_xcm_id!(MOONBEAM_BRZ, 4);
+	create_xcm_id!(POLKADEX_PDEX, 5);
 }
 
 /// Locations for native currency and all natively issued tokens

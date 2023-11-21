@@ -69,7 +69,35 @@ pub mod opaque {
 	pub type BlockId = generic::BlockId<Block>;
 }
 
+#[macro_use]
 pub mod parachains {
+
+	/// Creates a function and a const u8 representation of the value.
+	/// # Examples
+	/// `create_xcm_id!(PARACHAIN_ASSET,100);`
+	///
+	/// will look like:
+	/// ```
+	/// use spacewalk_primitives::CurrencyId;
+	///
+	/// pub const PARACHAIN_ASSET : u8 = 100;
+	/// pub fn PARACHAIN_ASSET_id() -> CurrencyId {
+	/// 	CurrencyId::XCM(PARACHAIN_ASSET)
+	/// }
+	/// ```
+	#[macro_export]
+	macro_rules! create_xcm_id {
+		($asset_name:ident, $u8_repr:literal) => {
+			paste::item! {
+				pub const $asset_name :u8 = $u8_repr;
+
+				pub fn [< $asset_name _id >]() -> crate::CurrencyId {
+					spacewalk_primitives::CurrencyId::XCM($asset_name)
+				}
+			}
+		};
+	}
+
 	/// Creates a location for the given asset in this format: `fn <asset_name>_location() -> MultiLocation`
 	macro_rules! parachain_asset_location {
 		// Also declares a constant variable <asset_name>_ASSET_ID with <asset_value>.

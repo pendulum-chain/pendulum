@@ -62,10 +62,7 @@ pub struct CurrencyIdConvert;
 impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		match id {
-			CurrencyId::XCM(f) => match f {
-				xcm_assets::RELAY => Some(MultiLocation::parent()),
-				_ => None,
-			},
+			CurrencyId::XCM(xcm_assets::RELAY) => Some(MultiLocation::parent()),
 			CurrencyId::Native => Some(native_location_external_pov()),
 			_ => None,
 		}

@@ -173,12 +173,7 @@ fn should_approve_transfer() {
 
 		// Will not work yet
 		assert_err!(
-			TokenAllowance::approve(
-				RuntimeOrigin::signed(owner),
-				currency_id,
-				delegate,
-				amount
-			),
+			TokenAllowance::approve(RuntimeOrigin::signed(owner), currency_id, delegate, amount),
 			Error::<Test>::CurrencyNotLive
 		);
 

@@ -21,7 +21,7 @@ pub mod native_locations {
 		crate::Balances::index() as u8
 	}
 
-	/// location of the native currency from the point of view of Pendulum parachain
+	/// location of the native currency from the point of view of Amplitude parachain
 	pub fn native_location_local_pov() -> MultiLocation {
 		MultiLocation { parents: 0, interior: X1(PalletInstance(balances_pallet_id())) }
 	}

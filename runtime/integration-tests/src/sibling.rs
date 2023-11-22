@@ -601,8 +601,7 @@ impl WeightTrader for AllTokensAreCreatedEqualToWeight {
 
 	fn buy_weight(&mut self, weight: Weight, payment: Assets) -> Result<Assets, XcmError> {
 		let asset_id = payment.fungible.iter().next().expect("Payment must be something; qed").0;
-		let required =
-			MultiAsset { id: *asset_id, fun: Fungible(weight.ref_time() as u128) };
+		let required = MultiAsset { id: *asset_id, fun: Fungible(weight.ref_time() as u128) };
 
 		if let MultiAsset { fun: _, id: Concrete(ref id) } = &required {
 			self.0 = *id;

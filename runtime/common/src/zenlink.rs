@@ -101,7 +101,7 @@ pub fn currency_id_to_zenlink_id(
 				((token2_type as u64) << 40);
 			Some(ZenlinkAssetId { chain_id: parachain_id, asset_type: LOCAL, asset_index: index })
 		},
-		CurrencyId::Token(_)=> None,
+		CurrencyId::Token(_) => None,
 	}
 }
 
@@ -121,12 +121,11 @@ mod zenlink_tests {
 	#[test]
 	fn convert_zenlink_xcm_to_xcm_currency() {
 		// XCM(0) ZenlinkAsset index = 0x0000_0000_0000_0100
-		let index = 0x0100 as u64;
+		let index = 0x0100u64;
 		let fake_zenlink_asset =
 			ZenlinkAssetId { chain_id: 1000u32, asset_type: LOCAL, asset_index: index };
-		let currency: Result<CurrencyId, _> =
-			zenlink_id_to_currency_id(fake_zenlink_asset, 1000u32);
-		assert_eq!(currency, Ok(CurrencyId::XCM(0)));
+		let currency = zenlink_id_to_currency_id(fake_zenlink_asset, 1000u32);
+		assert_eq!(currency, Some(CurrencyId::XCM(0)));
 	}
 
 	fn get_stellar_asset(selector: u8) -> spacewalk_primitives::CurrencyId {
@@ -143,11 +142,8 @@ mod zenlink_tests {
 	fn convert_zenlink_stellar_to_stellar_currency() {
 		// Stellar Native ZenlinkAsset index = 0x0000_0000_0000_0200
 		let stellar_native_index = 0x0200_u64;
-		let fake_zenlink_asset = ZenlinkAssetId {
-			chain_id: 1000,
-			asset_type: LOCAL,
-			asset_index: stellar_native_index,
-		};
+		let fake_zenlink_asset =
+			ZenlinkAssetId { chain_id: 1000, asset_type: LOCAL, asset_index: stellar_native_index };
 		let currency = zenlink_id_to_currency_id(fake_zenlink_asset, 1000);
 		assert_eq!(currency, Some(get_stellar_asset(0)));
 
@@ -276,13 +272,10 @@ mod zenlink_tests {
 	fn convert_stellar_currency_to_stellar_zenlink() {
 		let stellar_assets_indexes: [u64; 4] = [0x0200u64, 0x0201u64, 0x0202u64, 0x0203u64];
 
-		for (idx,item) in stellar_assets_indexes.iter().enumerate() {
+		for (idx, item) in stellar_assets_indexes.iter().enumerate() {
 			let fake_currency_id = get_stellar_asset(idx as u8);
-			let expected_zenlink_asset = ZenlinkAssetId {
-				chain_id: 1000,
-				asset_type: LOCAL,
-				asset_index: *item,
-			};
+			let expected_zenlink_asset =
+				ZenlinkAssetId { chain_id: 1000, asset_type: LOCAL, asset_index: *item };
 			assert_eq!(
 				currency_id_to_zenlink_id(fake_currency_id, 1000),
 				Some(expected_zenlink_asset)

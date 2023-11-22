@@ -228,3 +228,59 @@ impl ChainExtensionArithmeticError {
         }
     }
 }
+
+impl TryFrom<u32> for ChainExtensionOutcome {
+    type Error = DispatchError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(ChainExtensionOutcome::Success),
+            1 => Ok(ChainExtensionOutcome::Other),
+            2 => Ok(ChainExtensionOutcome::CannotLookup),
+            3 => Ok(ChainExtensionOutcome::BadOrigin),
+            4 => Ok(ChainExtensionOutcome::Module),
+            5 => Ok(ChainExtensionOutcome::ConsumerRemaining),
+            6 => Ok(ChainExtensionOutcome::NoProviders),
+            7 => Ok(ChainExtensionOutcome::TooManyConsumers),
+            8 => Ok(ChainExtensionOutcome::DecodingError),
+            9 => Ok(ChainExtensionOutcome::WriteError),
+            10 => Ok(ChainExtensionOutcome::UnimplementedFuncId),
+			999 => Ok(ChainExtensionOutcome::Unknown),
+            1000..=1999 => Ok(ChainExtensionOutcome::Token(ChainExtensionTokenError::try_from(value - 1000)?)),
+            2000..=2999 => Ok(ChainExtensionOutcome::Arithmetic(ChainExtensionArithmeticError::try_from(value - 2000)?)),
+        	_ => Err(DispatchError::Other("Invalid ChainExtensionOutcome value")),
+        }
+    }
+}
+
+impl TryFrom<u32> for ChainExtensionTokenError {
+    type Error = DispatchError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(ChainExtensionTokenError::NoFunds),
+            1 => Ok(ChainExtensionTokenError::WouldDie),
+            2 => Ok(ChainExtensionTokenError::BelowMinimum),
+            3 => Ok(ChainExtensionTokenError::CannotCreate),
+            4 => Ok(ChainExtensionTokenError::UnknownAsset),
+            5 => Ok(ChainExtensionTokenError::Frozen),
+            6 => Ok(ChainExtensionTokenError::Unsupported),
+            999 => Ok(ChainExtensionTokenError::Unknown),
+            _ => Err(DispatchError::Other("Invalid ChainExtensionTokenError value")),
+        }
+    }
+}
+
+impl TryFrom<u32> for ChainExtensionArithmeticError {
+    type Error = DispatchError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(ChainExtensionArithmeticError::Underflow),
+            1 => Ok(ChainExtensionArithmeticError::Overflow),
+            2 => Ok(ChainExtensionArithmeticError::DivisionByZero),
+            999 => Ok(ChainExtensionArithmeticError::Unknown),
+            _ => Err(DispatchError::Other("Invalid ChainExtensionArithmeticError value")),
+        }
+    }
+}

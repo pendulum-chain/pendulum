@@ -15,10 +15,12 @@ pub type Blockchain = [u8; 32];
 /// Symbol is a type alias for easier readability of dia blockchain symbol communicated between contract and chain extension.
 pub type Symbol = [u8; 32];
 
-/// ChainExtensionError is almost the same as DispatchError, but with some modifications to make it compatible with being communicated between contract and chain extension. It implements the necessary From<T> conversions with DispatchError and other nested errors.
+/// ChainExtensionOutcome is almost the same as DispatchError, but with some modifications to make it compatible with being communicated between contract and chain extension. It implements the necessary From<T> conversions with DispatchError and other nested errors.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub enum ChainExtensionError {
+pub enum ChainExtensionOutcome {
+	/// Chain extension function executed correctly
+	Success,
 	/// Some error occurred.
 	Other,
 	/// Failed to lookup some data.
@@ -47,7 +49,7 @@ pub enum ChainExtensionError {
 	Unknown,
 }
 
-/// ChainExtensionTokenError is a nested error in ChainExtensionError, similar to DispatchError's TokenError.
+/// ChainExtensionTokenError is a nested error in ChainExtensionOutcome, similar to DispatchError's TokenError.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum ChainExtensionTokenError {
@@ -69,7 +71,7 @@ pub enum ChainExtensionTokenError {
 	Unknown,
 }
 
-/// ChainExtensionArithmeticError is a nested error in ChainExtensionError, similar to DispatchError's ArithmeticError.
+/// ChainExtensionArithmeticError is a nested error in ChainExtensionOutcome, similar to DispatchError's ArithmeticError.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum ChainExtensionArithmeticError {
@@ -83,22 +85,22 @@ pub enum ChainExtensionArithmeticError {
 	Unknown,
 }
 
-impl From<DispatchError> for ChainExtensionError {
+impl From<DispatchError> for ChainExtensionOutcome {
 	fn from(e: DispatchError) -> Self {
 		match e {
-			DispatchError::Other(_) => ChainExtensionError::Other,
-			DispatchError::CannotLookup => ChainExtensionError::CannotLookup,
-			DispatchError::BadOrigin => ChainExtensionError::BadOrigin,
-			DispatchError::Module(_) => ChainExtensionError::Module,
-			DispatchError::ConsumerRemaining => ChainExtensionError::ConsumerRemaining,
-			DispatchError::NoProviders => ChainExtensionError::NoProviders,
-			DispatchError::TooManyConsumers => ChainExtensionError::TooManyConsumers,
+			DispatchError::Other(_) => ChainExtensionOutcome::Other,
+			DispatchError::CannotLookup => ChainExtensionOutcome::CannotLookup,
+			DispatchError::BadOrigin => ChainExtensionOutcome::BadOrigin,
+			DispatchError::Module(_) => ChainExtensionOutcome::Module,
+			DispatchError::ConsumerRemaining => ChainExtensionOutcome::ConsumerRemaining,
+			DispatchError::NoProviders => ChainExtensionOutcome::NoProviders,
+			DispatchError::TooManyConsumers => ChainExtensionOutcome::TooManyConsumers,
 			DispatchError::Token(token_err) =>
-				ChainExtensionError::Token(ChainExtensionTokenError::from(token_err)),
-			DispatchError::Arithmetic(arithmetic_error) => ChainExtensionError::Arithmetic(
+				ChainExtensionOutcome::Token(ChainExtensionTokenError::from(token_err)),
+			DispatchError::Arithmetic(arithmetic_error) => ChainExtensionOutcome::Arithmetic(
 				ChainExtensionArithmeticError::from(arithmetic_error),
 			),
-			_ => ChainExtensionError::Unknown,
+			_ => ChainExtensionOutcome::Unknown,
 		}
 	}
 }
@@ -174,29 +176,29 @@ impl From<dia::CoinInfo> for CoinInfo {
 	}
 }
 
-
 /// decode gets the slice from a Vec<u8> to decode it into its scale encoded type.
 pub fn decode<T: Decode>(input: Vec<u8>) -> Result<T, codec::Error> {
 	let mut input = input.as_slice();
 	T::decode(&mut input)
 }
 
-impl ChainExtensionError {
+impl ChainExtensionOutcome {
     pub fn as_u32(&self) -> u32 {
         match self {
-            ChainExtensionError::Other => 1,
-            ChainExtensionError::CannotLookup => 2,
-            ChainExtensionError::BadOrigin => 3,
-            ChainExtensionError::Module => 4,
-            ChainExtensionError::ConsumerRemaining => 5,
-            ChainExtensionError::NoProviders => 6,
-            ChainExtensionError::TooManyConsumers => 7,
-			ChainExtensionError::DecodingError => 8,
-			ChainExtensionError::WriteError =>9,
-			ChainExtensionError::UnimplementedFuncId => 10,
-            ChainExtensionError::Token(token_error) => 1000 + token_error.as_u32(),
-            ChainExtensionError::Arithmetic(arithmetic_error) => 2000 + arithmetic_error.as_u32(),
-            ChainExtensionError::Unknown => 999,
+			ChainExtensionOutcome::Success => 0,
+            ChainExtensionOutcome::Other => 1,
+            ChainExtensionOutcome::CannotLookup => 2,
+            ChainExtensionOutcome::BadOrigin => 3,
+            ChainExtensionOutcome::Module => 4,
+            ChainExtensionOutcome::ConsumerRemaining => 5,
+            ChainExtensionOutcome::NoProviders => 6,
+            ChainExtensionOutcome::TooManyConsumers => 7,
+			ChainExtensionOutcome::DecodingError => 8,
+			ChainExtensionOutcome::WriteError =>9,
+			ChainExtensionOutcome::UnimplementedFuncId => 10,
+            ChainExtensionOutcome::Token(token_error) => 1000 + token_error.as_u32(),
+            ChainExtensionOutcome::Arithmetic(arithmetic_error) => 2000 + arithmetic_error.as_u32(),
+            ChainExtensionOutcome::Unknown => 999,
         }
     }
 }

@@ -129,14 +129,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 			CurrencyId::XCM(f) => match f {
 				XCM_ASSET_RELAY_DOT => Some(MultiLocation::parent()),
 				// Handles both Kusama and Polkadot asset hub
-				XCM_ASSET_ASSETHUB_USDT => Some(MultiLocation::new(
-					1,
-					X3(
-						Parachain(asset_hub::PARA_ID),
-						PalletInstance(asset_hub::ASSET_PALLET_ID),
-						GeneralIndex(asset_hub::USDT_ASSET_ID),
-					),
-				)),
+				XCM_ASSET_ASSETHUB_USDT => Some(asset_hub::USDT_location()),
 				_ => None,
 			},
 		}
@@ -157,15 +150,8 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			MultiLocation { parents: 0, interior: X1(PalletInstance(10)) } =>
 				Some(CurrencyId::Native),
 			// Handles both Kusama and Polkadot asset hub
-			MultiLocation {
-				parents: 1,
-				interior:
-					X3(
-						Parachain(asset_hub::PARA_ID),
-						PalletInstance(asset_hub::ASSET_PALLET_ID),
-						GeneralIndex(asset_hub::USDT_ASSET_ID),
-					),
-			} => Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
+			loc if loc == asset_hub::USDT_location() =>
+				Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
 			MultiLocation { parents: 1, interior: Here } =>
 				Some(CurrencyId::XCM(XCM_ASSET_RELAY_DOT)),
 			_ => None,

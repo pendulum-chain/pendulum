@@ -309,7 +309,7 @@ pub fn run() -> Result<()> {
 					&polkadot_cli,
 					config.tokio_handle.clone(),
 				)
-				.map_err(|err| format!("Relay chain argument error: {}", err))?;
+				.map_err(|err| format!("Relay chain argument error: {err}"))?;
 
 				cmd.run(config, polkadot_config)
 			})
@@ -354,13 +354,11 @@ pub fn run() -> Result<()> {
 				construct_sync_run!(|components, cli, cmd, config| cmd.run(components.client))
 			},
 			#[cfg(not(feature = "runtime-benchmarks"))]
-			BenchmarkCmd::Storage(_) =>
-				return Err(sc_cli::Error::Input(
-					"Compile with --features=runtime-benchmarks \
+			BenchmarkCmd::Storage(_) => Err(sc_cli::Error::Input(
+				"Compile with --features=runtime-benchmarks \
 						to enable storage benchmarks."
-						.into(),
-				)
-				.into()),
+					.into(),
+			)),
 			#[cfg(feature = "runtime-benchmarks")]
 			BenchmarkCmd::Storage(cmd) => {
 				construct_sync_run!(|components, cli, cmd, config| {
@@ -415,7 +413,7 @@ pub fn run() -> Result<()> {
 			runner.run_node_until_exit(|config| async move {
 				let hwbench = if !cli.no_hardware_benchmarks {
 					config.database.path().map(|database_path| {
-						let _ = std::fs::create_dir_all(&database_path);
+						let _ = std::fs::create_dir_all(database_path);
 						sc_sysinfo::gather_hwbench(Some(database_path))
 					})
 				} else {
@@ -424,7 +422,7 @@ pub fn run() -> Result<()> {
 
 				let para_id = chain_spec::ParachainExtensions::try_get(&*config.chain_spec)
 					.map(|e| e.para_id)
-					.ok_or_else(|| "Could not find parachain ID in chain-spec.")?;
+					.ok_or("Could not find parachain ID in chain-spec.")?;
 
 				let polkadot_cli = RelayChainCli::new(
 					&config,
@@ -438,24 +436,24 @@ pub fn run() -> Result<()> {
 
 				let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
 				let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
-					.map_err(|e| format!("{:?}", e))?;
+					.map_err(|e| format!("{e:?}"))?;
 				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
 				let tokio_handle = config.tokio_handle.clone();
 				let polkadot_config =
 					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, tokio_handle)
-						.map_err(|err| format!("Relay chain argument error: {}", err))?;
+						.map_err(|err| format!("Relay chain argument error: {err}"))?;
 
 				info!("Parachain id: {:?}", id);
 				info!("Parachain Account: {}", parachain_account);
 				info!("Parachain genesis state: {}", genesis_state);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
-				if !collator_options.relay_chain_rpc_urls.is_empty() && cli.relay_chain_args.len() > 0 {
+				if !collator_options.relay_chain_rpc_urls.is_empty() && cli.relay_chain_args.is_empty() {
 					trace!("Detected relay chain node arguments together with --relay-chain-rpc-url. This command starts a minimal Polkadot node that only uses a network-related subset of all relay chain CLI options.");
 				}
 
-				let res = match config.chain_spec.identify() {
+				match config.chain_spec.identify() {
 					ChainIdentity::Amplitude => {
 						sp_core::crypto::set_default_ss58_version(
 							amplitude_runtime::SS58Prefix::get().into(),
@@ -512,9 +510,7 @@ pub fn run() -> Result<()> {
 					.await
 					.map(|r| r.0)
 					.map_err(Into::into),
-				};
-
-				res
+				}
 			})
 		},
 	}

@@ -72,6 +72,7 @@ pub type LocationToAccountId = (
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(
 	Encode,
 	Decode,
@@ -174,7 +175,7 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 /// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location.clone())
+		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
 			.ok_or(location)
 	}
 }
@@ -600,11 +601,10 @@ impl WeightTrader for AllTokensAreCreatedEqualToWeight {
 
 	fn buy_weight(&mut self, weight: Weight, payment: Assets) -> Result<Assets, XcmError> {
 		let asset_id = payment.fungible.iter().next().expect("Payment must be something; qed").0;
-		let required =
-			MultiAsset { id: asset_id.clone(), fun: Fungible(weight.ref_time() as u128) };
+		let required = MultiAsset { id: *asset_id, fun: Fungible(weight.ref_time() as u128) };
 
 		if let MultiAsset { fun: _, id: Concrete(ref id) } = &required {
-			self.0 = id.clone();
+			self.0 = *id;
 		}
 
 		let unused = payment.checked_sub(required).map_err(|_| XcmError::TooExpensive)?;
@@ -615,7 +615,7 @@ impl WeightTrader for AllTokensAreCreatedEqualToWeight {
 		if weight.is_zero() {
 			None
 		} else {
-			Some((self.0.clone(), weight.ref_time() as u128).into())
+			Some((self.0, weight.ref_time() as u128).into())
 		}
 	}
 }

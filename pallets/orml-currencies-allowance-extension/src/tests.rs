@@ -152,9 +152,9 @@ fn should_return_allowance() {
 
 		// Approve the amount
 		assert_ok!(TokenAllowance::approve(
-			RuntimeOrigin::signed(owner.clone()),
+			RuntimeOrigin::signed(owner),
 			currency_id,
-			delegate.clone(),
+			delegate,
 			amount
 		));
 
@@ -173,12 +173,7 @@ fn should_approve_transfer() {
 
 		// Will not work yet
 		assert_err!(
-			TokenAllowance::approve(
-				RuntimeOrigin::signed(owner.clone()),
-				currency_id,
-				delegate.clone(),
-				amount
-			),
+			TokenAllowance::approve(RuntimeOrigin::signed(owner), currency_id, delegate, amount),
 			Error::<Test>::CurrencyNotLive
 		);
 
@@ -190,9 +185,9 @@ fn should_approve_transfer() {
 
 		// Should work now
 		assert_ok!(TokenAllowance::approve(
-			RuntimeOrigin::signed(owner.clone()),
+			RuntimeOrigin::signed(owner),
 			currency_id,
-			delegate.clone(),
+			delegate,
 			amount
 		));
 
@@ -226,18 +221,18 @@ fn should_transfer_from_for_approved_transfer() {
 
 		// Approve the amount
 		assert_ok!(TokenAllowance::approve(
-			RuntimeOrigin::signed(owner.clone()),
+			RuntimeOrigin::signed(owner),
 			currency_id,
-			delegate.clone(),
+			delegate,
 			amount
 		));
 
 		// Transfer all of the approved amount
 		assert_ok!(TokenAllowance::transfer_from(
-			RuntimeOrigin::signed(delegate.clone()),
+			RuntimeOrigin::signed(delegate),
 			currency_id,
-			owner.clone(),
-			destination.clone(),
+			owner,
+			destination,
 			amount
 		));
 
@@ -252,16 +247,16 @@ fn should_transfer_from_for_approved_transfer() {
 		let partial_amount = amount / 2;
 		assert_ok!(Tokens::deposit(currency_id, &owner, amount));
 		assert_ok!(TokenAllowance::approve(
-			RuntimeOrigin::signed(owner.clone()),
+			RuntimeOrigin::signed(owner),
 			currency_id,
-			delegate.clone(),
+			delegate,
 			amount
 		));
 		assert_ok!(TokenAllowance::transfer_from(
-			RuntimeOrigin::signed(delegate.clone()),
+			RuntimeOrigin::signed(delegate),
 			currency_id,
-			owner.clone(),
-			destination.clone(),
+			owner,
+			destination,
 			partial_amount
 		));
 
@@ -303,10 +298,10 @@ fn should_not_transfer_from_without_approved_transfer() {
 		// Try to `transfer_from` without having approved the transfer
 		assert_err!(
 			TokenAllowance::transfer_from(
-				RuntimeOrigin::signed(delegate.clone()),
+				RuntimeOrigin::signed(delegate),
 				currency_id,
-				owner.clone(),
-				destination.clone(),
+				owner,
+				destination,
 				amount
 			),
 			Error::<Test>::Unapproved
@@ -314,19 +309,19 @@ fn should_not_transfer_from_without_approved_transfer() {
 
 		// Approve the amount
 		assert_ok!(TokenAllowance::approve(
-			RuntimeOrigin::signed(owner.clone()),
+			RuntimeOrigin::signed(owner),
 			currency_id,
-			delegate.clone(),
+			delegate,
 			amount
 		));
 
 		// Try to `transfer_from` for amount larger than what was approved
 		assert_err!(
 			TokenAllowance::transfer_from(
-				RuntimeOrigin::signed(delegate.clone()),
+				RuntimeOrigin::signed(delegate),
 				currency_id,
-				owner.clone(),
-				destination.clone(),
+				owner,
+				destination,
 				amount + 1
 			),
 			Error::<Test>::Unapproved
@@ -366,9 +361,9 @@ fn should_transfer_from_while_keeping_infinite_allowance() {
 
 		// Approve infinite spending
 		assert_ok!(TokenAllowance::approve(
-			RuntimeOrigin::signed(owner.clone()),
+			RuntimeOrigin::signed(owner),
 			currency_id,
-			delegate.clone(),
+			delegate,
 			allowance_amount,
 		));
 
@@ -377,10 +372,10 @@ fn should_transfer_from_while_keeping_infinite_allowance() {
 
 		// Transfer the approved amount once
 		assert_ok!(TokenAllowance::transfer_from(
-			RuntimeOrigin::signed(delegate.clone()),
+			RuntimeOrigin::signed(delegate),
 			currency_id,
-			owner.clone(),
-			destination.clone(),
+			owner,
+			destination,
 			allowance_amount
 		));
 
@@ -394,7 +389,7 @@ fn should_transfer_from_while_keeping_infinite_allowance() {
 
 		// Move the tokens from `destination` to the `owner` again to avoid overflow but allow for testing the same amount again
 		assert_ok!(Tokens::transfer(
-			RuntimeOrigin::signed(destination.clone()),
+			RuntimeOrigin::signed(destination),
 			owner,
 			currency_id,
 			allowance_amount
@@ -402,10 +397,10 @@ fn should_transfer_from_while_keeping_infinite_allowance() {
 
 		// Transfer the approved amount again
 		assert_ok!(TokenAllowance::transfer_from(
-			RuntimeOrigin::signed(delegate.clone()),
+			RuntimeOrigin::signed(delegate),
 			currency_id,
-			owner.clone(),
-			destination.clone(),
+			owner,
+			destination,
 			allowance_amount
 		));
 
@@ -428,8 +423,8 @@ fn should_not_transfer_from_for_invalid_origin() {
 			TokenAllowance::transfer_from(
 				RuntimeOrigin::none(),
 				currency_id,
-				owner.clone(),
-				destination.clone(),
+				owner,
+				destination,
 				amount
 			),
 			BadOrigin
@@ -438,8 +433,8 @@ fn should_not_transfer_from_for_invalid_origin() {
 			TokenAllowance::transfer_from(
 				RuntimeOrigin::root(),
 				currency_id,
-				owner.clone(),
-				destination.clone(),
+				owner,
+				destination,
 				amount
 			),
 			BadOrigin
@@ -458,10 +453,10 @@ fn should_not_transfer_from_for_invalid_currency() {
 
 		assert_err!(
 			TokenAllowance::transfer_from(
-				RuntimeOrigin::signed(delegate.clone()),
+				RuntimeOrigin::signed(delegate),
 				currency_id,
-				owner.clone(),
-				destination.clone(),
+				owner,
+				destination,
 				amount
 			),
 			Error::<Test>::CurrencyNotLive

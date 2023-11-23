@@ -39,7 +39,7 @@ use sc_consensus::ImportQueue;
 
 use crate::rpc::{
 	create_full_amplitude, create_full_development, create_full_foucoco, create_full_pendulum,
-	FullDeps, RpcExtension,
+	FullDeps, ResultRpcExtension,
 };
 
 pub use amplitude_runtime::RuntimeApi as AmplitudeRuntimeApi;
@@ -61,6 +61,19 @@ type ParachainBlockImport<RuntimeApi, Executor> = TParachainBlockImport<
 	Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
 	TFullBackend<Block>,
 >;
+
+type FullPool<RuntimeApi, Executor> = sc_transaction_pool::FullPool<
+	Block,
+	TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+>;
+
+type DefaultImportQueue<RuntimeApi, Executor> = sc_consensus::DefaultImportQueue<
+	Block,
+	TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+>;
+
+type OtherComponents<RuntimeApi, Executor> =
+	(ParachainBlockImport<RuntimeApi, Executor>, Option<Telemetry>, Option<TelemetryWorkerHandle>);
 
 pub trait ParachainRuntimeApiImpl:
 	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
@@ -145,6 +158,7 @@ impl sc_executor::NativeExecutionDispatch for DevelopmentRuntimeExecutor {
 ///
 /// Use this macro if you don't actually need the full service, but just the builder in order to
 /// be able to perform chain operations.
+#[allow(clippy::type_complexity)]
 pub fn new_partial<RuntimeApi, Executor>(
 	config: &Configuration,
 ) -> Result<
@@ -152,19 +166,9 @@ pub fn new_partial<RuntimeApi, Executor>(
 		TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
 		TFullBackend<Block>,
 		(),
-		sc_consensus::DefaultImportQueue<
-			Block,
-			TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
-		>,
-		sc_transaction_pool::FullPool<
-			Block,
-			TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
-		>,
-		(
-			ParachainBlockImport<RuntimeApi, Executor>,
-			Option<Telemetry>,
-			Option<TelemetryWorkerHandle>,
-		),
+		DefaultImportQueue<RuntimeApi, Executor>,
+		FullPool<RuntimeApi, Executor>,
+		OtherComponents<RuntimeApi, Executor>,
 	>,
 	sc_service::Error,
 >
@@ -280,9 +284,7 @@ async fn start_node_impl<RuntimeApi, Executor>(
 	collator_options: CollatorOptions,
 	id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
-	create_full_rpc: fn(
-		deps: FullDepsOf<RuntimeApi, Executor>,
-	) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>,
+	create_full_rpc: fn(deps: FullDepsOf<RuntimeApi, Executor>) -> ResultRpcExtension,
 ) -> sc_service::error::Result<(
 	TaskManager,
 	Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
@@ -456,13 +458,7 @@ fn build_import_queue<RuntimeApi, Executor>(
 	config: &Configuration,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
-) -> Result<
-	sc_consensus::DefaultImportQueue<
-		Block,
-		TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
-	>,
-	sc_service::Error,
->
+) -> Result<DefaultImportQueue<RuntimeApi, Executor>, sc_service::Error>
 where
 	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>
 		+ Send
@@ -501,6 +497,7 @@ where
 	.map_err(Into::into)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_consensus<RuntimeApi, Executor>(
 	client: Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
 	block_import: ParachainBlockImport<RuntimeApi, Executor>,
@@ -508,12 +505,7 @@ fn build_consensus<RuntimeApi, Executor>(
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 	relay_chain_interface: Arc<dyn RelayChainInterface>,
-	transaction_pool: Arc<
-		sc_transaction_pool::FullPool<
-			Block,
-			TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
-		>,
-	>,
+	transaction_pool: Arc<FullPool<RuntimeApi, Executor>>,
 	sync_oracle: Arc<SyncingService<Block>>,
 	keystore: SyncCryptoStorePtr,
 	force_authoring: bool,

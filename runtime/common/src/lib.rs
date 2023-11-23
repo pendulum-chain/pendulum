@@ -82,7 +82,7 @@ pub mod parachains {
 	///
 	/// pub const PARACHAIN_ASSET : u8 = 100;
 	/// pub fn PARACHAIN_ASSET_id() -> CurrencyId {
-	/// 	CurrencyId::XCM(PARACHAIN_ASSET)
+	///    CurrencyId::XCM(PARACHAIN_ASSET)
 	/// }
 	/// ```
 	#[macro_export]
@@ -91,7 +91,7 @@ pub mod parachains {
 			paste::item! {
 				pub const $asset_name :u8 = $u8_repr;
 
-				pub fn [< $asset_name _id >]() -> crate::CurrencyId {
+				pub fn [< $asset_name _id >]() -> spacewalk_primitives::CurrencyId {
 					spacewalk_primitives::CurrencyId::XCM($asset_name)
 				}
 			}
@@ -206,13 +206,13 @@ mod tests {
 	#[test]
 	fn test_BRZ() {
 		let brz_loc = moonbeam::BRZ_location();
-		let mut junctions = brz_loc.interior().clone().into_iter();
+		let mut junctions = brz_loc.interior().into_iter();
 
-		assert_eq!(junctions.next(), Some(Parachain(moonbeam::PARA_ID)));
-		assert_eq!(junctions.next(), Some(PalletInstance(moonbeam::ASSET_PALLET_INDEX)));
+		assert_eq!(junctions.next(), Some(&Parachain(moonbeam::PARA_ID)));
+		assert_eq!(junctions.next(), Some(&PalletInstance(moonbeam::ASSET_PALLET_INDEX)));
 		assert_eq!(
 			junctions.next(),
-			Some(AccountKey20 { network: None, key: moonbeam::BRZ_ASSET_ACCOUNT_IN_BYTES })
+			Some(&AccountKey20 { network: None, key: moonbeam::BRZ_ASSET_ACCOUNT_IN_BYTES })
 		);
 		assert_eq!(junctions.next(), None);
 	}
@@ -223,7 +223,7 @@ mod tests {
 		assert_eq!(equilibrium::EQ_ASSET_ID, expected_EQ_value);
 
 		let eq_interior = equilibrium::EQ_location().interior;
-		let mut junctions = eq_interior.clone().into_iter();
+		let mut junctions = eq_interior.into_iter();
 
 		assert_eq!(junctions.next(), Some(Parachain(equilibrium::PARA_ID)));
 		assert_eq!(junctions.next(), Some(PalletInstance(equilibrium::ASSET_PALLET_INDEX)));

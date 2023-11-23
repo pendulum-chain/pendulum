@@ -15,10 +15,12 @@ pub type Blockchain = [u8; 32];
 /// Symbol is a type alias for easier readability of dia blockchain symbol communicated between contract and chain extension.
 pub type Symbol = [u8; 32];
 
-/// ChainExtensionError is almost the same as DispatchError, but with some modifications to make it compatible with being communicated between contract and chain extension. It implements the necessary From<T> conversions with DispatchError and other nested errors.
+/// ChainExtensionOutcome is almost the same as DispatchError, but with some modifications to make it compatible with being communicated between contract and chain extension. It implements the necessary From<T> conversions with DispatchError and other nested errors.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub enum ChainExtensionError {
+pub enum ChainExtensionOutcome {
+	/// Chain extension function executed correctly
+	Success,
 	/// Some error occurred.
 	Other,
 	/// Failed to lookup some data.
@@ -33,6 +35,12 @@ pub enum ChainExtensionError {
 	NoProviders,
 	/// There are too many consumers so the account cannot be created.
 	TooManyConsumers,
+	/// Cannot decode
+	DecodingError,
+	/// Failed to save some data
+	WriteError,
+	/// Function id not implemented for chain extension
+	UnimplementedFuncId,
 	/// An error to do with tokens.
 	Token(ChainExtensionTokenError),
 	/// An arithmetic error.
@@ -41,7 +49,7 @@ pub enum ChainExtensionError {
 	Unknown,
 }
 
-/// ChainExtensionTokenError is a nested error in ChainExtensionError, similar to DispatchError's TokenError.
+/// ChainExtensionTokenError is a nested error in ChainExtensionOutcome, similar to DispatchError's TokenError.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum ChainExtensionTokenError {
@@ -63,7 +71,7 @@ pub enum ChainExtensionTokenError {
 	Unknown,
 }
 
-/// ChainExtensionArithmeticError is a nested error in ChainExtensionError, similar to DispatchError's ArithmeticError.
+/// ChainExtensionArithmeticError is a nested error in ChainExtensionOutcome, similar to DispatchError's ArithmeticError.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Encode, Decode, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum ChainExtensionArithmeticError {
@@ -77,22 +85,22 @@ pub enum ChainExtensionArithmeticError {
 	Unknown,
 }
 
-impl From<DispatchError> for ChainExtensionError {
+impl From<DispatchError> for ChainExtensionOutcome {
 	fn from(e: DispatchError) -> Self {
 		match e {
-			DispatchError::Other(_) => ChainExtensionError::Other,
-			DispatchError::CannotLookup => ChainExtensionError::CannotLookup,
-			DispatchError::BadOrigin => ChainExtensionError::BadOrigin,
-			DispatchError::Module(_) => ChainExtensionError::Module,
-			DispatchError::ConsumerRemaining => ChainExtensionError::ConsumerRemaining,
-			DispatchError::NoProviders => ChainExtensionError::NoProviders,
-			DispatchError::TooManyConsumers => ChainExtensionError::TooManyConsumers,
+			DispatchError::Other(_) => ChainExtensionOutcome::Other,
+			DispatchError::CannotLookup => ChainExtensionOutcome::CannotLookup,
+			DispatchError::BadOrigin => ChainExtensionOutcome::BadOrigin,
+			DispatchError::Module(_) => ChainExtensionOutcome::Module,
+			DispatchError::ConsumerRemaining => ChainExtensionOutcome::ConsumerRemaining,
+			DispatchError::NoProviders => ChainExtensionOutcome::NoProviders,
+			DispatchError::TooManyConsumers => ChainExtensionOutcome::TooManyConsumers,
 			DispatchError::Token(token_err) =>
-				ChainExtensionError::Token(ChainExtensionTokenError::from(token_err)),
-			DispatchError::Arithmetic(arithmetic_error) => ChainExtensionError::Arithmetic(
+				ChainExtensionOutcome::Token(ChainExtensionTokenError::from(token_err)),
+			DispatchError::Arithmetic(arithmetic_error) => ChainExtensionOutcome::Arithmetic(
 				ChainExtensionArithmeticError::from(arithmetic_error),
 			),
-			_ => ChainExtensionError::Unknown,
+			_ => ChainExtensionOutcome::Unknown,
 		}
 	}
 }
@@ -172,4 +180,107 @@ impl From<dia::CoinInfo> for CoinInfo {
 pub fn decode<T: Decode>(input: Vec<u8>) -> Result<T, codec::Error> {
 	let mut input = input.as_slice();
 	T::decode(&mut input)
+}
+
+impl ChainExtensionOutcome {
+    pub fn as_u32(&self) -> u32 {
+        match self {
+			ChainExtensionOutcome::Success => 0,
+            ChainExtensionOutcome::Other => 1,
+            ChainExtensionOutcome::CannotLookup => 2,
+            ChainExtensionOutcome::BadOrigin => 3,
+            ChainExtensionOutcome::Module => 4,
+            ChainExtensionOutcome::ConsumerRemaining => 5,
+            ChainExtensionOutcome::NoProviders => 6,
+            ChainExtensionOutcome::TooManyConsumers => 7,
+			ChainExtensionOutcome::DecodingError => 8,
+			ChainExtensionOutcome::WriteError =>9,
+			ChainExtensionOutcome::UnimplementedFuncId => 10,
+            ChainExtensionOutcome::Token(token_error) => 1000 + token_error.as_u32(),
+            ChainExtensionOutcome::Arithmetic(arithmetic_error) => 2000 + arithmetic_error.as_u32(),
+            ChainExtensionOutcome::Unknown => 999,
+        }
+    }
+}
+
+impl ChainExtensionTokenError {
+    pub fn as_u32(&self) -> u32 {
+        match self {
+            ChainExtensionTokenError::NoFunds => 0,
+            ChainExtensionTokenError::WouldDie => 1,
+            ChainExtensionTokenError::BelowMinimum => 2,
+            ChainExtensionTokenError::CannotCreate => 3,
+            ChainExtensionTokenError::UnknownAsset => 4,
+            ChainExtensionTokenError::Frozen => 5,
+            ChainExtensionTokenError::Unsupported => 6,
+            ChainExtensionTokenError::Unknown => 999,
+        }
+    }
+}
+
+impl ChainExtensionArithmeticError {
+    pub fn as_u32(&self) -> u32 {
+        match self {
+            ChainExtensionArithmeticError::Underflow => 0,
+            ChainExtensionArithmeticError::Overflow => 1,
+            ChainExtensionArithmeticError::DivisionByZero => 2,
+            ChainExtensionArithmeticError::Unknown => 999,
+        }
+    }
+}
+
+impl TryFrom<u32> for ChainExtensionOutcome {
+    type Error = DispatchError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(ChainExtensionOutcome::Success),
+            1 => Ok(ChainExtensionOutcome::Other),
+            2 => Ok(ChainExtensionOutcome::CannotLookup),
+            3 => Ok(ChainExtensionOutcome::BadOrigin),
+            4 => Ok(ChainExtensionOutcome::Module),
+            5 => Ok(ChainExtensionOutcome::ConsumerRemaining),
+            6 => Ok(ChainExtensionOutcome::NoProviders),
+            7 => Ok(ChainExtensionOutcome::TooManyConsumers),
+            8 => Ok(ChainExtensionOutcome::DecodingError),
+            9 => Ok(ChainExtensionOutcome::WriteError),
+            10 => Ok(ChainExtensionOutcome::UnimplementedFuncId),
+			999 => Ok(ChainExtensionOutcome::Unknown),
+            1000..=1999 => Ok(ChainExtensionOutcome::Token(ChainExtensionTokenError::try_from(value - 1000)?)),
+            2000..=2999 => Ok(ChainExtensionOutcome::Arithmetic(ChainExtensionArithmeticError::try_from(value - 2000)?)),
+        	_ => Err(DispatchError::Other("Invalid ChainExtensionOutcome value")),
+        }
+    }
+}
+
+impl TryFrom<u32> for ChainExtensionTokenError {
+    type Error = DispatchError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(ChainExtensionTokenError::NoFunds),
+            1 => Ok(ChainExtensionTokenError::WouldDie),
+            2 => Ok(ChainExtensionTokenError::BelowMinimum),
+            3 => Ok(ChainExtensionTokenError::CannotCreate),
+            4 => Ok(ChainExtensionTokenError::UnknownAsset),
+            5 => Ok(ChainExtensionTokenError::Frozen),
+            6 => Ok(ChainExtensionTokenError::Unsupported),
+            999 => Ok(ChainExtensionTokenError::Unknown),
+            _ => Err(DispatchError::Other("Invalid ChainExtensionTokenError value")),
+        }
+    }
+}
+
+impl TryFrom<u32> for ChainExtensionArithmeticError {
+    type Error = DispatchError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(ChainExtensionArithmeticError::Underflow),
+            1 => Ok(ChainExtensionArithmeticError::Overflow),
+            2 => Ok(ChainExtensionArithmeticError::DivisionByZero),
+            999 => Ok(ChainExtensionArithmeticError::Unknown),
+            _ => Err(DispatchError::Other("Invalid ChainExtensionArithmeticError value")),
+        }
+    }
 }

@@ -118,7 +118,6 @@
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 pub mod default_weights;
-pub mod runtime_api;
 
 #[cfg(test)]
 pub(crate) mod mock;
@@ -135,6 +134,7 @@ mod types;
 use frame_support::pallet;
 
 pub use crate::{default_weights::WeightInfo, pallet::*};
+pub use module_pallet_staking_rpc_runtime_api::StakingRates;
 
 #[pallet]
 pub mod pallet {
@@ -2559,7 +2559,7 @@ pub mod pallet {
 		/// delegators.
 		///
 		/// At least used in Runtime API.
-		pub fn get_staking_rates() -> runtime_api::StakingRates {
+		pub fn get_staking_rates() -> StakingRates {
 			let total_issuance = T::Currency::total_issuance();
 			let total_stake = TotalCollatorStake::<T>::get();
 			let inflation_config = InflationConfig::<T>::get();
@@ -2576,7 +2576,7 @@ pub mod pallet {
 				delegator_staking_rate.deconstruct(),
 			) * inflation_config.delegator.reward_rate.annual;
 
-			runtime_api::StakingRates {
+			StakingRates {
 				collator_staking_rate,
 				collator_reward_rate,
 				delegator_staking_rate,

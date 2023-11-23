@@ -67,9 +67,9 @@ use dia_oracle::DiaOracle;
 
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
+use module_oracle_rpc_runtime_api::BalanceWrapper;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{currency::MutationHooks, parameter_type_with_key};
-
 const CONTRACTS_DEBUG_OUTPUT: bool = true;
 
 #[cfg(any(feature = "std", test))]
@@ -1202,15 +1202,17 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl parachain_staking::runtime_api::ParachainStakingApi<Block, AccountId, Balance> for Runtime {
-		fn get_unclaimed_staking_rewards(account: &AccountId) -> Balance {
-			ParachainStaking::get_unclaimed_staking_rewards(account)
+	impl module_pallet_staking_rpc_runtime_api::ParachainStakingApi<Block, AccountId, Balance> for Runtime {
+		fn get_unclaimed_staking_rewards(account: AccountId) -> BalanceWrapper<Balance> {
+			let result = ParachainStaking::get_unclaimed_staking_rewards(&account);
+			BalanceWrapper{amount:result}
 		}
 
-		fn get_staking_rates() -> parachain_staking::runtime_api::StakingRates {
+		fn get_staking_rates() -> module_pallet_staking_rpc_runtime_api::StakingRates {
 			ParachainStaking::get_staking_rates()
 		}
 	}
+
 
 	impl dia_oracle_runtime_api::DiaOracleApi<Block> for Runtime{
 		fn get_value(blockchain: frame_support::sp_std::vec::Vec<u8>, symbol: frame_support::sp_std::vec::Vec<u8>)-> Result<dia_oracle_runtime_api::PriceInfo, sp_runtime::DispatchError>{

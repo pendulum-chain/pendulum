@@ -71,6 +71,7 @@ use dia_oracle::DiaOracle;
 
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
+use module_oracle_rpc_runtime_api::BalanceWrapper;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{currency::MutationHooks, parameter_type_with_key};
 
@@ -79,7 +80,6 @@ pub use sp_runtime::BuildStorage;
 
 pub use dia_oracle::dia::AssetId;
 pub use issue::{Event as IssueEvent, IssueRequest};
-pub use module_oracle_rpc_runtime_api::BalanceWrapper;
 pub use nomination::Event as NominationEvent;
 use oracle::{
 	dia,
@@ -363,7 +363,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Farming(_) |
 			RuntimeCall::AssetRegistry(_) |
 			RuntimeCall::Proxy(_) |
-			RuntimeCall::RewardDistribution(_)=> true,
+			RuntimeCall::RewardDistribution(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -1086,7 +1086,6 @@ parameter_types! {
 	pub const MaxRewardCurrencies: u32= 10;
 }
 
-
 impl staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type SignedInner = SignedInner;
@@ -1139,7 +1138,6 @@ impl stellar_relay::Config for Runtime {
 	type IsPublicNetwork = IsPublicNetwork;
 	type WeightInfo = stellar_relay::SubstrateWeight<Runtime>;
 }
-
 
 parameter_types! {
 	pub const FeePalletId: PalletId = PalletId(*b"mod/fees");
@@ -1225,7 +1223,6 @@ impl reward_distribution::Config for Runtime {
 	type VaultStaking = VaultStaking;
 	type FeePalletId = FeePalletId;
 }
-
 
 impl pooled_rewards::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -1525,12 +1522,13 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl parachain_staking::runtime_api::ParachainStakingApi<Block, AccountId, Balance> for Runtime {
-		fn get_unclaimed_staking_rewards(account: &AccountId) -> Balance {
-			ParachainStaking::get_unclaimed_staking_rewards(account)
+	impl module_pallet_staking_rpc_runtime_api::ParachainStakingApi<Block, AccountId, Balance> for Runtime {
+		fn get_unclaimed_staking_rewards(account: AccountId) -> BalanceWrapper<Balance> {
+			let result = ParachainStaking::get_unclaimed_staking_rewards(&account);
+			BalanceWrapper{amount:result}
 		}
 
-		fn get_staking_rates() -> parachain_staking::runtime_api::StakingRates {
+		fn get_staking_rates() -> module_pallet_staking_rpc_runtime_api::StakingRates {
 			ParachainStaking::get_staking_rates()
 		}
 	}

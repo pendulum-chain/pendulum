@@ -1,0 +1,26 @@
+[package]
+authors = ["Pendulum"]
+edition = "2021"
+name = "module-pallet-staking-rpc-runtime-api"
+version = "1.0.0"
+
+[dependencies]
+frame-support = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40", default-features = false}
+sp-api = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40", default-features = false}
+sp-std = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40", default-features = false}
+parity-scale-codec = {version = "3.1.5", default-features = false, features = ["derive"]}
+scale-info = {version = "2.1.1", default-features = false, features = ["derive"]}
+module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "d05b0015d15ca39cc780889bcc095335e9862a36"}
+serde = {version = "1.0.142", default-features = false, optional = true, features = ["derive"]}
+
+[features]
+default = ["std"]
+std = [
+  "serde",
+  "frame-support/std",
+  "scale-info/std",
+  "sp-api/std",
+  "sp-std/std",
+  "parity-scale-codec/std",
+  "module-oracle-rpc-runtime-api/std",
+]

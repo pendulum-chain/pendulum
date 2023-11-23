@@ -20,7 +20,7 @@ module-oracle-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =
 module-redeem-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "d05b0015d15ca39cc780889bcc095335e9862a36"}
 module-replace-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "d05b0015d15ca39cc780889bcc095335e9862a36"}
 module-vault-registry-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "d05b0015d15ca39cc780889bcc095335e9862a36"}
-
+module-pallet-staking-rpc = { path = "../pallets/parachain-staking/rpc" }
 spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", rev = "d05b0015d15ca39cc780889bcc095335e9862a36"}
 
 # Local

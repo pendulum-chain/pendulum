@@ -48,6 +48,7 @@ module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/space
 module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "d05b0015d15ca39cc780889bcc095335e9862a36"}
 module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "d05b0015d15ca39cc780889bcc095335e9862a36"}
 module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "d05b0015d15ca39cc780889bcc095335e9862a36"}
+module-pallet-staking-rpc-runtime-api = { path = "../../pallets/parachain-staking/rpc/runtime-api", default-features = false }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.40" }
@@ -230,6 +231,7 @@ std = [
     "module-redeem-rpc-runtime-api/std",
     "module-replace-rpc-runtime-api/std",
     "module-vault-registry-rpc-runtime-api/std",
+    "module-pallet-staking-rpc-runtime-api/std", 
     "spacewalk-primitives/std",
     "orml-currencies-allowance-extension/std",
 

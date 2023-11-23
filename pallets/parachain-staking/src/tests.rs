@@ -28,14 +28,13 @@ use pallet_authorship::EventHandler;
 use pallet_balances::{BalanceLock, Error as BalancesError, Reasons};
 use pallet_session::{SessionManager, ShouldEndSession};
 use sp_runtime::{traits::Zero, Perbill, Permill, Perquintill, SaturatedConversion};
-
+use module_pallet_staking_rpc_runtime_api::StakingRates;
 use crate::{
 	mock::{
 		almost_equal, events, last_event, roll_to, roll_to_claim_rewards, AccountId, Balance,
 		Balances, BlockNumber, ExtBuilder, RuntimeEvent as MetaEvent, RuntimeOrigin as Origin,
 		Session, StakePallet, System, Test, BLOCKS_PER_ROUND, DECIMALS, TREASURY_ACC,
 	},
-	runtime_api::StakingRates,
 	set::OrderedSet,
 	types::{
 		BalanceOf, Candidate, CandidateStatus, DelegationCounter, Delegator, RoundInfo, Stake,

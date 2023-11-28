@@ -1577,7 +1577,7 @@ impl oracle::Config for Runtime {
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
-	type DataFeedProvider = DataFeederBenchmark<
+	type DataFeeder = DataFeederBenchmark<
 		oracle::OracleKey,
 		oracle::TimestampedValue<UnsignedFixedPoint, Moment>,
 		Self::AccountId,

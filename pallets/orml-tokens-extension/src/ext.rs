@@ -7,16 +7,27 @@ pub(crate) mod orml_tokens {
 	use crate::BalanceOf;
     use crate::CurrencyOf;
     use crate::AccountIdOf;
-    use frame_system::Origin as RuntimeOrigin;
-    use sp_runtime::traits::Zero;
     use orml_traits::MultiCurrency;
 
 	pub fn mint<T: crate::Config>(
-		amount: BalanceOf<T>,
+        currency_id: CurrencyOf<T>,
         who:  &AccountIdOf<T>,
-        currency_id: CurrencyOf<T>
+		amount: BalanceOf<T>,
 	) -> Result<(), DispatchError> {
         <orml_currencies::Pallet<T> as MultiCurrency<AccountIdOf<T>>>::deposit(
+            currency_id,
+            who,
+            amount,
+        )?;
+        Ok(())
+	}
+
+    pub fn burn<T: crate::Config>(
+		currency_id: CurrencyOf<T>,
+        who:  &AccountIdOf<T>,
+		amount: BalanceOf<T>,
+	) -> Result<(), DispatchError> {
+        <orml_currencies::Pallet<T> as MultiCurrency<AccountIdOf<T>>>::withdraw(
             currency_id,
             who,
             amount,

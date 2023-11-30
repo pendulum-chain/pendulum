@@ -1,7 +1,6 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
-
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, PartialEq)]
 pub struct CurrencyDetails<AccountId> {
 	/// Can change `owner`, `issuer` and `admin` accounts.

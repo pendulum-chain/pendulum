@@ -1,4 +1,4 @@
-use crate::{self as orml_tokens_extension, Config};
+use crate::{self as orml_tokens_extension, Config, CurrencyIdCheck};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU32, Everything},
@@ -10,7 +10,6 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use crate::CurrencyIdCheck;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -139,11 +138,11 @@ impl orml_currencies::Config for Test {
 pub struct CurrencyIdCheckerImpl;
 
 impl CurrencyIdCheck for CurrencyIdCheckerImpl {
-    type CurrencyId = CurrencyId;
+	type CurrencyId = CurrencyId;
 
-    fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
-        matches!(currency_id, CurrencyId::Token(_))
-    }
+	fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
+		matches!(currency_id, CurrencyId::Token(_))
+	}
 }
 
 impl Config for Test {

@@ -10,8 +10,9 @@ pub use default_weights::{SubstrateWeight, WeightInfo};
 use mocktopus::macros::mockable;
 use orml_traits::MultiCurrency;
 use sp_std::{convert::TryInto, prelude::*, vec};
-// #[cfg(feature = "runtime-benchmarks")]
-// mod benchmarking;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 
 #[cfg(test)]
 mod mock;
@@ -44,6 +45,8 @@ pub mod pallet {
 	use frame_support::{pallet_prelude::*, transactional};
 	use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 
+	
+
 	/// ## Configuration
 	/// The pallet's configuration trait.
 	#[pallet::config]
@@ -56,6 +59,10 @@ pub mod pallet {
 
 		/// Type that allows for checking if currency type is ownable by users
 		type CurrencyIdChecker: CurrencyIdCheck<CurrencyId = CurrencyOf<Self>>;
+
+		/// TODO needs to be conditionaly compiled
+		#[cfg(feature = "runtime-benchmarks")]
+		type GetTestCurrency: Get<CurrencyOf<Self>>;
 	}
 
 	#[pallet::storage]
@@ -72,7 +79,7 @@ pub mod pallet {
 		Burned { currency_id: CurrencyOf<T>, from: AccountIdOf<T>, amount: BalanceOf<T> },
 		/// Some currency class was created.
 		Created { currency_id: CurrencyOf<T>, creator: AccountIdOf<T>, owner: AccountIdOf<T> },
-		/// Some currency was destroyed (it's data)
+		/// Some currency data was destroyed
 		Destroyed { currency_id: CurrencyOf<T> },
 		/// Change of ownership
 		OwnershipChanged { currency_id: CurrencyOf<T>, new_owner: AccountIdOf<T> },
@@ -104,11 +111,11 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Create and take ownership of one CurrencyId
 		///
-		/// The creator will have full control of this pallelt's functions
+		/// The creator will have full control of this pallet's functions
 		/// regarding this currency
 		///
 		/// Parameters:
-		/// - `currency_id`: Currency id of the Token(u64) variant.
+		/// - `currency_id`: Allowed Currency Id.
 		///
 		/// Emits `Created` event when successful.
 		///

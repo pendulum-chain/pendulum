@@ -3042,6 +3042,7 @@ dependencies = [
  "orml-currencies",
  "orml-currencies-allowance-extension",
  "orml-tokens",
+ "orml-tokens-extension",
  "orml-traits",
  "orml-xtokens",
  "pallet-aura",

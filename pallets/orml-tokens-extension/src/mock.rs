@@ -70,7 +70,7 @@ impl frame_system::Config for Test {
 pub type TestEvent = RuntimeEvent;
 
 parameter_types! {
-	pub const GetCollateralCurrencyId: CurrencyId = CurrencyId::XCM(1);
+	pub const GetTestTokenCurrency: CurrencyId = CurrencyId::Token(1);
 	pub const MaxLocks: u32 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
 }
@@ -138,17 +138,21 @@ impl orml_currencies::Config for Test {
 pub struct CurrencyIdCheckerImpl;
 
 impl CurrencyIdCheck for CurrencyIdCheckerImpl {
-	type CurrencyId = CurrencyId;
+    type CurrencyId = CurrencyId;
 
-	fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
-		matches!(currency_id, CurrencyId::Token(_))
-	}
+    // We allow any currency of the `Token` variant to facilitate testing
+    fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
+        matches!(currency_id, CurrencyId::Token(_))
+    }
 }
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = crate::SubstrateWeight<Test>;
 	type CurrencyIdChecker = CurrencyIdCheckerImpl;
+
+	#[cfg(feature = "runtime-benchmarks")]
+	type GetTestCurrency = GetTestTokenCurrency;
 }
 
 pub struct ExtBuilder;

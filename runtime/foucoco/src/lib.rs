@@ -932,6 +932,35 @@ impl pallet_vesting::Config for Runtime {
 	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
+struct CurrencyIdCheckerImpl;
+impl orml_tokens_extension::CurrencyIdCheck for CurrencyIdCheckerImpl {
+    type CurrencyId = CurrencyId;
+
+    // We allow any currency of the `Token` variant to facilitate testing
+    fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
+        matches!(currency_id, CurrencyId::Token(_))
+    }
+}
+
+parameter_types! {
+	pub const GetTestTokenCurrency: CurrencyId = CurrencyId::Token(1);
+}
+
+impl orml_tokens_extension::Config for Runtime{
+	/// The overarching event type.
+	type RuntimeEvent = RuntimeEvent;
+
+	/// Weight information for the extrinsics in this module.
+	type WeightInfo = orml_tokens_extension::default_weights::SubstrateWeight<Runtime>;
+
+	/// Type that allows for checking if currency type is ownable by users
+	type CurrencyIdChecker = CurrencyIdCheckerImpl;
+
+	/// TODO needs to be conditionaly compiled
+	#[cfg(feature = "runtime-benchmarks")]
+	type GetTestCurrency = GetTestTokenCurrency;
+
+}
 
 const fn deposit(items: u32, bytes: u32) -> Balance {
 	(items as Balance * UNIT + (bytes as Balance) * (5 * MILLIUNIT / 100)) / 10
@@ -1544,7 +1573,7 @@ impl oracle::Config for Runtime {
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
-	type DataFeedProvider = DataFeederBenchmark<
+	type DataFeeder = DataFeederBenchmark<
 		oracle::OracleKey,
 		oracle::TimestampedValue<UnsignedFixedPoint, Moment>,
 		Self::AccountId,
@@ -1795,7 +1824,7 @@ construct_runtime!(
 		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,
 
 		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
-
+		OrmlExtension: orml_tokens_extension::{Pallet, Storage, Call, Event<T>} = 81,
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 
 		// Asset Metadata
@@ -1831,6 +1860,7 @@ mod benches {
 		[pallet_xcm, PolkadotXcm]
 
 		[orml_currencies_allowance_extension, TokenAllowance]
+		[orml_tokens_extension, OrmlExtension]
 	);
 }
 

@@ -1406,6 +1406,7 @@ mod benches {
 		// Other
 		[orml_asset_registry, runtime_common::benchmarking::orml_asset_registry::Pallet::<Runtime>]
 		[pallet_xcm, PolkadotXcm]
+		[orml_tokens_extension, TokenExtension]
 	);
 }
 

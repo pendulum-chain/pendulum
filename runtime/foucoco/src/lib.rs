@@ -253,10 +253,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("foucoco"),
 	impl_name: create_runtime_str!("foucoco"),
 	authoring_version: 1,
-	spec_version: 3,
+	spec_version: 4,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 3,
+	transaction_version: 4,
 	state_version: 1,
 };
 
@@ -1084,7 +1084,7 @@ where
 
 	let currency_id: CurrencyId = match chain_ext::decode(input) {
 		Ok(value) => value,
-		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())), 
+		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
 	};
 
 	trace!("Calling totalSupply() for currency {:?}", currency_id);
@@ -1125,7 +1125,7 @@ where
 	let input = env.read(256)?;
 	let (currency_id, account_id): (CurrencyId, T::AccountId) = match chain_ext::decode(input) {
 		Ok(value) => value,
-		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())), 
+		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
 	};
 
 	trace!(
@@ -1179,7 +1179,7 @@ where
 		BalanceOfForChainExt<T>,
 	) = match chain_ext::decode(input) {
 		Ok(value) => value,
-		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())), 
+		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
 	};
 
 	trace!(
@@ -1221,7 +1221,7 @@ where
 	let input = env.read(256)?;
 	let (currency_id, owner, spender): (CurrencyId, T::AccountId, T::AccountId) = match chain_ext::decode(input) {
 		Ok(value) => value,
-		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())), 
+		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
 	};
 
 	trace!(
@@ -1274,7 +1274,7 @@ where
 		BalanceOfForChainExt<T>,
 	) =  match chain_ext::decode(input) {
 		Ok(value) => value,
-		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())), 
+		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
 	};
 
 	trace!(
@@ -1325,7 +1325,7 @@ where
 		BalanceOfForChainExt<T>,
 	) = match chain_ext::decode(input) {
 		Ok(value) => value,
-		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())), 
+		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
 	};
 
 	trace!(

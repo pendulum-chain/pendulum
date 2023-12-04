@@ -64,6 +64,9 @@ use runtime_common::{
 	Index, PoolId, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
+#[cfg(feature = "runtime-benchmarks")]
+use runtime_common::mock_data_feeder::MockDataFeeder;
+
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 
 use dia_oracle::DiaOracle;
@@ -375,7 +378,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::TokenAllowance(_) |
 			RuntimeCall::AssetRegistry(_) |
 			RuntimeCall::Proxy(_) |
-			RuntimeCall::RewardDistribution(_) => true,
+			RuntimeCall::OrmlExtension(_) |
+			RuntimeCall::RewardDistribution(_) => true
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -932,11 +936,11 @@ impl pallet_vesting::Config for Runtime {
 	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
-struct CurrencyIdCheckerImpl;
+pub struct CurrencyIdCheckerImpl;
 impl orml_tokens_extension::CurrencyIdCheck for CurrencyIdCheckerImpl {
     type CurrencyId = CurrencyId;
 
-    // We allow any currency of the `Token` variant to facilitate testing
+    // We allow any currency of the `Token` variant
     fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
         matches!(currency_id, CurrencyId::Token(_))
     }
@@ -956,7 +960,7 @@ impl orml_tokens_extension::Config for Runtime{
 	/// Type that allows for checking if currency type is ownable by users
 	type CurrencyIdChecker = CurrencyIdCheckerImpl;
 
-	/// TODO needs to be conditionaly compiled
+	/// Needs to be conditionaly compiled
 	#[cfg(feature = "runtime-benchmarks")]
 	type GetTestCurrency = GetTestTokenCurrency;
 
@@ -1551,33 +1555,13 @@ impl staking::Config for Runtime {
 	type MaxRewardCurrencies = MaxRewardCurrencies;
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-pub struct DataFeederBenchmark<K, V, A>(PhantomData<(K, V, A)>);
-
-#[cfg(feature = "runtime-benchmarks")]
-impl<K, V, A> orml_traits::DataFeeder<K, V, A> for DataFeederBenchmark<K, V, A> {
-	fn feed_value(_who: A, _key: K, _value: V) -> DispatchResult {
-		Ok(())
-	}
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-impl<K, V, A> orml_traits::DataProvider<K, V> for DataFeederBenchmark<K, V, A> {
-	fn get(_key: &K) -> Option<V> {
-		None
-	}
-}
 
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
-	type DataFeeder = DataFeederBenchmark<
-		oracle::OracleKey,
-		oracle::TimestampedValue<UnsignedFixedPoint, Moment>,
-		Self::AccountId,
-	>;
+	type DataFeeder = MockDataFeeder<Self::AccountId,Moment>;
 }
 
 parameter_types! {

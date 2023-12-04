@@ -8,8 +8,8 @@ use sp_runtime::traits::Get;
 use frame_support::assert_ok;
 use orml_traits::arithmetic::{One, Zero};
 
-const AMOUNT_MINTED: u64= 0;
-
+const AMOUNT_MINTED: u32= 10000;
+const AMOUNT_BURNED: u32= 5000;
 
 benchmarks!{
     
@@ -27,9 +27,9 @@ benchmarks!{
         let destination = account::<AccountIdOf<T>>("Receiver", 0, 0);
         assert_ok!(TokenExtension::<T>::create(origin.clone().into(), token_currency_id));
 
-	}: _(origin,token_currency_id, destination.clone(),BalanceOf::<T>::one())
+	}: _(origin,token_currency_id, destination.clone(),AMOUNT_MINTED.into())
     verify {
-        assert_eq!(<orml_currencies::Pallet<T> as MultiCurrency<AccountIdOf<T>>>::total_balance(token_currency_id, &destination), BalanceOf::<T>::one());
+        assert_eq!(<orml_currencies::Pallet<T> as MultiCurrency<AccountIdOf<T>>>::total_balance(token_currency_id, &destination), AMOUNT_MINTED.into());
 	}
 
     burn {  
@@ -37,11 +37,11 @@ benchmarks!{
         let origin = RawOrigin::Signed(account("Tester", 0, 0));
         let destination = account::<AccountIdOf<T>>("Receiver", 0, 0);
         assert_ok!(TokenExtension::<T>::create(origin.clone().into(), token_currency_id));
-        assert_ok!(TokenExtension::<T>::mint(origin.clone().into(), token_currency_id, destination.clone(), BalanceOf::<T>::one()));
+        assert_ok!(TokenExtension::<T>::mint(origin.clone().into(), token_currency_id, destination.clone(), AMOUNT_MINTED.into()));
 
-	}: _(origin,token_currency_id, destination.clone(),BalanceOf::<T>::one())
+	}: _(origin,token_currency_id, destination.clone(),AMOUNT_BURNED.into())
     verify {
-        assert_eq!(<orml_currencies::Pallet<T> as MultiCurrency<AccountIdOf<T>>>::total_balance(token_currency_id, &destination), BalanceOf::<T>::zero());
+        assert_eq!(<orml_currencies::Pallet<T> as MultiCurrency<AccountIdOf<T>>>::total_balance(token_currency_id, &destination), (AMOUNT_MINTED-AMOUNT_BURNED).into());
 	}
 
     transfer_ownership {  

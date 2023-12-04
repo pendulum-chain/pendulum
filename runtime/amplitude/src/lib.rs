@@ -98,6 +98,9 @@ use spacewalk_primitives::{
 	UnsignedInner,
 };
 
+#[cfg(feature = "runtime-benchmarks")]
+use runtime_common::mock_data_feeder::MockDataFeeder;
+
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 // XCM Imports
@@ -1117,11 +1120,7 @@ impl oracle::Config for Runtime {
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
-	type DataFeedProvider = DataFeederBenchmark<
-		oracle::OracleKey,
-		oracle::TimestampedValue<UnsignedFixedPoint, Moment>,
-		Self::AccountId,
-	>;
+	type DataFeeder = MockDataFeeder<Self::AccountId,Moment>;
 }
 
 parameter_types! {
@@ -1406,7 +1405,6 @@ mod benches {
 		// Other
 		[orml_asset_registry, runtime_common::benchmarking::orml_asset_registry::Pallet::<Runtime>]
 		[pallet_xcm, PolkadotXcm]
-		[orml_tokens_extension, TokenExtension]
 	);
 }
 

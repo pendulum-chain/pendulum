@@ -5,7 +5,6 @@
 #[cfg(test)]
 extern crate mocktopus;
 
-pub use default_weights::{SubstrateWeight, WeightInfo};
 #[cfg(test)]
 use mocktopus::macros::mockable;
 use orml_traits::MultiCurrency;
@@ -45,7 +44,7 @@ pub mod pallet {
 	use frame_support::{pallet_prelude::*, transactional};
 	use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 
-	
+	pub use default_weights::WeightInfo;
 
 	/// ## Configuration
 	/// The pallet's configuration trait.
@@ -121,7 +120,7 @@ pub mod pallet {
 		///
 		/// Weight: `O(1)`
 		#[pallet::call_index(0)]
-		#[pallet::weight(1)]
+		#[pallet::weight(<T as Config>::WeightInfo::create())]
 		#[transactional]
 		pub fn create(origin: OriginFor<T>, currency_id: CurrencyOf<T>) -> DispatchResult {
 			let creator = ensure_signed(origin)?;
@@ -162,7 +161,7 @@ pub mod pallet {
 		///
 		/// Weight: `O(1)`
 		#[pallet::call_index(1)]
-		#[pallet::weight(1)]
+		#[pallet::weight(<T as Config>::WeightInfo::mint())]
 		#[transactional]
 		pub fn mint(
 			origin: OriginFor<T>,
@@ -196,7 +195,7 @@ pub mod pallet {
 		///
 		/// Weight: `O(1)`
 		#[pallet::call_index(2)]
-		#[pallet::weight(1)]
+		#[pallet::weight(<T as Config>::WeightInfo::burn())]
 		#[transactional]
 		pub fn burn(
 			origin: OriginFor<T>,
@@ -229,7 +228,7 @@ pub mod pallet {
 		///
 		/// Weight: `O(1)`
 		#[pallet::call_index(3)]
-		#[pallet::weight(1)]
+		#[pallet::weight(<T as Config>::WeightInfo::transfer_ownership())]
 		#[transactional]
 		pub fn transfer_ownership(
 			origin: OriginFor<T>,
@@ -266,7 +265,7 @@ pub mod pallet {
 		///
 		/// Weight: `O(1)`
 		#[pallet::call_index(4)]
-		#[pallet::weight(1)]
+		#[pallet::weight(<T as Config>::WeightInfo::set_managers())]
 		#[transactional]
 		pub fn set_managers(
 			origin: OriginFor<T>,

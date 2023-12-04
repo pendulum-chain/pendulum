@@ -64,8 +64,8 @@ use runtime_common::{
 	Index, PoolId, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
-#[cfg(feature = "runtime-benchmarks")]
-use runtime_common::mock_data_feeder::MockDataFeeder;
+#[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
+use oracle::testing_utils::MockDataFeeder;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 

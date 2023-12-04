@@ -98,8 +98,8 @@ use spacewalk_primitives::{
 	UnsignedInner,
 };
 
-#[cfg(feature = "runtime-benchmarks")]
-use runtime_common::mock_data_feeder::MockDataFeeder;
+#[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
+use oracle::testing_utils::MockDataFeeder;
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 

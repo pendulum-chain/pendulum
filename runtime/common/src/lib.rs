@@ -13,8 +13,6 @@ pub mod stellar;
 pub mod zenlink;
 
 #[cfg(feature = "runtime-benchmarks")]
-pub mod mock_data_feeder;
-#[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.

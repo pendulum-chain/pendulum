@@ -10064,7 +10064,6 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "oracle",
  "orml-asset-registry",
  "orml-traits",
  "parity-scale-codec",
@@ -10075,7 +10074,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "spacewalk-primitives 1.0.0",
- "spin 0.9.8",
  "xcm",
  "zenlink-protocol",
 ]

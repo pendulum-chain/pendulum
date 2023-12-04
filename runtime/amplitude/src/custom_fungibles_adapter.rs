@@ -12,8 +12,8 @@ pub struct CustomFungiblesAdapter<
 	AccountId,
 	CheckAsset,
 	CheckingAccount,
-    DefinedDoStuff
->(PhantomData<(Assets, Matcher, AccountIdConverter, AccountId, CheckAsset, CheckingAccount, DefinedDoStuff)>);
+    Handle
+>(PhantomData<(Assets, Matcher, AccountIdConverter, AccountId, CheckAsset, CheckingAccount, Handle)>);
 impl<
 		Assets: fungibles::Mutate<AccountId> + fungibles::Transfer<AccountId>,
 		Matcher: MatchesFungibles<Assets::AssetId, Assets::Balance>,
@@ -21,9 +21,9 @@ impl<
 		AccountId: Clone, // can't get away without it since Currency is generic over it.
 		CheckAsset: AssetChecking<Assets::AssetId>,
 		CheckingAccount: Get<AccountId>,
-        DefinedDoStuff: HandleSpecialLocation,
+        Handle: HandleSpecialLocation,
 	> TransactAsset
-	for CustomFungiblesAdapter<Assets, Matcher, AccountIdConverter, AccountId, CheckAsset, CheckingAccount, DefinedDoStuff>
+	for CustomFungiblesAdapter<Assets, Matcher, AccountIdConverter, AccountId, CheckAsset, CheckingAccount, Handle>
 {
 	fn can_check_in(origin: &MultiLocation, what: &MultiAsset, context: &XcmContext) -> XcmResult {
 		FungiblesMutateAdapter::<
@@ -70,15 +70,19 @@ impl<
 	}
 
 	fn deposit_asset(what: &MultiAsset, who: &MultiLocation, context: &XcmContext) -> XcmResult {
-        DefinedDoStuff::do_stuff();
-        FungiblesMutateAdapter::<
-			Assets,
-			Matcher,
-			AccountIdConverter,
-			AccountId,
-			CheckAsset,
-			CheckingAccount,
-		>::deposit_asset(what, who, context)
+        if !Handle::handle(who, context){
+			
+			return FungiblesMutateAdapter::<
+				Assets,
+				Matcher,
+				AccountIdConverter,
+				AccountId,
+				CheckAsset,
+				CheckingAccount,
+			>::deposit_asset(what, who, context)
+		};
+		return Ok(());
+        
 	}
 
 	fn withdraw_asset(
@@ -110,5 +114,7 @@ impl<
 
 pub trait HandleSpecialLocation{
 
-    fn handle(what: &MultiAsset, context: Option<&XcmContext> ) -> Result<(),()>;
+    fn handle(what: &MultiLocation, context: &XcmContext ) -> bool;
 }
+
+

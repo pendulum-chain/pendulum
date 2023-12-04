@@ -1,11 +1,12 @@
 use super::{
 	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
+	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue, System
 };
 use crate::{
 	assets::{
 		native_locations::{native_location_external_pov, native_location_local_pov},
 		xcm_assets,
+		intercept_multilocation
 	},
 	ConstU32,
 };
@@ -23,7 +24,7 @@ use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use runtime_common::parachains::kusama::asset_hub;
 use sp_runtime::traits::Convert;
-use xcm::latest::{prelude::*, Weight as XCMWeight};
+use xcm::latest::{Instruction::{self, *},prelude::*, Weight as XCMWeight};
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
 	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
@@ -35,6 +36,14 @@ use xcm_executor::{
 	XcmExecutor,
 };
 
+use frame_support::{
+	ensure,
+	traits::{Contains, Get},
+};
+
+use cumulus_primitives_core::XcmContext;
+use crate::custom_fungibles_adapter::{CustomFungiblesAdapter, HandleSpecialLocation};
+use crate::custom_barrier::AllowUnpaidExecutionFromCustom;
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
@@ -78,6 +87,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 }
 
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
+	
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
 			loc if loc == MultiLocation::parent() => Some(xcm_assets::RELAY_KSM_id()),
@@ -128,22 +138,42 @@ where
 		false
 	}
 }
+use xcm::latest::{
+	Junction, Junction::{Parachain, PalletInstance,GeneralKey}, Junctions::{X2,X3}, MultiLocation,
+};
+use frame_support::{
+	log::{error, info}};
+pub struct MultiLocationFilter;
 
-/// Means for transacting the fungibles assets of ths parachain.
-pub type FungiblesTransactor = FungiblesAdapter<
-	// Use this fungibles implementation
-	Tokens,
-	// This means that this adapter should handle any token that `CurrencyIdConvert` can convert
-	// to `CurrencyId`, the `CurrencyId` type of `Tokens`, the fungibles implementation it uses.
-	ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
-	// Convert an XCM MultiLocation into a local account id
-	LocationToAccountId,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly)
-	AccountId,
-	// We dont allow teleports.
-	NoChecking,
-	// The account to use for tracking teleports.
-	CheckingAccount,
+impl HandleSpecialLocation for MultiLocationFilter{
+		fn handle(who: &MultiLocation, _ctx: &XcmContext) -> bool {
+			info!("from {:?}", _ctx.origin);
+			info!("Handling deposit multiloc {:?}", &who);
+			if let Some((len, data)) = intercept_multilocation::matches_general_structure(who) {
+				System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0u8;32])), data.to_vec());
+				return true
+			}
+			return false
+		}
+
+	
+}
+
+pub type FungiblesTransactor = CustomFungiblesAdapter<
+// Use this fungibles implementation
+Tokens,
+// This means that this adapter should handle any token that `CurrencyIdConvert` can convert
+// to `CurrencyId`, the `CurrencyId` type of `Tokens`, the fungibles implementation it uses.
+ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
+// Convert an XCM MultiLocation into a local account id
+LocationToAccountId,
+// Our chain's account ID type (we can't get away without mentioning it explicitly)
+AccountId,
+// We dont allow teleports.
+NoChecking,
+// The account to use for tracking teleports.
+CheckingAccount,
+MultiLocationFilter
 >;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
@@ -246,7 +276,9 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
-pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
+
+
+pub type Barrier = AllowUnpaidExecutionFromCustom<Everything>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {

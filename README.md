@@ -183,7 +183,7 @@ runtimes `lib.rs` file.
 
 ```shell
 ./target/production/pendulum-node benchmark pallet \
-    --chain foucoco \
+    --cha foucoco \
     --execution=wasm \
     --wasm-execution=compiled \
     --pallet "*" \

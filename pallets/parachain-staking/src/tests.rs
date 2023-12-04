@@ -20,15 +20,6 @@
 
 use std::{convert::TryInto, iter};
 
-use frame_support::{
-	assert_noop, assert_ok, storage::bounded_btree_map::BoundedBTreeMap,
-	traits::EstimateNextSessionRotation, BoundedVec,
-};
-use pallet_authorship::EventHandler;
-use pallet_balances::{BalanceLock, Error as BalancesError, Reasons};
-use pallet_session::{SessionManager, ShouldEndSession};
-use sp_runtime::{traits::Zero, Perbill, Permill, Perquintill, SaturatedConversion};
-use module_pallet_staking_rpc_runtime_api::StakingRates;
 use crate::{
 	mock::{
 		almost_equal, events, last_event, roll_to, roll_to_claim_rewards, AccountId, Balance,
@@ -42,6 +33,15 @@ use crate::{
 	},
 	CandidatePool, Config, Error, Event, InflationInfo, RewardRate, StakingInfo, STAKING_ID,
 };
+use frame_support::{
+	assert_noop, assert_ok, storage::bounded_btree_map::BoundedBTreeMap,
+	traits::EstimateNextSessionRotation, BoundedVec,
+};
+use module_pallet_staking_rpc_runtime_api::StakingRates;
+use pallet_authorship::EventHandler;
+use pallet_balances::{BalanceLock, Error as BalancesError, Reasons};
+use pallet_session::{SessionManager, ShouldEndSession};
+use sp_runtime::{traits::Zero, Perbill, Permill, Perquintill, SaturatedConversion};
 
 #[test]
 fn should_select_collators_genesis_session() {

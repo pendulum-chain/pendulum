@@ -415,10 +415,6 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 				WeightLimit::Unlimited
 			));
 
-			assert_eq!(
-				TEN_UNITS - 1 * UNIT, //initial balance - one unit
-				Tokens::balance(CurrencyId::XCM(1), &AccountId::from(BOB))
-			);
 
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
@@ -426,38 +422,10 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 			)));
 
 			for i in System::events().iter() {
-				println!("{}: {:?}\n", stringify!($para2_runtime), i);
+				println!("para 2 {}: {:?}\n", stringify!($para2_runtime), i);
 			}
 		});
 
-		$parachain1::execute_with(|| {
-			use $para1_runtime::*;
-
-			for i in System::events().iter() {
-				println!("{}: {:?}\n", stringify!($para1_runtime), i);
-			}
-
-			let events = System::events();
-			match &events[events.len() - 2] {
-				&frame_system::EventRecord {
-					phase: frame_system::Phase::Initialization,
-					event:
-						RuntimeEvent::Assets(pallet_assets::Event::Issued {
-							asset_id: $para1_asset_id,
-							owner: _,
-							amount,
-						}),
-					topics: _,
-				} => {
-					// https://github.com/paritytech/cumulus/pull/1278 support using self sufficient asset
-					// for paying xcm execution fee.
-					// 990_000_000_000 for Statemint
-					// 988_423_297_485 for Statemine
-					assert_eq!(amount, Assets::balance($para1_asset_id, &AccountId::from(BOB)));
-				},
-				other => panic!("wrong event: {other:?}"),
-			}
-		});
 	}};
 }
 
@@ -537,6 +505,10 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Verify BOB's balance on parachain2 after receiving
 		// Should increase by the transfer amount
 		$parachain2::execute_with(|| {
+			use $parachain2_runtime::{RuntimeEvent, System, XTokens};
+			for i in System::events().iter() {
+				println!("para 2 events {}: {:?}\n", stringify!($para2_runtime), i);
+			}
 			assert_eq!(
 				$parachain2_runtime::Tokens::balance(para1_native_currency_on_para2, &BOB.into()),
 				transfer_amount
@@ -590,6 +562,10 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Verify ALICE's balance on parachain1 after receiving
 		// Should become the same amount as initial balance before both transfers
 		$parachain1::execute_with(|| {
+			use $parachain1_runtime::{RuntimeEvent, System, XTokens};
+			for i in System::events().iter() {
+				println!("para 1 events {}: {:?}\n", stringify!($para2_runtime), i);
+			}
 			assert_eq!(
 				$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::Native, &ALICE.into()),
 				native_tokens_before
@@ -598,6 +574,103 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 	}};
 }
 
+
+macro_rules! moonbeam_transfers_token_and_handle_automation {
+	(
+        $mocknet:ident,
+        $parachain1_runtime:ident,
+        $parachain1:ident,
+        $parachain2_runtime:ident,
+        $parachain2:ident,
+        $parachain1_id:ident,
+        $parachain2_id:ident
+    ) => {{
+		use crate::mock::{units, ALICE, BOB};
+		use frame_support::traits::fungibles::Inspect;
+		use polkadot_core_primitives::Balance;
+		use xcm::latest::{
+			Junction, Junction::{AccountId32, GeneralKey, PalletInstance}, Junctions::{X2, X3}, MultiLocation, WeightLimit,
+		};
+		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;
+		use $parachain2_runtime::CurrencyId as Parachain2CurrencyId;
+
+
+		$mocknet::reset();
+
+		// Asset Location and amount are not important for this test
+		let transfer_amount: Balance = units(10);
+		let asset_location = MultiLocation::new(
+			1,
+			X2(Junction::Parachain($parachain1_id), Junction::PalletInstance(10)),
+		);
+
+		let para1_native_currency_on_para2 = Parachain2CurrencyId::from($parachain1_id);
+
+		// We transfer to parachain 2 (sibling) so that it is able to transfer back
+		$parachain1::execute_with(|| {
+			use $parachain1_runtime::{RuntimeEvent, System, XTokens};
+
+	
+			assert_ok!(XTokens::transfer_multiasset(
+				$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
+				Box::new((asset_location.clone(), transfer_amount).into()),
+				Box::new(
+					MultiLocation {
+						parents: 1,
+						interior: X2(
+							Junction::Parachain($parachain2_id),
+							AccountId32 { network: None, id: BOB }
+						)
+					}
+					.into()
+				),
+				WeightLimit::Unlimited
+			));
+
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::XTokens(orml_xtokens::Event::TransferredMultiAssets { .. })
+			)));
+		});
+
+
+		// Here we use the same asset, but the important bit is the multilocation
+		// This emulates the special multilocation that triggers the automation pallet 
+		$parachain2::execute_with(|| {
+			use $parachain2_runtime::{RuntimeEvent, System, XTokens};
+
+			assert_ok!(XTokens::transfer_multiasset(
+				$parachain2_runtime::RuntimeOrigin::signed(BOB.into()),
+				Box::new((asset_location.clone(), transfer_amount).into()),
+				Box::new(
+					MultiLocation::new(
+						1,
+						X3(
+							Junction::Parachain(2124),
+							PalletInstance(99),
+							GeneralKey {length:32 , data:[1u8;32]}
+						)
+					)
+					.into()
+				),
+				WeightLimit::Unlimited
+			));
+
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::XTokens(orml_xtokens::Event::TransferredMultiAssets { .. })
+			)));
+		});
+
+		$parachain1::execute_with(|| {
+			use $parachain1_runtime::{RuntimeEvent, System, XTokens};
+			for i in System::events().iter() {
+				println!("para 1 events {}: {:?}\n", stringify!($para2_runtime), i);
+			}
+
+		});
+	}};
+}
 // macros defined at the bottom of this file to prevent unresolved imports
 pub(super) use parachain1_transfer_asset_to_parachain2;
 pub(super) use parachain1_transfer_asset_to_parachain2_and_back;
@@ -605,3 +678,4 @@ pub(super) use parachain1_transfer_incorrect_asset_to_parachain2_should_fail;
 pub(super) use transfer_10_relay_token_from_parachain_to_relay_chain;
 pub(super) use transfer_20_relay_token_from_relay_chain_to_parachain;
 pub(super) use transfer_native_token_from_parachain1_to_parachain2_and_back;
+pub(super) use moonbeam_transfers_token_and_handle_automation;

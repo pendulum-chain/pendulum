@@ -37,3 +37,21 @@ pub mod native_locations {
 		}
 	}
 }
+pub mod intercept_multilocation {
+	use xcm::latest::{
+		Junction::{PalletInstance, Parachain, GeneralKey},
+		Junctions::{X2,X3},
+		MultiLocation,
+	};
+	pub fn matches_general_structure(location: &MultiLocation) -> Option<(u8, [u8; 32])> {
+		if let MultiLocation {
+			parents: 0,
+			interior: X2(PalletInstance(99), GeneralKey { length, data })
+		} = location {
+			Some((*length, *data))
+		} else {
+			None
+		}
+	}
+
+}

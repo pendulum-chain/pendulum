@@ -99,7 +99,6 @@ pub mod parachains {
 	}
 
 	/// Creates a location for the given asset in this format: `fn <asset_name>_location() -> MultiLocation`
-	#[macro_export]
 	macro_rules! parachain_asset_location {
 		// Also declares a constant variable <asset_name>_ASSET_ID with <asset_value>.
 		// This assumes that the following constant variables exist:
@@ -192,6 +191,23 @@ pub mod parachains {
 		/// values of kusama asset_hub is similar to polkadot's asset_hub
 		pub mod asset_hub {
 			pub use super::super::polkadot::asset_hub::*;
+		}
+	}
+
+	pub mod moonbase_alpha_relay {
+		pub mod moonbase_alpha {
+			use xcm::latest::{
+				Junction::{PalletInstance, Parachain},
+				Junctions::X2,
+			};
+	
+			pub const PARA_ID: u32 = 1000;
+			pub const BALANCES_PALLET_INDEX: u8 = 3;
+	
+			parachain_asset_location!(
+				DEV,
+				X2(Parachain(PARA_ID), PalletInstance(BALANCES_PALLET_INDEX),)
+			);
 		}
 	}
 }

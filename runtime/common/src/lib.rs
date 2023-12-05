@@ -206,7 +206,7 @@ pub mod parachains {
 	
 			parachain_asset_location!(
 				DEV,
-				X2(Parachain(PARA_ID), PalletInstance(BALANCES_PALLET_INDEX),)
+				X2(Parachain(PARA_ID), PalletInstance(BALANCES_PALLET_INDEX))
 			);
 		}
 	}

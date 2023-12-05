@@ -3,8 +3,9 @@ use super::{
 	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
 };
 use crate::assets::{
+	moonbase_alpha_relay::moonbase::DEV_location,
 	native_locations::{native_location_external_pov, native_location_local_pov},
-	xcm_assets, moonbase_alpha_relay::moonbase::DEV_location,
+	xcm_assets,
 };
 use core::marker::PhantomData;
 use frame_support::{

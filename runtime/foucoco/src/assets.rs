@@ -39,22 +39,18 @@ pub mod native_locations {
 
 pub mod moonbase_alpha_relay {
 	pub mod moonbase {
+		use runtime_common::parachain_asset_location;
 		use xcm::latest::{
 			Junction::{PalletInstance, Parachain},
 			Junctions::X2,
 		};
-		use runtime_common::parachain_asset_location;
 
 		pub const PARA_ID: u32 = 1000;
 		pub const BALANCES_PALLET_INDEX: u8 = 110;
-		
+
 		parachain_asset_location!(
 			DEV,
-			X2(
-				Parachain(PARA_ID),
-				PalletInstance(BALANCES_PALLET_INDEX),
-			)
-			
+			X2(Parachain(PARA_ID), PalletInstance(BALANCES_PALLET_INDEX),)
 		);
 	}
 }

@@ -3,6 +3,7 @@
 pub mod xcm_assets {
 	use runtime_common::create_xcm_id;
 	create_xcm_id!(RELAY, 0);
+	create_xcm_id!(MOONBASE_DEV, 2);
 }
 
 /// Locations for native currency and all natively issued tokens
@@ -33,5 +34,27 @@ pub mod native_locations {
 				PalletInstance(balances_pallet_id()),
 			),
 		}
+	}
+}
+
+pub mod moonbase_alpha_relay {
+	pub mod moonbase {
+		use xcm::latest::{
+			Junction::{PalletInstance, Parachain},
+			Junctions::X2,
+		};
+		use runtime_common::parachain_asset_location;
+
+		pub const PARA_ID: u32 = 1000;
+		pub const BALANCES_PALLET_INDEX: u8 = 110;
+		
+		parachain_asset_location!(
+			DEV,
+			X2(
+				Parachain(PARA_ID),
+				PalletInstance(BALANCES_PALLET_INDEX),
+			)
+			
+		);
 	}
 }

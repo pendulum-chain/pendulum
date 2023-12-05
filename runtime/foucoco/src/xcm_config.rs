@@ -4,7 +4,7 @@ use super::{
 };
 use crate::assets::{
 	native_locations::{native_location_external_pov, native_location_local_pov},
-	xcm_assets,
+	xcm_assets, moonbase_alpha_relay::moonbase::DEV_location,
 };
 use core::marker::PhantomData;
 use frame_support::{
@@ -63,6 +63,8 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		match id {
 			CurrencyId::XCM(xcm_assets::RELAY) => Some(MultiLocation::parent()),
+			// Moonbase testnet native token
+			CurrencyId::XCM(xcm_assets::MOONBASE_DEV) => Some(DEV_location()),
 			CurrencyId::Native => Some(native_location_external_pov()),
 			_ => None,
 		}
@@ -78,6 +80,8 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			// Our native currency location with re-anchoring
 			// The XCM pallet will try to re-anchor the location before it reaches here
 			loc if loc == native_location_local_pov() => Some(CurrencyId::Native),
+			// Moonbase testnet native token
+			loc if loc == DEV_location() => Some(xcm_assets::MOONBASE_DEV_id()),
 			_ => None,
 		}
 	}

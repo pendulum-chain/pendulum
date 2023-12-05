@@ -99,6 +99,7 @@ pub mod parachains {
 	}
 
 	/// Creates a location for the given asset in this format: `fn <asset_name>_location() -> MultiLocation`
+	#[macro_export]
 	macro_rules! parachain_asset_location {
 		// Also declares a constant variable <asset_name>_ASSET_ID with <asset_value>.
 		// This assumes that the following constant variables exist:

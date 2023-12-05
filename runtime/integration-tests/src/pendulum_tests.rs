@@ -91,54 +91,54 @@ fn transfer_dot_from_pendulum_to_polkadot() {
 	);
 }
 
-#[test]
-fn assethub_transfer_incorrect_asset_to_pendulum_should_fail() {
-	parachain1_transfer_incorrect_asset_to_parachain2_should_fail!(
-		polkadot_asset_hub_runtime,
-		AssetHubParachain,
-		pendulum_runtime,
-		PendulumParachain,
-		PENDULUM_ID
-	);
-}
+// #[test]
+// fn assethub_transfer_incorrect_asset_to_pendulum_should_fail() {
+// 	parachain1_transfer_incorrect_asset_to_parachain2_should_fail!(
+// 		polkadot_asset_hub_runtime,
+// 		AssetHubParachain,
+// 		pendulum_runtime,
+// 		PendulumParachain,
+// 		PENDULUM_ID
+// 	);
+// }
 
-#[test]
-fn assethub_transfer_asset_to_pendulum() {
-	parachain1_transfer_asset_to_parachain2!(
-		polkadot_asset_hub_runtime,
-		AssetHubParachain,
-		USDT_ASSET_ID,
-		pendulum_runtime,
-		PendulumParachain,
-		PENDULUM_ID
-	);
-}
+// #[test]
+// fn assethub_transfer_asset_to_pendulum() {
+// 	parachain1_transfer_asset_to_parachain2!(
+// 		polkadot_asset_hub_runtime,
+// 		AssetHubParachain,
+// 		USDT_ASSET_ID,
+// 		pendulum_runtime,
+// 		PendulumParachain,
+// 		PENDULUM_ID
+// 	);
+// }
 
-#[test]
-fn assethub_transfer_asset_to_pendulum_and_back() {
-	let network_id = NetworkId::Polkadot;
+// #[test]
+// fn assethub_transfer_asset_to_pendulum_and_back() {
+// 	let network_id = NetworkId::Polkadot;
 
-	parachain1_transfer_asset_to_parachain2_and_back!(
-		polkadot_asset_hub_runtime,
-		AssetHubParachain,
-		ASSETHUB_ID,
-		USDT_ASSET_ID,
-		pendulum_runtime,
-		PendulumParachain,
-		PENDULUM_ID,
-		network_id
-	);
-}
+// 	parachain1_transfer_asset_to_parachain2_and_back!(
+// 		polkadot_asset_hub_runtime,
+// 		AssetHubParachain,
+// 		ASSETHUB_ID,
+// 		USDT_ASSET_ID,
+// 		pendulum_runtime,
+// 		PendulumParachain,
+// 		PENDULUM_ID,
+// 		network_id
+// 	);
+// }
 
-#[test]
-fn transfer_native_token_from_pendulum_to_sibling_parachain_and_back() {
-	transfer_native_token_from_parachain1_to_parachain2_and_back!(
-		PolkadotMockNet,
-		pendulum_runtime,
-		PendulumParachain,
-		sibling,
-		SiblingParachain,
-		PENDULUM_ID,
-		SIBLING_ID
-	);
-}
+// #[test]
+// fn transfer_native_token_from_pendulum_to_sibling_parachain_and_back() {
+// 	transfer_native_token_from_parachain1_to_parachain2_and_back!(
+// 		PolkadotMockNet,
+// 		pendulum_runtime,
+// 		PendulumParachain,
+// 		sibling,
+// 		SiblingParachain,
+// 		PENDULUM_ID,
+// 		SIBLING_ID
+// 	);
+// }

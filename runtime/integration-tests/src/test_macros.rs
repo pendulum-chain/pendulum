@@ -562,7 +562,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Verify ALICE's balance on parachain1 after receiving
 		// Should become the same amount as initial balance before both transfers
 		$parachain1::execute_with(|| {
-			use $parachain1_runtime::{RuntimeEvent, System, XTokens};
+			use $parachain1_runtime::System;
 			for i in System::events().iter() {
 				println!("para 1 events {}: {:?}\n", stringify!($para2_runtime), i);
 			}
@@ -585,13 +585,11 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
         $parachain1_id:ident,
         $parachain2_id:ident
     ) => {{
-		use crate::mock::{units, ALICE, BOB};
-		use frame_support::traits::fungibles::Inspect;
+		use crate::mock::{units, ALICE};
 		use polkadot_core_primitives::Balance;
 		use xcm::latest::{
-			Junction, Junction::{AccountId32, GeneralKey, PalletInstance}, Junctions::{X2, X3}, MultiLocation, WeightLimit,
+			Junction, Junction::{ GeneralKey, PalletInstance}, Junctions::{X1,X2, X3}, MultiLocation, WeightLimit,
 		};
-		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;
 		use $parachain2_runtime::CurrencyId as Parachain2CurrencyId;
 
 
@@ -599,54 +597,22 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 
 		// Asset Location and amount are not important for this test
 		let transfer_amount: Balance = units(10);
-		let asset_location = MultiLocation::new(
-			1,
-			X2(Junction::Parachain($parachain1_id), Junction::PalletInstance(10)),
-		);
-
-		let para1_native_currency_on_para2 = Parachain2CurrencyId::from($parachain1_id);
-
-		// We transfer to parachain 2 (sibling) so that it is able to transfer back
-		$parachain1::execute_with(|| {
-			use $parachain1_runtime::{RuntimeEvent, System, XTokens};
-
-	
-			assert_ok!(XTokens::transfer_multiasset(
-				$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
-				Box::new((asset_location.clone(), transfer_amount).into()),
-				Box::new(
-					MultiLocation {
-						parents: 1,
-						interior: X2(
-							Junction::Parachain($parachain2_id),
-							AccountId32 { network: None, id: BOB }
-						)
-					}
-					.into()
-				),
-				WeightLimit::Unlimited
-			));
-
-			assert!(System::events().iter().any(|r| matches!(
-				r.event,
-				RuntimeEvent::XTokens(orml_xtokens::Event::TransferredMultiAssets { .. })
-			)));
-		});
-
 
 		// Here we use the same asset, but the important bit is the multilocation
 		// This emulates the special multilocation that triggers the automation pallet 
 		$parachain2::execute_with(|| {
-			use $parachain2_runtime::{RuntimeEvent, System, XTokens};
+			use $parachain2_runtime::{XTokens, Tokens,RuntimeOrigin};
 
-			assert_ok!(XTokens::transfer_multiasset(
-				$parachain2_runtime::RuntimeOrigin::signed(BOB.into()),
-				Box::new((asset_location.clone(), transfer_amount).into()),
+			assert_ok!(Tokens::set_balance(RuntimeOrigin::root().into(), ALICE.clone().into(), Parachain2CurrencyId::Token,transfer_amount, 0));
+			assert_ok!(XTokens::transfer(
+				$parachain2_runtime::RuntimeOrigin::signed(ALICE.into()),
+				Parachain2CurrencyId::Token,
+				transfer_amount,
 				Box::new(
 					MultiLocation::new(
 						1,
 						X3(
-							Junction::Parachain(2124),
+							Junction::Parachain($parachain1_id),
 							PalletInstance(99),
 							GeneralKey {length:32 , data:[1u8;32]}
 						)
@@ -655,18 +621,19 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 				),
 				WeightLimit::Unlimited
 			));
-
-			assert!(System::events().iter().any(|r| matches!(
-				r.event,
-				RuntimeEvent::XTokens(orml_xtokens::Event::TransferredMultiAssets { .. })
-			)));
 		});
 
 		$parachain1::execute_with(|| {
-			use $parachain1_runtime::{RuntimeEvent, System, XTokens};
+			use $parachain1_runtime::{RuntimeEvent, System};
 			for i in System::events().iter() {
 				println!("para 1 events {}: {:?}\n", stringify!($para2_runtime), i);
 			}
+			// given the configuration in amplitude's xcm_config, we expect the callback (in this case a Remark)
+			// to be executed
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::System(frame_system::Event::Remarked { .. })
+			)));
 
 		});
 	}};

@@ -11,6 +11,7 @@ pub mod chain_ext;
 mod proxy_type;
 pub mod stellar;
 pub mod zenlink;
+pub mod custom_xcm_barrier;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;

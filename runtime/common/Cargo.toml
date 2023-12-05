@@ -24,6 +24,7 @@ sp-consensus-aura = { git = "https://github.com/paritytech/substrate", default-f
 sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 
 xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.40" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.40" }
 
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.40" }
 orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.40" }
@@ -32,7 +33,6 @@ dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-
 zenlink-protocol = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.40-protocol" }
 
 spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "d05b0015d15ca39cc780889bcc095335e9862a36" }
-
 [features]
 default = [
     "std",
@@ -49,6 +49,7 @@ std = [
     "sp-consensus-aura/std",
     "sp-core/std",
     "xcm/std",
+    "xcm-executor/std",
     "orml-traits/std",
     "dia-oracle/std",
     "orml-asset-registry/std",

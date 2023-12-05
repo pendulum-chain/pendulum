@@ -10051,6 +10051,7 @@ dependencies = [
  "sp-std",
  "spacewalk-primitives 1.0.0",
  "xcm",
+ "xcm-executor",
  "zenlink-protocol",
 ]
 

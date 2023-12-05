@@ -1,0 +1,115 @@
+
+use core::marker::PhantomData;
+use frame_support::{
+	log,ensure,
+	traits::Contains,
+};
+
+use xcm::latest::{Instruction::self,prelude::*, Weight as XCMWeight};
+
+use xcm_executor::{
+	traits::ShouldExecute,
+};
+
+use scale_info::prelude::boxed::Box;
+use sp_std::vec::Vec;
+
+pub trait WithdrawAssetMatcher: Sync {
+    fn matches(&self, multi_asset: &MultiAsset) -> bool;
+}
+
+pub trait DepositAssetMatcher {
+    fn matches<'a>(&self, assets: &'a MultiAssetFilter, beneficiary: &'a MultiLocation) -> Option<(u8, &'a [u8])>;
+}
+pub struct MatcherPair {
+    withdraw_asset_matcher: Box<dyn WithdrawAssetMatcher>,
+    deposit_asset_matcher: Box<dyn DepositAssetMatcher>,
+}
+
+impl MatcherPair {
+    pub fn new(withdraw_asset_matcher: Box<dyn WithdrawAssetMatcher>, deposit_asset_matcher: Box<dyn DepositAssetMatcher>) -> Self {
+        MatcherPair {
+            withdraw_asset_matcher,
+            deposit_asset_matcher,
+        }
+    }
+
+    fn matches_withdraw_asset(&self, multi_asset: &MultiAsset) -> bool {
+        self.withdraw_asset_matcher.matches(multi_asset)
+    }
+
+    fn matches_deposit_asset<'a>(&'a self, assets: &'a MultiAssetFilter, beneficiary: &'a MultiLocation) -> Option<(u8, &'a [u8])> {
+        self.deposit_asset_matcher.matches(assets, beneficiary)
+    }
+}
+
+pub trait MatcherConfig {
+    fn get_matcher_pairs() -> Vec<MatcherPair>;
+    fn callback() -> Result<(),()>;
+    fn get_incoming_parachain_id() -> u32;
+}
+
+
+pub struct AllowUnpaidExecutionFromCustom<T, V> {
+    _phantom: PhantomData<(T, V)>,
+}
+impl<T: Contains<MultiLocation>, V: MatcherConfig> ShouldExecute for AllowUnpaidExecutionFromCustom<T, V> {
+    fn should_execute<RuntimeCall>(
+        origin: &MultiLocation,
+        instructions: &mut [Instruction<RuntimeCall>],
+        _max_weight: XCMWeight,
+        _weight_credit: &mut XCMWeight,
+    ) -> Result<(), ()> {
+        log::info!(
+            target: "xcm::barriers",
+            "AllowUnpaidExecutionFromCustom origin: {:?}, instructions: {:?}, max_weight: {:?}, weight_credit: {:?}",
+            origin, instructions, _max_weight, _weight_credit,
+        );
+        log::info!("origin {:?}",origin);
+        let incoming_parachain_id = V::get_incoming_parachain_id();
+        // Check if the origin is the specific parachain
+        if let MultiLocation {
+            parents: 1,
+            interior: X1(Parachain(parachain_id))
+        } = origin {
+            log::info!("paraid {:?}",*parachain_id);
+            if *parachain_id == incoming_parachain_id {  
+                log::info!("parachain match");
+
+                let matcher_pairs = V::get_matcher_pairs();
+                // Iterate through the instructions, for 
+                // each match pair we allow
+                for matcher_pair in matcher_pairs {
+                    let mut withdraw_asset_matched = false;
+
+                    // Check for WithdrawAsset 
+                    for instruction in instructions.iter() {
+                        if let Instruction::WithdrawAsset(assets) = instruction {
+                            if assets.clone().into_inner().iter().any(|asset| matcher_pair.matches_withdraw_asset(asset)) {
+                                withdraw_asset_matched = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // If WithdrawAsset matches, then check for DepositAsset with the same matcher pair
+                    // and execute the callback
+                    if withdraw_asset_matched {
+                        for instruction in instructions.iter() {
+                            if let Instruction::DepositAsset { assets, beneficiary } = instruction {
+                                if let Some((length, data)) = matcher_pair.matches_deposit_asset(assets, beneficiary) {
+                                    V::callback();
+                                    return Err(());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        ensure!(T::contains(origin), ());
+        Ok(())
+    }
+}
+

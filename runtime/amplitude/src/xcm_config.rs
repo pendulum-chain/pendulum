@@ -6,10 +6,10 @@ use crate::{
 	assets::{
 		native_locations::{native_location_external_pov, native_location_local_pov},
 		xcm_assets,
-		intercept_multilocation
 	},
 	ConstU32,
 };
+
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
@@ -26,7 +26,7 @@ use runtime_common::parachains::kusama::asset_hub;
 use sp_runtime::traits::Convert;
 use xcm::latest::{Instruction::{self, *},prelude::*, Weight as XCMWeight};
 use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
+	AccountId32Aliases, ConvertedConcreteId, EnsureXcmOrigin,
 	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
@@ -36,14 +36,13 @@ use xcm_executor::{
 	XcmExecutor,
 };
 
-use frame_support::{
-	ensure,
-	traits::{Contains, Get},
-};
-
+use scale_info::prelude::boxed::Box;
 use cumulus_primitives_core::XcmContext;
-use crate::custom_fungibles_adapter::{CustomFungiblesAdapter, HandleSpecialLocation};
-use crate::custom_barrier::AllowUnpaidExecutionFromCustom;
+use runtime_common::custom_xcm_barrier::{MatcherConfig,AllowUnpaidExecutionFromCustom,WithdrawAssetMatcher, DepositAssetMatcher, MatcherPair };
+use xcm::latest::{
+	 Junction::{Parachain, PalletInstance,GeneralKey}, Junctions::{X2,X3}, MultiLocation,
+};
+use sp_std::{vec,vec::Vec};
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
@@ -138,28 +137,9 @@ where
 		false
 	}
 }
-use xcm::latest::{
-	Junction, Junction::{Parachain, PalletInstance,GeneralKey}, Junctions::{X2,X3}, MultiLocation,
-};
-use frame_support::{
-	log::{error, info}};
-pub struct MultiLocationFilter;
 
-impl HandleSpecialLocation for MultiLocationFilter{
-		fn handle(who: &MultiLocation, _ctx: &XcmContext) -> bool {
-			info!("from {:?}", _ctx.origin);
-			info!("Handling deposit multiloc {:?}", &who);
-			if let Some((len, data)) = intercept_multilocation::matches_general_structure(who) {
-				System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0u8;32])), data.to_vec());
-				return true
-			}
-			return false
-		}
 
-	
-}
-
-pub type FungiblesTransactor = CustomFungiblesAdapter<
+pub type FungiblesTransactor = FungiblesAdapter<
 // Use this fungibles implementation
 Tokens,
 // This means that this adapter should handle any token that `CurrencyIdConvert` can convert
@@ -172,8 +152,7 @@ AccountId,
 // We dont allow teleports.
 NoChecking,
 // The account to use for tracking teleports.
-CheckingAccount,
-MultiLocationFilter
+CheckingAccount
 >;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
@@ -278,8 +257,71 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 
 
 
-pub type Barrier = AllowUnpaidExecutionFromCustom<Everything>;
+// This one allows to test it with the current configuration in amplitude integration tests
+struct WithdrawAssetMatcher1;
+impl WithdrawAssetMatcher for WithdrawAssetMatcher1 {
+    fn matches(&self, multi_asset: &MultiAsset) -> bool {
+        if let MultiAsset { id: Concrete(MultiLocation { parents: 0, interior: X1(PalletInstance(2)) }),.. } = multi_asset {
+            true
+        } else {
+            false
+        }
+    }
+}
 
+//For moonbeam asset like BRZ we expect to use
+// impl DepositAssetMatcher for MyDepositAssetMatcher {
+//     fn matches(&self, multi_asset: &MultiAsset) -> bool {
+//         if let MultiLocation {
+//             parents: 1,
+//             interior: X3(Parachain(2004), PalletInstance(110), AccountKey20 { key })
+//         } = beneficiary {
+//             if key == b"INSERT_ERC20_ADDRESS" {
+//                 // Return some relevant data if needed, otherwise just return Some(()) or similar
+//                 return true;
+//             }
+//         }
+//         false
+//     }
+// }
+
+struct DepositAssetMatcher1;
+impl DepositAssetMatcher for DepositAssetMatcher1 {
+	fn matches<'a>(&self, assets: &'a MultiAssetFilter, beneficiary: &'a MultiLocation) -> Option<(u8, &'a [u8])> {
+        if let (Wild(AllCounted(1)), MultiLocation { parents: 0, interior: X2(PalletInstance(99), GeneralKey { length, data }) }) = (assets, beneficiary) {
+            Some((*length, &*data))
+        } else {
+            None
+        }
+    }
+}
+
+pub struct MatcherConfigAmplitude;
+
+impl MatcherConfig for MatcherConfigAmplitude {
+    fn get_matcher_pairs() -> Vec<MatcherPair> {
+		vec![
+            MatcherPair::new(
+                Box::new(WithdrawAssetMatcher1),
+                Box::new(DepositAssetMatcher1),
+            ),
+            // Additional matcher pairs to be defined in the future
+        ]
+    }
+	fn get_incoming_parachain_id() -> u32{
+		// TODO change to moonbeam or moonbase id
+		9999u32
+	}
+
+	fn callback()-> Result<(),()>{
+		// TODO change to call the actual automation pallet, with data and length
+		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0;32])), [0;1].to_vec());
+		Ok(())
+	}
+}
+
+
+pub type Barrier = AllowUnpaidExecutionFromCustom<Everything, MatcherConfigAmplitude>;
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;

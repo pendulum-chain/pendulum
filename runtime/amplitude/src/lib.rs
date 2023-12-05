@@ -10,8 +10,6 @@ mod assets;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
-pub mod custom_fungibles_adapter;
-pub mod custom_barrier;
 
 use crate::zenlink::*;
 use bifrost_farming as farming;

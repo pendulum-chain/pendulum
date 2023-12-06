@@ -415,7 +415,6 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 				WeightLimit::Unlimited
 			));
 
-
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. })
@@ -425,7 +424,6 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 				println!("para 2 {}: {:?}\n", stringify!($para2_runtime), i);
 			}
 		});
-
 	}};
 }
 
@@ -574,7 +572,6 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 	}};
 }
 
-
 macro_rules! moonbeam_transfers_token_and_handle_automation {
 	(
         $mocknet:ident,
@@ -596,16 +593,16 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 
 		let transfer_amount: Balance = units(10);
 		// We mock parachain 2 as beeing moonriver in this case.
-		// Sending "Token" variant which is equivalent to BRZ mock token Multilocation 
+		// Sending "Token" variant which is equivalent to BRZ mock token Multilocation
 		// in the sibling definition
 		$parachain2::execute_with(|| {
 			use $parachain2_runtime::{XTokens, Tokens,RuntimeOrigin, System};
 
 			assert_ok!(Tokens::set_balance(RuntimeOrigin::root().into(), ALICE.clone().into(), Parachain2CurrencyId::Token,transfer_amount, 0));
-			
-			// We must ensure that the destination Multilocation is of the structure 
+
+			// We must ensure that the destination Multilocation is of the structure
 			// the intercept excepts so it calls automation pallet
-			
+
 			// TODO replace instance 99 with automation pallet index when added
 			assert_ok!(XTokens::transfer(
 				$parachain2_runtime::RuntimeOrigin::signed(ALICE.into()),
@@ -639,10 +636,10 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 	}};
 }
 // macros defined at the bottom of this file to prevent unresolved imports
+pub(super) use moonbeam_transfers_token_and_handle_automation;
 pub(super) use parachain1_transfer_asset_to_parachain2;
 pub(super) use parachain1_transfer_asset_to_parachain2_and_back;
 pub(super) use parachain1_transfer_incorrect_asset_to_parachain2_should_fail;
 pub(super) use transfer_10_relay_token_from_parachain_to_relay_chain;
 pub(super) use transfer_20_relay_token_from_relay_chain_to_parachain;
 pub(super) use transfer_native_token_from_parachain1_to_parachain2_and_back;
-pub(super) use moonbeam_transfers_token_and_handle_automation;

@@ -18,6 +18,7 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
+use runtime_common::parachains::moonbase_alpha_relay::moonbase_alpha;
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
@@ -31,9 +32,14 @@ use xcm_executor::{
 	XcmExecutor,
 };
 
-use runtime_common::parachains::moonbase_alpha::{PARA_ID as MOONBASE_PARA_ID, BRZ_location};
-use sp_std::{vec,vec::Vec};
-use runtime_common::custom_xcm_barrier::{MatcherConfig,AllowUnpaidExecutionFromCustom,ReserveAssetDepositedMatcher, DepositAssetMatcher, MatcherPair };
+use runtime_common::{
+	custom_xcm_barrier::{
+		AllowUnpaidExecutionFromCustom, DepositAssetMatcher, MatcherConfig, MatcherPair,
+		ReserveAssetDepositedMatcher,
+	},
+	parachains::moonbase_alpha::{BRZ_location, PARA_ID as MOONBASE_PARA_ID},
+};
+use sp_std::{vec, vec::Vec};
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -67,6 +73,8 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		match id {
 			CurrencyId::XCM(xcm_assets::RELAY) => Some(MultiLocation::parent()),
+			// Moonbase testnet native token
+			CurrencyId::XCM(xcm_assets::MOONBASE_DEV) => Some(moonbase_alpha::DEV_location()),
 			CurrencyId::Native => Some(native_location_external_pov()),
 			_ => None,
 		}
@@ -82,6 +90,8 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			// Our native currency location with re-anchoring
 			// The XCM pallet will try to re-anchor the location before it reaches here
 			loc if loc == native_location_local_pov() => Some(CurrencyId::Native),
+			// Moonbase testnet native token
+			loc if loc == moonbase_alpha::DEV_location() => Some(xcm_assets::MOONBASE_DEV_id()),
 			_ => None,
 		}
 	}
@@ -260,53 +270,63 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
-
 struct ReserveAssetDepositedMatcher1;
 impl ReserveAssetDepositedMatcher for ReserveAssetDepositedMatcher1 {
-    fn matches(&self, multi_asset: &MultiAsset) -> bool {
-        let expected_multiloc = BRZ_location();
+	fn matches(&self, multi_asset: &MultiAsset) -> bool {
+		let expected_multiloc = BRZ_location();
 
 		match multi_asset {
-			MultiAsset { id: AssetId::Concrete(loc), .. } if loc == &expected_multiloc => return true,
+			MultiAsset { id: AssetId::Concrete(loc), .. } if loc == &expected_multiloc =>
+				return true,
 			_ => return false,
 		}
-    }	
+	}
 }
 // TODO modify with automation's pallet instance
 struct DepositAssetMatcher1;
 impl DepositAssetMatcher for DepositAssetMatcher1 {
-	fn matches<'a>(&self, assets: &'a MultiAssetFilter, beneficiary: &'a MultiLocation) -> Option<(u8, &'a [u8])> {
-        if let (Wild(AllCounted(1)), MultiLocation { parents: 0, interior: X2(PalletInstance(99), GeneralKey { length, data }) }) = (assets, beneficiary) {
-            Some((*length, &*data))
-        } else {
-            None
-        }
-    }
+	fn matches<'a>(
+		&self,
+		assets: &'a MultiAssetFilter,
+		beneficiary: &'a MultiLocation,
+	) -> Option<(u8, &'a [u8])> {
+		if let (
+			Wild(AllCounted(1)),
+			MultiLocation {
+				parents: 0,
+				interior: X2(PalletInstance(99), GeneralKey { length, data }),
+			},
+		) = (assets, beneficiary)
+		{
+			Some((*length, &*data))
+		} else {
+			None
+		}
+	}
 }
 
 pub struct MatcherConfigFoucoco;
 
 impl MatcherConfig for MatcherConfigFoucoco {
-    fn get_matcher_pairs() -> Vec<MatcherPair> {
+	fn get_matcher_pairs() -> Vec<MatcherPair> {
 		vec![
-            MatcherPair::new(
-                Box::new(ReserveAssetDepositedMatcher1),
-                Box::new(DepositAssetMatcher1),
-            ),
-            // Additional matcher pairs to be defined in the future
-        ]
-    }
-	fn get_incoming_parachain_id() -> u32{
+			MatcherPair::new(
+				Box::new(ReserveAssetDepositedMatcher1),
+				Box::new(DepositAssetMatcher1),
+			),
+			// Additional matcher pairs to be defined in the future
+		]
+	}
+	fn get_incoming_parachain_id() -> u32 {
 		MOONRIVER_PARA_ID
 	}
 
-	fn callback(_length: u8, _data: &[u8])-> Result<(),()>{
+	fn callback(_length: u8, _data: &[u8]) -> Result<(), ()> {
 		// TODO change to call the actual automation pallet, with data and length
-		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0;32])), [0;1].to_vec());
+		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0; 32])), [0; 1].to_vec());
 		Ok(())
 	}
 }
-
 
 pub type Barrier = MatcherConfigFoucoco<Everything, MatcherConfigAmplitude>;
 

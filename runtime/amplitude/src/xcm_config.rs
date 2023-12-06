@@ -1,6 +1,6 @@
 use super::{
 	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue, System
+	RuntimeCall, RuntimeEvent, RuntimeOrigin, System, Tokens, WeightToFee, XcmpQueue,
 };
 use crate::{
 	assets::{
@@ -22,29 +22,40 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
-use runtime_common::parachains::kusama::asset_hub;
-use runtime_common::parachains::kusama::moonriver::{PARA_ID as MOONRIVER_PARA_ID, BRZ_location};
+use runtime_common::parachains::kusama::{
+	asset_hub,
+	moonriver::{BRZ_location, PARA_ID as MOONRIVER_PARA_ID},
+};
 
 use sp_runtime::traits::Convert;
-use xcm::latest::{Instruction::{self, *},prelude::*, Weight as XCMWeight};
+use xcm::latest::{
+	prelude::*,
+	Instruction::{self, *},
+	Weight as XCMWeight,
+};
 use xcm_builder::{
-	AccountId32Aliases, ConvertedConcreteId, EnsureXcmOrigin,
-	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
+	AccountId32Aliases, ConvertedConcreteId, EnsureXcmOrigin, FixedWeightBounds, FungiblesAdapter,
+	NoChecking, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
+	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+	SovereignSignedViaLocation, UsingComponents,
 };
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
 
-use scale_info::prelude::boxed::Box;
 use cumulus_primitives_core::XcmContext;
-use runtime_common::custom_xcm_barrier::{MatcherConfig,AllowUnpaidExecutionFromCustom,ReserveAssetDepositedMatcher, DepositAssetMatcher, MatcherPair };
-use xcm::latest::{
-	 Junction::{Parachain, PalletInstance,GeneralKey}, Junctions::{X2,X3}, MultiLocation,
+use runtime_common::custom_xcm_barrier::{
+	AllowUnpaidExecutionFromCustom, DepositAssetMatcher, MatcherConfig, MatcherPair,
+	ReserveAssetDepositedMatcher,
 };
-use sp_std::{vec,vec::Vec};
+use scale_info::prelude::boxed::Box;
+use sp_std::{vec, vec::Vec};
+use xcm::latest::{
+	Junction::{GeneralKey, PalletInstance, Parachain},
+	Junctions::{X2, X3},
+	MultiLocation,
+};
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
@@ -88,7 +99,6 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 }
 
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
-	
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
 			loc if loc == MultiLocation::parent() => Some(xcm_assets::RELAY_KSM_id()),
@@ -140,21 +150,20 @@ where
 	}
 }
 
-
 pub type FungiblesTransactor = FungiblesAdapter<
-// Use this fungibles implementation
-Tokens,
-// This means that this adapter should handle any token that `CurrencyIdConvert` can convert
-// to `CurrencyId`, the `CurrencyId` type of `Tokens`, the fungibles implementation it uses.
-ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
-// Convert an XCM MultiLocation into a local account id
-LocationToAccountId,
-// Our chain's account ID type (we can't get away without mentioning it explicitly)
-AccountId,
-// We dont allow teleports.
-NoChecking,
-// The account to use for tracking teleports.
-CheckingAccount
+	// Use this fungibles implementation
+	Tokens,
+	// This means that this adapter should handle any token that `CurrencyIdConvert` can convert
+	// to `CurrencyId`, the `CurrencyId` type of `Tokens`, the fungibles implementation it uses.
+	ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
+	// Convert an XCM MultiLocation into a local account id
+	LocationToAccountId,
+	// Our chain's account ID type (we can't get away without mentioning it explicitly)
+	AccountId,
+	// We dont allow teleports.
+	NoChecking,
+	// The account to use for tracking teleports.
+	CheckingAccount,
 >;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
@@ -257,25 +266,24 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
-
-
 // We will allow for BRZ location from moonriver
 struct ReserveAssetDepositedMatcher1;
 impl ReserveAssetDepositedMatcher for ReserveAssetDepositedMatcher1 {
-    fn matches(&self, multi_asset: &MultiAsset) -> bool {
-        let expected_multiloc = BRZ_location();
+	fn matches(&self, multi_asset: &MultiAsset) -> bool {
+		let expected_multiloc = BRZ_location();
 
 		match multi_asset {
-			MultiAsset { id: AssetId::Concrete(loc), .. } if loc == &expected_multiloc => return true,
+			MultiAsset { id: AssetId::Concrete(loc), .. } if loc == &expected_multiloc =>
+				return true,
 			_ => return false,
 		}
-    }	
+	}
 }
 
 // The beneficiary. We will always expect a location of the form
 // MultiLocation: {
 //     parents: 1,
-//     interior: { X3: { 
+//     interior: { X3: {
 //        Parachain(SenderParachainId),
 //        PalletInstance(xx), // will point to the automation pallet
 //        GeneralKey{ length: xx, data: []  }, // this will hold the reference number for Mykobo
@@ -285,38 +293,48 @@ impl ReserveAssetDepositedMatcher for ReserveAssetDepositedMatcher1 {
 // TODO modify with automation's pallet instance
 struct DepositAssetMatcher1;
 impl DepositAssetMatcher for DepositAssetMatcher1 {
-	fn matches<'a>(&self, assets: &'a MultiAssetFilter, beneficiary: &'a MultiLocation) -> Option<(u8, &'a [u8])> {
-        if let (Wild(AllCounted(1)), MultiLocation { parents: 0, interior: X2(PalletInstance(99), GeneralKey { length, data }) }) = (assets, beneficiary) {
-            Some((*length, &*data))
-        } else {
-            None
-        }
-    }
+	fn matches<'a>(
+		&self,
+		assets: &'a MultiAssetFilter,
+		beneficiary: &'a MultiLocation,
+	) -> Option<(u8, &'a [u8])> {
+		if let (
+			Wild(AllCounted(1)),
+			MultiLocation {
+				parents: 0,
+				interior: X2(PalletInstance(99), GeneralKey { length, data }),
+			},
+		) = (assets, beneficiary)
+		{
+			Some((*length, &*data))
+		} else {
+			None
+		}
+	}
 }
 
 pub struct MatcherConfigAmplitude;
 
 impl MatcherConfig for MatcherConfigAmplitude {
-    fn get_matcher_pairs() -> Vec<MatcherPair> {
+	fn get_matcher_pairs() -> Vec<MatcherPair> {
 		vec![
-            MatcherPair::new(
-                Box::new(ReserveAssetDepositedMatcher1),
-                Box::new(DepositAssetMatcher1),
-            ),
-            // Additional matcher pairs to be defined in the future
-        ]
-    }
-	fn get_incoming_parachain_id() -> u32{
+			MatcherPair::new(
+				Box::new(ReserveAssetDepositedMatcher1),
+				Box::new(DepositAssetMatcher1),
+			),
+			// Additional matcher pairs to be defined in the future
+		]
+	}
+	fn get_incoming_parachain_id() -> u32 {
 		MOONRIVER_PARA_ID
 	}
 
-	fn callback(_length: u8, _data: &[u8])-> Result<(),()>{
+	fn callback(_length: u8, _data: &[u8]) -> Result<(), ()> {
 		// TODO change to call the actual automation pallet, with data and length
-		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0;32])), [0;1].to_vec());
+		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0; 32])), [0; 1].to_vec());
 		Ok(())
 	}
 }
-
 
 pub type Barrier = AllowUnpaidExecutionFromCustom<Everything, MatcherConfigAmplitude>;
 pub struct XcmConfig;

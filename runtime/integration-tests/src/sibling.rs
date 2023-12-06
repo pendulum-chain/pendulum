@@ -43,8 +43,8 @@ use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation,
 };
 
-use runtime_common::parachains::kusama::moonriver::{BRZ_location};
 use crate::{AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
+use runtime_common::parachains::kusama::moonriver::BRZ_location;
 
 const XCM_ASSET_RELAY_DOT: u8 = 0;
 const XCM_ASSET_ASSETHUB_USDT: u8 = 1;
@@ -93,7 +93,7 @@ pub enum CurrencyId {
 	Amplitude,
 	Native,
 	XCM(u8),
-	Token
+	Token,
 }
 
 // Convert from u32 parachain id to CurrencyId

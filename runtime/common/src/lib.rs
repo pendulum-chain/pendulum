@@ -8,10 +8,10 @@ use sp_runtime::{
 
 pub mod asset_registry;
 pub mod chain_ext;
+pub mod custom_xcm_barrier;
 mod proxy_type;
 pub mod stellar;
 pub mod zenlink;
-pub mod custom_xcm_barrier;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
@@ -199,12 +199,12 @@ pub mod parachains {
 				Junction::{AccountKey20, PalletInstance, Parachain},
 				Junctions::X3,
 			};
-			
+
 			// see https://docs.moonbeam.network/builders/interoperability/xcm/xc-registration/assets/
 			pub const PARA_ID: u32 = 2023;
 			pub const ASSET_PALLET_INDEX: u8 = 10;
-			
-			// TODO use the REAL BRZ asset on moonriver 
+
+			// TODO use the REAL BRZ asset on moonriver
 			// 0xD65A1872f2E2E26092A443CB86bb5d8572027E6E
 			// extracted using `H160::from_str("...")` then `as_bytes()`
 			pub const BRZ_ASSET_ACCOUNT_IN_BYTES: [u8; 20] = [
@@ -223,22 +223,22 @@ pub mod parachains {
 		}
 	}
 
-	pub mod moonbase_alpha{
+	pub mod moonbase_alpha {
 		use xcm::latest::{
 			Junction::{AccountKey20, PalletInstance, Parachain},
 			Junctions::X3,
 		};
-		
+
 		// see https://docs.moonbeam.network/builders/interoperability/xcm/xc-registration/assets/
 		pub const PARA_ID: u32 = 1000;
 		pub const ASSET_PALLET_INDEX: u8 = 3;
-		
-		// TODO use the REAL BRZ asset on moonbase alpha 
+
+		// TODO use the REAL BRZ asset on moonbase alpha
 		// 0xD65A1872f2E2E26092A443CB86bb5d8572027E6E
 		// extracted using `H160::from_str("...")` then `as_bytes()`
 		pub const BRZ_ASSET_ACCOUNT_IN_BYTES: [u8; 20] = [
-			214, 90, 24, 114, 242, 226, 226, 96, 146, 164, 67, 203, 134, 187, 93, 133, 114, 2,
-			126, 110,
+			214, 90, 24, 114, 242, 226, 226, 96, 146, 164, 67, 203, 134, 187, 93, 133, 114, 2, 126,
+			110,
 		];
 
 		parachain_asset_location!(
@@ -249,6 +249,23 @@ pub mod parachains {
 				AccountKey20 { network: None, key: BRZ_ASSET_ACCOUNT_IN_BYTES }
 			)
 		);
+	}
+
+	pub mod moonbase_alpha_relay {
+		pub mod moonbase_alpha {
+			use xcm::latest::{
+				Junction::{PalletInstance, Parachain},
+				Junctions::X2,
+			};
+
+			pub const PARA_ID: u32 = 1000;
+			pub const BALANCES_PALLET_INDEX: u8 = 3;
+
+			parachain_asset_location!(
+				DEV,
+				X2(Parachain(PARA_ID), PalletInstance(BALANCES_PALLET_INDEX))
+			);
+		}
 	}
 }
 

@@ -10,9 +10,9 @@ use sp_io::TestExternalities;
 use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::Weight;
 
+use runtime_common::parachains::kusama::moonriver::PARA_ID as MOONRIVER_PARA_ID;
 use statemine_runtime as kusama_asset_hub_runtime;
 use statemint_runtime as polkadot_asset_hub_runtime;
-use runtime_common::parachains::kusama::moonriver::{PARA_ID as MOONRIVER_PARA_ID};
 
 pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];
@@ -119,7 +119,7 @@ pub enum ParachainType {
 	Pendulum,
 	Amplitude,
 	Sibling,
-	Moonriver
+	Moonriver,
 }
 
 pub struct ExtBuilderParachain<Currency> {
@@ -193,7 +193,8 @@ pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 		ParachainType::Amplitude =>
 			ExtBuilderParachain::amplitude_default().balances(vec![]).build(),
 		ParachainType::Sibling => ExtBuilderParachain::sibling_default().balances(vec![]).build(),
-		ParachainType::Moonriver => ExtBuilderParachain::moonriver_default().balances(vec![]).build(),
+		ParachainType::Moonriver =>
+			ExtBuilderParachain::moonriver_default().balances(vec![]).build(),
 	}
 }
 
@@ -301,7 +302,6 @@ impl Builder<SiblingCurrencyId> for ExtBuilderParachain<SiblingCurrencyId> {
 		}
 	}
 }
-
 
 // ------------------- for Statemint and Statemine -------------------
 impl ExtBuilderParachain<u128> {

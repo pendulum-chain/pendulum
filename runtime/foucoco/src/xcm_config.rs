@@ -1,6 +1,6 @@
 use super::{
 	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
+	RuntimeCall, RuntimeEvent, RuntimeOrigin, System, Tokens, WeightToFee, XcmpQueue,
 };
 use crate::assets::{
 	native_locations::{native_location_external_pov, native_location_local_pov},
@@ -39,7 +39,7 @@ use runtime_common::{
 	},
 	parachains::moonbase_alpha::{BRZ_location, PARA_ID as MOONBASE_PARA_ID},
 };
-use sp_std::{vec, vec::Vec};
+use sp_std::{boxed::Box, vec, vec::Vec};
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -318,7 +318,7 @@ impl MatcherConfig for MatcherConfigFoucoco {
 		]
 	}
 	fn get_incoming_parachain_id() -> u32 {
-		MOONRIVER_PARA_ID
+		MOONBASE_PARA_ID
 	}
 
 	fn callback(_length: u8, _data: &[u8]) -> Result<(), ()> {
@@ -328,7 +328,7 @@ impl MatcherConfig for MatcherConfigFoucoco {
 	}
 }
 
-pub type Barrier = MatcherConfigFoucoco<Everything, MatcherConfigAmplitude>;
+pub type Barrier = AllowUnpaidExecutionFromCustom<Everything, MatcherConfigFoucoco>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {

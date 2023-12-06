@@ -23,6 +23,8 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use runtime_common::parachains::kusama::asset_hub;
+use runtime_common::parachains::kusama::moonriver::{PARA_ID as MOONRIVER_PARA_ID, BRZ_location};
+
 use sp_runtime::traits::Convert;
 use xcm::latest::{Instruction::{self, *},prelude::*, Weight as XCMWeight};
 use xcm_builder::{
@@ -38,7 +40,7 @@ use xcm_executor::{
 
 use scale_info::prelude::boxed::Box;
 use cumulus_primitives_core::XcmContext;
-use runtime_common::custom_xcm_barrier::{MatcherConfig,AllowUnpaidExecutionFromCustom,WithdrawAssetMatcher, DepositAssetMatcher, MatcherPair };
+use runtime_common::custom_xcm_barrier::{MatcherConfig,AllowUnpaidExecutionFromCustom,ReserveAssetDepositedMatcher, DepositAssetMatcher, MatcherPair };
 use xcm::latest::{
 	 Junction::{Parachain, PalletInstance,GeneralKey}, Junctions::{X2,X3}, MultiLocation,
 };
@@ -257,34 +259,30 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 
 
 
-// This one allows to test it with the current configuration in amplitude integration tests
-struct WithdrawAssetMatcher1;
-impl WithdrawAssetMatcher for WithdrawAssetMatcher1 {
+// We will allow for BRZ location from moonriver
+struct ReserveAssetDepositedMatcher1;
+impl ReserveAssetDepositedMatcher for ReserveAssetDepositedMatcher1 {
     fn matches(&self, multi_asset: &MultiAsset) -> bool {
-        if let MultiAsset { id: Concrete(MultiLocation { parents: 0, interior: X1(PalletInstance(2)) }),.. } = multi_asset {
-            true
-        } else {
-            false
-        }
-    }
+        let expected_multiloc = BRZ_location();
+
+		match multi_asset {
+			MultiAsset { id: AssetId::Concrete(loc), .. } if loc == &expected_multiloc => return true,
+			_ => return false,
+		}
+    }	
 }
 
-//For moonbeam asset like BRZ we expect to use
-// impl DepositAssetMatcher for MyDepositAssetMatcher {
-//     fn matches(&self, multi_asset: &MultiAsset) -> bool {
-//         if let MultiLocation {
-//             parents: 1,
-//             interior: X3(Parachain(2004), PalletInstance(110), AccountKey20 { key })
-//         } = beneficiary {
-//             if key == b"INSERT_ERC20_ADDRESS" {
-//                 // Return some relevant data if needed, otherwise just return Some(()) or similar
-//                 return true;
-//             }
-//         }
-//         false
-//     }
-// }
+// The beneficiary. We will always expect a location of the form
+// MultiLocation: {
+//     parents: 1,
+//     interior: { X3: { 
+//        Parachain(SenderParachainId),
+//        PalletInstance(xx), // will point to the automation pallet
+//        GeneralKey{ length: xx, data: []  }, // this will hold the reference number for Mykobo
+// },
+// Keep in mind that this location will be re-anchored
 
+// TODO modify with automation's pallet instance
 struct DepositAssetMatcher1;
 impl DepositAssetMatcher for DepositAssetMatcher1 {
 	fn matches<'a>(&self, assets: &'a MultiAssetFilter, beneficiary: &'a MultiLocation) -> Option<(u8, &'a [u8])> {
@@ -302,18 +300,17 @@ impl MatcherConfig for MatcherConfigAmplitude {
     fn get_matcher_pairs() -> Vec<MatcherPair> {
 		vec![
             MatcherPair::new(
-                Box::new(WithdrawAssetMatcher1),
+                Box::new(ReserveAssetDepositedMatcher1),
                 Box::new(DepositAssetMatcher1),
             ),
             // Additional matcher pairs to be defined in the future
         ]
     }
 	fn get_incoming_parachain_id() -> u32{
-		// TODO change to moonbeam or moonbase id
-		9999u32
+		MOONRIVER_PARA_ID
 	}
 
-	fn callback()-> Result<(),()>{
+	fn callback(_length: u8, _data: &[u8])-> Result<(),()>{
 		// TODO change to call the actual automation pallet, with data and length
 		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0;32])), [0;1].to_vec());
 		Ok(())

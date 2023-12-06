@@ -43,6 +43,7 @@ use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation,
 };
 
+use runtime_common::parachains::kusama::moonriver::{BRZ_location};
 use crate::{AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
 
 const XCM_ASSET_RELAY_DOT: u8 = 0;
@@ -128,7 +129,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				Some(MultiLocation::new(1, X2(Parachain(PENDULUM_ID), PalletInstance(10)))),
 			CurrencyId::Amplitude =>
 				Some(MultiLocation::new(1, X2(Parachain(AMPLITUDE_ID), PalletInstance(10)))),
-			CurrencyId::Token => Some(MultiLocation { parents: 1, interior: X2(Parachain(AMPLITUDE_ID), PalletInstance(2)) }),
+			CurrencyId::Token => Some(BRZ_location()),
 			CurrencyId::XCM(f) => match f {
 				XCM_ASSET_RELAY_DOT => Some(MultiLocation::parent()),
 				// Handles both Kusama and Polkadot asset hub
@@ -157,7 +158,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 				Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
 			MultiLocation { parents: 1, interior: Here } =>
 				Some(CurrencyId::XCM(XCM_ASSET_RELAY_DOT)),
-			MultiLocation { parents: 1, interior: X2(Parachain(AMPLITUDE_ID), PalletInstance(2)) } => Some(CurrencyId::Token),
+			loc if loc == BRZ_location() => Some(CurrencyId::Token),
 			_ => None,
 		}
 	}

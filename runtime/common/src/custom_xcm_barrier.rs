@@ -14,7 +14,7 @@ use xcm_executor::{
 use scale_info::prelude::boxed::Box;
 use sp_std::vec::Vec;
 
-pub trait WithdrawAssetMatcher: Sync {
+pub trait ReserveAssetDepositedMatcher: Sync {
     fn matches(&self, multi_asset: &MultiAsset) -> bool;
 }
 
@@ -22,20 +22,20 @@ pub trait DepositAssetMatcher {
     fn matches<'a>(&self, assets: &'a MultiAssetFilter, beneficiary: &'a MultiLocation) -> Option<(u8, &'a [u8])>;
 }
 pub struct MatcherPair {
-    withdraw_asset_matcher: Box<dyn WithdrawAssetMatcher>,
+    reserve_deposited_asset_matcher: Box<dyn ReserveAssetDepositedMatcher>,
     deposit_asset_matcher: Box<dyn DepositAssetMatcher>,
 }
 
 impl MatcherPair {
-    pub fn new(withdraw_asset_matcher: Box<dyn WithdrawAssetMatcher>, deposit_asset_matcher: Box<dyn DepositAssetMatcher>) -> Self {
+    pub fn new(reserve_deposited_asset_matcher: Box<dyn ReserveAssetDepositedMatcher>, deposit_asset_matcher: Box<dyn DepositAssetMatcher>) -> Self {
         MatcherPair {
-            withdraw_asset_matcher,
+            reserve_deposited_asset_matcher,
             deposit_asset_matcher,
         }
     }
 
-    fn matches_withdraw_asset(&self, multi_asset: &MultiAsset) -> bool {
-        self.withdraw_asset_matcher.matches(multi_asset)
+    fn matches_reserve_deposited(&self, multi_asset: &MultiAsset) -> bool {
+        self.reserve_deposited_asset_matcher.matches(multi_asset)
     }
 
     fn matches_deposit_asset<'a>(&'a self, assets: &'a MultiAssetFilter, beneficiary: &'a MultiLocation) -> Option<(u8, &'a [u8])> {
@@ -45,7 +45,7 @@ impl MatcherPair {
 
 pub trait MatcherConfig {
     fn get_matcher_pairs() -> Vec<MatcherPair>;
-    fn callback() -> Result<(),()>;
+    fn callback(length: u8, data: &[u8]) -> Result<(),()>;
     fn get_incoming_parachain_id() -> u32;
 }
 
@@ -80,25 +80,25 @@ impl<T: Contains<MultiLocation>, V: MatcherConfig> ShouldExecute for AllowUnpaid
                 // Iterate through the instructions, for 
                 // each match pair we allow
                 for matcher_pair in matcher_pairs {
-                    let mut withdraw_asset_matched = false;
+                    let mut reserve_deposited_matched = false;
 
-                    // Check for WithdrawAsset 
+                    // Check for ReserveAssetDeposited instruction
                     for instruction in instructions.iter() {
-                        if let Instruction::WithdrawAsset(assets) = instruction {
-                            if assets.clone().into_inner().iter().any(|asset| matcher_pair.matches_withdraw_asset(asset)) {
-                                withdraw_asset_matched = true;
+                        if let Instruction::ReserveAssetDeposited(assets) = instruction {
+                            if assets.clone().into_inner().iter().any(|asset| matcher_pair.matches_reserve_deposited(asset)) {
+                                reserve_deposited_matched = true;
                                 break;
                             }
                         }
                     }
 
-                    // If WithdrawAsset matches, then check for DepositAsset with the same matcher pair
+                    // If ReserveAssetDeposited matches, then check for DepositAsset with the same matcher pair
                     // and execute the callback
-                    if withdraw_asset_matched {
+                    if reserve_deposited_matched {
                         for instruction in instructions.iter() {
                             if let Instruction::DepositAsset { assets, beneficiary } = instruction {
                                 if let Some((length, data)) = matcher_pair.matches_deposit_asset(assets, beneficiary) {
-                                    V::callback();
+                                    V::callback(length, data);
                                     return Err(());
                                 }
                             }

@@ -13,6 +13,8 @@ use crate::{
 	AMPLITUDE_ID, ASSETHUB_ID, SIBLING_ID,
 };
 
+use runtime_common::parachains::kusama::moonriver::{PARA_ID as MOONRIVER_PARA_ID};
+
 use frame_support::assert_ok;
 use statemine_runtime as kusama_asset_hub_runtime;
 use xcm::latest::NetworkId;
@@ -49,6 +51,16 @@ decl_test_parachain! {
 }
 
 decl_test_parachain! {
+	pub struct MoonriverParachain {
+		Runtime = sibling::Runtime,
+		RuntimeOrigin = sibling::RuntimeOrigin,
+		XcmpMessageHandler = sibling::XcmpQueue,
+		DmpMessageHandler = sibling::DmpQueue,
+		new_ext = para_ext(ParachainType::Moonriver),
+	}
+}
+
+decl_test_parachain! {
 	pub struct AssetHubParachain {
 		Runtime = kusama_asset_hub_runtime::Runtime,
 		RuntimeOrigin = kusama_asset_hub_runtime::RuntimeOrigin,
@@ -65,6 +77,7 @@ decl_test_network! {
 			(1000, AssetHubParachain),
 			(2124, AmplitudeParachain),
 			(9999, SiblingParachain),
+			(2023, MoonriverParachain),
 		],
 	}
 }
@@ -152,9 +165,9 @@ fn moonbeam_transfers_token_and_handle_automation() {
 		amplitude_runtime,
 		AmplitudeParachain,
 		sibling,
-		SiblingParachain,
+		MoonriverParachain,
 		AMPLITUDE_ID,
-		SIBLING_ID
+		MOONRIVER_PARA_ID
  		
 	);
 }

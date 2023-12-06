@@ -193,6 +193,62 @@ pub mod parachains {
 		pub mod asset_hub {
 			pub use super::super::polkadot::asset_hub::*;
 		}
+
+		pub mod moonriver {
+			use xcm::latest::{
+				Junction::{AccountKey20, PalletInstance, Parachain},
+				Junctions::X3,
+			};
+			
+			// see https://docs.moonbeam.network/builders/interoperability/xcm/xc-registration/assets/
+			pub const PARA_ID: u32 = 2023;
+			pub const ASSET_PALLET_INDEX: u8 = 10;
+			
+			// TODO use the REAL BRZ asset on moonriver 
+			// 0xD65A1872f2E2E26092A443CB86bb5d8572027E6E
+			// extracted using `H160::from_str("...")` then `as_bytes()`
+			pub const BRZ_ASSET_ACCOUNT_IN_BYTES: [u8; 20] = [
+				214, 90, 24, 114, 242, 226, 226, 96, 146, 164, 67, 203, 134, 187, 93, 133, 114, 2,
+				126, 110,
+			];
+
+			parachain_asset_location!(
+				BRZ,
+				X3(
+					Parachain(PARA_ID),
+					PalletInstance(ASSET_PALLET_INDEX),
+					AccountKey20 { network: None, key: BRZ_ASSET_ACCOUNT_IN_BYTES }
+				)
+			);
+		}
+	}
+
+	pub mod moonbase_alpha{
+		use xcm::latest::{
+			Junction::{AccountKey20, PalletInstance, Parachain},
+			Junctions::X3,
+		};
+		
+		// see https://docs.moonbeam.network/builders/interoperability/xcm/xc-registration/assets/
+		pub const PARA_ID: u32 = 1000;
+		pub const ASSET_PALLET_INDEX: u8 = 3;
+		
+		// TODO use the REAL BRZ asset on moonbase alpha 
+		// 0xD65A1872f2E2E26092A443CB86bb5d8572027E6E
+		// extracted using `H160::from_str("...")` then `as_bytes()`
+		pub const BRZ_ASSET_ACCOUNT_IN_BYTES: [u8; 20] = [
+			214, 90, 24, 114, 242, 226, 226, 96, 146, 164, 67, 203, 134, 187, 93, 133, 114, 2,
+			126, 110,
+		];
+
+		parachain_asset_location!(
+			BRZ,
+			X3(
+				Parachain(PARA_ID),
+				PalletInstance(ASSET_PALLET_INDEX),
+				AccountKey20 { network: None, key: BRZ_ASSET_ACCOUNT_IN_BYTES }
+			)
+		);
 	}
 }
 

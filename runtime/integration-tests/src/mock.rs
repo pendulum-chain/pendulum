@@ -12,6 +12,7 @@ use xcm_emulator::Weight;
 
 use statemine_runtime as kusama_asset_hub_runtime;
 use statemint_runtime as polkadot_asset_hub_runtime;
+use runtime_common::parachains::kusama::moonriver::{PARA_ID as MOONRIVER_PARA_ID};
 
 pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];
@@ -118,6 +119,7 @@ pub enum ParachainType {
 	Pendulum,
 	Amplitude,
 	Sibling,
+	Moonriver
 }
 
 pub struct ExtBuilderParachain<Currency> {
@@ -191,6 +193,7 @@ pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 		ParachainType::Amplitude =>
 			ExtBuilderParachain::amplitude_default().balances(vec![]).build(),
 		ParachainType::Sibling => ExtBuilderParachain::sibling_default().balances(vec![]).build(),
+		ParachainType::Moonriver => ExtBuilderParachain::moonriver_default().balances(vec![]).build(),
 	}
 }
 
@@ -202,6 +205,7 @@ impl<Currency> ExtBuilderParachain<Currency> {
 			ParachainType::Pendulum => PENDULUM_ID,
 			ParachainType::Sibling => SIBLING_ID,
 			ParachainType::Amplitude => AMPLITUDE_ID,
+			ParachainType::Moonriver => MOONRIVER_PARA_ID,
 		}
 	}
 }
@@ -257,6 +261,10 @@ impl ExtBuilderParachain<SiblingCurrencyId> {
 	pub fn sibling_default() -> Self {
 		Self { balances: vec![], chain: ParachainType::Sibling }
 	}
+
+	pub fn moonriver_default() -> Self {
+		Self { balances: vec![], chain: ParachainType::Moonriver }
+	}
 }
 
 impl Builder<SiblingCurrencyId> for ExtBuilderParachain<SiblingCurrencyId> {
@@ -278,10 +286,22 @@ impl Builder<SiblingCurrencyId> for ExtBuilderParachain<SiblingCurrencyId> {
 					SiblingCurrencyId
 				)
 			},
+			ParachainType::Moonriver => {
+				use sibling::{Runtime, System};
+				build_parachain_with_orml!(
+					self,
+					Runtime,
+					System,
+					INITIAL_BALANCE,
+					ORML_INITIAL_BALANCE,
+					SiblingCurrencyId
+				)
+			},
 			_ => panic!("cannot use this chain to build"),
 		}
 	}
 }
+
 
 // ------------------- for Statemint and Statemine -------------------
 impl ExtBuilderParachain<u128> {

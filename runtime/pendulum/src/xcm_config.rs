@@ -1,6 +1,6 @@
 use super::{
 	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
+	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue, System
 };
 use crate::{
 	assets::{
@@ -26,6 +26,7 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use runtime_common::parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex};
+use runtime_common::custom_xcm_barrier::{MatcherConfig,AllowUnpaidExecutionFromCustom,ReserveAssetDepositedMatcher, DepositAssetMatcher, MatcherPair };
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
@@ -38,6 +39,8 @@ use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
+use sp_std::{vec,vec::Vec};
+use scale_info::prelude::boxed::Box;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -263,7 +266,57 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
-pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
+
+// We will allow for BRZ location from moonbeam
+struct ReserveAssetDepositedMatcher1;
+impl ReserveAssetDepositedMatcher for ReserveAssetDepositedMatcher1 {
+    fn matches(&self, multi_asset: &MultiAsset) -> bool {
+        let expected_multiloc = moonbeam::BRZ_location();
+
+		match multi_asset {
+			MultiAsset { id: AssetId::Concrete(loc), .. } if loc == &expected_multiloc => return true,
+			_ => return false,
+		}
+    }	
+}
+
+// TODO modify with automation's pallet instance
+struct DepositAssetMatcher1;
+impl DepositAssetMatcher for DepositAssetMatcher1 {
+	fn matches<'a>(&self, assets: &'a MultiAssetFilter, beneficiary: &'a MultiLocation) -> Option<(u8, &'a [u8])> {
+        if let (Wild(AllCounted(1)), MultiLocation { parents: 0, interior: X2(PalletInstance(99), GeneralKey { length, data }) }) = (assets, beneficiary) {
+            Some((*length, &*data))
+        } else {
+            None
+        }
+    }
+}
+
+pub struct MatcherConfigPendulum;
+
+impl MatcherConfig for MatcherConfigPendulum {
+    fn get_matcher_pairs() -> Vec<MatcherPair> {
+		vec![
+            MatcherPair::new(
+                Box::new(ReserveAssetDepositedMatcher1),
+                Box::new(DepositAssetMatcher1),
+            ),
+            // Additional matcher pairs to be defined in the future
+        ]
+    }
+	fn get_incoming_parachain_id() -> u32{
+		moonbeam::PARA_ID
+	}
+
+	fn callback(_length: u8, _data: &[u8])-> Result<(),()>{
+		// TODO change to call the actual automation pallet, with data and length
+		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0;32])), [0;1].to_vec());
+		Ok(())
+	}
+}
+
+
+pub type Barrier = AllowUnpaidExecutionFromCustom<Everything, MatcherConfigPendulum>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {

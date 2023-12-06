@@ -591,19 +591,22 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 			Junction, Junction::{ GeneralKey, PalletInstance}, Junctions::{X1,X2, X3}, MultiLocation, WeightLimit,
 		};
 		use $parachain2_runtime::CurrencyId as Parachain2CurrencyId;
-
-
+		use runtime_common::parachains::kusama::moonriver::{BRZ_location};
 		$mocknet::reset();
 
-		// Asset Location and amount are not important for this test
 		let transfer_amount: Balance = units(10);
-
-		// Here we use the same asset, but the important bit is the multilocation
-		// This emulates the special multilocation that triggers the automation pallet 
+		// We mock parachain 2 as beeing moonriver in this case.
+		// Sending "Token" variant which is equivalent to BRZ mock token Multilocation 
+		// in the sibling definition
 		$parachain2::execute_with(|| {
-			use $parachain2_runtime::{XTokens, Tokens,RuntimeOrigin};
+			use $parachain2_runtime::{XTokens, Tokens,RuntimeOrigin, System};
 
 			assert_ok!(Tokens::set_balance(RuntimeOrigin::root().into(), ALICE.clone().into(), Parachain2CurrencyId::Token,transfer_amount, 0));
+			
+			// We must ensure that the destination Multilocation is of the structure 
+			// the intercept excepts so it calls automation pallet
+			
+			// TODO replace instance 99 with automation pallet index when added
 			assert_ok!(XTokens::transfer(
 				$parachain2_runtime::RuntimeOrigin::signed(ALICE.into()),
 				Parachain2CurrencyId::Token,
@@ -625,9 +628,6 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 
 		$parachain1::execute_with(|| {
 			use $parachain1_runtime::{RuntimeEvent, System};
-			for i in System::events().iter() {
-				println!("para 1 events {}: {:?}\n", stringify!($para2_runtime), i);
-			}
 			// given the configuration in amplitude's xcm_config, we expect the callback (in this case a Remark)
 			// to be executed
 			assert!(System::events().iter().any(|r| matches!(

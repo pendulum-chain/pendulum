@@ -1033,27 +1033,13 @@ where
 		);
 
 		let result = match func_id {
-			FuncId::TotalSupply => {
-				total_supply(env, overhead_weight)
-			},
-			FuncId::BalanceOf => {
-				balance_of(env, overhead_weight)
-			},
-			FuncId::Transfer => {
-				transfer(env, overhead_weight)
-			},
-			FuncId::Allowance => {
-				allowance(env, overhead_weight)
-			},
-			FuncId::Approve => {
-				approve(env, overhead_weight)
-			},
-			FuncId::TransferFrom => {
-				transfer_from(env, overhead_weight)
-			},
-			FuncId::GetCoinInfo => {
-				get_coin_info(env, overhead_weight)
-			},
+			FuncId::TotalSupply => total_supply(env, overhead_weight),
+			FuncId::BalanceOf => balance_of(env, overhead_weight),
+			FuncId::Transfer => transfer(env, overhead_weight),
+			FuncId::Allowance => allowance(env, overhead_weight),
+			FuncId::Approve => approve(env, overhead_weight),
+			FuncId::TransferFrom => transfer_from(env, overhead_weight),
+			FuncId::GetCoinInfo => get_coin_info(env, overhead_weight),
 		};
 
 		result
@@ -1089,21 +1075,17 @@ where
 
 	trace!("Calling totalSupply() for currency {:?}", currency_id);
 
-	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-		currency_id,
-	){
+	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
 		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
 	}
 
 	let total_supply =
-		<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(
-			currency_id,
-		);
+		<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(currency_id);
 
-	if let Err(_) = env.write(&total_supply.encode(), false, None){
+	if let Err(_) = env.write(&total_supply.encode(), false, None) {
 		return Ok(RetVal::Converging(ChainExtensionOutcome::WriteError.as_u32()))
 	};
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
 fn balance_of<E: Ext, T>(
@@ -1128,27 +1110,21 @@ where
 		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
 	};
 
-	trace!(
-		"Calling balanceOf() for currency {:?} and account {:?}",
-		currency_id, account_id
-	);
+	trace!("Calling balanceOf() for currency {:?} and account {:?}", currency_id, account_id);
 
-	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-		currency_id,
-	){
+	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
 		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
 	}
 
-	let balance =
-		<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
-			currency_id,
-			&account_id,
-		);
+	let balance = <orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::free_balance(
+		currency_id,
+		&account_id,
+	);
 
-	if let Err(_) = env.write(&balance.encode(), false, None){
+	if let Err(_) = env.write(&balance.encode(), false, None) {
 		return Ok(RetVal::Converging(ChainExtensionOutcome::WriteError.as_u32()))
 	};
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
 fn transfer<E: Ext, T>(
@@ -1169,27 +1145,24 @@ where
 
 	let mut env = env.buf_in_buf_out();
 	// Here we use weights for non native currency as worst case scenario, since we can't know whether it's native or not until we've already read from contract env.
-	let base_weight =
-		<T as orml_currencies::Config>::WeightInfo::transfer_non_native_currency();
+	let base_weight = <T as orml_currencies::Config>::WeightInfo::transfer_non_native_currency();
 	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 	let input = env.read(256)?;
-	let (currency_id, recipient, amount): (
-		CurrencyId,
-		T::AccountId,
-		BalanceOfForChainExt<T>,
-	) = match chain_ext::decode(input) {
-		Ok(value) => value,
-		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
-	};
+	let (currency_id, recipient, amount): (CurrencyId, T::AccountId, BalanceOfForChainExt<T>) =
+		match chain_ext::decode(input) {
+			Ok(value) => value,
+			Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
+		};
 
 	trace!(
 		"Calling transfer() sending {:?} {:?}, from {:?} to {:?}",
-		amount, currency_id, caller, recipient
+		amount,
+		currency_id,
+		caller,
+		recipient
 	);
 
-	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-		currency_id,
-	){
+	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
 		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
 	}
 
@@ -1199,7 +1172,7 @@ where
 		&recipient,
 		amount,
 	)?;
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
 fn allowance<E: Ext, T>(
@@ -1219,32 +1192,30 @@ where
 	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
 	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 	let input = env.read(256)?;
-	let (currency_id, owner, spender): (CurrencyId, T::AccountId, T::AccountId) = match chain_ext::decode(input) {
-		Ok(value) => value,
-		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
-	};
+	let (currency_id, owner, spender): (CurrencyId, T::AccountId, T::AccountId) =
+		match chain_ext::decode(input) {
+			Ok(value) => value,
+			Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
+		};
 
 	trace!(
 		"Calling allowance() for currency {:?}, owner {:?} and spender {:?}",
-		currency_id, owner, spender
+		currency_id,
+		owner,
+		spender
 	);
 
-	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-		currency_id,
-	){
+	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
 		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
 	}
 
-	let allowance = orml_currencies_allowance_extension::Pallet::<T>::allowance(
-		currency_id,
-		&owner,
-		&spender,
-	);
+	let allowance =
+		orml_currencies_allowance_extension::Pallet::<T>::allowance(currency_id, &owner, &spender);
 
-	if let Err(_) = env.write(&allowance.encode(), false, None){
+	if let Err(_) = env.write(&allowance.encode(), false, None) {
 		return Ok(RetVal::Converging(ChainExtensionOutcome::WriteError.as_u32()))
 	};
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
 fn approve<E: Ext, T>(
@@ -1264,27 +1235,24 @@ where
 	let caller = ext.caller().clone();
 
 	let mut env = env.buf_in_buf_out();
-	let base_weight =
-		<<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::approve();
+	let base_weight = <<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::approve();
 	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 	let input = env.read(256)?;
-	let (currency_id, spender, amount): (
-		CurrencyId,
-		T::AccountId,
-		BalanceOfForChainExt<T>,
-	) =  match chain_ext::decode(input) {
-		Ok(value) => value,
-		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
-	};
+	let (currency_id, spender, amount): (CurrencyId, T::AccountId, BalanceOfForChainExt<T>) =
+		match chain_ext::decode(input) {
+			Ok(value) => value,
+			Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
+		};
 
 	trace!(
 		"Calling approve() allowing spender {:?} to transfer {:?} {:?} from {:?}",
-		spender, amount, currency_id, caller
+		spender,
+		amount,
+		currency_id,
+		caller
 	);
 
-	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-		currency_id,
-	){
+	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
 		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
 	}
 
@@ -1294,7 +1262,7 @@ where
 		&spender,
 		amount,
 	)?;
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
 fn transfer_from<E: Ext, T>(
@@ -1314,8 +1282,7 @@ where
 	let caller = ext.caller().clone();
 
 	let mut env = env.buf_in_buf_out();
-	let base_weight =
-		<<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::transfer_from();
+	let base_weight = <<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::transfer_from();
 	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 	let input = env.read(256)?;
 	let (owner, currency_id, recipient, amount): (
@@ -1330,12 +1297,14 @@ where
 
 	trace!(
 		"Calling transfer_from() for caller {:?}, sending {:?} {:?}, from {:?} to {:?}",
-		caller, amount, currency_id, owner, recipient
+		caller,
+		amount,
+		currency_id,
+		owner,
+		recipient
 	);
 
-	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(
-		currency_id,
-	){
+	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
 		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
 	}
 
@@ -1346,7 +1315,7 @@ where
 		&recipient,
 		amount,
 	)?;
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
 fn get_coin_info<E: Ext, T>(
@@ -1375,16 +1344,14 @@ where
 	trace!("Calling get_coin_info() for: {:?}:{:?}", blockchain, symbol);
 
 	let result = match result {
-		Ok(coin_info) =>
-			Result::<CoinInfo, ChainExtensionOutcome>::Ok(CoinInfo::from(coin_info)),
-		Err(e) =>
-			return Ok(RetVal::Converging(ChainExtensionOutcome::from(e).as_u32())),
+		Ok(coin_info) => Result::<CoinInfo, ChainExtensionOutcome>::Ok(CoinInfo::from(coin_info)),
+		Err(e) => return Ok(RetVal::Converging(ChainExtensionOutcome::from(e).as_u32())),
 	};
 
-	if let Err(_) = env.write(&result.encode(), false, None){
+	if let Err(_) = env.write(&result.encode(), false, None) {
 		return Ok(RetVal::Converging(ChainExtensionOutcome::WriteError.as_u32()))
 	};
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
 impl pallet_contracts::Config for Runtime {

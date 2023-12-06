@@ -18,6 +18,7 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
+use runtime_common::parachains::moonbase_alpha_relay::moonbase_alpha;
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
@@ -63,6 +64,8 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		match id {
 			CurrencyId::XCM(xcm_assets::RELAY) => Some(MultiLocation::parent()),
+			// Moonbase testnet native token
+			CurrencyId::XCM(xcm_assets::MOONBASE_DEV) => Some(moonbase_alpha::DEV_location()),
 			CurrencyId::Native => Some(native_location_external_pov()),
 			_ => None,
 		}
@@ -78,6 +81,8 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			// Our native currency location with re-anchoring
 			// The XCM pallet will try to re-anchor the location before it reaches here
 			loc if loc == native_location_local_pov() => Some(CurrencyId::Native),
+			// Moonbase testnet native token
+			loc if loc == moonbase_alpha::DEV_location() => Some(xcm_assets::MOONBASE_DEV_id()),
 			_ => None,
 		}
 	}

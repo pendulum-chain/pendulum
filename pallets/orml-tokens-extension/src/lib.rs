@@ -42,7 +42,7 @@ pub mod pallet {
 	use super::*;
 	use crate::types::CurrencyDetails;
 	use frame_support::{pallet_prelude::*, transactional};
-	use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+	use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
 
 	pub use default_weights::WeightInfo;
 
@@ -235,19 +235,51 @@ pub mod pallet {
 			currency_id: CurrencyOf<T>,
 			new_owner: AccountIdOf<T>,
 		) -> DispatchResult {
+
 			let origin = ensure_signed(origin)?;
 
 			CurrencyData::<T>::try_mutate(currency_id.clone(), |maybe_details| {
 				let details = maybe_details.as_mut().ok_or(Error::<T>::NotCreated)?;
-
 				ensure!(origin == details.owner, Error::<T>::NoPermission);
 
 				if details.owner == new_owner {
 					return Ok(())
 				}
-
 				details.owner = new_owner.clone();
+	
+				Self::deposit_event(Event::OwnershipChanged { currency_id, new_owner });
+				Ok(())
+			})
+		}
 
+		/// Force transfer ownership from root.
+		///
+		/// Origin must be root.
+		///
+		/// - `currency_id`: Currency id.
+		/// - `new_owner`: The new Owner of this currency.
+		///
+		/// Emits `OwnershipChanged`.
+		///
+		/// Weight: `O(1)`
+		#[pallet::call_index(4)]
+		#[pallet::weight(<T as Config>::WeightInfo::transfer_ownership())]
+		#[transactional]
+		pub fn force_transfer_ownership(
+			origin: OriginFor<T>,
+			currency_id: CurrencyOf<T>,
+			new_owner: AccountIdOf<T>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			CurrencyData::<T>::try_mutate(currency_id.clone(), |maybe_details| {
+				let details = maybe_details.as_mut().ok_or(Error::<T>::NotCreated)?;
+
+				if details.owner == new_owner {
+					return Ok(())
+				}
+				details.owner = new_owner.clone();
+	
 				Self::deposit_event(Event::OwnershipChanged { currency_id, new_owner });
 				Ok(())
 			})
@@ -264,7 +296,7 @@ pub mod pallet {
 		/// Emits `ManagersChanged`.
 		///
 		/// Weight: `O(1)`
-		#[pallet::call_index(4)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_managers())]
 		#[transactional]
 		pub fn set_managers(
@@ -290,10 +322,10 @@ pub mod pallet {
 	}
 }
 
+#[cfg_attr(test, mockable)]
+impl<T: Config> Pallet<T> {}
+
 pub trait CurrencyIdCheck {
 	type CurrencyId;
 	fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool;
 }
-
-#[cfg_attr(test, mockable)]
-impl<T: Config> Pallet<T> {}

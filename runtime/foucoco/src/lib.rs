@@ -82,6 +82,7 @@ pub use nomination::Event as NominationEvent;
 pub use redeem::{Event as RedeemEvent, RedeemRequest};
 pub use replace::{Event as ReplaceEvent, ReplaceRequest};
 pub use security::StatusCode;
+pub use spacewalk_primitives::CurrencyId;
 pub use stellar_relay::traits::{FieldLength, Organization, Validator};
 
 const CONTRACTS_DEBUG_OUTPUT: bool = true;
@@ -93,7 +94,7 @@ use oracle::dia::{DiaOracleAdapter, XCMCurrencyConversion};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use spacewalk_primitives::{
-	self as primitives, CurrencyId, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner,
+	self as primitives, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner,
 	UnsignedFixedPoint, UnsignedInner,
 };
 

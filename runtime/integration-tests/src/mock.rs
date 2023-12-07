@@ -1,6 +1,7 @@
-use crate::{sibling, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID};
+use crate::{sibling, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, FOUCOCO_ID, SIBLING_ID};
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::CurrencyId as PendulumCurrencyId;
+use foucoco_runtime::CurrencyId as FoucocoCurrencyId;
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
 use polkadot_parachain::primitives::Id as ParaId;
 use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
@@ -74,6 +75,7 @@ macro_rules! build_parachain_with_orml {
 			balances: vec![
 				(AccountId::from(BOB), CurrencyId::XCM(0), units($orml_balance)),
 				(AccountId::from(ALICE), CurrencyId::XCM(0), units($orml_balance)),
+				(AccountId::from(ALICE), CurrencyId::XCM(1), units($orml_balance)),
 				(AccountId::from(BOB), CurrencyId::Native, units($orml_balance)),
 				(AccountId::from(ALICE), CurrencyId::Native, units($orml_balance)),
 			],
@@ -117,6 +119,7 @@ pub enum ParachainType {
 	KusamaAssetHub,
 	Pendulum,
 	Amplitude,
+	Foucoco,
 	Sibling,
 }
 
@@ -141,6 +144,11 @@ pub fn polkadot_relay_ext() -> sp_io::TestExternalities {
 pub fn kusama_relay_ext() -> sp_io::TestExternalities {
 	use kusama_runtime::{Runtime, System};
 	build_relaychain!(Runtime, System, AMPLITUDE_ID)
+}
+
+pub fn rococo_relay_ext() -> sp_io::TestExternalities {
+	use rococo_runtime::{Runtime, System};
+	build_relaychain!(Runtime, System, FOUCOCO_ID)
 }
 
 fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
@@ -190,6 +198,8 @@ pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 		ParachainType::Pendulum => ExtBuilderParachain::pendulum_default().balances(vec![]).build(),
 		ParachainType::Amplitude =>
 			ExtBuilderParachain::amplitude_default().balances(vec![]).build(),
+		ParachainType::Foucoco =>
+			ExtBuilderParachain::foucoco_default().balances(vec![]).build(),
 		ParachainType::Sibling => ExtBuilderParachain::sibling_default().balances(vec![]).build(),
 	}
 }
@@ -200,8 +210,9 @@ impl<Currency> ExtBuilderParachain<Currency> {
 			ParachainType::PolkadotAssetHub => ASSETHUB_ID,
 			ParachainType::KusamaAssetHub => ASSETHUB_ID,
 			ParachainType::Pendulum => PENDULUM_ID,
-			ParachainType::Sibling => SIBLING_ID,
 			ParachainType::Amplitude => AMPLITUDE_ID,
+			ParachainType::Foucoco => FOUCOCO_ID,
+			ParachainType::Sibling => SIBLING_ID,
 		}
 	}
 }
@@ -214,6 +225,10 @@ impl ExtBuilderParachain<PendulumCurrencyId> {
 
 	pub fn amplitude_default() -> Self {
 		Self { balances: vec![], chain: ParachainType::Amplitude }
+	}
+
+	pub fn foucoco_default() -> Self {
+		Self { balances: vec![], chain: ParachainType::Foucoco }
 	}
 }
 
@@ -245,6 +260,17 @@ impl Builder<PendulumCurrencyId> for ExtBuilderParachain<PendulumCurrencyId> {
 					INITIAL_BALANCE,
 					ORML_INITIAL_BALANCE,
 					PendulumCurrencyId
+				)
+			},
+			ParachainType::Foucoco => {
+				use foucoco_runtime::{Runtime, System};
+				build_parachain_with_orml!(
+					self,
+					Runtime,
+					System,
+					INITIAL_BALANCE,
+					ORML_INITIAL_BALANCE,
+					FoucocoCurrencyId
 				)
 			},
 			_ => panic!("cannot use this chain to build"),

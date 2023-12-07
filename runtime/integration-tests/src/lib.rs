@@ -8,6 +8,9 @@ mod pendulum_tests;
 mod amplitude_tests;
 
 #[cfg(test)]
+mod foucoco_tests;
+
+#[cfg(test)]
 mod test_macros;
 
 #[cfg(test)]
@@ -15,5 +18,6 @@ mod sibling;
 
 pub const PENDULUM_ID: u32 = 2094;
 pub const AMPLITUDE_ID: u32 = 2124;
+pub const FOUCOCO_ID: u32 = 2124;
 pub const ASSETHUB_ID: u32 = 1000;
-pub const SIBLING_ID: u32 = 9999;
+pub const SIBLING_ID: u32 = 1000;

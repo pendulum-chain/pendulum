@@ -35,7 +35,7 @@ polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch =
 polkadot-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.40" }
 kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.40" }
 polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.40" }
-
+rococo-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.40" }
 xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", rev = "bea35c799d725a4233db6b9108ee2ed5bbfc1aed" }
 
 cumulus-pallet-dmp-queue = {git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.40"}
@@ -58,7 +58,8 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 runtime-common = {path = "../common", default-features = false}
 
 pendulum-runtime = { path = "../pendulum" }
-amplitude-runtime = {path = "../amplitude" }
+amplitude-runtime = { path = "../amplitude" }
+foucoco-runtime = { path = "../foucoco" }
 
 [features]
 default = ["std"]

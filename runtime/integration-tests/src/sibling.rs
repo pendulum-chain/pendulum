@@ -16,6 +16,7 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::MAXIMUM_BLOCK_WEIGHT;
 use runtime_common::parachains::polkadot::asset_hub;
+use runtime_common::parachains::moonbase_alpha_relay::moonbase_alpha;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
@@ -47,6 +48,7 @@ use crate::{AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
 
 const XCM_ASSET_RELAY_DOT: u8 = 0;
 const XCM_ASSET_ASSETHUB_USDT: u8 = 1;
+const XCM_ASSET_MOONBASE_ALPHA_DEV: u8 = 2;
 
 pub type AccountId = AccountId32;
 
@@ -94,8 +96,8 @@ pub enum CurrencyId {
 	XCM(u8),
 }
 
-// Convert from u32 parachain id to CurrencyId
-// Needed for the test macro so it works regardless of the XCM sender parachain
+/// Convert from u32 parachain id to CurrencyId
+/// Needed for the test macro so it works regardless of the XCM sender parachain
 impl From<u32> for CurrencyId {
 	fn from(id: u32) -> Self {
 		match id {
@@ -131,6 +133,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				XCM_ASSET_RELAY_DOT => Some(MultiLocation::parent()),
 				// Handles both Kusama and Polkadot asset hub
 				XCM_ASSET_ASSETHUB_USDT => Some(asset_hub::USDT_location()),
+				XCM_ASSET_MOONBASE_ALPHA_DEV => Some(moonbase_alpha::DEV_location()),
 				_ => None,
 			},
 		}
@@ -150,6 +153,10 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			} => Some(CurrencyId::Amplitude),
 			MultiLocation { parents: 0, interior: X1(PalletInstance(10)) } =>
 				Some(CurrencyId::Native),
+			loc if loc == moonbase_alpha::DEV_location() =>
+				Some(CurrencyId::XCM(XCM_ASSET_MOONBASE_ALPHA_DEV)),
+			MultiLocation { parents: 0, interior: X1(PalletInstance(3)) } =>
+				Some(CurrencyId::XCM(XCM_ASSET_MOONBASE_ALPHA_DEV)),
 			// Handles both Kusama and Polkadot asset hub
 			loc if loc == asset_hub::USDT_location() =>
 				Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
@@ -447,7 +454,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
 		Tokens: orml_tokens::{Pallet, Storage, Config<T>, Event<T>},
 		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>} = 3,
 		PolkadotXcm: pallet_xcm,
 		ParachainSystem: cumulus_pallet_parachain_system::{
 			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,

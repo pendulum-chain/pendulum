@@ -5,7 +5,7 @@ use frame_support::{
 };
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
-use sp_core::H256;
+use sp_core::{H256, ConstU128};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -150,20 +150,40 @@ impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = SubstrateWeight<Test>;
 	type CurrencyIdChecker = CurrencyIdCheckerImpl;
-
+	type AssetDeposit = ConstU128<DEPOSIT>;
+	type DepositCurrency = GetNativeCurrencyId;
 	#[cfg(feature = "runtime-benchmarks")]
 	type GetTestCurrency = GetTestTokenCurrency;
 }
 
+// ------- Constants and Genesis Config ------ //
+
+pub const USER_0: u64 = 0;
+pub const USER_1: u64 = 1;
+pub const USER_2: u64 = 2;
+pub const USER_3: u64 = 3;
+
+pub const USERS_INITIAL_BALANCE: u128 = 100000;
+pub const DEPOSIT: u128 = 5000;
 pub struct ExtBuilder;
 
 impl ExtBuilder {
 	pub fn build() -> sp_io::TestExternalities {
-		let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	
+		pallet_balances::GenesisConfig::<Test> {
+			balances: vec![
+							(USER_0,USERS_INITIAL_BALANCE),
+							(USER_1,USERS_INITIAL_BALANCE),
+							(USER_2,USERS_INITIAL_BALANCE)]
+		}
+		.assimilate_storage(&mut storage)
+		.unwrap();
 
 		sp_io::TestExternalities::from(storage)
 	}
 }
+
 
 pub fn run_test<T>(test: T)
 where
@@ -173,4 +193,5 @@ where
 		System::set_block_number(1);
 		test();
 	});
+
 }

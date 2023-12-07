@@ -59,15 +59,25 @@ pub mod pallet {
 		/// Type that allows for checking if currency type is ownable by users
 		type CurrencyIdChecker: CurrencyIdCheck<CurrencyId = CurrencyOf<Self>>;
 
+		/// The deposit currency
+		#[pallet::constant]
+		type DepositCurrency: Get<CurrencyOf<Self>>;
+
+		/// The deposit amount required to take a currency
+		#[pallet::constant]
+		type AssetDeposit: Get<BalanceOf<Self>>;
+
 		/// TODO needs to be conditionaly compiled
 		#[cfg(feature = "runtime-benchmarks")]
 		type GetTestCurrency: Get<CurrencyOf<Self>>;
+
+
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn currency_details)]
 	pub type CurrencyData<T: Config> =
-		StorageMap<_, Blake2_128Concat, CurrencyOf<T>, CurrencyDetails<AccountIdOf<T>>>;
+		StorageMap<_, Blake2_128Concat, CurrencyOf<T>, CurrencyDetails<AccountIdOf<T>, BalanceOf<T>>>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -98,6 +108,8 @@ pub mod pallet {
 		NotCreated,
 		/// No permission to call the operation
 		NoPermission,
+		/// Insuficient balance to make the creation deposit
+		InsufficientBalance
 	}
 
 	#[pallet::pallet]
@@ -127,12 +139,16 @@ pub mod pallet {
 			);
 			ensure!(!CurrencyData::<T>::contains_key(&currency_id), Error::<T>::AlreadyCreated);
 
+			let deposit = T::AssetDeposit::get();
+			ext::orml_tokens::reserve::<T>(T::DepositCurrency::get(), &creator, deposit).map_err(|_| Error::<T>::InsufficientBalance)?;
+
 			CurrencyData::<T>::insert(
 				currency_id.clone(),
 				CurrencyDetails {
 					owner: creator.clone(),
 					issuer: creator.clone(),
 					admin: creator.clone(),
+					deposit
 				},
 			);
 
@@ -236,7 +252,10 @@ pub mod pallet {
 					return Ok(())
 				}
 				details.owner = new_owner.clone();
-	
+				
+				// move reserved balance to the new owner's account
+				let _ = ext::orml_tokens::repatriate_reserve::<T>(T::DepositCurrency::get(), &origin, &new_owner ,details.deposit)?;
+
 				Self::deposit_event(Event::OwnershipChanged { currency_id, new_owner });
 				Ok(())
 			})
@@ -266,8 +285,10 @@ pub mod pallet {
 				if details.owner == new_owner {
 					return Ok(())
 				}
+				let _ = ext::orml_tokens::repatriate_reserve::<T>(T::DepositCurrency::get(), &details.owner, &new_owner ,details.deposit)?;
+
 				details.owner = new_owner.clone();
-	
+
 				Self::deposit_event(Event::OwnershipChanged { currency_id, new_owner });
 				Ok(())
 			})

@@ -78,8 +78,6 @@ pub mod pallet {
 		Burned { currency_id: CurrencyOf<T>, from: AccountIdOf<T>, amount: BalanceOf<T> },
 		/// Some currency class was created.
 		Created { currency_id: CurrencyOf<T>, creator: AccountIdOf<T>, owner: AccountIdOf<T> },
-		/// Some currency data was destroyed
-		Destroyed { currency_id: CurrencyOf<T> },
 		/// Change of ownership
 		OwnershipChanged { currency_id: CurrencyOf<T>, new_owner: AccountIdOf<T> },
 		/// Issuer and admin changed
@@ -117,8 +115,6 @@ pub mod pallet {
 		/// - `currency_id`: Allowed Currency Id.
 		///
 		/// Emits `Created` event when successful.
-		///
-		/// Weight: `O(1)`
 		#[pallet::call_index(0)]
 		#[pallet::weight(<T as Config>::WeightInfo::create())]
 		#[transactional]
@@ -158,8 +154,6 @@ pub mod pallet {
 		/// - `amount`: The amount of the currency to be minted.
 		///
 		/// Emits `Issued` event when successful.
-		///
-		/// Weight: `O(1)`
 		#[pallet::call_index(1)]
 		#[pallet::weight(<T as Config>::WeightInfo::mint())]
 		#[transactional]
@@ -192,8 +186,6 @@ pub mod pallet {
 		/// - `amount`: The amount of the currency to be burned.
 		///
 		/// Emits `Burned` event when successful.
-		///
-		/// Weight: `O(1)`
 		#[pallet::call_index(2)]
 		#[pallet::weight(<T as Config>::WeightInfo::burn())]
 		#[transactional]
@@ -225,8 +217,6 @@ pub mod pallet {
 		/// - `new_owner`: The new Owner of this currency.
 		///
 		/// Emits `OwnershipChanged`.
-		///
-		/// Weight: `O(1)`
 		#[pallet::call_index(3)]
 		#[pallet::weight(<T as Config>::WeightInfo::transfer_ownership())]
 		#[transactional]
@@ -260,8 +250,6 @@ pub mod pallet {
 		/// - `new_owner`: The new Owner of this currency.
 		///
 		/// Emits `OwnershipChanged`.
-		///
-		/// Weight: `O(1)`
 		#[pallet::call_index(4)]
 		#[pallet::weight(<T as Config>::WeightInfo::transfer_ownership())]
 		#[transactional]
@@ -290,12 +278,10 @@ pub mod pallet {
 		/// Origin must be Signed and the sender should be the Owner of the currency.
 		///
 		/// - `currency_id`: Identifier of the currency.
-		/// - `issuer`: The new Issuer of this currency.
-		/// - `admin`: The new Admin of this currency.
+		/// - `new_admin`: The new Admin of this currency.
+		/// - `new_issuer`: The new Issuer of this currency.
 		///
 		/// Emits `ManagersChanged`.
-		///
-		/// Weight: `O(1)`
 		#[pallet::call_index(5)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_managers())]
 		#[transactional]

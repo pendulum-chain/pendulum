@@ -104,7 +104,7 @@ orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
 
 orml-currencies-allowance-extension = {path = "../../pallets/orml-currencies-allowance-extension", default-features = false}
-orml-tokens-extension = {path = "../../pallets/orml-tokens-extension", default-features = false}
+orml-tokens-management-extension = {path = "../../pallets/orml-tokens-management-extension", default-features = false}
 
 # DIA
 dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.40" }
@@ -194,7 +194,7 @@ std = [
     "parachain-info/std",
     "parachain-staking/std",
     "orml-currencies-allowance-extension/std",
-    "orml-tokens-extension/std",
+    "orml-tokens-management-extension/std",
     "pooled-rewards/std",
     "polkadot-parachain/std",
     "polkadot-runtime-common/std",
@@ -267,7 +267,7 @@ runtime-benchmarks = [
 
     "runtime-common/runtime-benchmarks",
     "orml-currencies-allowance-extension/runtime-benchmarks",
-    "orml-tokens-extension/runtime-benchmarks"
+    "orml-tokens-management-extension/runtime-benchmarks"
 ]
 
 try-runtime = [

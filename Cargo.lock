@@ -3042,7 +3042,7 @@ dependencies = [
  "orml-currencies",
  "orml-currencies-allowance-extension",
  "orml-tokens",
- "orml-tokens-extension",
+ "orml-tokens-management-extension",
  "orml-traits",
  "orml-xtokens",
  "pallet-aura",
@@ -6179,7 +6179,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "orml-tokens-extension"
+name = "orml-tokens-management-extension"
 version = "1.0.0"
 dependencies = [
  "frame-benchmarking",

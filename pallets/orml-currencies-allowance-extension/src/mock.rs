@@ -150,27 +150,12 @@ impl ExtBuilder {
 	}
 }
 
-pub const USER1 = 1;
-pub const USER2 = 2;
-pub const USER2 = 3;
-
-pub const USER_INITIAL_BALANCE = 100000;
-
 pub fn run_test<T>(test: T)
 where
 	T: FnOnce(),
 {
 	ExtBuilder::build().execute_with(|| {
 		System::set_block_number(1);
-
-		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-
-		pallet_balances::GenesisConfig::<Test> {
-			balances: vec![(USER1,USER_INITIAL_BALANCE),
-							(USER1,USER_INITIAL_BALANCE),
-							(USER1,USER_INITIAL_BALANCE)]
-		}
-		.assimilate_storage(&mut storage)
-		.unwrap();
+		test();
 	});
 }

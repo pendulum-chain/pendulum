@@ -617,15 +617,7 @@ macro_rules! transfer_DEV_token_from_parachain1_to_parachain2_and_back {
 		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;
 		use $parachain2_runtime::CurrencyId as Parachain2CurrencyId;
 
-
 		$mocknet::reset();
-
-		println!("Parachain2 id: {:?}", $parachain2_id);
-		let transfer_amount: Balance = units(10);
-		let asset_location = MultiLocation::new(
-			1,
-			X2(Junction::Parachain($parachain2_id), Junction::PalletInstance(3)),
-		);
 
 		// Get ALICE's balance on parachain1 before the transfer
 		let native_tokens_before: Balance = units(100);
@@ -634,15 +626,29 @@ macro_rules! transfer_DEV_token_from_parachain1_to_parachain2_and_back {
 				$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::XCM(1), &ALICE.into()),
 				native_tokens_before
 			);
-			println!("Alice before: {:?}", $parachain1_runtime::Tokens::balance(Parachain1CurrencyId::XCM(1), &ALICE.into()));
+			println!(
+				"Alice before: {:?}",
+				$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::XCM(1), &ALICE.into())
+			);
 		});
 		$parachain2::execute_with(|| {
 			assert_eq!(
 				$parachain2_runtime::Tokens::balance(Parachain2CurrencyId::XCM(2), &BOB.into()),
 				0
 			);
-			println!("Bob before: {:?}", $parachain2_runtime::Tokens::balance(Parachain2CurrencyId::XCM(2), &BOB.into()));
+			println!(
+				"Bob before: {:?}",
+				$parachain2_runtime::Tokens::balance(Parachain2CurrencyId::XCM(2), &BOB.into())
+			);
 		});
+
+		println!("Parachain2 id: {:?}", $parachain2_id);
+		let transfer_amount: Balance = units(10);
+		let asset_location = MultiLocation::new(
+			1,
+			X2(Junction::Parachain($parachain2_id), Junction::PalletInstance(3)),
+		);
+		println!("Asset location: {:?}", asset_location);
 
 		// Execute the transfer from parachain1 to parachain2
 		$parachain1::execute_with(|| {
@@ -678,8 +684,10 @@ macro_rules! transfer_DEV_token_from_parachain1_to_parachain2_and_back {
 			// 	$parachain2_runtime::Tokens::balance(Parachain2CurrencyId::XCM(2), &BOB.into()),
 			// 	transfer_amount
 			// );
-			println!("Bob after: {:?}", $parachain2_runtime::Tokens::balance(Parachain2CurrencyId::XCM(2), &BOB.into()));
-
+			println!(
+				"Bob after: {:?}",
+				$parachain2_runtime::Tokens::balance(Parachain2CurrencyId::XCM(2), &BOB.into())
+			);
 		});
 
 		// Verify ALICE's balance on parachain1 after transfer
@@ -688,8 +696,10 @@ macro_rules! transfer_DEV_token_from_parachain1_to_parachain2_and_back {
 			// 	$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::XCM(1), &ALICE.into()),
 			// 	native_tokens_before - transfer_amount
 			// );
-			println!("Alice after: {:?}", $parachain1_runtime::Tokens::balance(Parachain1CurrencyId::XCM(1), &ALICE.into()));
-
+			println!(
+				"Alice after: {:?}",
+				$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::XCM(1), &ALICE.into())
+			);
 		});
 
 		// Send same amount back to ALICE on parachain1
@@ -739,11 +749,12 @@ macro_rules! transfer_DEV_token_from_parachain1_to_parachain2_and_back {
 	}};
 }
 
+use sp_runtime::print;
 // macros defined at the bottom of this file to prevent unresolved imports
 pub(super) use parachain1_transfer_asset_to_parachain2;
 pub(super) use parachain1_transfer_asset_to_parachain2_and_back;
 pub(super) use parachain1_transfer_incorrect_asset_to_parachain2_should_fail;
 pub(super) use transfer_10_relay_token_from_parachain_to_relay_chain;
 pub(super) use transfer_20_relay_token_from_relay_chain_to_parachain;
-pub(super) use transfer_native_token_from_parachain1_to_parachain2_and_back;
 pub(super) use transfer_DEV_token_from_parachain1_to_parachain2_and_back;
+pub(super) use transfer_native_token_from_parachain1_to_parachain2_and_back;

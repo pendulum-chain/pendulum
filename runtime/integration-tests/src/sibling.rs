@@ -15,8 +15,7 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::MAXIMUM_BLOCK_WEIGHT;
-use runtime_common::parachains::polkadot::asset_hub;
-use runtime_common::parachains::moonbase_alpha_relay::moonbase_alpha;
+use runtime_common::parachains::{moonbase_alpha_relay::moonbase_alpha, polkadot::asset_hub};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
@@ -120,6 +119,7 @@ pub struct CurrencyIdConvert;
 // Only supports native currency for now
 impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
+		println!("Converting currency id: {:?}", id);
 		match id {
 			CurrencyId::Native => Some(MultiLocation::new(
 				1,
@@ -142,6 +142,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
+		println!("Converting location: {:?}", location);
 		match location {
 			MultiLocation {
 				parents: 1,
@@ -153,6 +154,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			} => Some(CurrencyId::Amplitude),
 			MultiLocation { parents: 0, interior: X1(PalletInstance(10)) } =>
 				Some(CurrencyId::Native),
+			// Moonbase Alpha DEV token
 			loc if loc == moonbase_alpha::DEV_location() =>
 				Some(CurrencyId::XCM(XCM_ASSET_MOONBASE_ALPHA_DEV)),
 			MultiLocation { parents: 0, interior: X1(PalletInstance(3)) } =>

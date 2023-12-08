@@ -1,7 +1,6 @@
-use crate::{sibling, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, FOUCOCO_ID, SIBLING_ID};
+use crate::{sibling, AMPLITUDE_ID, ASSETHUB_ID, FOUCOCO_ID, PENDULUM_ID, SIBLING_ID};
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::CurrencyId as PendulumCurrencyId;
-use foucoco_runtime::CurrencyId as FoucocoCurrencyId;
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
 use polkadot_parachain::primitives::Id as ParaId;
 use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
@@ -198,8 +197,7 @@ pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 		ParachainType::Pendulum => ExtBuilderParachain::pendulum_default().balances(vec![]).build(),
 		ParachainType::Amplitude =>
 			ExtBuilderParachain::amplitude_default().balances(vec![]).build(),
-		ParachainType::Foucoco =>
-			ExtBuilderParachain::foucoco_default().balances(vec![]).build(),
+		ParachainType::Foucoco => ExtBuilderParachain::foucoco_default().balances(vec![]).build(),
 		ParachainType::Sibling => ExtBuilderParachain::sibling_default().balances(vec![]).build(),
 	}
 }
@@ -270,7 +268,7 @@ impl Builder<PendulumCurrencyId> for ExtBuilderParachain<PendulumCurrencyId> {
 					System,
 					INITIAL_BALANCE,
 					ORML_INITIAL_BALANCE,
-					FoucocoCurrencyId
+					PendulumCurrencyId
 				)
 			},
 			_ => panic!("cannot use this chain to build"),

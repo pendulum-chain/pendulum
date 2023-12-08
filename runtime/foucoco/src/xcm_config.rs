@@ -62,6 +62,7 @@ pub struct CurrencyIdConvert;
 
 impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
+		log::warn!("CurrencyIdConvert::convert({:?})", id);
 		match id {
 			CurrencyId::XCM(xcm_assets::RELAY) => Some(MultiLocation::parent()),
 			// Moonbase testnet native token
@@ -74,6 +75,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
+		log::warn!("CurrencyIdConvert::convert({:?})", location);
 		match location {
 			loc if loc == MultiLocation::parent() => Some(xcm_assets::RELAY_id()),
 			// Our native currency location without re-anchoring

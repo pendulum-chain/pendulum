@@ -379,9 +379,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::AssetRegistry(_) |
 			RuntimeCall::Proxy(_) |
 			RuntimeCall::OrmlExtension(_) |
-			RuntimeCall::RewardDistribution(_) => true
-			// All pallets are allowed, but exhaustive match is defensive
-			// in the case of adding new pallets.
+			RuntimeCall::RewardDistribution(_) => true, // All pallets are allowed, but exhaustive match is defensive
+			                                            // in the case of adding new pallets.
 		}
 	}
 }
@@ -937,25 +936,25 @@ impl pallet_vesting::Config for Runtime {
 	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
 pub struct CurrencyIdCheckerImpl;
-impl orml_tokens_extension::CurrencyIdCheck for CurrencyIdCheckerImpl {
-    type CurrencyId = CurrencyId;
+impl orml_tokens_management_extension::CurrencyIdCheck for CurrencyIdCheckerImpl {
+	type CurrencyId = CurrencyId;
 
-    // We allow any currency of the `Token` variant
-    fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
-        matches!(currency_id, CurrencyId::Token(_))
-    }
+	// We allow any currency of the `Token` variant
+	fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
+		matches!(currency_id, CurrencyId::Token(_))
+	}
 }
 
 parameter_types! {
 	pub const GetTestTokenCurrency: CurrencyId = CurrencyId::Token(1);
 }
 
-impl orml_tokens_extension::Config for Runtime{
+impl orml_tokens_management_extension::Config for Runtime {
 	/// The overarching event type.
 	type RuntimeEvent = RuntimeEvent;
 
 	/// Weight information for the extrinsics in this module.
-	type WeightInfo = orml_tokens_extension::default_weights::SubstrateWeight<Runtime>;
+	type WeightInfo = orml_tokens_management_extension::default_weights::SubstrateWeight<Runtime>;
 
 	/// Type that allows for checking if currency type is ownable by users
 	type CurrencyIdChecker = CurrencyIdCheckerImpl;
@@ -963,7 +962,6 @@ impl orml_tokens_extension::Config for Runtime{
 	/// Needs to be conditionaly compiled
 	#[cfg(feature = "runtime-benchmarks")]
 	type GetTestCurrency = GetTestTokenCurrency;
-
 }
 
 const fn deposit(items: u32, bytes: u32) -> Balance {
@@ -1555,13 +1553,12 @@ impl staking::Config for Runtime {
 	type MaxRewardCurrencies = MaxRewardCurrencies;
 }
 
-
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
-	type DataFeeder = MockDataFeeder<Self::AccountId,Moment>;
+	type DataFeeder = MockDataFeeder<Self::AccountId, Moment>;
 }
 
 parameter_types! {
@@ -1808,7 +1805,7 @@ construct_runtime!(
 		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,
 
 		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
-		OrmlExtension: orml_tokens_extension::{Pallet, Storage, Call, Event<T>} = 81,
+		OrmlExtension: orml_tokens_management_extension::{Pallet, Storage, Call, Event<T>} = 81,
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 
 		// Asset Metadata
@@ -1844,7 +1841,7 @@ mod benches {
 		[pallet_xcm, PolkadotXcm]
 
 		[orml_currencies_allowance_extension, TokenAllowance]
-		[orml_tokens_extension, OrmlExtension]
+		[orml_tokens_management_extension, OrmlExtension]
 	);
 }
 

@@ -1,15 +1,13 @@
 use crate::{
-	mock::{rococo_relay_ext, para_ext, ParachainType},
+	mock::{para_ext, rococo_relay_ext, ParachainType},
 	sibling,
-	test_macros::{
-		transfer_DEV_token_from_parachain1_to_parachain2_and_back,
-	},
+	test_macros::transfer_DEV_token_from_parachain1_to_parachain2_and_back,
 	FOUCOCO_ID, SIBLING_ID,
 };
 
 use frame_support::assert_ok;
-use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
 use polkadot_primitives::runtime_api::runtime_decl_for_parachain_host::ParachainHostV4;
+use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
 
 decl_test_relay_chain! {
 	pub struct RococoRelay {
@@ -44,13 +42,14 @@ decl_test_network! {
 		relay_chain = RococoRelay,
 		parachains = vec![
 			(2124, FoucocoParachain),
-			(1000, SiblingParachain),
+			(1001, SiblingParachain),
 		],
 	}
 }
 
 #[test]
 fn transfer_DEV_token_from_moonbeam_foucoco_to_sibling_parachain_and_back() {
+	sp_tracing::try_init_simple(); // Add this line
 	transfer_DEV_token_from_parachain1_to_parachain2_and_back!(
 		RococoMockNet,
 		foucoco_runtime,
@@ -61,4 +60,3 @@ fn transfer_DEV_token_from_moonbeam_foucoco_to_sibling_parachain_and_back() {
 		SIBLING_ID
 	);
 }
-

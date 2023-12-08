@@ -946,22 +946,16 @@ impl orml_tokens_management_extension::CurrencyIdCheck for CurrencyIdCheckerImpl
 }
 
 parameter_types! {
-	pub const GetTestTokenCurrency: CurrencyId = CurrencyId::Token(1);
+	pub const DepositCurrency: CurrencyId = CurrencyId::Native;
+	pub const AssetDeposit: Balance = 10 * UNIT;
 }
 
 impl orml_tokens_management_extension::Config for Runtime {
-	/// The overarching event type.
 	type RuntimeEvent = RuntimeEvent;
-
-	/// Weight information for the extrinsics in this module.
 	type WeightInfo = orml_tokens_management_extension::default_weights::SubstrateWeight<Runtime>;
-
-	/// Type that allows for checking if currency type is ownable by users
 	type CurrencyIdChecker = CurrencyIdCheckerImpl;
-
-	/// Needs to be conditionaly compiled
-	#[cfg(feature = "runtime-benchmarks")]
-	type GetTestCurrency = GetTestTokenCurrency;
+	type DepositCurrency = DepositCurrency;
+	type AssetDeposit = AssetDeposit;
 }
 
 const fn deposit(items: u32, bytes: u32) -> Balance {

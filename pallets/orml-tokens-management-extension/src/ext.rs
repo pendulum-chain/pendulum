@@ -3,10 +3,10 @@ use mocktopus::macros::mockable;
 
 #[cfg_attr(test, mockable)]
 pub(crate) mod orml_tokens {
-	use crate::{AccountIdOf, BalanceOf, CurrencyOf};
+	use crate::types::{AccountIdOf, BalanceOf, CurrencyOf};
+	use frame_support::traits::BalanceStatus;
 	use orml_traits::{MultiCurrency, MultiReservableCurrency};
 	use sp_runtime::DispatchError;
-	use frame_support::traits::BalanceStatus;
 
 	pub fn mint<T: crate::Config>(
 		currency_id: CurrencyOf<T>,

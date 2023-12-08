@@ -7,7 +7,6 @@ extern crate mocktopus;
 
 #[cfg(test)]
 use mocktopus::macros::mockable;
-use orml_traits::MultiCurrency;
 use sp_std::{convert::TryInto, prelude::*, vec};
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -27,20 +26,10 @@ mod types;
 
 pub use pallet::*;
 
-pub(crate) type BalanceOf<T> = <<T as orml_currencies::Config>::MultiCurrency as MultiCurrency<
-	<T as frame_system::Config>::AccountId,
->>::Balance;
-
-pub(crate) type CurrencyOf<T> = <<T as orml_currencies::Config>::MultiCurrency as MultiCurrency<
-	<T as frame_system::Config>::AccountId,
->>::CurrencyId;
-
-pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use crate::types::CurrencyDetails;
+	use crate::types::{AccountIdOf, BalanceOf, CurrencyDetails, CurrencyOf};
 	use frame_support::{pallet_prelude::*, transactional};
 	use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
 
@@ -66,18 +55,16 @@ pub mod pallet {
 		/// The deposit amount required to take a currency
 		#[pallet::constant]
 		type AssetDeposit: Get<BalanceOf<Self>>;
-
-		/// TODO needs to be conditionaly compiled
-		#[cfg(feature = "runtime-benchmarks")]
-		type GetTestCurrency: Get<CurrencyOf<Self>>;
-
-
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn currency_details)]
-	pub type CurrencyData<T: Config> =
-		StorageMap<_, Blake2_128Concat, CurrencyOf<T>, CurrencyDetails<AccountIdOf<T>, BalanceOf<T>>>;
+	pub type CurrencyData<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		CurrencyOf<T>,
+		CurrencyDetails<AccountIdOf<T>, BalanceOf<T>>,
+	>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -109,7 +96,7 @@ pub mod pallet {
 		/// No permission to call the operation
 		NoPermission,
 		/// Insuficient balance to make the creation deposit
-		InsufficientBalance
+		InsufficientBalance,
 	}
 
 	#[pallet::pallet]
@@ -140,7 +127,8 @@ pub mod pallet {
 			ensure!(!CurrencyData::<T>::contains_key(&currency_id), Error::<T>::AlreadyCreated);
 
 			let deposit = T::AssetDeposit::get();
-			ext::orml_tokens::reserve::<T>(T::DepositCurrency::get(), &creator, deposit).map_err(|_| Error::<T>::InsufficientBalance)?;
+			ext::orml_tokens::reserve::<T>(T::DepositCurrency::get(), &creator, deposit)
+				.map_err(|_| Error::<T>::InsufficientBalance)?;
 
 			CurrencyData::<T>::insert(
 				currency_id.clone(),
@@ -148,7 +136,7 @@ pub mod pallet {
 					owner: creator.clone(),
 					issuer: creator.clone(),
 					admin: creator.clone(),
-					deposit
+					deposit,
 				},
 			);
 
@@ -241,7 +229,6 @@ pub mod pallet {
 			currency_id: CurrencyOf<T>,
 			new_owner: AccountIdOf<T>,
 		) -> DispatchResult {
-
 			let origin = ensure_signed(origin)?;
 
 			CurrencyData::<T>::try_mutate(currency_id.clone(), |maybe_details| {
@@ -252,9 +239,14 @@ pub mod pallet {
 					return Ok(())
 				}
 				details.owner = new_owner.clone();
-				
+
 				// move reserved balance to the new owner's account
-				let _ = ext::orml_tokens::repatriate_reserve::<T>(T::DepositCurrency::get(), &origin, &new_owner ,details.deposit)?;
+				let _ = ext::orml_tokens::repatriate_reserve::<T>(
+					T::DepositCurrency::get(),
+					&origin,
+					&new_owner,
+					details.deposit,
+				)?;
 
 				Self::deposit_event(Event::OwnershipChanged { currency_id, new_owner });
 				Ok(())
@@ -285,7 +277,12 @@ pub mod pallet {
 				if details.owner == new_owner {
 					return Ok(())
 				}
-				let _ = ext::orml_tokens::repatriate_reserve::<T>(T::DepositCurrency::get(), &details.owner, &new_owner ,details.deposit)?;
+				let _ = ext::orml_tokens::repatriate_reserve::<T>(
+					T::DepositCurrency::get(),
+					&details.owner,
+					&new_owner,
+					details.deposit,
+				)?;
 
 				details.owner = new_owner.clone();
 

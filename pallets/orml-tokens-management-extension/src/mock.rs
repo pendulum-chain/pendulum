@@ -1,16 +1,18 @@
-use crate::{self as orml_tokens_extension, Config, CurrencyIdCheck};
+use crate::{
+	self as orml_tokens_management_extension, default_weights::SubstrateWeight, Config,
+	CurrencyIdCheck,
+};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU32, Everything},
 };
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
-use sp_core::{H256, ConstU128};
+use sp_core::{ConstU128, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use crate::default_weights::SubstrateWeight;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -25,7 +27,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call},
-		TokensExtension: orml_tokens_extension::{Pallet, Storage, Call, Event<T>},
+		TokensExtension: orml_tokens_management_extension::{Pallet, Storage, Call, Event<T>},
 	}
 );
 
@@ -34,7 +36,7 @@ pub type Balance = u128;
 pub type BlockNumber = u64;
 pub type Index = u64;
 pub type Amount = i64;
-pub use spacewalk_primitives::CurrencyId;
+pub type CurrencyId = u64;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -70,9 +72,8 @@ impl frame_system::Config for Test {
 pub type TestEvent = RuntimeEvent;
 
 parameter_types! {
-	pub const GetTestTokenCurrency: CurrencyId = CurrencyId::Token(1);
 	pub const MaxLocks: u32 = 50;
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native;
+	pub const GetNativeCurrencyId: CurrencyId = 0;
 }
 
 parameter_type_with_key! {
@@ -138,12 +139,12 @@ impl orml_currencies::Config for Test {
 pub struct CurrencyIdCheckerImpl;
 
 impl CurrencyIdCheck for CurrencyIdCheckerImpl {
-    type CurrencyId = CurrencyId;
+	type CurrencyId = CurrencyId;
 
-    // We allow any currency of the `Token` variant to facilitate testing
-    fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
-        matches!(currency_id, CurrencyId::Token(_))
-    }
+	// We allow currency id 0-9
+	fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
+		*currency_id < 10
+	}
 }
 
 impl Config for Test {
@@ -152,8 +153,6 @@ impl Config for Test {
 	type CurrencyIdChecker = CurrencyIdCheckerImpl;
 	type AssetDeposit = ConstU128<DEPOSIT>;
 	type DepositCurrency = GetNativeCurrencyId;
-	#[cfg(feature = "runtime-benchmarks")]
-	type GetTestCurrency = GetTestTokenCurrency;
 }
 
 // ------- Constants and Genesis Config ------ //
@@ -170,12 +169,13 @@ pub struct ExtBuilder;
 impl ExtBuilder {
 	pub fn build() -> sp_io::TestExternalities {
 		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-	
+
 		pallet_balances::GenesisConfig::<Test> {
 			balances: vec![
-							(USER_0,USERS_INITIAL_BALANCE),
-							(USER_1,USERS_INITIAL_BALANCE),
-							(USER_2,USERS_INITIAL_BALANCE)]
+				(USER_0, USERS_INITIAL_BALANCE),
+				(USER_1, USERS_INITIAL_BALANCE),
+				(USER_2, USERS_INITIAL_BALANCE),
+			],
 		}
 		.assimilate_storage(&mut storage)
 		.unwrap();
@@ -183,7 +183,6 @@ impl ExtBuilder {
 		sp_io::TestExternalities::from(storage)
 	}
 }
-
 
 pub fn run_test<T>(test: T)
 where
@@ -193,5 +192,4 @@ where
 		System::set_block_number(1);
 		test();
 	});
-
 }

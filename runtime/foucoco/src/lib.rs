@@ -940,8 +940,15 @@ impl orml_tokens_management_extension::CurrencyIdCheck for CurrencyIdCheckerImpl
 	type CurrencyId = CurrencyId;
 
 	// We allow any currency of the `Token` variant
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
 		matches!(currency_id, CurrencyId::Token(_))
+	}
+
+	// for benchmarks we allow native. See orml-tokens-management-extension benchmark implementation
+	#[cfg(feature = "runtime-benchmarks")]
+	fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
+		matches!(currency_id, CurrencyId::Native)
 	}
 }
 

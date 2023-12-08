@@ -12,8 +12,8 @@ use orml_traits::{
 use sp_runtime::traits::Get;
 use sp_std::prelude::*;
 
-const AMOUNT_MINTED: u32 = 10000;
-const AMOUNT_BURNED: u32 = 5000;
+const AMOUNT_MINTED: u32 = 2000000000;
+const AMOUNT_BURNED: u32 = 1000000000;
 
 fn get_test_currency<T: Config>() -> CurrencyOf<T> {
 	<T as orml_currencies::Config>::GetNativeCurrencyId::get()
@@ -26,7 +26,7 @@ fn set_up_account<T: Config>(account: &AccountIdOf<T>) {
 	assert_ok!(<orml_currencies::Pallet<T> as MultiCurrency<AccountIdOf<T>>>::deposit(
 		token_currency_id,
 		&account,
-		AMOUNT_MINTED.into()
+		<T as crate::Config>::AssetDeposit::get()
 	));
 }
 

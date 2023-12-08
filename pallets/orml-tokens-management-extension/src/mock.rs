@@ -3,6 +3,7 @@ use crate::{
 	CurrencyIdCheck,
 };
 use frame_support::{
+	pallet_prelude::GenesisBuild,
 	parameter_types,
 	traits::{ConstU32, Everything},
 };
@@ -162,13 +163,25 @@ pub const USER_1: u64 = 1;
 pub const USER_2: u64 = 2;
 pub const USER_3: u64 = 3;
 
-pub const USERS_INITIAL_BALANCE: u128 = 100000;
+pub const USERS_INITIAL_BALANCE: u128 = 1000000;
 pub const DEPOSIT: u128 = 5000;
 pub struct ExtBuilder;
 
 impl ExtBuilder {
 	pub fn build() -> sp_io::TestExternalities {
 		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+		let native_currency_id = GetNativeCurrencyId::get();
+
+		orml_tokens::GenesisConfig::<Test> {
+			balances: vec![
+				(USER_0, native_currency_id, USERS_INITIAL_BALANCE),
+				(USER_1, native_currency_id, USERS_INITIAL_BALANCE),
+				(USER_2, native_currency_id, USERS_INITIAL_BALANCE),
+			],
+		}
+		.assimilate_storage(&mut storage)
+		.unwrap();
 
 		pallet_balances::GenesisConfig::<Test> {
 			balances: vec![

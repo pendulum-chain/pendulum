@@ -31,6 +31,7 @@ use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
+use frame_support::{ensure, traits::Contains};
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -66,7 +67,10 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 		match id {
 			CurrencyId::XCM(xcm_assets::RELAY) => Some(MultiLocation::parent()),
 			// Moonbase testnet native token
-			CurrencyId::XCM(xcm_assets::MOONBASE_DEV) => Some(moonbase_alpha::DEV_location()),
+			CurrencyId::XCM(xcm_assets::MOONBASE_DEV) => {
+				log::warn!("Match location: {:?}", Some(moonbase_alpha::DEV_location()));
+				Some(moonbase_alpha::DEV_location())
+			},
 			CurrencyId::Native => Some(native_location_external_pov()),
 			_ => None,
 		}
@@ -84,7 +88,10 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			// The XCM pallet will try to re-anchor the location before it reaches here
 			loc if loc == native_location_local_pov() => Some(CurrencyId::Native),
 			// Moonbase testnet native token
-			loc if loc == moonbase_alpha::DEV_location() => Some(xcm_assets::MOONBASE_DEV_id()),
+			loc if loc == moonbase_alpha::DEV_location() => {
+				log::warn!("Match currency id: {:?}", Some(xcm_assets::MOONBASE_DEV_id()));
+				Some(xcm_assets::MOONBASE_DEV_id())
+			},
 			_ => None,
 		}
 	}
@@ -244,7 +251,30 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
-pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
+pub struct AllowUnpaidExecutionFromCustom<T> {
+	_phantom: PhantomData<T>,
+}
+impl<T: Contains<MultiLocation>> ShouldExecute
+	for AllowUnpaidExecutionFromCustom<T>
+{
+	fn should_execute<RuntimeCall>(
+		origin: &MultiLocation,
+		instructions: &mut [Instruction<RuntimeCall>],
+		_max_weight: XCMWeight,
+		_weight_credit: &mut XCMWeight,
+	) -> Result<(), ()> {
+		log::info!(
+			target: "xcm::barriers",
+			"AllowUnpaidExecutionFromCustom origin: {:?}, instructions: {:?}, max_weight: {:?}, weight_credit: {:?}",
+			origin, instructions, _max_weight, _weight_credit,
+		);
+
+		ensure!(T::contains(origin), ());
+		Ok(())
+	}
+}
+
+pub type Barrier = AllowUnpaidExecutionFromCustom<Everything>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {

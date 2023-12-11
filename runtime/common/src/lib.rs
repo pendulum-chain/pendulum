@@ -214,7 +214,9 @@ pub mod parachains {
 
 #[cfg(test)]
 mod tests {
-	use super::parachains::polkadot::*;
+	use crate::parachains::moonbase_alpha_relay::moonbase_alpha;
+
+use super::parachains::polkadot::*;
 	use xcm::{
 		latest::prelude::{AccountKey20, PalletInstance, Parachain},
 		prelude::GeneralIndex,
@@ -231,6 +233,16 @@ mod tests {
 			junctions.next(),
 			Some(&AccountKey20 { network: None, key: moonbeam::BRZ_ASSET_ACCOUNT_IN_BYTES })
 		);
+		assert_eq!(junctions.next(), None);
+	}
+
+	#[test]
+	fn test_DEV() {
+		let dev_loc = moonbase_alpha::DEV_location();
+		let mut junctions = dev_loc.interior().into_iter();
+
+		assert_eq!(junctions.next(), Some(&Parachain(moonbase_alpha::PARA_ID)));
+		assert_eq!(junctions.next(), Some(&PalletInstance(moonbase_alpha::BALANCES_PALLET_INDEX)));
 		assert_eq!(junctions.next(), None);
 	}
 

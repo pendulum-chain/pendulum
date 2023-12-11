@@ -42,7 +42,7 @@ decl_test_network! {
 		relay_chain = RococoRelay,
 		parachains = vec![
 			(2124, FoucocoParachain),
-			(1001, SiblingParachain),
+			(1000, SiblingParachain),
 		],
 	}
 }

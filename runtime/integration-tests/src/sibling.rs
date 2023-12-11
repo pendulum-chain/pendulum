@@ -37,11 +37,15 @@ use xcm_executor::{
 
 use xcm::latest::Weight as XCMWeight;
 use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
+	AccountId32Aliases, ConvertedConcreteId, EnsureXcmOrigin,
 	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation,
 };
+
+use frame_support::{ensure, traits::Contains};
+
+use xcm::latest::Instruction;
 
 use crate::{AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
 
@@ -323,7 +327,32 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
-pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
+
+pub struct AllowUnpaidExecutionFromCustom<T> {
+	_phantom: PhantomData<T>,
+}
+impl<T: Contains<MultiLocation>> ShouldExecute
+	for AllowUnpaidExecutionFromCustom<T>
+{
+	fn should_execute<RuntimeCall>(
+		origin: &MultiLocation,
+		instructions: &mut [Instruction<RuntimeCall>],
+		_max_weight: XCMWeight,
+		_weight_credit: &mut XCMWeight,
+	) -> Result<(), ()> {
+		log::info!(
+			target: "xcm::barriers",
+			"AllowUnpaidExecutionFromCustom origin: {:?}, instructions: {:?}, max_weight: {:?}, weight_credit: {:?}",
+			origin, instructions, _max_weight, _weight_credit,
+		);
+
+		ensure!(T::contains(origin), ());
+		Ok(())
+	}
+}
+
+pub type Barrier = AllowUnpaidExecutionFromCustom<Everything>;
+
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
@@ -456,7 +485,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
 		Tokens: orml_tokens::{Pallet, Storage, Config<T>, Event<T>},
 		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>} = 3,
+		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 		PolkadotXcm: pallet_xcm,
 		ParachainSystem: cumulus_pallet_parachain_system::{
 			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,

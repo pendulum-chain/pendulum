@@ -201,7 +201,7 @@ pub mod parachains {
 				Junctions::X2,
 			};
 
-			pub const PARA_ID: u32 = 1001;
+			pub const PARA_ID: u32 = 1000;
 			pub const BALANCES_PALLET_INDEX: u8 = 3;
 
 			parachain_asset_location!(

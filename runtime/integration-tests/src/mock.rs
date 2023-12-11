@@ -75,6 +75,7 @@ macro_rules! build_parachain_with_orml {
 				(AccountId::from(BOB), CurrencyId::XCM(0), units($orml_balance)),
 				(AccountId::from(ALICE), CurrencyId::XCM(0), units($orml_balance)),
 				(AccountId::from(ALICE), CurrencyId::XCM(1), units($orml_balance)),
+				(AccountId::from(BOB), CurrencyId::XCM(2), units($orml_balance)),
 				(AccountId::from(BOB), CurrencyId::Native, units($orml_balance)),
 				(AccountId::from(ALICE), CurrencyId::Native, units($orml_balance)),
 			],

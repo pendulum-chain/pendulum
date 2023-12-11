@@ -57,7 +57,7 @@ pub type AccountId = AccountId32;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
-	pub const RelayNetwork: NetworkId = NetworkId::Polkadot;
+	pub const RelayNetwork: NetworkId = NetworkId::Rococo;
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 	pub UniversalLocation: InteriorMultiLocation =
@@ -137,7 +137,10 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				XCM_ASSET_RELAY_DOT => Some(MultiLocation::parent()),
 				// Handles both Kusama and Polkadot asset hub
 				XCM_ASSET_ASSETHUB_USDT => Some(asset_hub::USDT_location()),
-				XCM_ASSET_MOONBASE_ALPHA_DEV => Some(moonbase_alpha::DEV_location()),
+				XCM_ASSET_MOONBASE_ALPHA_DEV => {
+					println!("Match location: {:?}", Some(moonbase_alpha::DEV_location()));
+					Some(moonbase_alpha::DEV_location())				
+				},
 				_ => None,
 			},
 		}
@@ -159,10 +162,14 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			MultiLocation { parents: 0, interior: X1(PalletInstance(10)) } =>
 				Some(CurrencyId::Native),
 			// Moonbase Alpha DEV token
-			loc if loc == moonbase_alpha::DEV_location() =>
-				Some(CurrencyId::XCM(XCM_ASSET_MOONBASE_ALPHA_DEV)),
-			MultiLocation { parents: 0, interior: X1(PalletInstance(3)) } =>
-				Some(CurrencyId::XCM(XCM_ASSET_MOONBASE_ALPHA_DEV)),
+			loc if loc == moonbase_alpha::DEV_location() => {
+				println!("Match location: {:?}", loc);
+				Some(CurrencyId::XCM(XCM_ASSET_MOONBASE_ALPHA_DEV))
+			},
+			MultiLocation { parents: 0, interior: X1(PalletInstance(3)) } => {
+				println!("Match location: Reanchored one");
+				Some(CurrencyId::XCM(XCM_ASSET_MOONBASE_ALPHA_DEV))
+			},
 			// Handles both Kusama and Polkadot asset hub
 			loc if loc == asset_hub::USDT_location() =>
 				Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),

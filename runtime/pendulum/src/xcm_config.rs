@@ -29,10 +29,10 @@ use runtime_common::parachains::polkadot::{asset_hub, equilibrium, moonbeam, pol
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
-	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
+	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, CurrencyAdapter,
+	EnsureXcmOrigin, FixedWeightBounds, FungiblesAdapter, IsConcrete, NoChecking, ParentIsPreset,
+	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
@@ -46,6 +46,7 @@ parameter_types! {
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 	pub UniversalLocation: InteriorMultiLocation =
 		X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
+	pub PenLocation: MultiLocation = MultiLocation::new(0, X1(PalletInstance(10)));
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
@@ -146,6 +147,20 @@ where
 	}
 }
 
+/// Means for transacting the native currency on this chain.
+pub type CurrencyTransactor = CurrencyAdapter<
+	// Use this currency:
+	Balances,
+	// Use this currency when it is a fungible asset matching the given location or name:
+	IsConcrete<PenLocation>,
+	// Convert an XCM MultiLocation into a local account id:
+	LocationToAccountId,
+	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+	AccountId,
+	// We don't track any teleports of `Balances`.
+	(),
+>;
+
 /// Means for transacting the fungibles assets of ths parachain.
 pub type FungiblesTransactor = FungiblesAdapter<
 	// Use this fungibles implementation
@@ -162,6 +177,9 @@ pub type FungiblesTransactor = FungiblesAdapter<
 	// The account to use for tracking teleports.
 	CheckingAccount,
 >;
+
+/// Means for transacting assets on this chain.
+pub type AssetTransactors = (CurrencyTransactor, FungiblesTransactor);
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
@@ -270,7 +288,7 @@ impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
 	type XcmSender = XcmRouter;
 	// How to withdraw and deposit an asset.
-	type AssetTransactor = FungiblesTransactor;
+	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	// Teleporting is disabled.

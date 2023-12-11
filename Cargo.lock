@@ -3042,6 +3042,7 @@ dependencies = [
  "orml-currencies",
  "orml-currencies-allowance-extension",
  "orml-tokens",
+ "orml-tokens-management-extension",
  "orml-traits",
  "orml-xtokens",
  "pallet-aura",
@@ -6175,6 +6176,29 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "orml-tokens-management-extension"
+version = "1.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "mocktopus",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sha2 0.8.2",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "spacewalk-primitives 1.0.0",
 ]
 
 [[package]]

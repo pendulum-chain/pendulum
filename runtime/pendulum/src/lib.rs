@@ -913,8 +913,8 @@ impl dia_oracle::Config for Runtime {
 }
 
 parameter_types! {
-	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"fo/fmkpr");
-	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"fo/fmrir");
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"pe/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"pe/fmrir");
 	pub PendulumTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 

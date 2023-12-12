@@ -85,6 +85,8 @@ orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-modu
 # KILT
 parachain-staking = {path = "../../pallets/parachain-staking", default-features = false}
 
+orml-currencies-allowance-extension = {path = "../../pallets/orml-currencies-allowance-extension", default-features = false}
+
 # DIA
 dia-oracle = {git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.40"}
 dia-oracle-runtime-api = {git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.40"}
@@ -150,7 +152,6 @@ std = [
   "orml-traits/std",
   "orml-tokens/std",
   "orml-xtokens/std",
-  "orml-xcm-support/std",
   "pallet-aura/std",
   "pallet-authorship/std",
   "pallet-balances/std",
@@ -163,7 +164,7 @@ std = [
   "pallet-identity/std",
   "pallet-multisig/std",
   "pallet-preimage/std",
-  "pallet-proxy/std",
+	"pallet-proxy/std",
   "pallet-insecure-randomness-collective-flip/std",
   "pallet-scheduler/std",
   "pallet-session/std",
@@ -199,6 +200,7 @@ std = [
   "zenlink-protocol-runtime-api/std",
   "bifrost-farming/std",
   "bifrost-farming-rpc-runtime-api/std",
+  "orml-currencies-allowance-extension/std"
 ]
 
 runtime-benchmarks = [
@@ -216,7 +218,8 @@ runtime-benchmarks = [
   "cumulus-pallet-xcmp-queue/runtime-benchmarks",
   "pallet-collective/runtime-benchmarks",
 
-  "runtime-common/runtime-benchmarks"
+  "runtime-common/runtime-benchmarks",
+	"orml-currencies-allowance-extension/runtime-benchmarks"
 ]
 
 try-runtime = [

@@ -617,6 +617,10 @@ type TreasuryRejectOrigin = EitherOfDiverse<
 	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
 >;
 
+parameter_types! {
+	pub PendulumTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
 impl pallet_treasury::Config for Runtime {
 	type PalletId = TreasuryPalletId;
 	type Currency = Balances;
@@ -729,6 +733,10 @@ impl orml_currencies::Config for Runtime {
 	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type WeightInfo = ();
+}
+
+impl orml_unknown_tokens::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
 }
 
 impl orml_asset_registry::Config for Runtime {
@@ -1061,6 +1069,8 @@ construct_runtime!(
 		DiaOracleModule: dia_oracle::{Pallet, Storage, Call, Event<T>} = 58,
 
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
+
+		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 60,
 
 		// Asset Metadata
 		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,

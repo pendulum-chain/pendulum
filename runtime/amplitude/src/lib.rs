@@ -27,7 +27,7 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H256};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
+		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto, fungible::Credit
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchError, FixedPointNumber, SaturatedConversion,
@@ -452,13 +452,28 @@ parameter_types! {
 	pub const MaxReserves: u32 = 50;
 }
 
+pub struct MoveDustToTreasury;
+
+impl OnUnbalanced<Credit<<Runtime as frame_system::Config>::AccountId, pallet_balances::Pallet<Runtime>>>
+	for MoveDustToTreasury
+{
+	fn on_nonzero_unbalanced(
+		amount: Credit<<Runtime as frame_system::Config>::AccountId, pallet_balances::Pallet<Runtime>>,
+	) {
+		let _ = <Balances as Currency<AccountId>>::deposit_creating(
+			&TreasuryPalletId::get().into_account_truncating(),
+			amount.peek(),
+		);
+	}
+}
+
 impl pallet_balances::Config for Runtime {
 	type MaxLocks = MaxLocks;
 	/// The type for recording an account's balance.
 	type Balance = Balance;
 	/// The ubiquitous event type.
 	type RuntimeEvent = RuntimeEvent;
-	type DustRemoval = Treasury;
+	type DustRemoval = MoveDustToTreasury;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;

@@ -29,6 +29,9 @@ use sp_runtime::{
 	ApplyExtrinsicResult, SaturatedConversion,
 };
 
+use bifrost_farming as farming;
+use bifrost_farming_rpc_runtime_api as farming_rpc_runtime_api;
+
 pub use spacewalk_primitives::CurrencyId;
 
 use sp_std::{marker::PhantomData, prelude::*};
@@ -58,7 +61,7 @@ pub use sp_runtime::{traits::AccountIdConversion, MultiAddress, Perbill, Permill
 
 use runtime_common::{
 	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index,
-	ProxyType, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
+	ProxyType, PoolId, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -272,6 +275,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::DiaOracleModule(_) |
 			RuntimeCall::VestingManager(_) |
 			RuntimeCall::AssetRegistry(_) |
+			RuntimeCall::Farming(_) |
 			RuntimeCall::Proxy(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -908,6 +912,23 @@ impl dia_oracle::Config for Runtime {
 	type WeightInfo = dia_oracle::weights::DiaWeightInfo<Runtime>;
 }
 
+parameter_types! {
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"pe/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"pe/fmrir");
+	pub PendulumTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
+impl farming::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureRoot<AccountId>;
+	type WeightInfo = farming::weights::BifrostWeight<Runtime>;
+	type TreasuryAccount = PendulumTreasuryAccount;
+	type Keeper = FarmingKeeperPalletId;
+	type RewardIssuer = FarmingRewardIssuerPalletId;
+}
+
 impl frame_system::offchain::SigningTypes for Runtime {
 	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
 	type Signature = Signature;
@@ -1061,9 +1082,13 @@ construct_runtime!(
 		DiaOracleModule: dia_oracle::{Pallet, Storage, Call, Event<T>} = 58,
 
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
-
+		
+		//Farming
+		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 		// Asset Metadata
 		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
+
+		
 
 		VestingManager: vesting_manager::{Pallet, Call, Event<T>} = 100
 	}
@@ -1283,6 +1308,16 @@ impl_runtime_apis! {
 				asset_1,
 				amount,
 			)
+		}
+	}
+
+	impl farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId> for Runtime {
+		fn get_farming_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_farming_rewards(&who, pid).unwrap_or(Vec::new())
+		}
+
+		fn get_gauge_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_gauge_rewards(&who, pid).unwrap_or(Vec::new())
 		}
 	}
 

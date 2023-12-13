@@ -10,7 +10,6 @@ use sp_io::TestExternalities;
 use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::Weight;
 
-use runtime_common::parachains::kusama::moonriver::PARA_ID as MOONRIVER_PARA_ID;
 use runtime_common::parachains::polkadot::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
 use statemine_runtime as kusama_asset_hub_runtime;
 use statemint_runtime as polkadot_asset_hub_runtime;
@@ -120,7 +119,6 @@ pub enum ParachainType {
 	Pendulum,
 	Amplitude,
 	Sibling,
-	Moonriver,
 	Moonbeam
 }
 
@@ -195,8 +193,6 @@ pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 		ParachainType::Amplitude =>
 			ExtBuilderParachain::amplitude_default().balances(vec![]).build(),
 		ParachainType::Sibling => ExtBuilderParachain::sibling_default().balances(vec![]).build(),
-		ParachainType::Moonriver =>
-			ExtBuilderParachain::moonriver_default().balances(vec![]).build(),
 		ParachainType::Moonbeam =>
 			ExtBuilderParachain::moonbeam_default().balances(vec![]).build(),
 	}
@@ -210,7 +206,6 @@ impl<Currency> ExtBuilderParachain<Currency> {
 			ParachainType::Pendulum => PENDULUM_ID,
 			ParachainType::Sibling => SIBLING_ID,
 			ParachainType::Amplitude => AMPLITUDE_ID,
-			ParachainType::Moonriver => MOONRIVER_PARA_ID,
 			ParachainType::Moonbeam => MOONBEAM_PARA_ID,
 		}
 	}
@@ -268,10 +263,6 @@ impl ExtBuilderParachain<SiblingCurrencyId> {
 		Self { balances: vec![], chain: ParachainType::Sibling }
 	}
 
-	pub fn moonriver_default() -> Self {
-		Self { balances: vec![], chain: ParachainType::Moonriver }
-	}
-
 	pub fn moonbeam_default() -> Self {
 		Self { balances: vec![], chain: ParachainType::Moonbeam }
 	}
@@ -286,17 +277,6 @@ impl Builder<SiblingCurrencyId> for ExtBuilderParachain<SiblingCurrencyId> {
 	fn build(self) -> TestExternalities {
 		match self.chain {
 			ParachainType::Sibling => {
-				use sibling::{Runtime, System};
-				build_parachain_with_orml!(
-					self,
-					Runtime,
-					System,
-					INITIAL_BALANCE,
-					ORML_INITIAL_BALANCE,
-					SiblingCurrencyId
-				)
-			},
-			ParachainType::Moonriver => {
 				use sibling::{Runtime, System};
 				build_parachain_with_orml!(
 					self,

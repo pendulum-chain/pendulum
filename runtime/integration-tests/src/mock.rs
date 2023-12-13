@@ -23,8 +23,8 @@ pub const TEN_UNITS: Balance = 10_000_000_000_000;
 pub const USDT_ASSET_ID: u32 = 1984; //Real USDT Asset ID of both Polkadot's and Kusama's Asset Hub
 pub const INCORRECT_ASSET_ID: u32 = 0; //asset id that pendulum/amplitude does NOT SUPPORT
 
-pub const INITIAL_BALANCE: Balance = 1_000_000_000;
-pub const ORML_INITIAL_BALANCE: Balance = 100;
+pub const NATIVE_INITIAL_BALANCE: Balance = TEN_UNITS;
+pub const ORML_INITIAL_BALANCE: Balance = TEN_UNITS;
 
 macro_rules! create_test_externalities {
 	($runtime:ty, $system:ident, $storage:ident) => {{
@@ -75,8 +75,6 @@ macro_rules! build_parachain_with_orml {
 			balances: vec![
 				(AccountId::from(BOB), CurrencyId::XCM(0), units($orml_balance)),
 				(AccountId::from(ALICE), CurrencyId::XCM(0), units($orml_balance)),
-				(AccountId::from(BOB), CurrencyId::Native, units($orml_balance)),
-				(AccountId::from(ALICE), CurrencyId::Native, units($orml_balance)),
 			],
 		}
 		.assimilate_storage(&mut t)
@@ -236,7 +234,7 @@ impl Builder<PendulumCurrencyId> for ExtBuilderParachain<PendulumCurrencyId> {
 					self,
 					Runtime,
 					System,
-					INITIAL_BALANCE,
+					NATIVE_INITIAL_BALANCE,
 					ORML_INITIAL_BALANCE,
 					PendulumCurrencyId
 				)
@@ -247,7 +245,7 @@ impl Builder<PendulumCurrencyId> for ExtBuilderParachain<PendulumCurrencyId> {
 					self,
 					Runtime,
 					System,
-					INITIAL_BALANCE,
+					NATIVE_INITIAL_BALANCE,
 					ORML_INITIAL_BALANCE,
 					PendulumCurrencyId
 				)
@@ -282,7 +280,7 @@ impl Builder<SiblingCurrencyId> for ExtBuilderParachain<SiblingCurrencyId> {
 					self,
 					Runtime,
 					System,
-					INITIAL_BALANCE,
+					NATIVE_INITIAL_BALANCE,
 					ORML_INITIAL_BALANCE,
 					SiblingCurrencyId
 				)
@@ -293,7 +291,7 @@ impl Builder<SiblingCurrencyId> for ExtBuilderParachain<SiblingCurrencyId> {
 					self,
 					Runtime,
 					System,
-					INITIAL_BALANCE,
+					NATIVE_INITIAL_BALANCE,
 					ORML_INITIAL_BALANCE,
 					SiblingCurrencyId
 				)

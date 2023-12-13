@@ -471,19 +471,19 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
         $parachain1_id:ident,
         $parachain2_id:ident
     ) => {{
-		use crate::mock::{units, ALICE, BOB};
+		use crate::mock::{ALICE, BOB, UNIT, NATIVE_INITIAL_BALANCE};
 		use frame_support::traits::fungibles::Inspect;
 		use polkadot_core_primitives::Balance;
 		use xcm::latest::{
 			Junction, Junction::AccountId32, Junctions::X2, MultiLocation, WeightLimit,
 		};
+		use orml_traits::MultiCurrency;
 		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;
 		use $parachain2_runtime::CurrencyId as Parachain2CurrencyId;
 
-
 		$mocknet::reset();
 
-		let transfer_amount: Balance = units(10);
+		let transfer_amount: Balance = UNIT;
 		let asset_location = MultiLocation::new(
 			1,
 			X2(Junction::Parachain($parachain1_id), Junction::PalletInstance(10)),
@@ -492,11 +492,12 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Used for checking BOB's balance
 		let para1_native_currency_on_para2 = Parachain2CurrencyId::from($parachain1_id);
 
-		// Get ALICE's balance on parachain1 before the transfer
-		let native_tokens_before: Balance = units(100);
+		// Get ALICE's balance on parachain1 before the transfer (defined in mock config)
+		let native_tokens_before: Balance = NATIVE_INITIAL_BALANCE;
+
 		$parachain1::execute_with(|| {
 			assert_eq!(
-				$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::Native, &ALICE.into()),
+				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &ALICE.into()),
 				native_tokens_before
 			);
 		});
@@ -550,7 +551,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Verify ALICE's balance on parachain1 after transfer
 		$parachain1::execute_with(|| {
 			assert_eq!(
-				$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::Native, &ALICE.into()),
+				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &ALICE.into()),
 				native_tokens_before - transfer_amount
 			);
 		});
@@ -599,7 +600,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 				println!("para 1 events {}: {:?}\n", stringify!($para2_runtime), i);
 			}
 			assert_eq!(
-				$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::Native, &ALICE.into()),
+				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &ALICE.into()),
 				native_tokens_before
 			);
 		});

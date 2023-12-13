@@ -1,7 +1,7 @@
 use crate::{
 	mock::{para_ext, rococo_relay_ext, ParachainType},
 	sibling,
-	test_macros::transfer_DEV_token_from_parachain1_to_parachain2_and_back,
+	test_macros::transfer_dev_token_from_parachain1_to_parachain2_and_back,
 	FOUCOCO_ID, SIBLING_ID,
 };
 
@@ -48,9 +48,9 @@ decl_test_network! {
 }
 
 #[test]
-fn transfer_DEV_token_from_moonbeam_foucoco_to_sibling_parachain_and_back() {
+fn transfer_dev_token_from_moonbeam_foucoco_to_sibling_parachain_and_back() {
 	sp_tracing::try_init_simple(); // Add this line
-	transfer_DEV_token_from_parachain1_to_parachain2_and_back!(
+	transfer_dev_token_from_parachain1_to_parachain2_and_back!(
 		RococoMockNet,
 		foucoco_runtime,
 		FoucocoParachain,

@@ -60,8 +60,8 @@ use frame_system::{
 pub use sp_runtime::{traits::AccountIdConversion, MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index,
-	ProxyType, PoolId, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
+	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
+	ProxyType, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -621,10 +621,6 @@ type TreasuryRejectOrigin = EitherOfDiverse<
 	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
 >;
 
-parameter_types! {
-	pub PendulumTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
-}
-
 impl pallet_treasury::Config for Runtime {
 	type PalletId = TreasuryPalletId;
 	type Currency = Balances;
@@ -1086,13 +1082,13 @@ construct_runtime!(
 		DiaOracleModule: dia_oracle::{Pallet, Storage, Call, Event<T>} = 58,
 
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
-		
+
 		//Farming
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 		// Asset Metadata
 		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
 
-		
+
 
 		VestingManager: vesting_manager::{Pallet, Call, Event<T>} = 100
 	}

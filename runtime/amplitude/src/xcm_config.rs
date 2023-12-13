@@ -12,7 +12,7 @@ use crate::{
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
-	traits::{ContainsPair, Everything, Nothing},
+	traits::{ContainsPair, Everything, Nothing, ProcessMessageError},
 };
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
@@ -34,6 +34,7 @@ use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
+use frame_system::EnsureRoot;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -201,7 +202,7 @@ where
 		instructions: &mut [Instruction<RuntimeCall>],
 		max_weight: XCMWeight,
 		weight_credit: &mut XCMWeight,
-	) -> Result<(), ()> {
+	) -> Result<(), ProcessMessageError> {
 		Deny::should_execute(origin, instructions, max_weight, weight_credit)?;
 		Allow::should_execute(origin, instructions, max_weight, weight_credit)
 	}
@@ -215,7 +216,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 		instructions: &mut [Instruction<RuntimeCall>],
 		_max_weight: XCMWeight,
 		_weight_credit: &mut XCMWeight,
-	) -> Result<(), ()> {
+	) -> Result<(), ProcessMessageError> {
 		if instructions.iter().any(|inst| {
 			matches!(
 				inst,
@@ -229,7 +230,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 					}
 			)
 		}) {
-			return Err(()) // Deny
+			return Err(ProcessMessageError::Unsupported) // Deny
 		}
 
 		// allow reserve transfers to arrive from relay chain
@@ -317,6 +318,7 @@ impl pallet_xcm::Config for Runtime {
 	type WeightInfo = crate::weights::pallet_xcm::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
+	type AdminOrigin = EnsureRoot<AccountId>;
 }
 
 #[cfg(feature = "runtime-benchmarks")]

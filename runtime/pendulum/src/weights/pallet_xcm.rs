@@ -55,6 +55,15 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
+	// TODO RE RUN AND GET THIS PROPERLY
+	fn force_suspension() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 3_067_000 picoseconds.
+		Weight::from_parts(3_211_000, 0)
+			.saturating_add(T::DbWeight::get().writes(1_u64))
+	}
 	/// Storage: Benchmark Override (r:0 w:0)
 	/// Proof Skipped: Benchmark Override (max_values: None, max_size: None, mode: Measured)
 	fn teleport_assets() -> Weight {

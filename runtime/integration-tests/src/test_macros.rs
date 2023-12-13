@@ -588,7 +588,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 			Junction, Junction::{ GeneralKey, PalletInstance}, Junctions::{X1,X2, X3}, MultiLocation, WeightLimit,
 		};
 		use $parachain2_runtime::CurrencyId as Parachain2CurrencyId;
-		use runtime_common::parachains::kusama::moonriver::{BRZ_location};
+
 		$mocknet::reset();
 
 		let transfer_amount: Balance = units(10);
@@ -625,7 +625,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 
 		$parachain1::execute_with(|| {
 			use $parachain1_runtime::{RuntimeEvent, System};
-			// given the configuration in amplitude's xcm_config, we expect the callback (in this case a Remark)
+			// given the configuration in pendulum's xcm_config, we expect the callback (in this case a Remark)
 			// to be executed
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,

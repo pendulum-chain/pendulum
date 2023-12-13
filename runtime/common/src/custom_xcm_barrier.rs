@@ -70,6 +70,9 @@ impl<T: Contains<MultiLocation>, V: MatcherConfig> ShouldExecute
 		);
 		log::info!("origin {:?}", origin);
 		let incoming_parachain_id = V::get_incoming_parachain_id();
+
+		ensure!(T::contains(origin), ());
+		
 		// Check if the origin is the specific parachain
 		if let MultiLocation { parents: 1, interior: X1(Parachain(parachain_id)) } = origin {
 			log::info!("paraid {:?}", *parachain_id);
@@ -115,7 +118,7 @@ impl<T: Contains<MultiLocation>, V: MatcherConfig> ShouldExecute
 			}
 		}
 
-		ensure!(T::contains(origin), ());
+		
 		Ok(())
 	}
 }

@@ -1,6 +1,6 @@
 use super::{
 	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeOrigin, System, Tokens, WeightToFee, XcmpQueue,
+	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
 };
 use crate::assets::{
 	native_locations::{native_location_external_pov, native_location_local_pov},
@@ -31,15 +31,6 @@ use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
-
-use runtime_common::{
-	custom_xcm_barrier::{
-		AllowUnpaidExecutionFromCustom, DepositAssetMatcher, MatcherConfig, MatcherPair,
-		ReserveAssetDepositedMatcher,
-	},
-	parachains::moonbase_alpha::{BRZ_location, PARA_ID as MOONBASE_PARA_ID},
-};
-use sp_std::{boxed::Box, vec, vec::Vec};
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -270,65 +261,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
-struct ReserveAssetDepositedMatcher1;
-impl ReserveAssetDepositedMatcher for ReserveAssetDepositedMatcher1 {
-	fn matches(&self, multi_asset: &MultiAsset) -> bool {
-		let expected_multiloc = BRZ_location();
-
-		match multi_asset {
-			MultiAsset { id: AssetId::Concrete(loc), .. } if loc == &expected_multiloc =>
-				return true,
-			_ => return false,
-		}
-	}
-}
-// TODO modify with automation's pallet instance
-struct DepositAssetMatcher1;
-impl DepositAssetMatcher for DepositAssetMatcher1 {
-	fn matches<'a>(
-		&self,
-		assets: &'a MultiAssetFilter,
-		beneficiary: &'a MultiLocation,
-	) -> Option<(u8, &'a [u8])> {
-		if let (
-			Wild(AllCounted(1)),
-			MultiLocation {
-				parents: 0,
-				interior: X2(PalletInstance(99), GeneralKey { length, data }),
-			},
-		) = (assets, beneficiary)
-		{
-			Some((*length, &*data))
-		} else {
-			None
-		}
-	}
-}
-
-pub struct MatcherConfigFoucoco;
-
-impl MatcherConfig for MatcherConfigFoucoco {
-	fn get_matcher_pairs() -> Vec<MatcherPair> {
-		vec![
-			MatcherPair::new(
-				Box::new(ReserveAssetDepositedMatcher1),
-				Box::new(DepositAssetMatcher1),
-			),
-			// Additional matcher pairs to be defined in the future
-		]
-	}
-	fn get_incoming_parachain_id() -> u32 {
-		MOONBASE_PARA_ID
-	}
-
-	fn callback(_length: u8, _data: &[u8]) -> Result<(), ()> {
-		// TODO change to call the actual automation pallet, with data and length
-		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0; 32])), [0; 1].to_vec());
-		Ok(())
-	}
-}
-
-pub type Barrier = AllowUnpaidExecutionFromCustom<Everything, MatcherConfigFoucoco>;
+pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {

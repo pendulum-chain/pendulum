@@ -1,6 +1,6 @@
 use super::{
 	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeOrigin, System, Tokens, WeightToFee, XcmpQueue,
+	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
 };
 use crate::{
 	assets::{
@@ -9,7 +9,6 @@ use crate::{
 	},
 	ConstU32,
 };
-
 use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
@@ -22,40 +21,20 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
-use runtime_common::parachains::kusama::{
-	asset_hub,
-	moonriver::{BRZ_location, PARA_ID as MOONRIVER_PARA_ID},
-};
-
+use runtime_common::parachains::kusama::asset_hub;
 use sp_runtime::traits::Convert;
-use xcm::latest::{
-	prelude::*,
-	Instruction::{self, *},
-	Weight as XCMWeight,
-};
+use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
-	AccountId32Aliases, ConvertedConcreteId, EnsureXcmOrigin, FixedWeightBounds, FungiblesAdapter,
-	NoChecking, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, UsingComponents,
+	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
+	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
 	XcmExecutor,
 };
 
-use cumulus_primitives_core::XcmContext;
-use runtime_common::custom_xcm_barrier::{
-	AllowUnpaidExecutionFromCustom, DepositAssetMatcher, MatcherConfig, MatcherPair,
-	ReserveAssetDepositedMatcher,
-};
-use scale_info::prelude::boxed::Box;
-use sp_std::{vec, vec::Vec};
-use xcm::latest::{
-	Junction::{GeneralKey, PalletInstance, Parachain},
-	Junctions::{X2, X3},
-	MultiLocation,
-};
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
@@ -150,6 +129,7 @@ where
 	}
 }
 
+/// Means for transacting the fungibles assets of ths parachain.
 pub type FungiblesTransactor = FungiblesAdapter<
 	// Use this fungibles implementation
 	Tokens,
@@ -266,77 +246,8 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
-// We will allow for BRZ location from moonriver
-struct ReserveAssetDepositedMatcher1;
-impl ReserveAssetDepositedMatcher for ReserveAssetDepositedMatcher1 {
-	fn matches(&self, multi_asset: &MultiAsset) -> bool {
-		let expected_multiloc = BRZ_location();
+pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
-		match multi_asset {
-			MultiAsset { id: AssetId::Concrete(loc), .. } if loc == &expected_multiloc =>
-				return true,
-			_ => return false,
-		}
-	}
-}
-
-// The beneficiary. We will always expect a location of the form
-// MultiLocation: {
-//     parents: 1,
-//     interior: { X3: {
-//        Parachain(SenderParachainId),
-//        PalletInstance(xx), // will point to the automation pallet
-//        GeneralKey{ length: xx, data: []  }, // this will hold the reference number for Mykobo
-// },
-// Keep in mind that this location will be re-anchored
-
-// TODO modify with automation's pallet instance
-struct DepositAssetMatcher1;
-impl DepositAssetMatcher for DepositAssetMatcher1 {
-	fn matches<'a>(
-		&self,
-		assets: &'a MultiAssetFilter,
-		beneficiary: &'a MultiLocation,
-	) -> Option<(u8, &'a [u8])> {
-		if let (
-			Wild(AllCounted(1)),
-			MultiLocation {
-				parents: 0,
-				interior: X2(PalletInstance(99), GeneralKey { length, data }),
-			},
-		) = (assets, beneficiary)
-		{
-			Some((*length, &*data))
-		} else {
-			None
-		}
-	}
-}
-
-pub struct MatcherConfigAmplitude;
-
-impl MatcherConfig for MatcherConfigAmplitude {
-	fn get_matcher_pairs() -> Vec<MatcherPair> {
-		vec![
-			MatcherPair::new(
-				Box::new(ReserveAssetDepositedMatcher1),
-				Box::new(DepositAssetMatcher1),
-			),
-			// Additional matcher pairs to be defined in the future
-		]
-	}
-	fn get_incoming_parachain_id() -> u32 {
-		MOONRIVER_PARA_ID
-	}
-
-	fn callback(_length: u8, _data: &[u8]) -> Result<(), ()> {
-		// TODO change to call the actual automation pallet, with data and length
-		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0; 32])), [0; 1].to_vec());
-		Ok(())
-	}
-}
-
-pub type Barrier = AllowUnpaidExecutionFromCustom<Everything, MatcherConfigAmplitude>;
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;

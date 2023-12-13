@@ -156,16 +156,3 @@ fn transfer_native_token_from_amplitude_to_sibling_parachain_and_back() {
 		SIBLING_ID
 	);
 }
-
-#[test]
-fn moonbeam_transfers_token_and_handle_automation() {
-	moonbeam_transfers_token_and_handle_automation!(
-		KusamaMockNet,
-		amplitude_runtime,
-		AmplitudeParachain,
-		sibling,
-		MoonriverParachain,
-		AMPLITUDE_ID,
-		MOONRIVER_PARA_ID
-	);
-}

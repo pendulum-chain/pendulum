@@ -44,7 +44,8 @@ use xcm_builder::{
 };
 
 use crate::{AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
-use runtime_common::parachains::kusama::moonriver::BRZ_location;
+
+use runtime_common::parachains::polkadot::moonbeam::BRZ_location;
 
 const XCM_ASSET_RELAY_DOT: u8 = 0;
 const XCM_ASSET_ASSETHUB_USDT: u8 = 1;

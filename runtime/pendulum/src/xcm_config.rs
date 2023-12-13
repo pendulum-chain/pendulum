@@ -1,7 +1,9 @@
 use super::{
 	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeOrigin, System, Tokens, WeightToFee, XcmpQueue,
+	RuntimeCall, RuntimeEvent, RuntimeOrigin, System, Tokens, WeightToFee, XcmpQueue, Currencies, Treasury
 };
+
+pub use sp_runtime::Perbill;
 use crate::{
 	assets::{
 		self,
@@ -20,7 +22,7 @@ use frame_support::{
 };
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
-	parameter_type_with_key,
+	parameter_type_with_key, MultiCurrency,
 };
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
@@ -33,7 +35,7 @@ use runtime_common::{
 	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
 };
 use scale_info::prelude::boxed::Box;
-use sp_runtime::traits::Convert;
+use sp_runtime::traits::{Convert, AccountIdConversion};
 use sp_std::{vec, vec::Vec};
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
@@ -272,22 +274,22 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 }
 
 // We will allow for BRZ location from moonbeam
-struct ReserveAssetDepositedMatcher1;
-impl ReserveAssetDepositedMatcher for ReserveAssetDepositedMatcher1 {
-	fn matches(&self, multi_asset: &MultiAsset) -> bool {
+struct BRZMoonbeamAssetMatcher;
+impl ReserveAssetDepositedMatcher for BRZMoonbeamAssetMatcher {
+	fn matches(&self, multi_asset: &MultiAsset) -> Option<MultiAsset> {
 		let expected_multiloc = moonbeam::BRZ_location();
 
 		match multi_asset {
 			MultiAsset { id: AssetId::Concrete(loc), .. } if loc == &expected_multiloc =>
-				return true,
-			_ => return false,
+				return Some(multi_asset.clone()),
+			_ => return None,
 		}
 	}
 }
 
 // TODO modify with automation's pallet instance
-struct DepositAssetMatcher1;
-impl DepositAssetMatcher for DepositAssetMatcher1 {
+struct PendulumAutomationPalletMatcher;
+impl DepositAssetMatcher for PendulumAutomationPalletMatcher {
 	fn matches<'a>(
 		&self,
 		assets: &'a MultiAssetFilter,
@@ -314,8 +316,8 @@ impl MatcherConfig for MatcherConfigPendulum {
 	fn get_matcher_pairs() -> Vec<MatcherPair> {
 		vec![
 			MatcherPair::new(
-				Box::new(ReserveAssetDepositedMatcher1),
-				Box::new(DepositAssetMatcher1),
+				Box::new(BRZMoonbeamAssetMatcher),
+				Box::new(PendulumAutomationPalletMatcher),
 			),
 			// Additional matcher pairs to be defined in the future
 		]
@@ -324,10 +326,26 @@ impl MatcherConfig for MatcherConfigPendulum {
 		moonbeam::PARA_ID
 	}
 
-	fn callback(_length: u8, _data: &[u8]) -> Result<(), ()> {
+	fn callback(_length: u8, _data: &[u8], _amount: u128) -> Result<(), ()> {
 		// TODO change to call the actual automation pallet, with data and length
 		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0; 32])), [0; 1].to_vec());
 		Ok(())
+	}
+
+	// TODO define actual desired implementation of fee extraction.
+	// In this placeholder implementation, some percentage is given to treasury account
+	// in the local currency representing the asset from
+	// ReserveDepositAsset (the original asset)
+	fn extract_fee(location: MultiLocation, amount: u128)-> u128 {
+		if let Some(currency_id) = CurrencyIdConvert::convert(location){
+
+			let fee = Perbill::from_percent(1) * amount;
+			<Currencies as MultiCurrency<AccountId>>::deposit(currency_id, &Treasury::account_id(), fee);
+			amount - fee
+		}else{
+			amount
+		}
+		
 	}
 }
 

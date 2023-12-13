@@ -618,6 +618,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
     ) => {{
 		use crate::mock::{units, ALICE};
 		use polkadot_core_primitives::Balance;
+		
 		use xcm::latest::{
 			Junction, Junction::{ GeneralKey, PalletInstance}, Junctions::{X1,X2, X3}, MultiLocation, WeightLimit,
 		};
@@ -658,12 +659,18 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 		});
 
 		$parachain1::execute_with(|| {
-			use $parachain1_runtime::{RuntimeEvent, System};
+			use $parachain1_runtime::{RuntimeEvent, System, Tokens};
 			// given the configuration in pendulum's xcm_config, we expect the callback (in this case a Remark)
 			// to be executed
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::System(frame_system::Event::Remarked { .. })
+			)));
+
+			// Assert also that the fee has been given to the treasury id
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::Tokens(orml_tokens::Event::Deposited { .. })
 			)));
 
 		});

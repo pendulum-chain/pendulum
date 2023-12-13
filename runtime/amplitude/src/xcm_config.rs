@@ -1,15 +1,5 @@
-use super::{
-	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
-};
-use crate::{
-	assets::{
-		native_locations::{native_location_external_pov, native_location_local_pov},
-		xcm_assets,
-	},
-	ConstU32,
-};
 use core::marker::PhantomData;
+
 use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ContainsPair, Everything, Nothing},
@@ -18,21 +8,33 @@ use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
 };
+use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
-use runtime_common::parachains::kusama::asset_hub;
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
-	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
+	AccountId32Aliases, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds,
+	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
-use xcm_executor::{
-	traits::{JustTry, ShouldExecute},
-	XcmExecutor,
+use xcm_executor::{traits::ShouldExecute, XcmExecutor};
+
+use runtime_common::parachains::kusama::asset_hub;
+
+use crate::{
+	assets::{
+		native_locations::{native_location_external_pov, native_location_local_pov},
+		xcm_assets,
+	},
+	ConstU32,
+};
+
+use super::{
+	AccountId, AmplitudeTreasuryAccount, Balance, Balances, Currencies, CurrencyId, ParachainInfo,
+	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, UnknownTokens,
+	WeightToFee, XcmpQueue,
 };
 
 parameter_types! {
@@ -129,21 +131,17 @@ where
 	}
 }
 
-/// Means for transacting the fungibles assets of ths parachain.
-pub type FungiblesTransactor = FungiblesAdapter<
+/// Means for transacting the currencies of this parachain
+pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	// Use this fungibles implementation
-	Tokens,
-	// This means that this adapter should handle any token that `CurrencyIdConvert` can convert
-	// to `CurrencyId`, the `CurrencyId` type of `Tokens`, the fungibles implementation it uses.
-	ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
-	// Convert an XCM MultiLocation into a local account id
-	LocationToAccountId,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly)
+	Currencies,
+	UnknownTokens,
+	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
 	AccountId,
-	// We dont allow teleports.
-	NoChecking,
-	// The account to use for tracking teleports.
-	CheckingAccount,
+	LocationToAccountId,
+	CurrencyId,
+	CurrencyIdConvert,
+	DepositToAlternative<AmplitudeTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
@@ -253,7 +251,7 @@ impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
 	type XcmSender = XcmRouter;
 	// How to withdraw and deposit an asset.
-	type AssetTransactor = FungiblesTransactor;
+	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	// Teleporting is disabled.

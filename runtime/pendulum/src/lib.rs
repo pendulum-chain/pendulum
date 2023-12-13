@@ -1070,7 +1070,7 @@ construct_runtime!(
 
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
 
-		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 60,
+		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 82,
 
 		// Asset Metadata
 		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,

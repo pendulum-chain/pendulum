@@ -48,7 +48,6 @@ parameter_types! {
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 	pub UniversalLocation: InteriorMultiLocation =
 		X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
-	pub PenLocation: MultiLocation = MultiLocation::new(0, X1(PalletInstance(10)));
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used

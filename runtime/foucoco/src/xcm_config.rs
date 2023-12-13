@@ -248,30 +248,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
-pub struct AllowUnpaidExecutionFromCustom<T> {
-	_phantom: PhantomData<T>,
-}
-impl<T: Contains<MultiLocation>> ShouldExecute
-	for AllowUnpaidExecutionFromCustom<T>
-{
-	fn should_execute<RuntimeCall>(
-		origin: &MultiLocation,
-		instructions: &mut [Instruction<RuntimeCall>],
-		_max_weight: XCMWeight,
-		_weight_credit: &mut XCMWeight,
-	) -> Result<(), ()> {
-		log::info!(
-			target: "xcm::barriers",
-			"AllowUnpaidExecutionFromCustom origin: {:?}, instructions: {:?}, max_weight: {:?}, weight_credit: {:?}",
-			origin, instructions, _max_weight, _weight_credit,
-		);
-
-		ensure!(T::contains(origin), ());
-		Ok(())
-	}
-}
-
-pub type Barrier = AllowUnpaidExecutionFromCustom<Everything>;
+pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {

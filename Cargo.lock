@@ -227,7 +227,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
- "orml-unknown-tokens",
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-aura",
@@ -3046,7 +3045,6 @@ dependencies = [
  "orml-tokens",
  "orml-tokens-management-extension",
  "orml-traits",
- "orml-unknown-tokens",
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-aura",
@@ -6225,21 +6223,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "orml-unknown-tokens"
-version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.40#19afb58a300faac6ceb0e6e4e341859282897c53"
-dependencies = [
- "frame-support",
- "frame-system",
- "orml-xcm-support",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-std",
- "xcm",
-]
-
-[[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack//open-runtime-module-library?branch=polkadot-v0.9.40#19afb58a300faac6ceb0e6e4e341859282897c53"
@@ -7804,7 +7787,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
- "orml-unknown-tokens",
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-aura",

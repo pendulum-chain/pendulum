@@ -33,8 +33,8 @@ use crate::{
 
 use super::{
 	AccountId, AmplitudeTreasuryAccount, Balance, Balances, Currencies, CurrencyId, ParachainInfo,
-	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, UnknownTokens,
-	WeightToFee, XcmpQueue,
+	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, WeightToFee,
+	XcmpQueue,
 };
 
 parameter_types! {
@@ -135,7 +135,7 @@ where
 pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	// Use this fungibles implementation
 	Currencies,
-	UnknownTokens,
+	(), // We don't handle unknown assets.
 	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
 	AccountId,
 	LocationToAccountId,

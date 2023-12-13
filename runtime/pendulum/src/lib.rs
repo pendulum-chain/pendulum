@@ -735,10 +735,6 @@ impl orml_currencies::Config for Runtime {
 	type WeightInfo = ();
 }
 
-impl orml_unknown_tokens::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-}
-
 impl orml_asset_registry::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type CustomMetadata = asset_registry::CustomMetadata;
@@ -1069,8 +1065,6 @@ construct_runtime!(
 		DiaOracleModule: dia_oracle::{Pallet, Storage, Call, Event<T>} = 58,
 
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
-
-		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 82,
 
 		// Asset Metadata
 		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,

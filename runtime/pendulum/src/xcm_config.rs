@@ -38,7 +38,7 @@ use crate::{
 use super::{
 	AccountId, Balance, Balances, Currencies, CurrencyId, ParachainInfo, ParachainSystem,
 	PendulumTreasuryAccount, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
-	UnknownTokens, WeightToFee, XcmpQueue,
+	WeightToFee, XcmpQueue,
 };
 
 parameter_types! {
@@ -150,9 +150,8 @@ where
 
 /// Means for transacting the currencies of this parachain
 pub type LocalAssetTransactor = MultiCurrencyAdapter<
-	// Use this fungibles implementation
 	Currencies,
-	UnknownTokens,
+	(), // We don't handle unknown assets.
 	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
 	AccountId,
 	LocationToAccountId,

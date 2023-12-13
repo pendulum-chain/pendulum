@@ -1,13 +1,5 @@
-use super::{
-	AccountId, Balance, Balances, Currencies, CurrencyId, FoucocoTreasuryAccount, ParachainInfo,
-	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens,
-	UnknownTokens, WeightToFee, XcmpQueue,
-};
-use crate::assets::{
-	native_locations::{native_location_external_pov, native_location_local_pov},
-	xcm_assets,
-};
 use core::marker::PhantomData;
+
 use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ConstU32, ContainsPair, Everything, Nothing},
@@ -20,18 +12,26 @@ use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdap
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
-use runtime_common::parachains::moonbase_alpha_relay::moonbase_alpha;
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, FungiblesAdapter, IsConcrete, NoChecking, ParentIsPreset,
-	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	AccountId32Aliases, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds,
+	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
-use xcm_executor::{
-	traits::{JustTry, ShouldExecute},
-	XcmExecutor,
+use xcm_executor::{traits::ShouldExecute, XcmExecutor};
+
+use runtime_common::parachains::moonbase_alpha_relay::moonbase_alpha;
+
+use crate::assets::{
+	native_locations::{native_location_external_pov, native_location_local_pov},
+	xcm_assets,
+};
+
+use super::{
+	AccountId, Balance, Balances, Currencies, CurrencyId, FoucocoTreasuryAccount, ParachainInfo,
+	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, WeightToFee,
+	XcmpQueue,
 };
 
 parameter_types! {
@@ -133,7 +133,7 @@ where
 pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	// Use this fungibles implementation
 	Currencies,
-	UnknownTokens,
+	(), // We don't handle unknown assets.
 	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
 	AccountId,
 	LocationToAccountId,

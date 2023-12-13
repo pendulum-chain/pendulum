@@ -236,6 +236,10 @@ macro_rules! parachain1_transfer_incorrect_asset_to_parachain2_should_fail {
 
 		$parachain2::execute_with(|| {
 			use $para2_runtime::{RuntimeEvent, System};
+			// print all system events
+			for i in System::events().iter() {
+				println!("{}: {:?}\n", stringify!($para2_runtime), i);
+			}
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Fail {

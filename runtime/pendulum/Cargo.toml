@@ -79,7 +79,6 @@ orml-asset-registry = {git = "https://github.com/open-web3-stack/open-runtime-mo
 orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.40" }
 orml-traits = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.40" }
 orml-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.40" }
-orml-unknown-tokens = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.40" }
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.40" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.40" }
 
@@ -149,7 +148,6 @@ std = [
   "orml-tokens/std",
   "orml-xtokens/std",
   "orml-xcm-support/std",
-  "orml-unknown-tokens/std",
   "pallet-aura/std",
   "pallet-authorship/std",
   "pallet-balances/std",

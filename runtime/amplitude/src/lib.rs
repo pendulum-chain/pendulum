@@ -840,10 +840,6 @@ impl orml_asset_registry::Config for Runtime {
 	type WeightInfo = weights::orml_asset_registry::WeightInfo<Runtime>;
 }
 
-impl orml_unknown_tokens::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-}
-
 parameter_types! {
 	pub const MinBlocksPerRound: BlockNumber = HOURS;
 	pub const DefaultBlocksPerRound: BlockNumber = 2 * HOURS;
@@ -1373,8 +1369,6 @@ construct_runtime!(
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
 		ClientsInfo: clients_info::{Pallet, Call, Storage, Event<T>} = 72,
 		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,
-
-		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 82,
 
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 

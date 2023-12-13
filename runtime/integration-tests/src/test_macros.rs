@@ -415,13 +415,47 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 				WeightLimit::Unlimited
 			));
 
+			assert_eq!(
+				TEN_UNITS - 1 * UNIT, //initial balance - one unit
+				Tokens::balance(CurrencyId::XCM(1), &AccountId::from(BOB))
+			);
+
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. })
 			)));
 
 			for i in System::events().iter() {
-				println!("para 2 {}: {:?}\n", stringify!($para2_runtime), i);
+				println!("{}: {:?}\n", stringify!($para2_runtime), i);
+			}
+		});
+
+		$parachain1::execute_with(|| {
+			use $para1_runtime::*;
+
+			for i in System::events().iter() {
+				println!("{}: {:?}\n", stringify!($para1_runtime), i);
+			}
+
+			let events = System::events();
+			match &events[events.len() - 2] {
+				&frame_system::EventRecord {
+					phase: frame_system::Phase::Initialization,
+					event:
+						RuntimeEvent::Assets(pallet_assets::Event::Issued {
+							asset_id: $para1_asset_id,
+							owner: _,
+							amount,
+						}),
+					topics: _,
+				} => {
+					// https://github.com/paritytech/cumulus/pull/1278 support using self sufficient asset
+					// for paying xcm execution fee.
+					// 990_000_000_000 for Statemint
+					// 988_423_297_485 for Statemine
+					assert_eq!(amount, Assets::balance($para1_asset_id, &AccountId::from(BOB)));
+				},
+				other => panic!("wrong event: {other:?}"),
 			}
 		});
 	}};

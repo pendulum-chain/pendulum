@@ -380,7 +380,6 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::AssetRegistry(_) |
 			RuntimeCall::Proxy(_) |
 			RuntimeCall::OrmlExtension(_) |
-			RuntimeCall::VeMinting(_) |
 			RuntimeCall::RewardDistribution(_) => true, // All pallets are allowed, but exhaustive match is defensive
 			                                            // in the case of adding new pallets.
 		}
@@ -1540,35 +1539,9 @@ impl farming::Config for Runtime {
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type FarmingBoost = FarmingBoostPalletId;
-	type VeMinting = VeMinting;
+	type VeMinting = ();
 	type BlockNumberToBalance = ConvertInto;
 	type WhitelistMaximumLimit = WhitelistMaximumLimit;
-}
-
-parameter_types! {
-	pub const VeMintingTokenType: CurrencyId = CurrencyId::Native;
-	pub VeMintingPalletId: PalletId = PalletId(*b"am/vemnt");
-	pub IncentivePalletId: PalletId = PalletId(*b"am/veict");
-	pub const Week: BlockNumber = 50400; // a week
-	pub const MaxBlock: BlockNumber = 10512000; // four years
-	pub const Multiplier: Balance = 10_u128.pow(12);
-	pub const VoteWeightMultiplier: Balance = 3;
-}
-
-impl bifrost_ve_minting::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type CurrencyId = CurrencyId;
-	type MultiCurrency = Currencies;
-	type ControlOrigin = EnsureRoot<AccountId>;
-	type TokenType = VeMintingTokenType;
-	type VeMintingPalletId = VeMintingPalletId;
-	type IncentivePalletId = IncentivePalletId;
-	type WeightInfo = ();
-	type BlockNumberToBalance = ConvertInto;
-	type Week = Week;
-	type MaxBlock = MaxBlock;
-	type Multiplier = Multiplier;
-	type VoteWeightMultiplier = VoteWeightMultiplier;
 }
 
 impl security::Config for Runtime {
@@ -1846,7 +1819,7 @@ construct_runtime!(
 
 		// Asset Metadata
 		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
-		VeMinting: bifrost_ve_minting::{Pallet, Call, Storage, Event<T>} = 92,
+
 	}
 );
 

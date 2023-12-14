@@ -191,8 +191,6 @@ version = "0.1.0"
 dependencies = [
  "bifrost-farming",
  "bifrost-farming-rpc-runtime-api",
- "bifrost-ve-minting",
- "bifrost-ve-minting-rpc-runtime-api",
  "clients-info",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
@@ -736,7 +734,6 @@ version = "0.8.0"
 source = "git+https://github.com/pendulum-chain/bifrost?branch=upgrade-v0.9.42#ad1e95fcafe0203968571ef11fd5e4ceaaee7146"
 dependencies = [
  "cumulus-primitives-core",
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex-literal 0.3.4",
@@ -750,18 +747,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
-]
-
-[[package]]
-name = "bifrost-ve-minting-rpc-runtime-api"
-version = "0.8.0"
-source = "git+https://github.com/pendulum-chain/bifrost?branch=upgrade-v0.9.42#ad1e95fcafe0203968571ef11fd5e4ceaaee7146"
-dependencies = [
- "node-primitives",
- "parity-scale-codec",
- "sp-api",
- "sp-core",
- "sp-std",
 ]
 
 [[package]]
@@ -3168,8 +3153,6 @@ version = "0.1.0"
 dependencies = [
  "bifrost-farming",
  "bifrost-farming-rpc-runtime-api",
- "bifrost-ve-minting",
- "bifrost-ve-minting-rpc-runtime-api",
  "clients-info",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",

@@ -268,17 +268,6 @@ impl Builder<PendulumCurrencyId> for ExtBuilderParachain<PendulumCurrencyId> {
 					PendulumCurrencyId
 				)
 			},
-			ParachainType::Foucoco => {
-				use foucoco_runtime::{Runtime, System};
-				build_parachain_with_orml!(
-					self,
-					Runtime,
-					System,
-					INITIAL_BALANCE,
-					ORML_INITIAL_BALANCE,
-					PendulumCurrencyId
-				)
-			},
 			_ => panic!("cannot use this chain to build"),
 		}
 	}

@@ -366,6 +366,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Farming(_) |
 			RuntimeCall::AssetRegistry(_) |
 			RuntimeCall::Proxy(_) |
+			RuntimeCall::VeMinting(_) |
 			RuntimeCall::RewardDistribution(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -1251,7 +1252,9 @@ impl pooled_rewards::Config for Runtime {
 parameter_types! {
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"am/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"am/fmrir");
+	pub const FarmingBoostPalletId: PalletId = PalletId(*b"am/fmbst");
 	pub AmplitudeTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+	pub const WhitelistMaximumLimit: u32 = 10;
 }
 
 impl farming::Config for Runtime {
@@ -1263,6 +1266,36 @@ impl farming::Config for Runtime {
 	type TreasuryAccount = AmplitudeTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
+	type FarmingBoost = FarmingBoostPalletId;
+	type VeMinting = VeMinting;
+	type BlockNumberToBalance = ConvertInto;
+	type WhitelistMaximumLimit = WhitelistMaximumLimit;
+}
+
+parameter_types! {
+	pub const VeMintingTokenType: CurrencyId = CurrencyId::Native;
+	pub VeMintingPalletId: PalletId = PalletId(*b"am/vemnt");
+	pub IncentivePalletId: PalletId = PalletId(*b"am/veict");
+	pub const Week: BlockNumber = 50400; // a week
+	pub const MaxBlock: BlockNumber = 10512000; // four years
+	pub const Multiplier: Balance = 10_u128.pow(12);
+	pub const VoteWeightMultiplier: Balance = 3;
+}
+
+impl bifrost_ve_minting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureRoot<AccountId>;
+	type TokenType = VeMintingTokenType;
+	type VeMintingPalletId = VeMintingPalletId;
+	type IncentivePalletId = IncentivePalletId;
+	type WeightInfo = ();
+	type BlockNumberToBalance = ConvertInto;
+	type Week = Week;
+	type MaxBlock = MaxBlock;
+	type Multiplier = Multiplier;
+	type VoteWeightMultiplier = VoteWeightMultiplier;
 }
 
 impl InstanceFilter<RuntimeCall> for ProxyType {
@@ -1390,6 +1423,7 @@ construct_runtime!(
 
 		// Asset Metadata
 		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
+		VeMinting: bifrost_ve_minting::{Pallet, Call, Storage, Event<T>} = 92,
 
 		VestingManager: vesting_manager::{Pallet, Call, Event<T>} = 100
 	}
@@ -1637,7 +1671,6 @@ impl_runtime_apis! {
 			Farming::get_gauge_rewards(&who, pid).unwrap_or(Vec::new())
 		}
 	}
-
 
 	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {

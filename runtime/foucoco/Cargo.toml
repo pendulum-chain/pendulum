@@ -138,6 +138,8 @@ zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DE
 
 bifrost-farming = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "upgrade-v0.9.42" }
 bifrost-farming-rpc-runtime-api = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "upgrade-v0.9.42" }
+bifrost-ve-minting = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "upgrade-v0.9.42" }
+bifrost-ve-minting-rpc-runtime-api = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "upgrade-v0.9.42" }
 
 [features]
 default = [
@@ -239,6 +241,8 @@ std = [
 
     "bifrost-farming/std",
     "bifrost-farming-rpc-runtime-api/std",
+    "bifrost-ve-minting/std",
+    "bifrost-ve-minting-rpc-runtime-api/std",
 ]
 
 runtime-benchmarks = [

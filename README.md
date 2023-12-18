@@ -122,14 +122,14 @@ the `--bootnode`. Here's an example:
 --chain local-parachain-raw.json \
 --base-path /tmp/parachain/alice \
 --port 40333 \
---ws-port 8844 \
+--rpc-port 8844 \
 --enable-offchain-indexing TRUE \
 -- \
 --execution wasm \
 --chain rococo-custom-2-raw.json \
 --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/<ALICE_NODE_ID> \
 --port 30343 \
---ws-port 9977
+--rpc-port 9977
 ```
 
 where `ALICE_NODE_ID` is the peer id of Alice.

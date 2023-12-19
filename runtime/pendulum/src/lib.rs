@@ -7,10 +7,10 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod assets;
+mod chain_ext;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
-mod chain_ext;
 
 use crate::zenlink::*;
 use xcm::v3::MultiLocation;
@@ -85,8 +85,8 @@ use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 // XCM Imports
-use xcm_executor::XcmExecutor;
 use crate::chain_ext::Psp22Extension;
+use xcm_executor::XcmExecutor;
 
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
@@ -1030,7 +1030,7 @@ impl pallet_proxy::Config for Runtime {
 impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo =
-	orml_currencies_allowance_extension::default_weights::SubstrateWeight<Runtime>;
+		orml_currencies_allowance_extension::default_weights::SubstrateWeight<Runtime>;
 	type MaxAllowedCurrencies = ConstU32<256>;
 }
 

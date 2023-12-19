@@ -1,26 +1,35 @@
+use crate::Tokens;
 use codec::Encode;
 use dia_oracle::{CoinInfo, DiaOracle};
-use frame_support::dispatch::Weight;
-use frame_support::pallet_prelude::Get;
-use frame_support::sp_tracing::{error, trace};
+use frame_support::{
+	dispatch::Weight,
+	pallet_prelude::Get,
+	sp_tracing::{error, trace},
+};
 use orml_currencies::WeightInfo;
-use orml_currencies_allowance_extension::{Config as AllowanceConfig, default_weights::WeightInfo as AllowanceWeightInfo};
+use orml_currencies_allowance_extension::{
+	default_weights::WeightInfo as AllowanceWeightInfo, Config as AllowanceConfig,
+};
 use orml_traits::MultiCurrency;
-use pallet_contracts::chain_extension::{ChainExtension, Environment, Ext, InitState, RetVal, SysConfig};
+use pallet_contracts::chain_extension::{
+	ChainExtension, Environment, Ext, InitState, RetVal, SysConfig,
+};
+use runtime_common::{
+	chain_ext,
+	chain_ext::{
+		Blockchain, ChainExtensionOutcome, ChainExtensionTokenError, Symbol, ToTrimmedVec,
+	},
+};
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::DispatchError;
 use spacewalk_primitives::CurrencyId;
-use runtime_common::chain_ext;
-use runtime_common::chain_ext::{Blockchain, ChainExtensionOutcome, ChainExtensionTokenError, Symbol, ToTrimmedVec};
-use crate::Tokens;
 
 use super::AccountId;
 
 pub(crate) type BalanceOfForChainExt<T> =
-<<T as orml_currencies::Config>::MultiCurrency as orml_traits::MultiCurrency<
-	<T as frame_system::Config>::AccountId,
->>::Balance;
-
+	<<T as orml_currencies::Config>::MultiCurrency as orml_traits::MultiCurrency<
+		<T as frame_system::Config>::AccountId,
+	>>::Balance;
 
 // Enum that handles all supported function id options
 #[derive(Debug)]
@@ -61,24 +70,23 @@ impl TryFrom<u16> for FuncId {
 	}
 }
 
-
 #[derive(Default)]
 pub struct Psp22Extension;
 
 impl<T> ChainExtension<T> for Psp22Extension
-	where
-		T: SysConfig
+where
+	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config
 		+ dia_oracle::Config,
-		<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
+	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 {
 	fn call<E: Ext>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
-		where
-			E: Ext<T = T>,
-			<E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
+	where
+		E: Ext<T = T>,
+		<E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
 	{
 		let func_id = FuncId::try_from(env.func_id())?;
 
@@ -112,19 +120,18 @@ impl<T> ChainExtension<T> for Psp22Extension
 	}
 }
 
-
 fn total_supply<E: Ext, T>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
-	where
-		T: SysConfig
+where
+	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config
 		+ dia_oracle::Config,
-		E: Ext<T = T>,
+	E: Ext<T = T>,
 {
 	let mut env = env.buf_in_buf_out();
 	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
@@ -155,14 +162,14 @@ fn balance_of<E: Ext, T>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
-	where
-		T: SysConfig
+where
+	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config
 		+ dia_oracle::Config,
-		E: Ext<T = T>,
+	E: Ext<T = T>,
 {
 	let mut env = env.buf_in_buf_out();
 	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
@@ -194,14 +201,14 @@ fn transfer<E: Ext, T>(
 	mut env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
-	where
-		T: SysConfig
+where
+	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config
 		+ dia_oracle::Config,
-		E: Ext<T = T>,
+	E: Ext<T = T>,
 {
 	let ext = env.ext();
 	let caller = ext.caller().clone();
@@ -242,14 +249,14 @@ fn allowance<E: Ext, T>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
-	where
-		T: SysConfig
+where
+	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config
 		+ dia_oracle::Config,
-		E: Ext<T = T>,
+	E: Ext<T = T>,
 {
 	let mut env = env.buf_in_buf_out();
 	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
@@ -285,14 +292,14 @@ fn approve<E: Ext, T>(
 	mut env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
-	where
-		T: SysConfig
+where
+	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config
 		+ dia_oracle::Config,
-		E: Ext<T = T>,
+	E: Ext<T = T>,
 {
 	let ext = env.ext();
 	let caller = ext.caller().clone();
@@ -332,14 +339,14 @@ fn transfer_from<E: Ext, T>(
 	mut env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
-	where
-		T: SysConfig
+where
+	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config
 		+ dia_oracle::Config,
-		E: Ext<T = T>,
+	E: Ext<T = T>,
 {
 	let ext = env.ext();
 	let caller = ext.caller().clone();
@@ -385,14 +392,14 @@ fn get_coin_info<E: Ext, T>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
-	where
-		T: SysConfig
+where
+	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config
 		+ dia_oracle::Config,
-		E: Ext<T = T>,
+	E: Ext<T = T>,
 {
 	let mut env = env.buf_in_buf_out();
 	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
@@ -416,4 +423,3 @@ fn get_coin_info<E: Ext, T>(
 	};
 	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
-

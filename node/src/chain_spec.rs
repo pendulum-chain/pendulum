@@ -22,16 +22,16 @@ use crate::constants::{
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type AmplitudeChainSpec =
-sc_service::GenericChainSpec<amplitude_runtime::GenesisConfig, ParachainExtensions>;
+	sc_service::GenericChainSpec<amplitude_runtime::GenesisConfig, ParachainExtensions>;
 
 pub type FoucocoChainSpec =
-sc_service::GenericChainSpec<foucoco_runtime::GenesisConfig, ParachainExtensions>;
+	sc_service::GenericChainSpec<foucoco_runtime::GenesisConfig, ParachainExtensions>;
 
 pub type PendulumChainSpec =
-sc_service::GenericChainSpec<pendulum_runtime::GenesisConfig, ParachainExtensions>;
+	sc_service::GenericChainSpec<pendulum_runtime::GenesisConfig, ParachainExtensions>;
 
 pub type DevelopmentChainSpec =
-sc_service::GenericChainSpec<development_runtime::GenesisConfig, ParachainExtensions>;
+	sc_service::GenericChainSpec<development_runtime::GenesisConfig, ParachainExtensions>;
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
@@ -82,8 +82,8 @@ pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
 
 /// Helper function to generate an account ID from seed
 pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-	where
-		AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+where
+	AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
 	AccountPublic::from(get_public_from_seed::<TPublic>(seed)).into_account()
 }

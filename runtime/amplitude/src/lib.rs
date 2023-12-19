@@ -1381,7 +1381,7 @@ construct_runtime!(
 		ClientsInfo: clients_info::{Pallet, Call, Storage, Event<T>} = 72,
 		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,
 
-		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Config<T>, Storage, Call, Event<T>} = 80,
+		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
 
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 

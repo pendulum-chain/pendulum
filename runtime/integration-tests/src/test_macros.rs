@@ -668,11 +668,6 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 				RuntimeEvent::System(frame_system::Event::Remarked { .. })
 			)));
 
-			// Assert also that the fee has been given to the treasury id
-			assert!(System::events().iter().any(|r| matches!(
-				r.event,
-				RuntimeEvent::Tokens(orml_tokens::Event::Deposited { .. })
-			)));
 
 		});
 	}};

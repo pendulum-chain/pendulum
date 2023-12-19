@@ -6,28 +6,22 @@ use frame_support::{
 };
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
-	parameter_type_with_key, MultiCurrency
-};
+	parameter_type_with_key,};
 use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
-use sp_runtime::{Perbill,traits::Convert};
-use sp_std::{vec, vec::Vec};
-use scale_info::prelude::boxed::Box;
+use sp_runtime::{traits::Convert};
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
-	AccountId32Aliases, EnsureXcmOrigin, FixedWeightBounds,
+	AccountId32Aliases, EnsureXcmOrigin, FixedWeightBounds,AllowUnpaidExecutionFrom,
 	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
 use runtime_common::{
-	custom_xcm_barrier::{
-		AllowUnpaidExecutionFromCustom, DepositAssetMatcher, MatcherConfig, MatcherPair,
-		ReserveAssetDepositedMatcher,
-	},
+	custom_transactor::{CustomMultiCurrencyAdapter, AutomationPalletConfig},
 	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
 };
 
@@ -156,17 +150,7 @@ where
 	}
 }
 
-/// Means for transacting the currencies of this parachain
-pub type LocalAssetTransactor = MultiCurrencyAdapter<
-	Currencies,
-	(), // We don't handle unknown assets.
-	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
-	AccountId,
-	LocationToAccountId,
-	CurrencyId,
-	CurrencyIdConvert,
-	DepositToAlternative<PendulumTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
->;
+
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
@@ -269,82 +253,54 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 }
 
 // We will allow for BRZ location from moonbeam
-struct BRZMoonbeamAssetMatcher;
-impl ReserveAssetDepositedMatcher for BRZMoonbeamAssetMatcher {
-	fn matches(&self, multi_asset: &MultiAsset) -> Option<MultiAsset> {
+pub struct AutomationPalletConfigPendulum;
+
+impl AutomationPalletConfig for AutomationPalletConfigPendulum {
+	fn matches_asset(asset: &MultiAsset) -> Option<u128> {
 		let expected_multiloc = moonbeam::BRZ_location();
 
-		match multi_asset {
-			MultiAsset { id: AssetId::Concrete(loc), .. } if loc == &expected_multiloc =>
-				return Some(multi_asset.clone()),
+		match asset {
+			MultiAsset { id: AssetId::Concrete(loc), fun: Fungibility::Fungible(amount_deposited) } if loc == &expected_multiloc =>
+				return Some(*amount_deposited),
 			_ => return None,
 		}
 	}
-}
 
-// TODO modify with automation's pallet instance
-struct PendulumAutomationPalletMatcher;
-impl DepositAssetMatcher for PendulumAutomationPalletMatcher {
-	fn matches<'a>(
-		&self,
-		assets: &'a MultiAssetFilter,
-		beneficiary: &'a MultiLocation,
-	) -> Option<(u8, &'a [u8])> {
-		if let (
-			Wild(AllCounted(1)),
+	// TODO modify with automation's pallet instance
+	fn matches_beneficiary(beneficiary_location: &MultiLocation) -> Option<(u8, [u8;32])> {
+		if let 
 			MultiLocation {
 				parents: 0,
 				interior: X2(PalletInstance(99), GeneralKey { length, data }),
-			},
-		) = (assets, beneficiary)
+			}
+		 = beneficiary_location
 		{
-			Some((*length, &*data))
+			Some((*length, *data))
 		} else {
 			None
 		}
 	}
-}
 
-pub struct MatcherConfigPendulum;
-
-impl MatcherConfig for MatcherConfigPendulum {
-	fn get_matcher_pairs() -> Vec<MatcherPair> {
-		vec![
-			MatcherPair::new(
-				Box::new(BRZMoonbeamAssetMatcher),
-				Box::new(PendulumAutomationPalletMatcher),
-			),
-			// Additional matcher pairs to be defined in the future
-		]
-	}
-	fn get_incoming_parachain_id() -> u32 {
-		moonbeam::PARA_ID
-	}
-
-	fn callback(_length: u8, _data: &[u8], _amount: u128) -> Result<(), ()> {
+	fn callback(_length: u8, _data: [u8;32], _amount: u128) -> Result<(), XcmError> {
 		// TODO change to call the actual automation pallet, with data and length
 		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0; 32])), [0; 1].to_vec());
 		Ok(())
 	}
 
-	// TODO define actual desired implementation of fee extraction.
-	// In this placeholder implementation, some percentage is given to treasury account
-	// in the local currency representing the asset from
-	// ReserveDepositAsset (the original asset)
-	fn extract_fee(location: MultiLocation, amount: u128)-> u128 {
-		if let Some(currency_id) = CurrencyIdConvert::convert(location){
-
-			let fee = Perbill::from_percent(1) * amount;
-			<Currencies as MultiCurrency<AccountId>>::deposit(currency_id, &Treasury::account_id(), fee);
-			amount - fee
-		}else{
-			amount
-		}
-		
-	}
 }
-
-pub type Barrier = AllowUnpaidExecutionFromCustom<Everything, MatcherConfigPendulum>;
+/// Means for transacting the currencies of this parachain
+pub type LocalAssetTransactor = CustomMultiCurrencyAdapter<
+	Currencies,
+	(), // We don't handle unknown assets.
+	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
+	AccountId,
+	LocationToAccountId,
+	CurrencyId,
+	CurrencyIdConvert,
+	DepositToAlternative<PendulumTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
+	AutomationPalletConfigPendulum,
+>;
+pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {

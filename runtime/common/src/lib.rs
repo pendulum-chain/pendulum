@@ -8,7 +8,7 @@ use sp_runtime::{
 
 pub mod asset_registry;
 pub mod chain_ext;
-pub mod custom_xcm_barrier;
+pub mod custom_transactor;
 mod proxy_type;
 pub mod stellar;
 pub mod zenlink;

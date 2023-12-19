@@ -21,7 +21,6 @@ use xcm_builder::{
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
-use runtime_common::parachains::kusama::asset_hub;
 
 use crate::{
 	assets::{

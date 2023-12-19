@@ -20,22 +20,12 @@
 
 use std::{convert::TryInto, iter};
 
-use frame_support::{
-	assert_noop, assert_ok, storage::bounded_btree_map::BoundedBTreeMap,
-	traits::EstimateNextSessionRotation, BoundedVec,
-};
-use pallet_authorship::EventHandler;
-use pallet_balances::{BalanceLock, Error as BalancesError, Reasons};
-use pallet_session::{SessionManager, ShouldEndSession};
-use sp_runtime::{traits::Zero, Perbill, Permill, Perquintill, SaturatedConversion};
-
 use crate::{
 	mock::{
 		almost_equal, events, last_event, roll_to, roll_to_claim_rewards, AccountId, Balance,
 		Balances, BlockNumber, ExtBuilder, RuntimeEvent as MetaEvent, RuntimeOrigin as Origin,
 		Session, StakePallet, System, Test, BLOCKS_PER_ROUND, DECIMALS, TREASURY_ACC,
 	},
-	runtime_api::StakingRates,
 	set::OrderedSet,
 	types::{
 		BalanceOf, Candidate, CandidateStatus, DelegationCounter, Delegator, RoundInfo, Stake,
@@ -43,6 +33,15 @@ use crate::{
 	},
 	CandidatePool, Config, Error, Event, InflationInfo, RewardRate, StakingInfo, STAKING_ID,
 };
+use frame_support::{
+	assert_noop, assert_ok, storage::bounded_btree_map::BoundedBTreeMap,
+	traits::EstimateNextSessionRotation, BoundedVec,
+};
+use module_pallet_staking_rpc_runtime_api::StakingRates;
+use pallet_authorship::EventHandler;
+use pallet_balances::{BalanceLock, Error as BalancesError, Reasons};
+use pallet_session::{SessionManager, ShouldEndSession};
+use sp_runtime::{traits::Zero, Perbill, Permill, Perquintill, SaturatedConversion};
 
 #[test]
 fn should_select_collators_genesis_session() {
@@ -2630,7 +2629,7 @@ fn adjust_reward_rates() {
 			let d_rewards_1 = Balances::free_balance(&2)
 				.saturating_sub(90_000_000 * DECIMALS)
 				.saturating_sub(d_rewards_0);
-			assert!(c_rewards_0 > c_rewards_1, "left {c_rewards_0:?}, right {c_rewards_1:?}");
+			assert!(c_rewards_0 > c_rewards_1, "left {c_rewards_0:?}, right {c_rewards_1:?}",);
 			assert!(d_rewards_0 > d_rewards_1);
 
 			// finish 2nd year

@@ -1,10 +1,11 @@
-use crate::{AMPLITUDE_ID, KUSAMA_ASSETHUB_ID, PENDULUM_ID, POLKADOT_ASSETHUB_ID};
+use crate::{sibling, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID};
 use frame_support::traits::GenesisBuild;
-use pendulum_runtime::CurrencyId;
+use pendulum_runtime::CurrencyId as PendulumCurrencyId;
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
 use polkadot_parachain::primitives::Id as ParaId;
 use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
+use sibling::CurrencyId as SiblingCurrencyId;
 use sp_io::TestExternalities;
 use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::Weight;
@@ -21,8 +22,8 @@ pub const TEN_UNITS: Balance = 10_000_000_000_000;
 pub const USDT_ASSET_ID: u32 = 1984; //Real USDT Asset ID of both Polkadot's and Kusama's Asset Hub
 pub const INCORRECT_ASSET_ID: u32 = 0; //asset id that pendulum/amplitude does NOT SUPPORT
 
-pub const INITIAL_BALANCE: Balance = 1_000_000_000;
-pub const ORML_INITIAL_BALANCE: Balance = 100;
+pub const NATIVE_INITIAL_BALANCE: Balance = TEN_UNITS;
+pub const ORML_INITIAL_BALANCE: Balance = TEN_UNITS;
 
 macro_rules! create_test_externalities {
 	($runtime:ty, $system:ident, $storage:ident) => {{
@@ -60,7 +61,7 @@ macro_rules! build_relaychain {
 }
 
 macro_rules! build_parachain_with_orml {
-	($self:ident, $runtime:ty, $system:tt, $balance:tt, $orml_balance:tt) => {{
+	($self:ident, $runtime:ty, $system:tt, $balance:tt, $orml_balance:tt, $currency_id_type:ty) => {{
 		let mut t = frame_system::GenesisConfig::default().build_storage::<$runtime>().unwrap();
 		pallet_balances::GenesisConfig::<$runtime> {
 			balances: vec![(AccountId::from(ALICE), $balance), (AccountId::from(BOB), $balance)],
@@ -68,8 +69,12 @@ macro_rules! build_parachain_with_orml {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
+		type CurrencyId = $currency_id_type;
 		orml_tokens::GenesisConfig::<$runtime> {
-			balances: vec![(AccountId::from(BOB), CurrencyId::XCM(0), units($orml_balance))],
+			balances: vec![
+				(AccountId::from(BOB), CurrencyId::XCM(0), units($orml_balance)),
+				(AccountId::from(ALICE), CurrencyId::XCM(0), units($orml_balance)),
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -110,6 +115,7 @@ pub enum ParachainType {
 	KusamaAssetHub,
 	Pendulum,
 	Amplitude,
+	Sibling,
 }
 
 pub struct ExtBuilderParachain<Currency> {
@@ -182,22 +188,24 @@ pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 		ParachainType::Pendulum => ExtBuilderParachain::pendulum_default().balances(vec![]).build(),
 		ParachainType::Amplitude =>
 			ExtBuilderParachain::amplitude_default().balances(vec![]).build(),
+		ParachainType::Sibling => ExtBuilderParachain::sibling_default().balances(vec![]).build(),
 	}
 }
 
 impl<Currency> ExtBuilderParachain<Currency> {
 	fn get_parachain_id(&self) -> u32 {
 		match self.chain {
-			ParachainType::PolkadotAssetHub => POLKADOT_ASSETHUB_ID,
-			ParachainType::KusamaAssetHub => KUSAMA_ASSETHUB_ID,
+			ParachainType::PolkadotAssetHub => ASSETHUB_ID,
+			ParachainType::KusamaAssetHub => ASSETHUB_ID,
 			ParachainType::Pendulum => PENDULUM_ID,
+			ParachainType::Sibling => SIBLING_ID,
 			ParachainType::Amplitude => AMPLITUDE_ID,
 		}
 	}
 }
 
 // ------------------- for Pendulum and Amplitude -------------------
-impl ExtBuilderParachain<CurrencyId> {
+impl ExtBuilderParachain<PendulumCurrencyId> {
 	pub fn pendulum_default() -> Self {
 		Self { balances: vec![], chain: ParachainType::Pendulum }
 	}
@@ -207,8 +215,8 @@ impl ExtBuilderParachain<CurrencyId> {
 	}
 }
 
-impl Builder<CurrencyId> for ExtBuilderParachain<CurrencyId> {
-	fn balances(mut self, balances: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+impl Builder<PendulumCurrencyId> for ExtBuilderParachain<PendulumCurrencyId> {
+	fn balances(mut self, balances: Vec<(AccountId, PendulumCurrencyId, Balance)>) -> Self {
 		self.balances = balances;
 		self
 	}
@@ -221,8 +229,9 @@ impl Builder<CurrencyId> for ExtBuilderParachain<CurrencyId> {
 					self,
 					Runtime,
 					System,
-					INITIAL_BALANCE,
-					ORML_INITIAL_BALANCE
+					NATIVE_INITIAL_BALANCE,
+					ORML_INITIAL_BALANCE,
+					PendulumCurrencyId
 				)
 			},
 			ParachainType::Amplitude => {
@@ -231,8 +240,40 @@ impl Builder<CurrencyId> for ExtBuilderParachain<CurrencyId> {
 					self,
 					Runtime,
 					System,
-					INITIAL_BALANCE,
-					ORML_INITIAL_BALANCE
+					NATIVE_INITIAL_BALANCE,
+					ORML_INITIAL_BALANCE,
+					PendulumCurrencyId
+				)
+			},
+			_ => panic!("cannot use this chain to build"),
+		}
+	}
+}
+
+// ------------------- for Sibling -------------------
+impl ExtBuilderParachain<SiblingCurrencyId> {
+	pub fn sibling_default() -> Self {
+		Self { balances: vec![], chain: ParachainType::Sibling }
+	}
+}
+
+impl Builder<SiblingCurrencyId> for ExtBuilderParachain<SiblingCurrencyId> {
+	fn balances(mut self, balances: Vec<(AccountId, SiblingCurrencyId, Balance)>) -> Self {
+		self.balances = balances;
+		self
+	}
+
+	fn build(self) -> TestExternalities {
+		match self.chain {
+			ParachainType::Sibling => {
+				use sibling::{Runtime, System};
+				build_parachain_with_orml!(
+					self,
+					Runtime,
+					System,
+					NATIVE_INITIAL_BALANCE,
+					ORML_INITIAL_BALANCE,
+					SiblingCurrencyId
 				)
 			},
 			_ => panic!("cannot use this chain to build"),

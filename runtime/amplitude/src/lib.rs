@@ -6,6 +6,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+mod assets;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
@@ -45,7 +46,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		ConstBool, ConstU32, Contains, Currency as FrameCurrency, EitherOfDiverse,
-		EqualPrivilegeOnly, Imbalance, OnUnbalanced, WithdrawReasons,
+		EqualPrivilegeOnly, Imbalance, InstanceFilter, OnUnbalanced, WithdrawReasons,
 	},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
@@ -61,7 +62,7 @@ pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
 	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
-	ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
+	ProxyType, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -70,6 +71,7 @@ use dia_oracle::DiaOracle;
 
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
+use module_oracle_rpc_runtime_api::BalanceWrapper;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{currency::MutationHooks, parameter_type_with_key};
 
@@ -78,7 +80,6 @@ pub use sp_runtime::BuildStorage;
 
 pub use dia_oracle::dia::AssetId;
 pub use issue::{Event as IssueEvent, IssueRequest};
-pub use module_oracle_rpc_runtime_api::BalanceWrapper;
 pub use nomination::Event as NominationEvent;
 use oracle::{
 	dia,
@@ -96,6 +97,9 @@ use spacewalk_primitives::{
 	self as primitives, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner, UnsignedFixedPoint,
 	UnsignedInner,
 };
+
+#[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
+use oracle::testing_utils::MockDataFeeder;
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
@@ -240,10 +244,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 10,
+	spec_version: 12,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 10,
+	transaction_version: 12,
 	state_version: 1,
 };
 
@@ -358,9 +362,11 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Security(_) |
 			RuntimeCall::StellarRelay(_) |
 			RuntimeCall::VaultRegistry(_) |
-			RuntimeCall::VaultRewards(_) |
+			RuntimeCall::PooledVaultRewards(_) |
 			RuntimeCall::Farming(_) |
-			RuntimeCall::AssetRegistry(_) => true,
+			RuntimeCall::AssetRegistry(_) |
+			RuntimeCall::Proxy(_) |
+			RuntimeCall::RewardDistribution(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -675,7 +681,7 @@ impl pallet_scheduler::Config for Runtime {
 
 parameter_types! {
 	pub const PreimageMaxSize: u32 = 4096 * 1024;
-	pub const PreimageBaseDeposit: Balance = 1 * UNIT;
+	pub const PreimageBaseDeposit: Balance = UNIT;
 	// One cent: $10,000 / MB
 	pub const PreimageByteDeposit: Balance = 10 * MILLIUNIT;
 }
@@ -730,9 +736,9 @@ impl pallet_treasury::Config for Runtime {
 parameter_types! {
 	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
 	pub const BountyValueMinimum: Balance = 5 * UNIT;
-	pub const BountyDepositBase: Balance = 1 * UNIT;
+	pub const BountyDepositBase: Balance = UNIT;
 	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
-	pub const CuratorDepositMin: Balance = 1 * UNIT;
+	pub const CuratorDepositMin: Balance = UNIT;
 	pub const CuratorDepositMax: Balance = 100 * UNIT;
 	pub const DataDepositPerByte: Balance = 30 * MILLIUNIT;
 	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
@@ -756,7 +762,7 @@ impl pallet_bounties::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ChildBountyValueMinimum: Balance = 1 * UNIT;
+	pub const ChildBountyValueMinimum: Balance = UNIT;
 }
 
 impl pallet_child_bounties::Config for Runtime {
@@ -1079,12 +1085,17 @@ impl security::Config for Runtime {
 	type WeightInfo = security::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+	pub const MaxRewardCurrencies: u32= 10;
+}
+
 impl staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type SignedInner = SignedInner;
 	type SignedFixedPoint = SignedFixedPoint;
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type CurrencyId = CurrencyId;
+	type MaxRewardCurrencies = MaxRewardCurrencies;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -1109,11 +1120,7 @@ impl oracle::Config for Runtime {
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
-	type DataFeedProvider = DataFeederBenchmark<
-		oracle::OracleKey,
-		oracle::TimestampedValue<UnsignedFixedPoint, Moment>,
-		Self::AccountId,
-	>;
+	type DataFeeder = MockDataFeeder<Self::AccountId, Moment>;
 }
 
 parameter_types! {
@@ -1131,13 +1138,6 @@ impl stellar_relay::Config for Runtime {
 	type WeightInfo = stellar_relay::SubstrateWeight<Runtime>;
 }
 
-impl reward::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type SignedFixedPoint = SignedFixedPoint;
-	type RewardId = VaultId;
-	type CurrencyId = CurrencyId;
-	type GetNativeCurrencyId = NativeCurrencyId;
-}
 parameter_types! {
 	pub const FeePalletId: PalletId = PalletId(*b"mod/fees");
 	pub const VaultRegistryPalletId: PalletId = PalletId(*b"mod/vreg");
@@ -1151,10 +1151,11 @@ impl fee::Config for Runtime {
 	type SignedInner = SignedInner;
 	type UnsignedFixedPoint = UnsignedFixedPoint;
 	type UnsignedInner = UnsignedInner;
-	type VaultRewards = VaultRewards;
+	type VaultRewards = PooledVaultRewards;
 	type VaultStaking = VaultStaking;
 	type OnSweep = currency::SweepFunds<Runtime, FeeAccount>;
 	type MaxExpectedValue = MaxExpectedValue;
+	type RewardDistribution = RewardDistribution;
 }
 
 impl vault_registry::Config for Runtime {
@@ -1200,6 +1201,36 @@ impl clients_info::Config for Runtime {
 	type MaxNameLength = ConstU32<255>;
 	type MaxUriLength = ConstU32<255>;
 }
+// Choice of parameters: Perquintill::from_parts(37567400000000000u64) represents a value of
+// 0.0375674 = 37567400000000000 / 1×10¹⁸
+// The decay interval 216000 equates to a month when considering 1 block every 12 seconds
+parameter_types! {
+	pub const DecayRate: Perquintill = Perquintill::from_parts(37567400000000000u64);
+	pub const MaxCurrencies: u32 = 10;
+}
+
+impl reward_distribution::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = reward_distribution::SubstrateWeight<Runtime>;
+	type Balance = Balance;
+	type DecayInterval = ConstU32<216_000>;
+	type DecayRate = DecayRate;
+	type VaultRewards = PooledVaultRewards;
+	type MaxCurrencies = MaxCurrencies;
+	type OracleApi = Oracle;
+	type Balances = Balances;
+	type VaultStaking = VaultStaking;
+	type FeePalletId = FeePalletId;
+}
+
+impl pooled_rewards::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type SignedFixedPoint = SignedFixedPoint;
+	type PoolId = CurrencyId;
+	type PoolRewardsCurrencyId = CurrencyId;
+	type StakeId = VaultId;
+	type MaxRewardCurrencies = MaxRewardCurrencies;
+}
 
 parameter_types! {
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"am/fmkpr");
@@ -1218,6 +1249,52 @@ impl farming::Config for Runtime {
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 }
 
+impl InstanceFilter<RuntimeCall> for ProxyType {
+	fn filter(&self, c: &RuntimeCall) -> bool {
+		match self {
+			// Always allowed RuntimeCall::Utility no matter type.
+			// Only transactions allowed by Proxy.filter can be executed
+			_ if matches!(c, RuntimeCall::Utility(..)) => true,
+			ProxyType::Any => true,
+		}
+	}
+
+	// Determines whether self matches at least everything that o does.
+	fn is_superset(&self, o: &Self) -> bool {
+		match (self, o) {
+			(x, y) if x == y => true,
+			(ProxyType::Any, _) => true,
+			#[allow(unreachable_patterns)]
+			_ => false,
+		}
+	}
+}
+
+parameter_types! {
+	// One storage item; key size 32, value size 8; .
+	pub const ProxyDepositBase: Balance = deposit(1, 8);
+	// Additional storage item size of 33 bytes.
+	pub const ProxyDepositFactor: Balance = deposit(0, 33);
+	pub const MaxProxies: u16 = 32;
+	pub const MaxPending: u16 = 32;
+	pub const AnnouncementDepositBase: Balance = deposit(1, 8);
+	pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
+}
+
+impl pallet_proxy::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type Currency = Balances;
+	type ProxyType = ProxyType;
+	type ProxyDepositBase = ProxyDepositBase;
+	type ProxyDepositFactor = ProxyDepositFactor;
+	type MaxProxies = MaxProxies;
+	type WeightInfo = pallet_proxy::weights::SubstrateWeight<Runtime>;
+	type MaxPending = MaxPending;
+	type CallHasher = BlakeTwo256;
+	type AnnouncementDepositBase = AnnouncementDepositBase;
+	type AnnouncementDepositFactor = AnnouncementDepositFactor;
+}
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -1247,6 +1324,7 @@ construct_runtime!(
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>} = 19,
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 20,
 		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,
+		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 22,
 
 		// Consensus support.
 		// The following order MUST NOT be changed: Aura -> Session -> Staking -> Authorship -> AuraExt
@@ -1287,9 +1365,10 @@ construct_runtime!(
 		Security: security::{Pallet, Call, Config, Storage, Event<T>} = 67,
 		StellarRelay: stellar_relay::{Pallet, Call, Config<T>, Storage, Event<T>} = 68,
 		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 69,
-		VaultRewards: reward::{Pallet, Call, Storage, Event<T>} = 70,
+		PooledVaultRewards: pooled_rewards::{Pallet, Call, Storage, Event<T>} = 70,
 		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
 		ClientsInfo: clients_info::{Pallet, Call, Storage, Event<T>} = 72,
+		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,
 
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 
@@ -1442,12 +1521,13 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl parachain_staking::runtime_api::ParachainStakingApi<Block, AccountId, Balance> for Runtime {
-		fn get_unclaimed_staking_rewards(account: &AccountId) -> Balance {
-			ParachainStaking::get_unclaimed_staking_rewards(account)
+	impl module_pallet_staking_rpc_runtime_api::ParachainStakingApi<Block, AccountId, Balance> for Runtime {
+		fn get_unclaimed_staking_rewards(account: AccountId) -> BalanceWrapper<Balance> {
+			let result = ParachainStaking::get_unclaimed_staking_rewards(&account);
+			BalanceWrapper{amount:result}
 		}
 
-		fn get_staking_rates() -> parachain_staking::runtime_api::StakingRates {
+		fn get_staking_rates() -> module_pallet_staking_rpc_runtime_api::StakingRates {
 			ParachainStaking::get_staking_rates()
 		}
 	}

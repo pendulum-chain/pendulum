@@ -461,9 +461,148 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 	}};
 }
 
+macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
+	(
+        $mocknet:ident,
+        $parachain1_runtime:ident,
+        $parachain1:ident,
+        $parachain2_runtime:ident,
+        $parachain2:ident,
+        $parachain1_id:ident,
+        $parachain2_id:ident
+    ) => {{
+		use crate::mock::{ALICE, BOB, UNIT, NATIVE_INITIAL_BALANCE};
+		use frame_support::traits::fungibles::Inspect;
+		use polkadot_core_primitives::Balance;
+		use xcm::latest::{
+			Junction, Junction::AccountId32, Junctions::X2, MultiLocation, WeightLimit,
+		};
+		use orml_traits::MultiCurrency;
+		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;
+		use $parachain2_runtime::CurrencyId as Parachain2CurrencyId;
+
+		$mocknet::reset();
+
+		let transfer_amount: Balance = UNIT;
+		let asset_location = MultiLocation::new(
+			1,
+			X2(Junction::Parachain($parachain1_id), Junction::PalletInstance(10)),
+		);
+		// This is needed in order to have the correct mapping regardless of the XCM sender parachain provided
+		// Used for checking BOB's balance
+		let para1_native_currency_on_para2 = Parachain2CurrencyId::from($parachain1_id);
+
+		// Get ALICE's balance on parachain1 before the transfer (defined in mock config)
+		let native_tokens_before: Balance = NATIVE_INITIAL_BALANCE;
+
+		$parachain1::execute_with(|| {
+			assert_eq!(
+				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &ALICE.into()),
+				native_tokens_before
+			);
+		});
+		$parachain2::execute_with(|| {
+			assert_eq!(
+				$parachain2_runtime::Tokens::balance(para1_native_currency_on_para2, &BOB.into()),
+				0
+			);
+		});
+
+		// Execute the transfer from parachain1 to parachain2
+		$parachain1::execute_with(|| {
+			use $parachain1_runtime::{RuntimeEvent, System, XTokens};
+
+			// Transfer using multilocation
+			assert_ok!(XTokens::transfer_multiasset(
+				$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
+				Box::new((asset_location.clone(), transfer_amount).into()),
+				Box::new(
+					MultiLocation {
+						parents: 1,
+						interior: X2(
+							Junction::Parachain($parachain2_id),
+							AccountId32 { network: None, id: BOB }
+						)
+					}
+					.into()
+				),
+				WeightLimit::Unlimited
+			));
+
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::XTokens(orml_xtokens::Event::TransferredMultiAssets { .. })
+			)));
+		});
+
+		// Verify BOB's balance on parachain2 after receiving
+		// Should increase by the transfer amount
+		$parachain2::execute_with(|| {
+			assert_eq!(
+				$parachain2_runtime::Tokens::balance(para1_native_currency_on_para2, &BOB.into()),
+				transfer_amount
+			);
+		});
+
+		// Verify ALICE's balance on parachain1 after transfer
+		$parachain1::execute_with(|| {
+			assert_eq!(
+				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &ALICE.into()),
+				native_tokens_before - transfer_amount
+			);
+		});
+
+		// Send same amount back to ALICE on parachain1
+		$parachain2::execute_with(|| {
+			use $parachain2_runtime::{RuntimeEvent, System, XTokens};
+
+			// Transfer using the same multilocation
+			assert_ok!(XTokens::transfer_multiasset(
+				$parachain2_runtime::RuntimeOrigin::signed(BOB.into()),
+				Box::new((asset_location.clone(), transfer_amount).into()),
+				Box::new(
+					MultiLocation {
+						parents: 1,
+						interior: X2(
+							Junction::Parachain($parachain1_id),
+							AccountId32 { network: None, id: ALICE }
+						)
+					}
+					.into()
+				),
+				WeightLimit::Unlimited
+			));
+
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::XTokens(orml_xtokens::Event::TransferredMultiAssets { .. })
+			)));
+		});
+
+		// Verify BOB's balance on parachain2 after transfer
+		// Should become the same amount as initial balance before both transfers
+		$parachain2::execute_with(|| {
+			assert_eq!(
+				$parachain2_runtime::Tokens::balance(para1_native_currency_on_para2, &BOB.into()),
+				0
+			);
+		});
+
+		// Verify ALICE's balance on parachain1 after receiving
+		// Should become the same amount as initial balance before both transfers
+		$parachain1::execute_with(|| {
+			assert_eq!(
+				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &ALICE.into()),
+				native_tokens_before
+			);
+		});
+	}};
+}
+
 // macros defined at the bottom of this file to prevent unresolved imports
 pub(super) use parachain1_transfer_asset_to_parachain2;
 pub(super) use parachain1_transfer_asset_to_parachain2_and_back;
 pub(super) use parachain1_transfer_incorrect_asset_to_parachain2_should_fail;
 pub(super) use transfer_10_relay_token_from_parachain_to_relay_chain;
 pub(super) use transfer_20_relay_token_from_relay_chain_to_parachain;
+pub(super) use transfer_native_token_from_parachain1_to_parachain2_and_back;

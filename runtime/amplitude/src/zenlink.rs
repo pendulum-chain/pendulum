@@ -50,7 +50,7 @@ where
 	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 {
 	fn local_balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
-		if let Ok(currency_id) =
+		if let Some(currency_id) =
 			zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into())
 		{
 			return TryInto::<AssetBalance>::try_into(Local::free_balance(currency_id, who))
@@ -60,7 +60,7 @@ where
 	}
 
 	fn local_total_supply(asset_id: ZenlinkAssetId) -> AssetBalance {
-		if let Ok(currency_id) =
+		if let Some(currency_id) =
 			zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into())
 		{
 			return TryInto::<AssetBalance>::try_into(Local::total_issuance(currency_id))
@@ -70,7 +70,7 @@ where
 	}
 
 	fn local_is_exists(asset_id: ZenlinkAssetId) -> bool {
-		zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into()).is_ok()
+		zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into()).is_some()
 	}
 
 	fn local_transfer(
@@ -79,7 +79,7 @@ where
 		target: &AccountId,
 		amount: AssetBalance,
 	) -> DispatchResult {
-		if let Ok(currency_id) =
+		if let Some(currency_id) =
 			zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into())
 		{
 			Local::transfer(
@@ -100,7 +100,7 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		if let Ok(currency_id) =
+		if let Some(currency_id) =
 			zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into())
 		{
 			Local::deposit(
@@ -122,7 +122,7 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		if let Ok(currency_id) =
+		if let Some(currency_id) =
 			zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into())
 		{
 			Local::withdraw(

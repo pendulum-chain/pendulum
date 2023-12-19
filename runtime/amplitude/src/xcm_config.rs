@@ -1,9 +1,5 @@
-use super::{
-	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
-};
-use crate::ConstU32;
 use core::marker::PhantomData;
+
 use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ContainsPair, Everything, Nothing},
@@ -12,6 +8,7 @@ use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
 };
+use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
@@ -19,18 +16,26 @@ use runtime_common::parachains::kusama::asset_hub;
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
-	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
+	AccountId32Aliases, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds,
+	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
-use xcm_executor::{
-	traits::{JustTry, ShouldExecute},
-	XcmExecutor,
+use xcm_executor::{traits::ShouldExecute, XcmExecutor};
+use runtime_common::parachains::kusama::asset_hub;
+
+use crate::{
+	assets::{
+		native_locations::{native_location_external_pov, native_location_local_pov},
+		xcm_assets,
+	},
+	ConstU32,
 };
 
-const XCM_ASSET_RELAY_KSM: u8 = 0;
-const XCM_ASSET_ASSETHUB_USDT: u8 = 1;
+use super::{
+	AccountId, AmplitudeTreasuryAccount, Balance, Balances, Currencies, CurrencyId, ParachainInfo,
+	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, WeightToFee,
+	XcmpQueue,
+};
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -64,17 +69,11 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		match id {
 			CurrencyId::XCM(index) => match index {
-				XCM_ASSET_RELAY_KSM => Some(MultiLocation::parent()),
-				XCM_ASSET_ASSETHUB_USDT => Some(MultiLocation::new(
-					1,
-					X3(
-						Parachain(asset_hub::PARA_ID),
-						PalletInstance(asset_hub::ASSET_PALLET_ID),
-						GeneralIndex(asset_hub::USDT_ASSET_ID),
-					),
-				)),
+				xcm_assets::RELAY_KSM => Some(MultiLocation::parent()),
+				xcm_assets::ASSETHUB_USDT => Some(asset_hub::USDT_location()),
 				_ => None,
 			},
+			CurrencyId::Native => Some(native_location_external_pov()),
 			_ => None,
 		}
 	}
@@ -83,17 +82,13 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
-			MultiLocation { parents: 1, interior: Here } =>
-				Some(CurrencyId::XCM(XCM_ASSET_RELAY_KSM)),
-			MultiLocation {
-				parents: 1,
-				interior:
-					X3(
-						Parachain(asset_hub::PARA_ID),
-						PalletInstance(asset_hub::ASSET_PALLET_ID),
-						GeneralIndex(asset_hub::USDT_ASSET_ID),
-					),
-			} => Some(CurrencyId::XCM(XCM_ASSET_ASSETHUB_USDT)),
+			loc if loc == MultiLocation::parent() => Some(xcm_assets::RELAY_KSM_id()),
+			loc if loc == asset_hub::USDT_location() => Some(xcm_assets::ASSETHUB_USDT_id()),
+			// Our native currency location without re-anchoring
+			loc if loc == native_location_external_pov() => Some(CurrencyId::Native),
+			// Our native currency location with re-anchoring
+			// The XCM pallet will try to re-anchor the location before it reaches here
+			loc if loc == native_location_local_pov() => Some(CurrencyId::Native),
 			_ => None,
 		}
 	}
@@ -136,21 +131,17 @@ where
 	}
 }
 
-/// Means for transacting the fungibles assets of ths parachain.
-pub type FungiblesTransactor = FungiblesAdapter<
+/// Means for transacting the currencies of this parachain
+pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	// Use this fungibles implementation
-	Tokens,
-	// This means that this adapter should handle any token that `CurrencyIdConvert` can convert
-	// to `CurrencyId`, the `CurrencyId` type of `Tokens`, the fungibles implementation it uses.
-	ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
-	// Convert an XCM MultiLocation into a local account id
-	LocationToAccountId,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly)
+	Currencies,
+	(), // We don't handle unknown assets.
+	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
 	AccountId,
-	// We dont allow teleports.
-	NoChecking,
-	// The account to use for tracking teleports.
-	CheckingAccount,
+	LocationToAccountId,
+	CurrencyId,
+	CurrencyIdConvert,
+	DepositToAlternative<AmplitudeTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
@@ -243,7 +234,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 		if matches!(origin, MultiLocation { parents: 1, interior: Here }) &&
 			instructions.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
 		{
-			log::warn!(
+			log::trace!(
 				target: "xcm::barriers",
 				"Unexpected ReserveAssetDeposited from the relay chain",
 			);
@@ -260,7 +251,7 @@ impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
 	type XcmSender = XcmRouter;
 	// How to withdraw and deposit an asset.
-	type AssetTransactor = FungiblesTransactor;
+	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	// Teleporting is disabled.

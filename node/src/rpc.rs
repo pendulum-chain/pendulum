@@ -16,6 +16,7 @@ use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApiServer};
 
 use module_issue_rpc::{Issue, IssueApiServer};
 use module_oracle_rpc::{Oracle, OracleApiServer};
+use module_pallet_staking_rpc::{ParachainStakingApiServer, Staking};
 use module_redeem_rpc::{Redeem, RedeemApiServer};
 use module_replace_rpc::{Replace, ReplaceApiServer};
 use module_vault_registry_rpc::{VaultRegistry, VaultRegistryApiServer};
@@ -25,7 +26,10 @@ use substrate_frame_rpc_system::{System, SystemApiServer};
 use crate::service::{AmplitudeClient, DevelopmentClient, FoucocoClient, PendulumClient};
 
 /// A type representing all RPC extensions.
-pub type RpcExtension = jsonrpsee::RpcModule<()>;
+type RpcExtension = jsonrpsee::RpcModule<()>;
+
+/// RpcExtension wrapped in Result<>
+pub type ResultRpcExtension = Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>;
 
 /// Full client dependencies
 pub struct FullDeps<C, P> {
@@ -38,9 +42,7 @@ pub struct FullDeps<C, P> {
 }
 
 /// Instantiate all RPC extensions.
-pub fn create_full_pendulum<P>(
-	deps: FullDeps<PendulumClient, P>,
-) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
+pub fn create_full_pendulum<P>(deps: FullDeps<PendulumClient, P>) -> ResultRpcExtension
 where
 	P: TransactionPool + Sync + Send + 'static,
 {
@@ -48,7 +50,9 @@ where
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
+	module.merge(Staking::new(client.clone()).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
+	module.merge(FarmingRpc::new(client.clone()).into_rpc())?;
 	module.merge(ZenlinkProtocol::new(client).into_rpc())?;
 	Ok(module)
 }
@@ -68,9 +72,7 @@ where
 	Ok(module)
 }
 
-pub fn create_full_amplitude<P>(
-	deps: FullDeps<AmplitudeClient, P>,
-) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
+pub fn create_full_amplitude<P>(deps: FullDeps<AmplitudeClient, P>) -> ResultRpcExtension
 where
 	P: TransactionPool + Sync + Send + 'static,
 {
@@ -78,6 +80,7 @@ where
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
+	module.merge(Staking::new(client.clone()).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 	module.merge(Issue::new(client.clone()).into_rpc())?;
 	module.merge(Redeem::new(client.clone()).into_rpc())?;
@@ -90,9 +93,7 @@ where
 	Ok(module)
 }
 
-pub fn create_full_foucoco<P>(
-	deps: FullDeps<FoucocoClient, P>,
-) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
+pub fn create_full_foucoco<P>(deps: FullDeps<FoucocoClient, P>) -> ResultRpcExtension
 where
 	P: TransactionPool + Sync + Send + 'static,
 {
@@ -100,6 +101,7 @@ where
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
+	module.merge(Staking::new(client.clone()).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 	module.merge(Issue::new(client.clone()).into_rpc())?;
 	module.merge(Redeem::new(client.clone()).into_rpc())?;

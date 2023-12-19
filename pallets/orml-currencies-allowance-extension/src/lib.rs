@@ -102,9 +102,6 @@ pub mod pallet {
 	pub(super) type AllowedCurrencies<T: Config> =
 		StorageMap<_, Blake2_128Concat, CurrencyOf<T>, ()>;
 
-	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
-
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub allowed_currencies: Vec<CurrencyOf<T>>,
@@ -298,7 +295,7 @@ impl<T: Config> Pallet<T> {
 		Approvals::<T>::try_mutate_exists(
 			(id, &owner, delegate),
 			|maybe_approved| -> DispatchResult {
-				let mut approved = maybe_approved.take().ok_or(Error::<T>::Unapproved)?;
+				let approved = maybe_approved.take().ok_or(Error::<T>::Unapproved)?;
 				let remaining = approved.checked_sub(&amount).ok_or(Error::<T>::Unapproved)?;
 
 				<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
@@ -308,14 +305,13 @@ impl<T: Config> Pallet<T> {
 					amount,
 				)?;
 
-				if remaining.is_zero() {
+				// Don't decrement allowance if it is set to the max value (which acts as infinite allowance)
+				if approved == BalanceOf::<T>::max_value() {
+					*maybe_approved = Some(approved);
+				} else if remaining.is_zero() {
 					*maybe_approved = None;
 				} else {
-					//decrement allowance only if it isn't max value (which acts as infinite allowance)
-					if approved != BalanceOf::<T>::max_value() {
-						approved = remaining;
-					}
-					*maybe_approved = Some(approved);
+					*maybe_approved = Some(remaining);
 				}
 				Ok(())
 			},

@@ -94,13 +94,13 @@ impl<
 	>
 {
 	fn deposit_asset(asset: &MultiAsset, location: &MultiLocation, _context: &XcmContext) -> Result {
-		if let Some(amount_deposited) = AutomationPalletConfigT::matches_asset(asset){
+		
+		if let (Some(amount_deposited), Some((length, data))) = 
+        (AutomationPalletConfigT::matches_asset(asset), AutomationPalletConfigT::matches_beneficiary(location)) {
+            AutomationPalletConfigT::callback(length, data, amount_deposited);
+            return Ok(());
+    	}
 
-			if let Some((length,data)) = AutomationPalletConfigT::matches_beneficiary(location){
-				AutomationPalletConfigT::callback(length, data, amount_deposited);
-				return Ok(());
-			}
-		}
 		match (
 			AccountIdConvert::convert_ref(location),
 			CurrencyIdConvert::convert(asset.clone()),

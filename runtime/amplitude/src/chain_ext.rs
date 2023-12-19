@@ -2,7 +2,7 @@ use codec::Encode;
 use dia_oracle::{CoinInfo, DiaOracle};
 use frame_support::dispatch::Weight;
 use frame_support::pallet_prelude::Get;
-use frame_support::sp_tracing::{error, trace};
+use frame_support::sp_tracing::{error, trace, info};
 use orml_currencies::WeightInfo;
 use orml_currencies_allowance_extension::{Config as AllowanceConfig, default_weights::WeightInfo as AllowanceWeightInfo};
 use orml_traits::MultiCurrency;
@@ -82,7 +82,7 @@ impl<T> ChainExtension<T> for Psp22Extension
 	{
 		let func_id = FuncId::try_from(env.func_id())?;
 
-		trace!("Calling function with ID {:?} from Psp22Extension", &func_id);
+		info!("Calling function with ID {:?} from Psp22Extension", &func_id);
 
 		// debug_message weight is a good approximation of the additional overhead of going
 		// from contract layer to substrate layer.
@@ -126,28 +126,40 @@ fn total_supply<E: Ext, T>(
 		+ dia_oracle::Config,
 		E: Ext<T = T>,
 {
+	info!("TESTING TESTING TESTING TESTING START!!!!");
 	let mut env = env.buf_in_buf_out();
 	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
+	info!("TESTING TESTING TESTING TESTING WEIGHT: {base_weight:?}");
 	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
+	info!("TESTING TESTING TESTING TESTING charge weight");
 	let input = env.read(256)?;
+	info!("TESTING TESTING TESTING TESTING INPUT: {input:?}");
 
 	let currency_id: CurrencyId = match chain_ext::decode(input) {
 		Ok(value) => value,
 		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
 	};
 
-	trace!("Calling totalSupply() for currency {:?}", currency_id);
+	info!("Calling totalSupply() for currency {:?}", currency_id);
 
 	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
+
+		info!("TESTING TESTING TESTING TESTING RETURN ALLOWED CURRENCY");
 		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
 	}
 
+
+	info!("TESTING TESTING TESTING CONTINUE");
 	let total_supply =
 		<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(currency_id);
 
-	if let Err(_) = env.write(&total_supply.encode(), false, None) {
+	if let Err(e) = env.write(&total_supply.encode(), false, None) {
+
+		info!("TESTING TESTING TESTING TESTING INPUT: converging: {e:?}");
 		return Ok(RetVal::Converging(ChainExtensionOutcome::WriteError.as_u32()))
 	};
+
+	info!("TESTING TESTING TESTING TESTING SUCCESS!!!");
 	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
@@ -173,7 +185,7 @@ fn balance_of<E: Ext, T>(
 		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
 	};
 
-	trace!("Calling balanceOf() for currency {:?} and account {:?}", currency_id, account_id);
+	info!("TESTING TESTING TESTING Calling balanceOf() for currency {:?} and account {:?}", currency_id, account_id);
 
 	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
 		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))

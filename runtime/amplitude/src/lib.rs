@@ -246,10 +246,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 13,
+	spec_version: 12,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 13,
+	transaction_version: 12,
 	state_version: 1,
 };
 
@@ -1381,7 +1381,7 @@ construct_runtime!(
 		ClientsInfo: clients_info::{Pallet, Call, Storage, Event<T>} = 72,
 		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,
 
-		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
+		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Config<T>, Storage, Call, Event<T>} = 80,
 
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 

@@ -2,21 +2,21 @@ use crate::{
 	mock::{para_ext, polkadot_relay_ext, ParachainType, USDT_ASSET_ID},
 	sibling,
 	test_macros::{
-		parachain1_transfer_asset_to_parachain2, parachain1_transfer_asset_to_parachain2_and_back,
+		moonbeam_transfers_token_and_handle_automation, parachain1_transfer_asset_to_parachain2,
+		parachain1_transfer_asset_to_parachain2_and_back,
 		parachain1_transfer_incorrect_asset_to_parachain2_should_fail,
 		transfer_10_relay_token_from_parachain_to_relay_chain,
 		transfer_20_relay_token_from_relay_chain_to_parachain,
 		transfer_native_token_from_parachain1_to_parachain2_and_back,
-		moonbeam_transfers_token_and_handle_automation
 	},
 	ASSETHUB_ID, PENDULUM_ID, SIBLING_ID,
 };
 
 use frame_support::assert_ok;
+use runtime_common::parachains::polkadot::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
 use statemint_runtime as polkadot_asset_hub_runtime;
 use xcm::latest::NetworkId;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
-use runtime_common::parachains::polkadot::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
 
 const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 3200000000; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
 

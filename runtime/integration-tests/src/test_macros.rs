@@ -619,7 +619,6 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
     ) => {{
 		use crate::mock::{units, ALICE};
 		use polkadot_core_primitives::Balance;
-		
 		use xcm::latest::{
 			Junction, Junction::{ GeneralKey, PalletInstance}, Junctions::{X1,X2, X3}, MultiLocation, WeightLimit,
 		};

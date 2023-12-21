@@ -117,7 +117,7 @@ pub enum ParachainType {
 	Pendulum,
 	Amplitude,
 	Sibling,
-	Moonbeam
+	Moonbeam,
 }
 
 pub struct ExtBuilderParachain<Currency> {
@@ -191,8 +191,7 @@ pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 		ParachainType::Amplitude =>
 			ExtBuilderParachain::amplitude_default().balances(vec![]).build(),
 		ParachainType::Sibling => ExtBuilderParachain::sibling_default().balances(vec![]).build(),
-		ParachainType::Moonbeam =>
-			ExtBuilderParachain::moonbeam_default().balances(vec![]).build(),
+		ParachainType::Moonbeam => ExtBuilderParachain::moonbeam_default().balances(vec![]).build(),
 	}
 }
 

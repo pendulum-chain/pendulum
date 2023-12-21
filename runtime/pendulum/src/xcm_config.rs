@@ -6,22 +6,23 @@ use frame_support::{
 };
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
-	parameter_type_with_key,};
+	parameter_type_with_key,
+};
 use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
-use sp_runtime::{traits::Convert};
+use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
-	AccountId32Aliases, EnsureXcmOrigin, FixedWeightBounds,AllowUnpaidExecutionFrom,
+	AccountId32Aliases, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds,
 	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
 use runtime_common::{
-	custom_transactor::{CustomMultiCurrencyAdapter, AutomationPalletConfig},
+	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
 	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
 };
 
@@ -40,9 +41,8 @@ use crate::{
 use super::{
 	AccountId, Balance, Balances, Currencies, CurrencyId, ParachainInfo, ParachainSystem,
 	PendulumTreasuryAccount, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
-	WeightToFee, XcmpQueue, Treasury, System
+	System, Treasury, WeightToFee, XcmpQueue,
 };
-
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -53,6 +53,9 @@ parameter_types! {
 		X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
 }
 
+/// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
+/// when determining ownership of accounts for asset transacting and when attempting to use XCM
+/// `Transact` in order to determine the dispatch Origin.
 pub type LocationToAccountId = (
 	// The parent (Relay-chain) origin converts to the parent `AccountId`.
 	ParentIsPreset<AccountId>,
@@ -149,8 +152,6 @@ where
 		false
 	}
 }
-
-
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
@@ -260,36 +261,37 @@ impl AutomationPalletConfig for AutomationPalletConfigPendulum {
 		let expected_multiloc = moonbeam::BRZ_location();
 
 		match asset {
-			MultiAsset { id: AssetId::Concrete(loc), fun: Fungibility::Fungible(amount_deposited) } if loc == &expected_multiloc =>
-				return Some(*amount_deposited),
+			MultiAsset {
+				id: AssetId::Concrete(loc),
+				fun: Fungibility::Fungible(amount_deposited),
+			} if loc == &expected_multiloc => return Some(*amount_deposited),
 			_ => return None,
 		}
 	}
 
 	// TODO modify with automation's pallet instance
-	fn matches_beneficiary(beneficiary_location: &MultiLocation) -> Option<(u8, [u8;32])> {
-		if let 
-			MultiLocation {
-				parents: 0,
-				interior: X2(PalletInstance(99), GeneralKey { length, data }),
-			}
-		 = beneficiary_location
+	fn matches_beneficiary(beneficiary_location: &MultiLocation) -> Option<AssetData> {
+		if let MultiLocation {
+			parents: 0,
+			interior: X2(PalletInstance(99), GeneralKey { length, data }),
+		} = beneficiary_location
 		{
-			Some((*length, *data))
+			let asset_data = AssetData { length: *length, data: *data };
+			Some(asset_data)
 		} else {
 			None
 		}
 	}
 
-	fn callback(_length: u8, _data: [u8;32], _amount: u128) -> Result<(), XcmError> {
+	fn callback(_length: u8, _data: [u8; 32], _amount: u128) -> Result<(), XcmError> {
 		// TODO change to call the actual automation pallet, with data and length
 		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0; 32])), [0; 1].to_vec());
 		Ok(())
 	}
-
 }
+
 /// Means for transacting the currencies of this parachain
-pub type LocalAssetTransactor = CustomMultiCurrencyAdapter<
+type Transactor = MultiCurrencyAdapter<
 	Currencies,
 	(), // We don't handle unknown assets.
 	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
@@ -298,8 +300,10 @@ pub type LocalAssetTransactor = CustomMultiCurrencyAdapter<
 	CurrencyId,
 	CurrencyIdConvert,
 	DepositToAlternative<PendulumTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
-	AutomationPalletConfigPendulum,
 >;
+
+pub type LocalAssetTransactor =
+	CustomTransactorInterceptor<Transactor, AutomationPalletConfigPendulum>;
 pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;

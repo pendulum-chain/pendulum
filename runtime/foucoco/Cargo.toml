@@ -266,7 +266,7 @@ runtime-benchmarks = [
 	"replace/runtime-benchmarks",
 	"stellar-relay/runtime-benchmarks",
 	"vault-registry/runtime-benchmarks",
-
+    "oracle/testing-utils",
     "runtime-common/runtime-benchmarks",
     "orml-currencies-allowance-extension/runtime-benchmarks",
     "orml-tokens-management-extension/runtime-benchmarks"

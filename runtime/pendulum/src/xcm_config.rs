@@ -21,7 +21,10 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
-use runtime_common::parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex};
+use runtime_common::{
+	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
+	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
+};
 
 use crate::{
 	assets::{
@@ -38,7 +41,7 @@ use crate::{
 use super::{
 	AccountId, Balance, Balances, Currencies, CurrencyId, ParachainInfo, ParachainSystem,
 	PendulumTreasuryAccount, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
-	WeightToFee, XcmpQueue,
+	System, Treasury, WeightToFee, XcmpQueue,
 };
 
 parameter_types! {
@@ -150,18 +153,6 @@ where
 	}
 }
 
-/// Means for transacting the currencies of this parachain
-pub type LocalAssetTransactor = MultiCurrencyAdapter<
-	Currencies,
-	(), // We don't handle unknown assets.
-	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
-	AccountId,
-	LocationToAccountId,
-	CurrencyId,
-	CurrencyIdConvert,
-	DepositToAlternative<PendulumTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
->;
-
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
 /// biases the kind of local `Origin` it will become.
@@ -262,6 +253,57 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
+// We will allow for BRZ location from moonbeam
+pub struct AutomationPalletConfigPendulum;
+
+impl AutomationPalletConfig for AutomationPalletConfigPendulum {
+	fn matches_asset(asset: &MultiAsset) -> Option<u128> {
+		let expected_multiloc = moonbeam::BRZ_location();
+
+		match asset {
+			MultiAsset {
+				id: AssetId::Concrete(loc),
+				fun: Fungibility::Fungible(amount_deposited),
+			} if loc == &expected_multiloc => return Some(*amount_deposited),
+			_ => return None,
+		}
+	}
+
+	// TODO modify with automation's pallet instance
+	fn matches_beneficiary(beneficiary_location: &MultiLocation) -> Option<AssetData> {
+		if let MultiLocation {
+			parents: 0,
+			interior: X2(PalletInstance(99), GeneralKey { length, data }),
+		} = beneficiary_location
+		{
+			let asset_data = AssetData { length: *length, data: *data };
+			Some(asset_data)
+		} else {
+			None
+		}
+	}
+
+	fn callback(_length: u8, _data: [u8; 32], _amount: u128) -> Result<(), XcmError> {
+		// TODO change to call the actual automation pallet, with data and length
+		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0; 32])), [0; 1].to_vec());
+		Ok(())
+	}
+}
+
+/// Means for transacting the currencies of this parachain
+type Transactor = MultiCurrencyAdapter<
+	Currencies,
+	(), // We don't handle unknown assets.
+	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
+	AccountId,
+	LocationToAccountId,
+	CurrencyId,
+	CurrencyIdConvert,
+	DepositToAlternative<PendulumTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
+>;
+
+pub type LocalAssetTransactor =
+	CustomTransactorInterceptor<Transactor, AutomationPalletConfigPendulum>;
 pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;

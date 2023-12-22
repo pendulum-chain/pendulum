@@ -10,6 +10,7 @@ use sp_io::TestExternalities;
 use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::Weight;
 
+use runtime_common::parachains::polkadot::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
 use statemine_runtime as kusama_asset_hub_runtime;
 use statemint_runtime as polkadot_asset_hub_runtime;
 
@@ -116,6 +117,7 @@ pub enum ParachainType {
 	Pendulum,
 	Amplitude,
 	Sibling,
+	Moonbeam,
 }
 
 pub struct ExtBuilderParachain<Currency> {
@@ -189,6 +191,7 @@ pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 		ParachainType::Amplitude =>
 			ExtBuilderParachain::amplitude_default().balances(vec![]).build(),
 		ParachainType::Sibling => ExtBuilderParachain::sibling_default().balances(vec![]).build(),
+		ParachainType::Moonbeam => ExtBuilderParachain::moonbeam_default().balances(vec![]).build(),
 	}
 }
 
@@ -200,6 +203,7 @@ impl<Currency> ExtBuilderParachain<Currency> {
 			ParachainType::Pendulum => PENDULUM_ID,
 			ParachainType::Sibling => SIBLING_ID,
 			ParachainType::Amplitude => AMPLITUDE_ID,
+			ParachainType::Moonbeam => MOONBEAM_PARA_ID,
 		}
 	}
 }
@@ -255,6 +259,10 @@ impl ExtBuilderParachain<SiblingCurrencyId> {
 	pub fn sibling_default() -> Self {
 		Self { balances: vec![], chain: ParachainType::Sibling }
 	}
+
+	pub fn moonbeam_default() -> Self {
+		Self { balances: vec![], chain: ParachainType::Moonbeam }
+	}
 }
 
 impl Builder<SiblingCurrencyId> for ExtBuilderParachain<SiblingCurrencyId> {
@@ -266,6 +274,17 @@ impl Builder<SiblingCurrencyId> for ExtBuilderParachain<SiblingCurrencyId> {
 	fn build(self) -> TestExternalities {
 		match self.chain {
 			ParachainType::Sibling => {
+				use sibling::{Runtime, System};
+				build_parachain_with_orml!(
+					self,
+					Runtime,
+					System,
+					NATIVE_INITIAL_BALANCE,
+					ORML_INITIAL_BALANCE,
+					SiblingCurrencyId
+				)
+			},
+			ParachainType::Moonbeam => {
 				use sibling::{Runtime, System};
 				build_parachain_with_orml!(
 					self,

@@ -2,7 +2,8 @@ use crate::{
 	mock::{kusama_relay_ext, para_ext, ParachainType, USDT_ASSET_ID},
 	sibling,
 	test_macros::{
-		parachain1_transfer_asset_to_parachain2, parachain1_transfer_asset_to_parachain2_and_back,
+		moonbeam_transfers_token_and_handle_automation, parachain1_transfer_asset_to_parachain2,
+		parachain1_transfer_asset_to_parachain2_and_back,
 		parachain1_transfer_incorrect_asset_to_parachain2_should_fail,
 		transfer_10_relay_token_from_parachain_to_relay_chain,
 		transfer_20_relay_token_from_relay_chain_to_parachain,

@@ -10073,6 +10073,7 @@ dependencies = [
  "frame-system",
  "orml-asset-registry",
  "orml-traits",
+ "orml-xcm-support",
  "parity-scale-codec",
  "paste",
  "scale-info",
@@ -10082,6 +10083,7 @@ dependencies = [
  "sp-std",
  "spacewalk-primitives 1.0.0 (git+https://github.com/pendulum-chain/spacewalk?rev=20a3dd191dc352f989f90a1a48eacb8ff6d9ac85)",
  "xcm",
+ "xcm-executor",
  "zenlink-protocol",
 ]
 

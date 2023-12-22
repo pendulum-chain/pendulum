@@ -7,6 +7,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod assets;
+mod chain_ext;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
@@ -84,6 +85,7 @@ use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 // XCM Imports
+use crate::chain_ext::Psp22Extension;
 use xcm_executor::XcmExecutor;
 
 /// The address format for describing accounts.
@@ -274,6 +276,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::ZenlinkProtocol(_) |
 			RuntimeCall::DiaOracleModule(_) |
 			RuntimeCall::VestingManager(_) |
+			RuntimeCall::TokenAllowance(_) |
 			RuntimeCall::AssetRegistry(_) |
 			RuntimeCall::Farming(_) |
 			RuntimeCall::Proxy(_) => true,
@@ -863,7 +866,7 @@ impl pallet_contracts::Config for Runtime {
 	type CallStack = [pallet_contracts::Frame<Self>; 5];
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-	type ChainExtension = ();
+	type ChainExtension = Psp22Extension;
 	type DeletionQueueDepth = DeletionQueueDepth;
 	type DeletionWeightLimit = DeletionWeightLimit;
 	type Schedule = Schedule;
@@ -1024,6 +1027,13 @@ impl pallet_proxy::Config for Runtime {
 	type AnnouncementDepositFactor = AnnouncementDepositFactor;
 }
 
+impl orml_currencies_allowance_extension::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo =
+		orml_currencies_allowance_extension::default_weights::SubstrateWeight<Runtime>;
+	type MaxAllowedCurrencies = ConstU32<256>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -1081,6 +1091,8 @@ construct_runtime!(
 		RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 57,
 		DiaOracleModule: dia_oracle::{Pallet, Storage, Call, Event<T>} = 58,
 
+		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
+
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
 
 		//Farming
@@ -1111,6 +1123,7 @@ mod benches {
 		// Other
 		[orml_asset_registry, runtime_common::benchmarking::orml_asset_registry::Pallet::<Runtime>]
 		[pallet_xcm, PolkadotXcm]
+		[orml_currencies_allowance_extension, TokenAllowance]
 	);
 }
 

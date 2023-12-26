@@ -517,13 +517,13 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 				$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
 				Box::new((asset_location.clone(), transfer_amount).into()),
 				Box::new(
-					MultiLocation::new(
-						1,
-						X2(
-							Parachain($parachain1_id),
-							Junction::AccountId32 { network: Some($network_id), id: BOB.into() }
+					MultiLocation {
+						parents: 1,
+						interior: X2(
+							Junction::Parachain($parachain2_id),
+							AccountId32 { network: None, id: BOB }
 						)
-					)
+					}
 					.into()
 				),
 				WeightLimit::Unlimited
@@ -568,7 +568,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 					MultiLocation {
 						parents: 1,
 						interior: X2(
-							Junction::Parachain($parachain2_id),
+							Junction::Parachain($parachain1_id),
 							AccountId32 { network: None, id: ALICE }
 						)
 					}

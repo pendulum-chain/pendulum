@@ -19,6 +19,9 @@ use xcm::latest::NetworkId;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
 
 const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 3200000000; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
+const MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 32000000000; //Fees that we will charge in incoming Moonbeam's BRZ. Depends on the RelativeValue struct implementation.
+const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 12800000000; 
+const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 6400000000; //Fees that we will charge in incoming Moonbeam's BRZ. Depends on the RelativeValue struct implementation.
 
 decl_test_relay_chain! {
 	pub struct PolkadotRelay {
@@ -80,81 +83,84 @@ decl_test_network! {
 	}
 }
 
-// #[test]
-// fn transfer_dot_from_polkadot_to_pendulum() {
-// 	transfer_20_relay_token_from_relay_chain_to_parachain!(
-// 		PolkadotMockNet,
-// 		polkadot_runtime,
-// 		PolkadotRelay,
-// 		pendulum_runtime,
-// 		PendulumParachain,
-// 		PENDULUM_ID,
-// 		DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN
-// 	)
-// }
+#[test]
+fn transfer_dot_from_polkadot_to_pendulum() {
+	transfer_20_relay_token_from_relay_chain_to_parachain!(
+		PolkadotMockNet,
+		polkadot_runtime,
+		PolkadotRelay,
+		pendulum_runtime,
+		PendulumParachain,
+		PENDULUM_ID,
+		DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN
+	)
+}
 
-// #[test]
-// fn transfer_dot_from_pendulum_to_polkadot() {
-// 	transfer_10_relay_token_from_parachain_to_relay_chain!(
-// 		PolkadotMockNet,
-// 		polkadot_runtime,
-// 		PolkadotRelay,
-// 		pendulum_runtime,
-// 		PendulumParachain
-// 	);
-// }
+#[test]
+fn transfer_dot_from_pendulum_to_polkadot() {
+	transfer_10_relay_token_from_parachain_to_relay_chain!(
+		PolkadotMockNet,
+		polkadot_runtime,
+		PolkadotRelay,
+		pendulum_runtime,
+		PendulumParachain
+	);
+}
 
-// #[test]
-// fn assethub_transfer_incorrect_asset_to_pendulum_should_fail() {
-// 	parachain1_transfer_incorrect_asset_to_parachain2_should_fail!(
-// 		polkadot_asset_hub_runtime,
-// 		AssetHubParachain,
-// 		pendulum_runtime,
-// 		PendulumParachain,
-// 		PENDULUM_ID
-// 	);
-// }
+#[test]
+fn assethub_transfer_incorrect_asset_to_pendulum_should_fail() {
+	parachain1_transfer_incorrect_asset_to_parachain2_should_fail!(
+		polkadot_asset_hub_runtime,
+		AssetHubParachain,
+		pendulum_runtime,
+		PendulumParachain,
+		PENDULUM_ID
+	);
+}
 
-// #[test]
-// fn assethub_transfer_asset_to_pendulum() {
-// 	parachain1_transfer_asset_to_parachain2!(
-// 		polkadot_asset_hub_runtime,
-// 		AssetHubParachain,
-// 		USDT_ASSET_ID,
-// 		pendulum_runtime,
-// 		PendulumParachain,
-// 		PENDULUM_ID
-// 	);
-// }
+#[test]
+fn assethub_transfer_asset_to_pendulum() {
+	parachain1_transfer_asset_to_parachain2!(
+		polkadot_asset_hub_runtime,
+		AssetHubParachain,
+		USDT_ASSET_ID,
+		pendulum_runtime,
+		PendulumParachain,
+		PENDULUM_ID,
+		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
+	);
+}
 
-// #[test]
-// fn assethub_transfer_asset_to_pendulum_and_back() {
-// 	let network_id = NetworkId::Polkadot;
+#[test]
+fn assethub_transfer_asset_to_pendulum_and_back() {
+	let network_id = NetworkId::Polkadot;
 
-// 	parachain1_transfer_asset_to_parachain2_and_back!(
-// 		polkadot_asset_hub_runtime,
-// 		AssetHubParachain,
-// 		ASSETHUB_ID,
-// 		USDT_ASSET_ID,
-// 		pendulum_runtime,
-// 		PendulumParachain,
-// 		PENDULUM_ID,
-// 		network_id
-// 	);
-// }
+	parachain1_transfer_asset_to_parachain2_and_back!(
+		polkadot_asset_hub_runtime,
+		AssetHubParachain,
+		ASSETHUB_ID,
+		USDT_ASSET_ID,
+		pendulum_runtime,
+		PendulumParachain,
+		PENDULUM_ID,
+		network_id,
+		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
+	);
+}
 
-// #[test]
-// fn transfer_native_token_from_pendulum_to_sibling_parachain_and_back() {
-// 	transfer_native_token_from_parachain1_to_parachain2_and_back!(
-// 		PolkadotMockNet,
-// 		pendulum_runtime,
-// 		PendulumParachain,
-// 		sibling,
-// 		SiblingParachain,
-// 		PENDULUM_ID,
-// 		SIBLING_ID
-// 	);
-// }
+#[test]
+fn transfer_native_token_from_pendulum_to_sibling_parachain_and_back() {
+	transfer_native_token_from_parachain1_to_parachain2_and_back!(
+		PolkadotMockNet,
+		pendulum_runtime,
+		PendulumParachain,
+		sibling,
+		SiblingParachain,
+		PENDULUM_ID,
+		SIBLING_ID,
+		NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN
+	);
+}
 
 #[test]
 fn moonbeam_transfers_token_and_handle_automation() {
@@ -165,6 +171,7 @@ fn moonbeam_transfers_token_and_handle_automation() {
 		sibling,
 		MoonbeamParachain,
 		PENDULUM_ID,
-		MOONBEAM_PARA_ID
+		MOONBEAM_PARA_ID,
+		MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }

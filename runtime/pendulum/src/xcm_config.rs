@@ -44,7 +44,7 @@ use crate::{
 		},
 		xcm_assets,
 	},
-	ConstU32, Perbill,
+	ConstU32, 
 };
 
 use super::{
@@ -328,10 +328,9 @@ impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImple
 		let amount = <WeightToFee as WeightToFeeTrait>::weight_to_fee(&weight);
 
 		// since this is calibrated (in theory) for the native of the relay
-		// we should just have a multiplier for relative "value"
-		// and it should work the same
+		// we should just have a multiplier for relative "value" of that token
+		// and adjust the amount inversily proportional to the value 
 		if let Some(relative_value) = RelayRelativeValue::get_relative_value(asset_id) {
-			// Adjust the amount based on the relative value
 			let adjusted_amount =
 				RelativeValue::adjust_amount_by_relative_value(amount, relative_value);
 			log::info!("amount to be charged: {:?} in asset: {:?}", adjusted_amount, asset_id);
@@ -340,8 +339,6 @@ impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImple
 			log::info!("amount to be charged: {:?} in asset: {:?}", amount, asset_id);
 			return Ok(amount)
 		}
-
-		Ok(amount)
 	}
 }
 
@@ -358,7 +355,6 @@ type Transactor = MultiCurrencyAdapter<
 >;
 
 pub type Traders = (
-	UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>,
 	TakeFirstAssetTrader<
 		AccountId,
 		ChargeWeightInFungiblesImplementation,

@@ -34,12 +34,6 @@ use cumulus_primitives_utility::{
 	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,
 };
 
-use super::{
-	AccountId, AmplitudeTreasuryAccount, Balance, Balances, Currencies, CurrencyId, ParachainInfo,
-	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens,
-	Treasury, WeightToFee, XcmpQueue,
-};
-
 use crate::{
 	assets::{
 		native_locations::{native_location_external_pov, native_location_local_pov},
@@ -47,6 +41,13 @@ use crate::{
 	},
 	ConstU32,
 };
+
+use super::{
+	AccountId, AmplitudeTreasuryAccount, Balance, Balances, Currencies, CurrencyId, ParachainInfo,
+	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens,
+	Treasury, WeightToFee, XcmpQueue,
+};
+
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -82,7 +83,6 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 			CurrencyId::XCM(index) => match index {
 				xcm_assets::RELAY_KSM => Some(MultiLocation::parent()),
 				xcm_assets::ASSETHUB_USDT => Some(asset_hub::USDT_location()),
-				9 => Some(MultiLocation::new(1, X2(Parachain(9999), PalletInstance(10)))),
 				_ => None,
 			},
 			CurrencyId::Native => Some(native_location_external_pov()),
@@ -101,8 +101,6 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			// Our native currency location with re-anchoring
 			// The XCM pallet will try to re-anchor the location before it reaches here
 			loc if loc == native_location_local_pov() => Some(CurrencyId::Native),
-			MultiLocation { parents: 1, interior: X2(Parachain(9999), PalletInstance(10)) } =>
-				Some(CurrencyId::XCM(9)),
 			_ => None,
 		}
 	}
@@ -117,6 +115,39 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 		}
 	}
 }
+
+pub struct RelativeValue {
+	num: Balance,
+	denominator: Balance,
+}
+
+impl RelativeValue {
+	fn adjust_amount_by_relative_value(amount: Balance, relative_value: RelativeValue) -> Balance {
+		if relative_value.denominator == 0 {
+			// Or probably error
+			return amount
+		}
+		// Calculate the adjusted amount
+		let adjusted_amount = amount * relative_value.denominator / relative_value.num;
+		adjusted_amount
+	}
+}
+
+pub struct RelayRelativeValue;
+impl RelayRelativeValue {
+	fn get_relative_value(id: CurrencyId) -> Option<RelativeValue> {
+		match id {
+			CurrencyId::XCM(index) => match index {
+				xcm_assets::RELAY_KSM => Some(RelativeValue { num: 1, denominator: 1 }),
+				xcm_assets::ASSETHUB_USDT => Some(RelativeValue { num: 1, denominator: 4 }),
+				_ => None,
+			},
+			CurrencyId::Native => Some(RelativeValue { num: 1, denominator: 2 }),
+			_ => Some(RelativeValue { num: 1, denominator: 1 }),
+		}
+	}
+}
+
 
 /// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
 /// Here we need to know the canonical representation of all the tokens we handle in order to
@@ -248,7 +279,10 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 		if matches!(origin, MultiLocation { parents: 1, interior: Here }) &&
 			instructions.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
 		{
-			log::info!("{:?}", instructions);
+			log::trace!(
+				target: "xcm::barriers",
+				"Unexpected ReserveAssetDeposited from the relay chain",
+			);
 		}
 		// Permit everything else
 		Ok(())
@@ -274,21 +308,26 @@ pub type Barrier = (
 );
 
 pub struct ChargeWeightInFungiblesImplementation;
-
-//TODO some logic needs to be put in here. Most likely, we define weight_to_fee for all the assets
 impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImplementation {
 	fn charge_weight_in_fungibles(
 		asset_id: CurrencyId,
 		weight: Weight,
 	) -> Result<Balance, XcmError> {
 		let amount = <WeightToFee as WeightToFeeTrait>::weight_to_fee(&weight);
-		log::info!("amount to be charger {:?} and asset {:?}", amount, asset_id);
-		Ok(amount)
+
+		if let Some(relative_value) = RelayRelativeValue::get_relative_value(asset_id) {
+			let adjusted_amount =
+				RelativeValue::adjust_amount_by_relative_value(amount, relative_value);
+			log::info!("amount to be charged: {:?} in asset: {:?}", adjusted_amount, asset_id);
+			return Ok(adjusted_amount)
+		} else {
+			log::info!("amount to be charged: {:?} in asset: {:?}", amount, asset_id);
+			return Ok(amount)
+		}
 	}
 }
 
 pub type Traders = (
-	UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>,
 	TakeFirstAssetTrader<
 		AccountId,
 		ChargeWeightInFungiblesImplementation,

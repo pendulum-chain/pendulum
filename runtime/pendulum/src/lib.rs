@@ -6,7 +6,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-mod assets;
+pub mod assets;
 mod chain_ext;
 mod weights;
 pub mod xcm_config;

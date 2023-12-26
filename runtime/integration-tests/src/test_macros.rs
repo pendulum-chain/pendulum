@@ -547,7 +547,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Verify BOB's balance on parachain2 after receiving
 		// Should increase by the transfer amount
 		$parachain2::execute_with(|| {
-			use $parachain2_runtime::{RuntimeEvent, System, XTokens};
+			use $parachain2_runtime::{ System};
 			for i in System::events().iter() {
 				println!("para 2 events {}: {:?}\n", stringify!($para2_runtime), i);
 			}
@@ -621,6 +621,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 	}};
 }
 
+// NOTE this test is only relevant to the pendulum runtime configuration
 macro_rules! moonbeam_transfers_token_and_handle_automation {
 	(
         $mocknet:ident,
@@ -635,7 +636,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 		use crate::mock::{units, ALICE};
 		use polkadot_core_primitives::Balance;
 		use xcm::latest::{
-			Junction, Junction::{ GeneralKey, PalletInstance}, Junctions::{X1,X2, X3}, MultiLocation, WeightLimit,
+			Junction, Junction::{ GeneralKey, PalletInstance}, Junctions::{X3}, MultiLocation, WeightLimit,
 		};
 		use pendulum_runtime::assets::xcm_assets;
 		use orml_traits::MultiCurrency;
@@ -655,7 +656,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 		// Sending "Token" variant which is equivalent to BRZ mock token Multilocation
 		// in the sibling definition
 		$parachain2::execute_with(|| {
-			use $parachain2_runtime::{XTokens, Tokens,RuntimeOrigin, System};
+			use $parachain2_runtime::{XTokens, Tokens,RuntimeOrigin};
 
 			assert_ok!(Tokens::set_balance(RuntimeOrigin::root().into(), ALICE.clone().into(), Parachain2CurrencyId::Token,transfer_amount, 0));
 
@@ -683,7 +684,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 		});
 
 		$parachain1::execute_with(|| {
-			use $parachain1_runtime::{RuntimeEvent, System, Tokens, Treasury};
+			use $parachain1_runtime::{RuntimeEvent, System, Treasury};
 			// given the configuration in pendulum's xcm_config, we expect the callback (in this case a Remark)
 			// to be executed
 			assert!(System::events().iter().any(|r| matches!(

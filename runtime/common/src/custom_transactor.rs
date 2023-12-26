@@ -1,21 +1,7 @@
-use sp_runtime::{
-	codec::FullCodec,
-	traits::{Convert, MaybeSerializeDeserialize, SaturatedConversion},
-};
-use sp_std::{
-	cmp::{Eq, PartialEq},
-	fmt::Debug,
-	marker::PhantomData,
-	prelude::*,
-	result,
-};
+use sp_std::{marker::PhantomData, result};
 
-use orml_xcm_support::{OnDepositFail, UnknownAsset as UnknownAssetT};
 use xcm::v3::{prelude::*, Error as XcmError, MultiAsset, MultiLocation, Result};
-use xcm_executor::{
-	traits::{Convert as MoreConvert, MatchesFungible, TransactAsset},
-	Assets,
-};
+use xcm_executor::{traits::TransactAsset, Assets};
 
 pub struct AssetData {
 	pub length: u8,

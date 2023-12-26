@@ -357,7 +357,6 @@ macro_rules! parachain1_transfer_asset_to_parachain2 {
 				$para2_runtime::Tokens::balance($para2_runtime::CurrencyId::XCM(1), &BOB.into()),
 				TEN_UNITS - $tx_fee
 			);
-
 		});
 	}};
 }
@@ -400,7 +399,10 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 				Balances, CurrencyId, RuntimeEvent, RuntimeOrigin, System, Tokens, XTokens,
 			};
 
-			assert_eq!(received_amount_after_fee, Tokens::balance(CurrencyId::XCM(1), &AccountId::from(BOB)));
+			assert_eq!(
+				received_amount_after_fee,
+				Tokens::balance(CurrencyId::XCM(1), &AccountId::from(BOB))
+			);
 			// ensure sender has enough balance to be charged as fee
 			assert_ok!(Balances::mint_into(&AccountId::from(BOB), TEN_UNITS));
 
@@ -602,7 +604,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Verify ALICE's balance on parachain1 after receiving
 		// Should become the same amount as initial balance before both transfers
 		$parachain1::execute_with(|| {
-			use $parachain1_runtime::System;
+			use $parachain1_runtime::{System, Treasury};
 			for i in System::events().iter() {
 				println!("para 1 events {}: {:?}\n", stringify!($para2_runtime), i);
 			}
@@ -610,98 +612,12 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &ALICE.into()),
 				native_tokens_before - $tx_fee
 			);
+
+			assert_eq!(
+				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &Treasury::account_id()),
+				$tx_fee
+			);
 		});
-	}};
-}
-
-macro_rules! transfer_foreign_token_from_external_parachain_to_us_and_check_fees {
-	(
-        $mocknet:ident,
-        $parachain1_runtime:ident,
-        $parachain1:ident,
-        $parachain2_runtime:ident,
-        $parachain2:ident,
-        $parachain1_id:ident,
-        $parachain2_id:ident
-    ) => {{
-		use crate::mock::{units, ALICE, BOB, ORML_INITIAL_BALANCE, UNIT};
-		use frame_support::traits::fungibles::Inspect;
-		use orml_traits::MultiCurrency;
-		use polkadot_core_primitives::Balance;
-		use xcm::latest::{
-			Junction, Junction::AccountId32, Junctions::X2, MultiLocation, WeightLimit,
-		};
-		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;
-		use $parachain2_runtime::CurrencyId as Parachain2CurrencyId;
-
-		$mocknet::reset();
-
-		let transfer_amount: Balance = UNIT;
-		let asset = Parachain1CurrencyId::Native;
-
-		//let para1_native_currency_on_para2 = Parachain2CurrencyId::from($parachain1_id);
-
-		// Get ALICE's balance on parachain1 before the transfer (defined in mock config)
-		let tokens_before: Balance = units(ORML_INITIAL_BALANCE);
-
-		$parachain1::execute_with(|| {
-			$parachain1_runtime::Tokens::deposit(asset, &ALICE.into(), tokens_before);
-			// assert_eq!(
-			// 	$parachain1_runtime::Tokens::free_balance(asset, &ALICE.into()),
-			// 	tokens_before
-			// );
-		});
-		$parachain2::execute_with(|| {
-			// assert_eq!(
-			// 	$parachain2_runtime::Tokens::balance(para1_native_currency_on_para2, &BOB.into()),
-			// 	0
-			// );
-		});
-
-		// Execute the transfer from parachain1 to parachain2
-		$parachain1::execute_with(|| {
-			use $parachain1_runtime::{RuntimeEvent, System, XTokens};
-
-			// Transfer using multilocation
-			assert_ok!(XTokens::transfer(
-				$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
-				asset,
-				transfer_amount,
-				Box::new(
-					MultiLocation {
-						parents: 1,
-						interior: X2(
-							Junction::Parachain($parachain2_id),
-							AccountId32 { network: None, id: BOB }
-						)
-					}
-					.into()
-				),
-				WeightLimit::Unlimited
-			));
-
-			assert!(System::events().iter().any(|r| matches!(
-				r.event,
-				RuntimeEvent::XTokens(orml_xtokens::Event::TransferredMultiAssets { .. })
-			)));
-		});
-
-		// Verify BOB's balance on parachain2 after receiving
-		// Should increase by the transfer amount
-		// $parachain2::execute_with(|| {
-		// 	assert_eq!(
-		// 		$parachain2_runtime::Tokens::balance(para1_native_currency_on_para2, &BOB.into()),
-		// 		transfer_amount
-		// 	);
-		// });
-
-		// // Verify ALICE's balance on parachain1 after transfer
-		// $parachain1::execute_with(|| {
-		// 	assert_eq!(
-		// 		$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &ALICE.into()),
-		// 		native_tokens_before - transfer_amount
-		// 	);
-		// });
 	}};
 }
 
@@ -732,7 +648,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 		let mut treasury_balance_before: Balance = 0;
 		// get the balance of the treasury before sending the message
 		$parachain1::execute_with(|| {
-			use $parachain1_runtime::{ PendulumTreasuryAccount}; 
+			use $parachain1_runtime::{ PendulumTreasuryAccount};
 			treasury_balance_before = $parachain1_runtime::Currencies::free_balance(xcm_assets::MOONBEAM_BRZ_id(), &PendulumTreasuryAccount::get());
 		});
 		// We mock parachain 2 as beeing moonriver in this case.
@@ -767,7 +683,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 		});
 
 		$parachain1::execute_with(|| {
-			use $parachain1_runtime::{RuntimeEvent, System, Tokens, PendulumTreasuryAccount};
+			use $parachain1_runtime::{RuntimeEvent, System, Tokens, Treasury};
 			// given the configuration in pendulum's xcm_config, we expect the callback (in this case a Remark)
 			// to be executed
 			assert!(System::events().iter().any(|r| matches!(
@@ -776,7 +692,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 			)));
 
 			assert_eq!(
-				$parachain1_runtime::Currencies::free_balance(xcm_assets::MOONBEAM_BRZ_id(), &PendulumTreasuryAccount::get()),
+				$parachain1_runtime::Currencies::free_balance(xcm_assets::MOONBEAM_BRZ_id(), &Treasury::account_id()),
 				$expected_fee
 			);
 
@@ -791,5 +707,4 @@ pub(super) use parachain1_transfer_asset_to_parachain2_and_back;
 pub(super) use parachain1_transfer_incorrect_asset_to_parachain2_should_fail;
 pub(super) use transfer_10_relay_token_from_parachain_to_relay_chain;
 pub(super) use transfer_20_relay_token_from_relay_chain_to_parachain;
-pub(super) use transfer_foreign_token_from_external_parachain_to_us_and_check_fees;
 pub(super) use transfer_native_token_from_parachain1_to_parachain2_and_back;

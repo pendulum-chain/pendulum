@@ -44,7 +44,7 @@ use crate::{
 		},
 		xcm_assets,
 	},
-	ConstU32, 
+	ConstU32,
 };
 
 use super::{
@@ -329,7 +329,7 @@ impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImple
 
 		// since this is calibrated (in theory) for the native of the relay
 		// we should just have a multiplier for relative "value" of that token
-		// and adjust the amount inversily proportional to the value 
+		// and adjust the amount inversily proportional to the value
 		if let Some(relative_value) = RelayRelativeValue::get_relative_value(asset_id) {
 			let adjusted_amount =
 				RelativeValue::adjust_amount_by_relative_value(amount, relative_value);

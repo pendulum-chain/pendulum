@@ -18,10 +18,10 @@ use statemint_runtime as polkadot_asset_hub_runtime;
 use xcm::latest::NetworkId;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
 
-const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 3200000000; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
-const MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 32000000000; //Fees that we will charge in incoming Moonbeam's BRZ. Depends on the RelativeValue struct implementation.
-const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 12800000000;
-const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 6400000000;
+const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 32653061; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
+const MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 1391304347; //Fees that we will charge in incoming Moonbeam's BRZ. Depends on the RelativeValue struct implementation.
+const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 266666666;
+const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 3200000000;
 
 decl_test_relay_chain! {
 	pub struct PolkadotRelay {

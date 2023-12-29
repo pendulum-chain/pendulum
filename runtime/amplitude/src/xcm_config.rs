@@ -135,11 +135,11 @@ impl RelayRelativeValue {
 	fn get_relative_value(id: CurrencyId) -> Option<RelativeValue> {
 		match id {
 			CurrencyId::XCM(index) => match index {
-				xcm_assets::RELAY_KSM => Some(RelativeValue { num: 1, denominator: 1 }),
-				xcm_assets::ASSETHUB_USDT => Some(RelativeValue { num: 1, denominator: 4 }),
+				xcm_assets::RELAY_KSM => Some(RelativeValue { num: 100, denominator: 1 }),
+				xcm_assets::ASSETHUB_USDT => Some(RelativeValue { num: 20, denominator: 4 }),
 				_ => None,
 			},
-			CurrencyId::Native => Some(RelativeValue { num: 1, denominator: 2 }),
+			CurrencyId::Native => Some(RelativeValue { num: 1, denominator: 1 }),
 			_ => Some(RelativeValue { num: 1, denominator: 1 }),
 		}
 	}

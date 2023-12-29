@@ -122,19 +122,19 @@ impl RelayRelativeValue {
 	fn get_relative_value(id: CurrencyId) -> Option<RelativeValue> {
 		match id {
 			CurrencyId::XCM(f) => match f {
-				xcm_assets::RELAY_DOT => Some(RelativeValue { num: 1, denominator: 1 }),
-				xcm_assets::ASSETHUB_USDT => Some(RelativeValue { num: 1, denominator: 4 }),
-				xcm_assets::ASSETHUB_USDC => Some(RelativeValue { num: 1, denominator: 4 }),
-				xcm_assets::EQUILIBRIUM_EQD => Some(RelativeValue { num: 1, denominator: 10 }),
-				xcm_assets::MOONBEAM_BRZ => Some(RelativeValue { num: 1, denominator: 10 }),
-				xcm_assets::POLKADEX_PDEX => Some(RelativeValue { num: 1, denominator: 2 }),
-				xcm_assets::MOONBEAM_GLMR => Some(RelativeValue { num: 1, denominator: 10 }),
+				xcm_assets::RELAY_DOT => Some(RelativeValue { num: 98, denominator: 1 }),
+				xcm_assets::ASSETHUB_USDT => Some(RelativeValue { num: 12, denominator: 1 }),
+				xcm_assets::ASSETHUB_USDC => Some(RelativeValue { num: 12, denominator: 1 }),
+				xcm_assets::EQUILIBRIUM_EQD => Some(RelativeValue { num: 12, denominator: 1 }),
+				xcm_assets::MOONBEAM_BRZ => Some(RelativeValue { num: 23, denominator: 10 }),
+				xcm_assets::POLKADEX_PDEX => Some(RelativeValue { num: 14, denominator: 1 }),
+				xcm_assets::MOONBEAM_GLMR => Some(RelativeValue { num: 55, denominator: 10 }),
 				_ => None,
 			},
 
-			CurrencyId::Native => Some(RelativeValue { num: 1, denominator: 2 }),
-			assets::tokens::EURC_ID => Some(RelativeValue { num: 1, denominator: 10 }),
-			_ => Some(RelativeValue { num: 1, denominator: 1 }),
+			CurrencyId::Native => Some(RelativeValue { num: 1, denominator: 1 }),
+			assets::tokens::EURC_ID => Some(RelativeValue { num: 13, denominator: 1 }),
+			_ => Some(RelativeValue { num: 10, denominator: 1 }),
 		}
 	}
 }

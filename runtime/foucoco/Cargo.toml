@@ -99,6 +99,7 @@ orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-m
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.42" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.42" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.42" }
+orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.42" }
 
 # KILT
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
@@ -167,6 +168,7 @@ std = [
     "orml-traits/std",
     "orml-tokens/std",
     "orml-xtokens/std",
+    "orml-xcm-support/std",
     "pallet-aura/std",
     "pallet-authorship/std",
     "pallet-balances/std",
@@ -264,7 +266,7 @@ runtime-benchmarks = [
 	"replace/runtime-benchmarks",
 	"stellar-relay/runtime-benchmarks",
 	"vault-registry/runtime-benchmarks",
-
+    "oracle/testing-utils",
     "runtime-common/runtime-benchmarks",
     "orml-currencies-allowance-extension/runtime-benchmarks",
     "orml-tokens-management-extension/runtime-benchmarks"

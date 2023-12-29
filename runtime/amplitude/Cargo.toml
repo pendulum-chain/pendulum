@@ -99,9 +99,14 @@ orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-modul
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.42" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.42" }
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.42" }
+orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.42" }
+
 
 # KILT
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
+
+orml-currencies-allowance-extension = {path = "../../pallets/orml-currencies-allowance-extension", default-features = false}
+
 
 # Pendulum Pallets
 vesting-manager = {path = "../../pallets/vesting-manager", default-features = false}
@@ -165,6 +170,7 @@ std = [
     "orml-traits/std",
     "orml-tokens/std",
     "orml-xtokens/std",
+    "orml-xcm-support/std",
     "pallet-aura/std",
     "pallet-authorship/std",
     "pallet-balances/std",
@@ -190,7 +196,6 @@ std = [
     "pallet-vesting/std",
     "pallet-xcm/std",
     "parachain-info/std",
-    "parachain-staking/std",
     "polkadot-parachain/std",
     "polkadot-runtime-common/std",
     "runtime-common/std",
@@ -206,7 +211,6 @@ std = [
     "sp-std/std",
     "sp-transaction-pool/std",
     "sp-version/std",
-    "vesting-manager/std",
     "xcm-builder/std",
     "xcm-executor/std",
     "xcm/std",
@@ -233,6 +237,11 @@ std = [
     "module-pallet-staking-rpc-runtime-api/std",
     "module-vault-registry-rpc-runtime-api/std",
     "spacewalk-primitives/std",
+	# custom libraries from pendulum
+	"orml-currencies-allowance-extension/std",
+	"parachain-staking/std",
+	"vesting-manager/std",
+
 ]
 
 runtime-benchmarks = [
@@ -260,7 +269,8 @@ runtime-benchmarks = [
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
 
-    "runtime-common/runtime-benchmarks"
+    "runtime-common/runtime-benchmarks",
+	"orml-currencies-allowance-extension/runtime-benchmarks"
 ]
 
 try-runtime = [

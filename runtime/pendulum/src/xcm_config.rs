@@ -1,7 +1,23 @@
-use super::{
-	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
+
+use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
+use sp_runtime::traits::Convert;
+use xcm::latest::{prelude::*, Weight as XCMWeight};
+use xcm_builder::{
+	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
+	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
+use xcm_executor::{
+	traits::{JustTry, ShouldExecute},
+	XcmExecutor,
+};
+
+use runtime_common::{
+	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
+	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
+};
+
 use crate::{
 	assets::{
 		self,
@@ -25,18 +41,11 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
-use runtime_common::parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex};
-use sp_runtime::traits::Convert;
-use xcm::latest::{prelude::*, Weight as XCMWeight};
-use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
-	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
-};
-use xcm_executor::{
-	traits::{JustTry, ShouldExecute},
-	XcmExecutor,
+
+use super::{
+	AccountId, Balance, Balances, Currencies, CurrencyId, ParachainInfo, ParachainSystem,
+	PendulumTreasuryAccount, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
+	System, Treasury, WeightToFee, XcmpQueue,
 };
 use frame_system::EnsureRoot;
 
@@ -77,6 +86,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				xcm_assets::EQUILIBRIUM_EQD => Some(equilibrium::EQD_location()),
 				xcm_assets::MOONBEAM_BRZ => Some(moonbeam::BRZ_location()),
 				xcm_assets::POLKADEX_PDEX => Some(polkadex::PDEX_location()),
+				xcm_assets::MOONBEAM_GLMR => Some(moonbeam::GLMR_location()),
 				_ => None,
 			},
 
@@ -97,6 +107,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			loc if loc == equilibrium::EQD_location() => Some(xcm_assets::EQUILIBRIUM_EQD_id()),
 			loc if loc == moonbeam::BRZ_location() => Some(xcm_assets::MOONBEAM_BRZ_id()),
 			loc if loc == polkadex::PDEX_location() => Some(xcm_assets::POLKADEX_PDEX_id()),
+			loc if loc == moonbeam::GLMR_location() => Some(xcm_assets::MOONBEAM_GLMR_id()),
 
 			// Our native currency location without re-anchoring
 			loc if loc == native_location_external_pov() => Some(CurrencyId::Native),
@@ -146,23 +157,6 @@ where
 		false
 	}
 }
-
-/// Means for transacting the fungibles assets of ths parachain.
-pub type FungiblesTransactor = FungiblesAdapter<
-	// Use this fungibles implementation
-	Tokens,
-	// This means that this adapter should handle any token that `CurrencyIdConvert` can convert
-	// to `CurrencyId`, the `CurrencyId` type of `Tokens`, the fungibles implementation it uses.
-	ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
-	// Convert an XCM MultiLocation into a local account id
-	LocationToAccountId,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly)
-	AccountId,
-	// We dont allow teleports.
-	NoChecking,
-	// The account to use for tracking teleports.
-	CheckingAccount,
->;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
@@ -264,6 +258,57 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
+// We will allow for BRZ location from moonbeam
+pub struct AutomationPalletConfigPendulum;
+
+impl AutomationPalletConfig for AutomationPalletConfigPendulum {
+	fn matches_asset(asset: &MultiAsset) -> Option<u128> {
+		let expected_multiloc = moonbeam::BRZ_location();
+
+		match asset {
+			MultiAsset {
+				id: AssetId::Concrete(loc),
+				fun: Fungibility::Fungible(amount_deposited),
+			} if loc == &expected_multiloc => return Some(*amount_deposited),
+			_ => return None,
+		}
+	}
+
+	// TODO modify with automation's pallet instance
+	fn matches_beneficiary(beneficiary_location: &MultiLocation) -> Option<AssetData> {
+		if let MultiLocation {
+			parents: 0,
+			interior: X2(PalletInstance(99), GeneralKey { length, data }),
+		} = beneficiary_location
+		{
+			let asset_data = AssetData { length: *length, data: *data };
+			Some(asset_data)
+		} else {
+			None
+		}
+	}
+
+	fn callback(_length: u8, _data: [u8; 32], _amount: u128) -> Result<(), XcmError> {
+		// TODO change to call the actual automation pallet, with data and length
+		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0; 32])), [0; 1].to_vec());
+		Ok(())
+	}
+}
+
+/// Means for transacting the currencies of this parachain
+type Transactor = MultiCurrencyAdapter<
+	Currencies,
+	(), // We don't handle unknown assets.
+	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
+	AccountId,
+	LocationToAccountId,
+	CurrencyId,
+	CurrencyIdConvert,
+	DepositToAlternative<PendulumTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
+>;
+
+pub type LocalAssetTransactor =
+	CustomTransactorInterceptor<Transactor, AutomationPalletConfigPendulum>;
 pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;
@@ -271,7 +316,7 @@ impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
 	type XcmSender = XcmRouter;
 	// How to withdraw and deposit an asset.
-	type AssetTransactor = FungiblesTransactor;
+	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	// Teleporting is disabled.

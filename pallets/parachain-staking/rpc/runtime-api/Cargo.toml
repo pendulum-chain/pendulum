@@ -10,7 +10,7 @@ sp-api = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0
 sp-std = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false}
 parity-scale-codec = {version = "3.1.5", default-features = false, features = ["derive"]}
 scale-info = {version = "2.1.1", default-features = false, features = ["derive"]}
-module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "3c7d6c7f66f74ea1ea0d14cbe993c1e69856170b"}
+module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "59896f7df1c1daf0f91103323b4d7ba3f1e186fe"}
 serde = {version = "1.0.142", default-features = false, optional = true, features = ["derive"]}
 
 [features]

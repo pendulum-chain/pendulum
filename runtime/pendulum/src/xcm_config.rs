@@ -5,8 +5,9 @@ use cumulus_primitives_utility::{
 };
 use frame_support::{
 	log, match_types, parameter_types,
-	traits::{ContainsPair, Everything, Nothing, ProcessMessageError},
+	traits::{ContainsPair, Everything, Nothing, ProcessMessageError,tokens::fungibles},
 	weights::{Weight, WeightToFee as WeightToFeeTrait},
+	pallet_prelude::DispatchError,
 };
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
@@ -45,7 +46,7 @@ use crate::{
 		xcm_assets,
 	},
 	ConstU32,
-};
+	};
 
 use super::{
 	AccountId, Balance, Balances, Currencies, CurrencyId, ParachainInfo, ParachainSystem,
@@ -321,7 +322,7 @@ pub type Barrier = (
 );
 
 pub struct ChargeWeightInFungiblesImplementation;
-impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImplementation {
+impl ChargeWeightInFungibles<AccountId, ConcreteAssets> for ChargeWeightInFungiblesImplementation {
 	fn charge_weight_in_fungibles(
 		asset_id: CurrencyId,
 		weight: Weight,
@@ -355,12 +356,89 @@ type Transactor = MultiCurrencyAdapter<
 	DepositToAlternative<PendulumTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
+// Workarround for TakeFirstAssetTrader
+use frame_support::traits::tokens::{Preservation, Fortitude, Provenance, WithdrawConsequence, DepositConsequence};
+
+pub struct ConcreteAssets;
+impl fungibles::Mutate<AccountId> for ConcreteAssets {}
+impl fungibles::Balanced<AccountId> for ConcreteAssets {
+	type OnDropCredit = fungibles::DecreaseIssuance<AccountId, Self>;
+	type OnDropDebt = fungibles::IncreaseIssuance<AccountId, Self>;
+}
+impl fungibles::Inspect<AccountId> for ConcreteAssets {
+	type AssetId = <Tokens as fungibles::Inspect<AccountId>>::AssetId;
+	type Balance = <Tokens as fungibles::Inspect<AccountId>>::Balance;
+
+	fn minimum_balance(id: Self::AssetId) -> Self::Balance {
+		Tokens::minimum_balance(id)
+	}
+
+	fn total_issuance(asset_id: Self::AssetId) -> Self::Balance {
+		Tokens::total_issuance(asset_id)
+	}
+
+	fn balance(asset_id: Self::AssetId, account_id: &AccountId) -> Self::Balance {
+		Tokens::balance(asset_id, account_id)
+	}
+
+	fn total_balance(asset_id: Self::AssetId, account_id: &AccountId) -> Self::Balance {
+		Tokens::balance(asset_id, account_id)
+	}
+
+	fn reducible_balance(
+		_: Self::AssetId,
+		_: &AccountId,
+		_: Preservation,
+		_: Fortitude,
+	) -> Self::Balance {
+		todo!()
+	}
+
+	fn can_deposit(
+		_: Self::AssetId,
+		_: &AccountId,
+		_: Self::Balance,
+		_: Provenance,
+	) -> DepositConsequence {
+		todo!()
+	}
+
+	fn can_withdraw(
+		_: Self::AssetId,
+		_: &AccountId,
+		_: Self::Balance,
+	) -> WithdrawConsequence<Self::Balance> {
+		todo!()
+	}
+
+	fn asset_exists(_: Self::AssetId) -> bool {
+		todo!()
+	}
+
+}
+impl fungibles::Unbalanced<AccountId> for ConcreteAssets {
+	fn handle_dust(_: fungibles::Dust<AccountId, Self>) {
+		todo!()
+	}
+	fn write_balance(
+		_: Self::AssetId,
+		_: &AccountId,
+		_: Self::Balance,
+	) -> Result<Option<Self::Balance>, DispatchError> {
+		todo!()
+	}
+
+	fn set_total_issuance(_: Self::AssetId, _: Self::Balance) {
+		todo!()
+	}
+}
+
 pub type Traders = (
 	TakeFirstAssetTrader<
 		AccountId,
 		ChargeWeightInFungiblesImplementation,
 		ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
-		Tokens,
+		ConcreteAssets,
 		XcmFeesTo32ByteAccount<Transactor, AccountId, PendulumTreasuryAccount>,
 	>,
 );

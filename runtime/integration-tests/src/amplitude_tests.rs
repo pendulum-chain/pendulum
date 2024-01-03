@@ -2,8 +2,7 @@ use crate::{
 	mock::{kusama_relay_ext, para_ext, ParachainType, USDT_ASSET_ID},
 	sibling,
 	test_macros::{
-		moonbeam_transfers_token_and_handle_automation, parachain1_transfer_asset_to_parachain2,
-		parachain1_transfer_asset_to_parachain2_and_back,
+		parachain1_transfer_asset_to_parachain2, parachain1_transfer_asset_to_parachain2_and_back,
 		parachain1_transfer_incorrect_asset_to_parachain2_should_fail,
 		transfer_10_relay_token_from_parachain_to_relay_chain,
 		transfer_20_relay_token_from_relay_chain_to_parachain,
@@ -17,7 +16,9 @@ use statemine_runtime as kusama_asset_hub_runtime;
 use xcm::latest::NetworkId;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
 
-const KSM_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 3200000000;
+const KSM_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 32000000;
+const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 640000000;
+const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 3200000000;
 
 decl_test_relay_chain! {
 	pub struct KusamaRelay {
@@ -111,7 +112,8 @@ fn assethub_transfer_asset_to_amplitude() {
 		USDT_ASSET_ID,
 		amplitude_runtime,
 		AmplitudeParachain,
-		AMPLITUDE_ID
+		AMPLITUDE_ID,
+		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }
 
@@ -127,7 +129,8 @@ fn assethub_transfer_asset_to_amplitude_and_back() {
 		amplitude_runtime,
 		AmplitudeParachain,
 		AMPLITUDE_ID,
-		network_id
+		network_id,
+		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }
 
@@ -140,6 +143,7 @@ fn transfer_native_token_from_amplitude_to_sibling_parachain_and_back() {
 		sibling,
 		SiblingParachain,
 		AMPLITUDE_ID,
-		SIBLING_ID
+		SIBLING_ID,
+		NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }

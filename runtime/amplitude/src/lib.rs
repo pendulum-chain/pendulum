@@ -146,6 +146,20 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
 
+use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::GetStorageVersion;
+
+pub struct CustomOnRuntimeUpgrade;
+impl frame_support::traits::OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		log::info!("Custom on-runtime-upgrade function");
+        if Contracts::on_chain_storage_version() == 0 {
+			log::info!("Upgrading pallet contract's storage version to 10");
+			StorageVersion::new(0).put::<Contracts>();
+		}
+		// not really a heavy operation
+		frame_support::weights::Weight::zero()
+    }
+}
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
 	Runtime,
@@ -153,6 +167,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
+	CustomOnRuntimeUpgrade
 >;
 
 pub struct AmplitudeDiaOracleKeyConverter;

@@ -30,13 +30,13 @@ runtime-common = {path = "../common", default-features = false}
 spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "59896f7df1c1daf0f91103323b4d7ba3f1e186fe"}
 
 # Substrate
-frame-benchmarking = {git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.40"}
-frame-executive = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40"}
-frame-support = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40"}
-frame-system = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40"}
-frame-system-benchmarking = {git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.40"}
-frame-system-rpc-runtime-api = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40"}
-frame-try-runtime = {git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.40"}
+frame-benchmarking = {git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.42"}
+frame-executive = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42"}
+frame-support = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42"}
+frame-system = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42"}
+frame-system-benchmarking = {git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.42"}
+frame-system-rpc-runtime-api = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42"}
+frame-try-runtime = {git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.42"}
 module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "59896f7df1c1daf0f91103323b4d7ba3f1e186fe"}
 module-pallet-staking-rpc-runtime-api = { path = "../../pallets/parachain-staking/rpc/runtime-api", default-features = false }
 pallet-aura = {git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42"}

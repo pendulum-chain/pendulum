@@ -149,15 +149,47 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, Si
 use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::GetStorageVersion;
 use frame_support::pallet_prelude::StorageVersion;
 
+parameter_types! {
+	pub const InactiveAccounts: Vec<AccountId> = Vec::new();
+}
+
+pub struct VestingMigrateToV1;
+impl frame_support::traits::OnRuntimeUpgrade  for VestingMigrateToV1{
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		pallet_vesting::migrations::v1::pre_migrate::<Runtime>();
+
+		Ok(Vec::new())
+	}
+
+	fn on_runtime_upgrade() -> Weight {
+
+		pallet_vesting::migrations::v1::migrate::<Runtime>();
+
+		frame_support::weights::Weight::zero()
+
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+		pallet_vesting::migrations::v1::post_migrate::<Runtime>();
+
+		Ok(())
+	}
+
+}
+
+// Temporary struct that defines the executions to be done upon upgrade, 
+// Should be removed or at least checked on each upgrade to see if it is relevant,
+// given that these are "one-time" executions for particular upgrades
 pub struct CustomOnRuntimeUpgrade;
 impl frame_support::traits::OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
     fn on_runtime_upgrade() -> frame_support::weights::Weight {
 		log::info!("Custom on-runtime-upgrade function");
         if Contracts::on_chain_storage_version() == 0 {
 			log::info!{"version for pallet_xcm {:?}",StorageVersion::get::<PolkadotXcm>()};
-			log::info!{"version for tx payment {:?}",StorageVersion::get::<TransactionPayment>()};
 			log::info!("Upgrading pallet contract's storage version to 10");
-			StorageVersion::new(10).put::<Contracts>();
+			StorageVersion::new(10).put::<Contracts>();			
 		}
 		// not really a heavy operation
 		frame_support::weights::Weight::zero()
@@ -170,7 +202,16 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(CustomOnRuntimeUpgrade, pallet_xcm::migration::v1::MigrateToV1<Runtime>)
+	(CustomOnRuntimeUpgrade, 
+		//VestingMigrateToV1,
+		// pallet_xcm::migration::v1::MigrateToV1<Runtime>,
+		//pallet_democracy::migrations::v1::Migration<Runtime>,
+		//pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
+		// pallet_balances::migration::MigrateManyToTrackInactive<Runtime, InactiveAccounts>,
+		//pallet_preimage::migration::v1::Migration<Runtime>,
+		pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
+		// orml_asset_registry::Migration<Runtime>
+	)
 >;
 
 pub struct AmplitudeDiaOracleKeyConverter;
@@ -264,7 +305,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 13,
+	spec_version: 15,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 13,

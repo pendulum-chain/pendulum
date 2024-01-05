@@ -124,6 +124,44 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
 
+parameter_types! {
+	pub const InactiveAccounts: Vec<AccountId> = Vec::new();
+}
+
+use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::GetStorageVersion;
+
+use frame_support::pallet_prelude::StorageVersion;
+
+
+pub struct VestingMigrateToV1;
+impl frame_support::traits::OnRuntimeUpgrade  for VestingMigrateToV1{
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		pallet_vesting::migrations::v1::pre_migrate::<Runtime>();
+
+		Ok(Vec::new())
+	}
+
+	fn on_runtime_upgrade() -> Weight {
+
+		frame_support::weights::Weight::zero()
+
+	}
+}
+
+pub struct CustomOnRuntimeUpgrade;
+impl frame_support::traits::OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		log::info!("Custom on-runtime-upgrade function");
+        if Contracts::on_chain_storage_version() == 0 {
+			log::info!{"version for pallet_xcm {:?}",StorageVersion::get::<PolkadotXcm>()};
+			StorageVersion::new(10).put::<Contracts>();
+		}
+		// not really a heavy operation
+		frame_support::weights::Weight::zero()
+    }
+}
+
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
 	Runtime,
@@ -131,8 +169,13 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
+	(CustomOnRuntimeUpgrade, 
+		//VestingMigrateToV1,
+		//pallet_xcm::migration::v1::MigrateToV1<Runtime>,
+		pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
+		//pallet_balances::migration::MigrateManyToTrackInactive<Runtime, InactiveAccounts>,
+	)
 >;
-
 /// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
 /// node's balance type.
 ///
@@ -169,7 +212,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("pendulum"),
 	impl_name: create_runtime_str!("pendulum"),
 	authoring_version: 1,
-	spec_version: 10,
+	spec_version: 11,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 10,

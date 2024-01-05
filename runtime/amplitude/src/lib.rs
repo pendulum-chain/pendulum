@@ -149,9 +149,14 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, Si
 use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::GetStorageVersion;
 use frame_support::pallet_prelude::StorageVersion;
 
+parameter_types! {
+	pub const InactiveAccounts: Vec<AccountId> = Vec::new();
+}
+
 pub struct CustomOnRuntimeUpgrade;
 impl frame_support::traits::OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
     fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		
 		log::info!("Custom on-runtime-upgrade function");
         if Contracts::on_chain_storage_version() == 0 {
 			log::info!{"version for pallet_xcm {:?}",StorageVersion::get::<PolkadotXcm>()};
@@ -170,7 +175,15 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(CustomOnRuntimeUpgrade, pallet_xcm::migration::v1::MigrateToV1<Runtime>)
+	(CustomOnRuntimeUpgrade, 
+		pallet_xcm::migration::v1::MigrateToV1<Runtime>,
+		pallet_democracy::migrations::v1::Migration<Runtime>,
+		pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
+		pallet_balances::migration::MigrateManyToTrackInactive<Runtime, InactiveAccounts>,
+		//pallet_preimage::migration::v1::Migration<Runtime>,
+		pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
+		orml_asset_registry::Migration<Runtime>
+	)
 >;
 
 pub struct AmplitudeDiaOracleKeyConverter;

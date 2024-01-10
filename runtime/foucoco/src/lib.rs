@@ -169,7 +169,6 @@ pub type Executive = frame_executive::Executive<
 	AllPalletsWithSystem,
 >;
 
-
 pub struct SpacewalkNativeCurrency;
 impl oracle::dia::NativeCurrencyKey for SpacewalkNativeCurrency {
 	fn native_symbol() -> Vec<u8> {
@@ -791,7 +790,7 @@ impl pallet_child_bounties::Config for Runtime {
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		// Since the xcm trader uses Tokens to get the minimum
-		// balance of both it's assets and native, we need to 
+		// balance of both it's assets and native, we need to
 		// handle native here
 		match currency_id{
 			CurrencyId::Native => EXISTENTIAL_DEPOSIT,
@@ -1893,12 +1892,12 @@ impl_runtime_apis! {
 		}
 
 		fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
-            Runtime::metadata_at_version(version)
-        }
+			Runtime::metadata_at_version(version)
+		}
 
-        fn metadata_versions() -> sp_std::vec::Vec<u32> {
-            Runtime::metadata_versions()
-        }
+		fn metadata_versions() -> sp_std::vec::Vec<u32> {
+			Runtime::metadata_versions()
+		}
 	}
 
 	impl sp_block_builder::BlockBuilder<Block> for Runtime {
@@ -2086,15 +2085,15 @@ impl_runtime_apis! {
 		}
 
 		fn execute_block(
-            block: Block,
-            state_root_check: bool,
-            signature_check: bool,
-            select: frame_try_runtime::TryStateSelect
-        ) -> Weight {
-            // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
-            // have a backtrace here.
-            Executive::try_execute_block(block, state_root_check, signature_check, select).expect("execute-block failed")
-        }
+			block: Block,
+			state_root_check: bool,
+			signature_check: bool,
+			select: frame_try_runtime::TryStateSelect
+		) -> Weight {
+			// NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+			// have a backtrace here.
+			Executive::try_execute_block(block, state_root_check, signature_check, select).expect("execute-block failed")
+		}
 	}
 
 

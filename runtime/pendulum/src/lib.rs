@@ -45,8 +45,8 @@ use frame_support::{
 	dispatch::DispatchClass,
 	parameter_types,
 	traits::{
-		ConstBool, ConstU32, Contains, Currency, EitherOfDiverse, EqualPrivilegeOnly, Imbalance,
-		InstanceFilter, OnUnbalanced, WithdrawReasons, fungible::Credit
+		fungible::Credit, ConstBool, ConstU32, Contains, Currency, EitherOfDiverse,
+		EqualPrivilegeOnly, Imbalance, InstanceFilter, OnUnbalanced, WithdrawReasons,
 	},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
@@ -129,37 +129,32 @@ parameter_types! {
 }
 
 use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::GetStorageVersion;
-
 use frame_support::pallet_prelude::StorageVersion;
-
-
-pub struct VestingMigrateToV1;
-impl frame_support::traits::OnRuntimeUpgrade  for VestingMigrateToV1{
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-		pallet_vesting::migrations::v1::pre_migrate::<Runtime>();
-
-		Ok(Vec::new())
-	}
-
-	fn on_runtime_upgrade() -> Weight {
-
-		frame_support::weights::Weight::zero()
-
-	}
-}
 
 pub struct CustomOnRuntimeUpgrade;
 impl frame_support::traits::OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
-    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
 		log::info!("Custom on-runtime-upgrade function");
-        if Contracts::on_chain_storage_version() == 0 {
-			log::info!{"version for pallet_xcm {:?}",StorageVersion::get::<PolkadotXcm>()};
+		// WARNING: manually setting the storage version
+		if StorageVersion::get::<Contracts>() = 0 {
+			log::info!("Upgrading pallet contract's storage version to 10");
 			StorageVersion::new(10).put::<Contracts>();
 		}
+		if StorageVersion::get::<Scheduler>() = 3 {
+			log::info!("Upgrading pallet scheduler's storage version to 4");
+			StorageVersion::new(4).put::<Scheduler>();
+		}
+		if StorageVersion::get::<PolkadotXcm>() == 0 {
+			log::info!("Upgrading pallet xcm's storage version to 1");
+			StorageVersion::new(1).put::<PolkadotXcm>();
+		}
+		if StorageVersion::get::<AssetRegistry>() == 0 {
+			log::info!("Upgrading pallet asset registry's storage version to 2");
+			StorageVersion::new(2).put::<AssetRegistry>();
+		}
 		// not really a heavy operation
-		frame_support::weights::Weight::zero()
-    }
+		frame_support::weights::Weight::reads(4).writes(4)
+	}
 }
 
 /// Executive: handles dispatch to the various modules.
@@ -169,12 +164,10 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(CustomOnRuntimeUpgrade, 
-		//VestingMigrateToV1,
-		//pallet_xcm::migration::v1::MigrateToV1<Runtime>,
-		pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
-		//pallet_balances::migration::MigrateManyToTrackInactive<Runtime, InactiveAccounts>,
-	)
+	(
+		CustomOnRuntimeUpgrade,
+		pallet_balances::migration::MigrateManyToTrackInactive<Runtime, InactiveAccounts>,
+	),
 >;
 /// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
 /// node's balance type.
@@ -410,11 +403,16 @@ parameter_types! {
 
 pub struct MoveDustToTreasury;
 
-impl OnUnbalanced<Credit<<Runtime as frame_system::Config>::AccountId, pallet_balances::Pallet<Runtime>>>
-	for MoveDustToTreasury
+impl
+	OnUnbalanced<
+		Credit<<Runtime as frame_system::Config>::AccountId, pallet_balances::Pallet<Runtime>>,
+	> for MoveDustToTreasury
 {
 	fn on_nonzero_unbalanced(
-		amount: Credit<<Runtime as frame_system::Config>::AccountId, pallet_balances::Pallet<Runtime>>,
+		amount: Credit<
+			<Runtime as frame_system::Config>::AccountId,
+			pallet_balances::Pallet<Runtime>,
+		>,
 	) {
 		let _ = <Balances as Currency<AccountId>>::deposit_creating(
 			&TreasuryPalletId::get().into_account_truncating(),
@@ -750,7 +748,7 @@ impl pallet_child_bounties::Config for Runtime {
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		// Since the xcm trader uses Tokens to get the minimum
-		// balance of both it's assets and native, we need to 
+		// balance of both it's assets and native, we need to
 		// handle native here
 		match currency_id{
 			CurrencyId::Native => EXISTENTIAL_DEPOSIT,
@@ -917,7 +915,7 @@ parameter_types! {
 	pub const DepositPerItem: Balance = deposit(1, 0);
 	pub const DepositPerByte: Balance = deposit(0, 1);
 	// Fallback value if storage deposit limit not set by the user
-    pub const DefaultDepositLimit: Balance = deposit(1024, 1024 * 1024);
+	pub const DefaultDepositLimit: Balance = deposit(1024, 1024 * 1024);
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 }
 
@@ -1230,12 +1228,12 @@ impl_runtime_apis! {
 		}
 
 		fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
-            Runtime::metadata_at_version(version)
-        }
+			Runtime::metadata_at_version(version)
+		}
 
-        fn metadata_versions() -> sp_std::vec::Vec<u32> {
-            Runtime::metadata_versions()
-        }
+		fn metadata_versions() -> sp_std::vec::Vec<u32> {
+			Runtime::metadata_versions()
+		}
 	}
 
 	impl sp_block_builder::BlockBuilder<Block> for Runtime {
@@ -1422,15 +1420,15 @@ impl_runtime_apis! {
 		}
 
 		fn execute_block(
-            block: Block,
-            state_root_check: bool,
-            signature_check: bool,
-            select: frame_try_runtime::TryStateSelect
-        ) -> Weight {
-            // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
-            // have a backtrace here.
-            Executive::try_execute_block(block, state_root_check, signature_check, select).expect("execute-block failed")
-        }
+			block: Block,
+			state_root_check: bool,
+			signature_check: bool,
+			select: frame_try_runtime::TryStateSelect
+		) -> Weight {
+			// NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+			// have a backtrace here.
+			Executive::try_execute_block(block, state_root_check, signature_check, select).expect("execute-block failed")
+		}
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]

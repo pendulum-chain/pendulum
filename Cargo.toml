@@ -34,12 +34,3 @@ orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-modu
 orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.42" }
 zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", branch = "polkadot-v0.9.42" }
 zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", branch = "polkadot-v0.9.42" }
-
-
-[patch.'https://github.com/paritytech/polkadot']
-pallet-xcm = {path = "/home/giannipop/root/pendulum/polkadot/xcm/pallet-xcm/"}
-
-[patch.'https://github.com/paritytech/substrate']
-pallet-scheduler = {path = "/home/giannipop/root/pendulum/substrate/frame/scheduler/"}
-pallet-preimage  = {path = "/home/giannipop/root/pendulum/substrate/frame/preimage/"}
-pallet-vesting  = {path = "/home/giannipop/root/pendulum/substrate/frame/vesting/"}

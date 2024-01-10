@@ -73,7 +73,7 @@ pub enum ChainExtensionTokenError {
 	/// Account cannot be created for a held balance.
 	CannotCreateHold,
 	/// Withdrawal would cause unwanted loss of account.
-	NotExpendable
+	NotExpendable,
 }
 
 /// ChainExtensionArithmeticError is a nested error in ChainExtensionOutcome, similar to DispatchError's ArithmeticError.
@@ -221,7 +221,7 @@ impl ChainExtensionTokenError {
 			ChainExtensionTokenError::Frozen => 5,
 			ChainExtensionTokenError::Unsupported => 6,
 			ChainExtensionTokenError::OnlyProvider => 7,
-			ChainExtensionTokenError::CannotCreateHold  => 8,
+			ChainExtensionTokenError::CannotCreateHold => 8,
 			ChainExtensionTokenError::Unknown => 999,
 		}
 	}

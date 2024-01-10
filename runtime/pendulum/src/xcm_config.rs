@@ -4,10 +4,11 @@ use cumulus_primitives_utility::{
 	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,
 };
 use frame_support::{
-	log, match_types, parameter_types,
-	traits::{ContainsPair, Everything, Nothing, ProcessMessageError,tokens::fungibles},
-	weights::{Weight, WeightToFee as WeightToFeeTrait},
+	log, match_types,
 	pallet_prelude::DispatchError,
+	parameter_types,
+	traits::{tokens::fungibles, ContainsPair, Everything, Nothing, ProcessMessageError},
+	weights::{Weight, WeightToFee as WeightToFeeTrait},
 };
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
@@ -24,7 +25,7 @@ use xcm_builder::{
 	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
 	FixedWeightBounds, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeWeightCredit, 
+	SovereignSignedViaLocation, TakeWeightCredit,
 };
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
@@ -46,7 +47,7 @@ use crate::{
 		xcm_assets,
 	},
 	ConstU32,
-	};
+};
 
 use super::{
 	AccountId, Balance, Balances, Currencies, CurrencyId, ParachainInfo, ParachainSystem,
@@ -357,7 +358,9 @@ type Transactor = MultiCurrencyAdapter<
 >;
 
 // Workarround for TakeFirstAssetTrader
-use frame_support::traits::tokens::{Preservation, Fortitude, Provenance, WithdrawConsequence, DepositConsequence};
+use frame_support::traits::tokens::{
+	DepositConsequence, Fortitude, Preservation, Provenance, WithdrawConsequence,
+};
 
 pub struct ConcreteAssets;
 impl fungibles::Mutate<AccountId> for ConcreteAssets {}
@@ -414,7 +417,6 @@ impl fungibles::Inspect<AccountId> for ConcreteAssets {
 	fn asset_exists(_: Self::AssetId) -> bool {
 		todo!()
 	}
-
 }
 impl fungibles::Unbalanced<AccountId> for ConcreteAssets {
 	fn handle_dust(_: fungibles::Dust<AccountId, Self>) {

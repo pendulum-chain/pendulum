@@ -26,7 +26,7 @@ use xcm_executor::{
 	XcmExecutor,
 };
 
-use runtime_common::parachains::kusama::asset_hub;
+use runtime_common::{RelativeValue,parachains::kusama::asset_hub};
 
 use cumulus_primitives_utility::{
 	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,
@@ -113,34 +113,19 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 	}
 }
 
-pub struct RelativeValue {
-	num: Balance,
-	denominator: Balance,
-}
-
-impl RelativeValue {
-	fn adjust_amount_by_relative_value(amount: Balance, relative_value: RelativeValue) -> Balance {
-		if relative_value.denominator == 0 {
-			// Or probably error
-			return amount
-		}
-		// Calculate the adjusted amount
-		let adjusted_amount = amount * relative_value.denominator / relative_value.num;
-		adjusted_amount
-	}
-}
+type RelativeValueOf = RelativeValue<Balance>;
 
 pub struct RelayRelativeValue;
 impl RelayRelativeValue {
-	fn get_relative_value(id: CurrencyId) -> Option<RelativeValue> {
+	fn get_relative_value(id: CurrencyId) -> Option<RelativeValueOf> {
 		match id {
 			CurrencyId::XCM(index) => match index {
-				xcm_assets::RELAY_KSM => Some(RelativeValue { num: 100, denominator: 1 }),
-				xcm_assets::ASSETHUB_USDT => Some(RelativeValue { num: 20, denominator: 4 }),
+				xcm_assets::RELAY_KSM => Some(RelativeValueOf { num: 100, denominator: 1 }),
+				xcm_assets::ASSETHUB_USDT => Some(RelativeValueOf { num: 20, denominator: 4 }),
 				_ => None,
 			},
-			CurrencyId::Native => Some(RelativeValue { num: 1, denominator: 1 }),
-			_ => Some(RelativeValue { num: 1, denominator: 1 }),
+			CurrencyId::Native => Some(RelativeValueOf { num: 1, denominator: 1 }),
+			_ => Some(RelativeValueOf { num: 1, denominator: 1 }),
 		}
 	}
 }
@@ -313,7 +298,7 @@ impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImple
 
 		if let Some(relative_value) = RelayRelativeValue::get_relative_value(asset_id) {
 			let adjusted_amount =
-				RelativeValue::adjust_amount_by_relative_value(amount, relative_value);
+				RelativeValue::<Balance>::adjust_amount_by_relative_value(amount, relative_value);
 			log::info!("amount to be charged: {:?} in asset: {:?}", adjusted_amount, asset_id);
 			return Ok(adjusted_amount)
 		} else {

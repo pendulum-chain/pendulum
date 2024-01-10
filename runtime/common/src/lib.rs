@@ -2,7 +2,7 @@
 #![allow(non_snake_case)]
 
 use sp_runtime::{
-	traits::{IdentifyAccount, Verify},
+	traits::{IdentifyAccount, Verify, Saturating,CheckedDiv },
 	DispatchError, MultiSignature,
 };
 
@@ -68,6 +68,23 @@ pub mod opaque {
 	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 	/// Opaque block identifier type.
 	pub type BlockId = generic::BlockId<Block>;
+}
+
+
+pub struct RelativeValue<Amount> {
+	pub num: Amount,
+	pub denominator: Amount,
+}
+
+impl<Amount: CheckedDiv<Output = Amount> + Saturating + Clone> RelativeValue<Amount> {
+	pub fn adjust_amount_by_relative_value(amount: Amount, relative_value: RelativeValue<Amount>) -> Amount {
+		// Calculate the adjusted amount
+		if let Some(adjusted_amount) = amount.clone().saturating_mul(relative_value.denominator).checked_div(&relative_value.num) {
+			return adjusted_amount
+		}
+		// We should never specify a numerator of 0, but just to be safe
+		return amount;
+	}
 }
 
 #[macro_use]

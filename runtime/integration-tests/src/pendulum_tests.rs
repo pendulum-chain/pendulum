@@ -18,7 +18,10 @@ use statemint_runtime as polkadot_asset_hub_runtime;
 use xcm::latest::NetworkId;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
 
-const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 3200000000; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
+const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 32653061; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
+const MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 1391304347; //Fees that we will charge in incoming Moonbeam's BRZ. Depends on the RelativeValue struct implementation.
+const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 266666666;
+const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 3200000000;
 
 decl_test_relay_chain! {
 	pub struct PolkadotRelay {
@@ -123,7 +126,8 @@ fn assethub_transfer_asset_to_pendulum() {
 		USDT_ASSET_ID,
 		pendulum_runtime,
 		PendulumParachain,
-		PENDULUM_ID
+		PENDULUM_ID,
+		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }
 
@@ -139,7 +143,8 @@ fn assethub_transfer_asset_to_pendulum_and_back() {
 		pendulum_runtime,
 		PendulumParachain,
 		PENDULUM_ID,
-		network_id
+		network_id,
+		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }
 
@@ -152,7 +157,8 @@ fn transfer_native_token_from_pendulum_to_sibling_parachain_and_back() {
 		sibling,
 		SiblingParachain,
 		PENDULUM_ID,
-		SIBLING_ID
+		SIBLING_ID,
+		NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }
 
@@ -165,6 +171,7 @@ fn moonbeam_transfers_token_and_handle_automation() {
 		sibling,
 		MoonbeamParachain,
 		PENDULUM_ID,
-		MOONBEAM_PARA_ID
+		MOONBEAM_PARA_ID,
+		MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }

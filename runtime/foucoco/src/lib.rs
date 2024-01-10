@@ -781,8 +781,14 @@ impl pallet_child_bounties::Config for Runtime {
 }
 
 parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		NANOUNIT
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		// Since the xcm trader uses Tokens to get the minimum
+		// balance of both it's assets and native, we need to 
+		// handle native here
+		match currency_id{
+			CurrencyId::Native => EXISTENTIAL_DEPOSIT,
+			_ => NANOUNIT
+		}
 	};
 }
 

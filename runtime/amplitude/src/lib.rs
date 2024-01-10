@@ -186,36 +186,36 @@ impl frame_support::traits::OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
 		log::info!("Custom on-runtime-upgrade function");
 
 		// WARNING: manually setting the storage version
-		if StorageVersion::get::<Contracts>() == 0 {
+		if Contracts::on_chain_storage_version() == 0 {
 			log::info!("Upgrading pallet contract's storage version to 10");
 			StorageVersion::new(10).put::<Contracts>();
 		}
-		if StorageVersion::get::<Democracy>() == 0 {
+		if Democracy::on_chain_storage_version() == 0 {
 			log::info!("Upgrading pallet democracy's storage version to 1");
 			StorageVersion::new(1).put::<Democracy>();
 		}
-		if StorageVersion::get::<Scheduler>() == 3 {
+		if Scheduler::on_chain_storage_version() == 3 {
 			log::info!("Upgrading pallet scheduler's storage version to 4");
 			StorageVersion::new(4).put::<Scheduler>();
 		}
-		if StorageVersion::get::<Preimage>() == 0 {
+		if Preimage::on_chain_storage_version() == 0 {
 			log::info!("Upgrading pallet preimage's storage version to 1");
 			StorageVersion::new(1).put::<Preimage>();
 		}
-		if StorageVersion::get::<Multisig>() == 0 {
+		if Multisig::on_chain_storage_version() == 0 {
 			log::info!("Upgrading pallet multisig's storage version to 1");
 			StorageVersion::new(1).put::<Multisig>();
 		}
-		if StorageVersion::get::<PolkadotXcm>() == 0 {
+		if PolkadotXcm::on_chain_storage_version() == 0 {
 			log::info!("Upgrading pallet xcm's storage version to 1");
 			StorageVersion::new(1).put::<PolkadotXcm>();
 		}
-		if StorageVersion::get::<AssetRegistry>() == 0 {
+		if AssetRegistry::on_chain_storage_version() == 0 {
 			log::info!("Upgrading pallet asset registry's storage version to 2");
 			StorageVersion::new(2).put::<AssetRegistry>();
 		}
 
-		frame_support::weights::Weight::reads(7).writes(7)
+		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(7, 7)
 	}
 }
 /// Executive: handles dispatch to the various modules.

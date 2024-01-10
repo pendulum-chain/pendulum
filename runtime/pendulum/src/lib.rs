@@ -136,24 +136,24 @@ impl frame_support::traits::OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
 		log::info!("Custom on-runtime-upgrade function");
 		// WARNING: manually setting the storage version
-		if StorageVersion::get::<Contracts>() = 0 {
+		if Contracts::on_chain_storage_version() == 0 {
 			log::info!("Upgrading pallet contract's storage version to 10");
 			StorageVersion::new(10).put::<Contracts>();
 		}
-		if StorageVersion::get::<Scheduler>() = 3 {
+		if Scheduler::on_chain_storage_version() == 3 {
 			log::info!("Upgrading pallet scheduler's storage version to 4");
 			StorageVersion::new(4).put::<Scheduler>();
 		}
-		if StorageVersion::get::<PolkadotXcm>() == 0 {
+		if PolkadotXcm::on_chain_storage_version() == 0 {
 			log::info!("Upgrading pallet xcm's storage version to 1");
 			StorageVersion::new(1).put::<PolkadotXcm>();
 		}
-		if StorageVersion::get::<AssetRegistry>() == 0 {
+		if AssetRegistry::on_chain_storage_version() == 0 {
 			log::info!("Upgrading pallet asset registry's storage version to 2");
 			StorageVersion::new(2).put::<AssetRegistry>();
 		}
 		// not really a heavy operation
-		frame_support::weights::Weight::reads(4).writes(4)
+		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(4, 4)
 	}
 }
 

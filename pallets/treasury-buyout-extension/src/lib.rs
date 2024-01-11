@@ -341,7 +341,7 @@ pub mod pallet {
 			if values.0.is_zero() && values.1.is_zero() || accounts.0 == accounts.1 {
 				return Ok(())
 			}
-
+            //TODO: SHOULD CHECK BOTH BALANCES BEFORE TRANSFER
 			//TODO use this to return in case of error and event
 			let mut err_acc: Option<T::AccountId> = None;
 

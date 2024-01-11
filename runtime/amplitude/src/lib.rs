@@ -154,25 +154,6 @@ parameter_types! {
 	pub const InactiveAccounts: Vec<AccountId> = Vec::new();
 }
 
-pub struct VestingMigrateToV1;
-impl frame_support::traits::OnRuntimeUpgrade for VestingMigrateToV1 {
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-		pallet_vesting::migrations::v1::pre_migrate::<Runtime>()?;
-
-		Ok(Vec::new())
-	}
-
-	fn on_runtime_upgrade() -> Weight {
-		pallet_vesting::migrations::v1::migrate::<Runtime>()
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
-		pallet_vesting::migrations::v1::post_migrate::<Runtime>()
-	}
-}
-
 // Temporary struct that defines the executions to be done upon upgrade,
 // Should be removed or at least checked on each upgrade to see if it is relevant,
 // given that these are "one-time" executions for particular upgrades

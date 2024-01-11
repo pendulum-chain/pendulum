@@ -160,6 +160,33 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, Si
 
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
+use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::GetStorageVersion;
+use frame_support::pallet_prelude::StorageVersion;
+
+// Temporary struct that defines the executions to be done upon upgrade,
+// Should be removed or at least checked on each upgrade to see if it is relevant,
+// given that these are "one-time" executions for particular upgrades
+pub struct CustomOnRuntimeUpgrade;
+impl frame_support::traits::OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let mut writes = 0;
+		// WARNING: manually setting the storage version
+		if Contracts::on_chain_storage_version() == 9 {
+			log::info!("Upgrading pallet contract's storage version to 10");
+			StorageVersion::new(10).put::<Contracts>();
+			writes += 1;
+		}
+
+		if AssetRegistry::on_chain_storage_version() == 0 {
+			log::info!("Upgrading pallet asset registry's storage version to 2");
+			StorageVersion::new(2).put::<AssetRegistry>();
+			writes += 1;
+		}
+
+		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(2, writes)
+	}
+}
+
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
 	Runtime,
@@ -167,6 +194,11 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
+	(
+		CustomOnRuntimeUpgrade,
+		pallet_vesting::migrations::v1::ForceSetVersionToV1<Runtime>,
+		pallet_transaction_payment::migrations::v1::ForceSetVersionToV2<Runtime>,
+	),
 >;
 
 pub struct SpacewalkNativeCurrency;

@@ -192,7 +192,7 @@ impl frame_support::traits::OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
 			StorageVersion::new(2).put::<AssetRegistry>();
 		}
 
-		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(7, 7)
+		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(8, 8)
 	}
 }
 /// Executive: handles dispatch to the various modules.
@@ -205,6 +205,8 @@ pub type Executive = frame_executive::Executive<
 	(
 		CustomOnRuntimeUpgrade,
 		pallet_balances::migration::MigrateManyToTrackInactive<Runtime, InactiveAccounts>,
+		pallet_vesting::migrations::v1::ForceSetVersionToV1<Runtime>,
+		pallet_transaction_payment::migrations::v1::ForceSetVersionToV2<Runtime>,
 	),
 >;
 

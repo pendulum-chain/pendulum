@@ -7528,7 +7528,7 @@ dependencies = [
 [[package]]
 name = "pallet-transaction-payment"
 version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42#ff24c60ac7d9f87727ecdd0ded9a80c56e4f4b65"
+source = "git+https://github.com/pendulum-chain/patch-pallet-vesting-transaction-storage?branch=polkadot-v0.9.42#2c1ddd4bf181040b24c28a3ace7336d45622a73d"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7620,7 +7620,7 @@ dependencies = [
 [[package]]
 name = "pallet-vesting"
 version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42#ff24c60ac7d9f87727ecdd0ded9a80c56e4f4b65"
+source = "git+https://github.com/pendulum-chain/patch-pallet-vesting-transaction-storage?branch=polkadot-v0.9.42#2c1ddd4bf181040b24c28a3ace7336d45622a73d"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

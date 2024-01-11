@@ -26,7 +26,7 @@ use xcm_executor::{
 	XcmExecutor,
 };
 
-use runtime_common::{RelativeValue,parachains::kusama::asset_hub};
+use runtime_common::{parachains::kusama::asset_hub, RelativeValue};
 
 use cumulus_primitives_utility::{
 	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,
@@ -298,7 +298,7 @@ impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImple
 
 		if let Some(relative_value) = RelayRelativeValue::get_relative_value(asset_id) {
 			let adjusted_amount =
-				RelativeValue::<Balance>::adjust_amount_by_relative_value(amount, relative_value);
+				RelativeValue::<Balance>::divide_by_relative_value(amount, relative_value);
 			log::info!("amount to be charged: {:?} in asset: {:?}", adjusted_amount, asset_id);
 			return Ok(adjusted_amount)
 		} else {

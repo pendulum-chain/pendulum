@@ -30,9 +30,9 @@ use xcm_executor::{
 };
 
 use runtime_common::{
-	RelativeValue,
 	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
 	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
+	RelativeValue,
 };
 
 use crate::{
@@ -317,7 +317,7 @@ impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImple
 		// and adjust the amount inversily proportional to the value
 		if let Some(relative_value) = RelayRelativeValue::get_relative_value(asset_id) {
 			let adjusted_amount =
-				RelativeValue::<Balance>::adjust_amount_by_relative_value(amount, relative_value);
+				RelativeValue::<Balance>::divide_by_relative_value(amount, relative_value);
 			log::info!("amount to be charged: {:?} in asset: {:?}", adjusted_amount, asset_id);
 			return Ok(adjusted_amount)
 		} else {

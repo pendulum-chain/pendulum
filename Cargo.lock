@@ -13658,6 +13658,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "treasury-buyout-extension"
+version = "1.0.0"
+dependencies = [
+ "dia-oracle",
+ "dia-oracle-runtime-api",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "mocktopus",
+ "oracle",
+ "orml-asset-registry",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-treasury",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sha2 0.8.2",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "spacewalk-primitives 1.0.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d05b0015d15ca39cc780889bcc095335e9862a36)",
+]
+
+[[package]]
 name = "trie-db"
 version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

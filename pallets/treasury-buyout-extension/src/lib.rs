@@ -44,24 +44,31 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + orml_currencies::Config + oracle::Config {
+		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
+		/// Used for currency-related operations
 		type Currency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyIdOf<Self>>;
 
+		/// Used for getting the treasury account
 		#[pallet::constant]
 		type TreasuryAccount: Get<Self::AccountId>;
 
+		/// Timestamp provider
 		type UnixTime: UnixTime;
 
+		/// Fee from the native asset buyouts
 		#[pallet::constant]
 		type SellFee: Get<Permill>;
 
 		// might be needed?
 		//type AssetRegistry: Inspect;
 
+		/// Min amount of native token to buyout
 		#[pallet::constant]
 		type MinAmountToBuyout: Get<BalanceOf<Self>>;
 
+		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 
 		//Going to get rid of this

@@ -118,8 +118,8 @@ pub mod pallet {
 		InsufficientTreasuryBalance,
 		/// The account balance is too low for an operation
 		InsufficientAccountBalance,
-        /// Exchange failed
-        ExchangeFailure,
+		/// Exchange failed
+		ExchangeFailure,
 	}
 
 	#[pallet::event]
@@ -132,15 +132,15 @@ pub mod pallet {
 			asset: CurrencyIdOf<T>,
 			exchange_amount: BalanceOf<T>,
 		},
-        // Exchange event
-        Exchange {
-            from: AccountIdOf<T>,
-            from_asset: CurrencyIdOf<T>,
-            from_amount: BalanceOf<T>,
-            to: AccountIdOf<T>,
-            to_asset: CurrencyIdOf<T>,
-            to_amount: BalanceOf<T>,
-        },
+		// Exchange event
+		Exchange {
+			from: AccountIdOf<T>,
+			from_asset: CurrencyIdOf<T>,
+			from_amount: BalanceOf<T>,
+			to: AccountIdOf<T>,
+			to_asset: CurrencyIdOf<T>,
+			to_amount: BalanceOf<T>,
+		},
 	}
 
 	/// Stores limit amount user could by for a period.
@@ -198,11 +198,8 @@ pub mod pallet {
 			buyout_amount: BalanceOf<T>,
 		) -> Result<BalanceOf<T>, DispatchError> {
 			let basic_asset = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
-			ensure!(
-			    asset != basic_asset,
-			    Error::<T>::WrongAssetToBuyout,
-			);
-            //TODO fix this
+			ensure!(asset != basic_asset, Error::<T>::WrongAssetToBuyout,);
+			//TODO fix this
 			let basic_asset_price_with_fee = {
 				let basic_asset_price =
 					oracle::Pallet::<T>::get_price(OracleKey::ExchangeRate(basic_asset))?.into();
@@ -230,13 +227,10 @@ pub mod pallet {
 			exchange_amount: BalanceOf<T>,
 		) -> Result<BalanceOf<T>, DispatchError> {
 			let basic_asset = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
-			
-			ensure!(
-			    asset != basic_asset,
-			    Error::<T>::WrongAssetToBuyout,
-			);
 
-            //TODO fix this
+			ensure!(asset != basic_asset, Error::<T>::WrongAssetToBuyout,);
+
+			//TODO fix this
 			let basic_asset_price_with_fee = {
 				let basic_asset_price =
 					oracle::Pallet::<T>::get_price(OracleKey::ExchangeRate(basic_asset))?.into();
@@ -325,49 +319,48 @@ pub mod pallet {
 			)
 		}
 
-		//Not sure if this is going to be like this
+		// Not sure if this is going to be like this
 		fn exchange(
 			accounts: (&AccountIdOf<T>, &AccountIdOf<T>),
 			assets: (&CurrencyIdOf<T>, &CurrencyIdOf<T>),
 			values: (BalanceOf<T>, BalanceOf<T>),
 		) -> Result<(), (DispatchError, Option<T::AccountId>)> {
-            // Ensure that the asset provided to be exchanged is not the same as native asset
-            ensure!(assets.0 != assets.1, (Error::<T>::WrongAssetToBuyout.into(), None));
+			// Ensure that the asset provided to be exchanged is not the same as native asset
+			ensure!(assets.0 != assets.1, (Error::<T>::WrongAssetToBuyout.into(), None));
 
-            // Check for exchanging zero values and same accounts
+			// Check for exchanging zero values and same accounts
 			if values.0.is_zero() && values.1.is_zero() || accounts.0 == accounts.1 {
 				return Ok(())
 			}
 
-            // Check both balances before transfer
-            let user_balance = T::Currency::free_balance(*assets.0, accounts.0);
-            let treasury_balance = T::Currency::free_balance(*assets.1, accounts.1);
-            
-            if user_balance < values.0 {
-                return Err((Error::<T>::ExchangeFailure.into(), Some(accounts.0.clone())));
-            }
-            if treasury_balance < values.1 {
-                return Err((Error::<T>::ExchangeFailure.into(), Some(accounts.1.clone())));
-            }
+			// Check both balances before transfer
+			let user_balance = T::Currency::free_balance(*assets.0, accounts.0);
+			let treasury_balance = T::Currency::free_balance(*assets.1, accounts.1);
 
-            // Transfer from user account to treasury then viceversa
-            T::Currency::transfer(*assets.0, accounts.0, accounts.1, values.0)
-                .map_err(|_| (Error::<T>::ExchangeFailure.into(), Some(accounts.0.clone())))?;
-            T::Currency::transfer(*assets.1, accounts.1, accounts.0, values.1)
-                .map_err(|_| (Error::<T>::ExchangeFailure.into(), Some(accounts.1.clone())))?;
+			if user_balance < values.0 {
+				return Err((Error::<T>::ExchangeFailure.into(), Some(accounts.0.clone())))
+			}
+			if treasury_balance < values.1 {
+				return Err((Error::<T>::ExchangeFailure.into(), Some(accounts.1.clone())))
+			}
 
+			// Transfer from user account to treasury then viceversa
+			T::Currency::transfer(*assets.0, accounts.0, accounts.1, values.0)
+				.map_err(|_| (Error::<T>::ExchangeFailure.into(), Some(accounts.0.clone())))?;
+			T::Currency::transfer(*assets.1, accounts.1, accounts.0, values.1)
+				.map_err(|_| (Error::<T>::ExchangeFailure.into(), Some(accounts.1.clone())))?;
 
 			// Deposit an event for the exchange
-			Self::deposit_event(Event::<T>::Exchange{
-			    from: accounts.0.clone(),
-			    from_asset: *assets.0,
-			    from_amount: values.0,
-			    to: accounts.1.clone(),
-			    to_asset: *assets.1,
-			    to_amount: values.1,
-            });
+			Self::deposit_event(Event::<T>::Exchange {
+				from: accounts.0.clone(),
+				from_asset: *assets.0,
+				from_amount: values.0,
+				to: accounts.1.clone(),
+				to_asset: *assets.1,
+				to_amount: values.1,
+			});
 
 			Ok(())
 		}
-    }
+	}
 }

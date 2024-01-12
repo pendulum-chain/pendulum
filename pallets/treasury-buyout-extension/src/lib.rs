@@ -330,6 +330,7 @@ pub mod pallet {
 			)
 		}
 
+        // Use NoPrice error here maybe
 		fn fetch_prices(
 			assets: (&CurrencyIdOf<T>, &CurrencyIdOf<T>),
 		) -> Result<(FixedU128, FixedU128), DispatchError> {

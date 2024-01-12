@@ -17,6 +17,13 @@ mod types;
 use crate::types::{Amount, BUYOUT_LIMIT_PERIOD_IN_SEC};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
+use sp_std::fmt::Debug;
+use sp_runtime::{
+    traits::{One, Zero},
+    FixedPointNumber,
+};
+use frame_support::sp_runtime::SaturatedConversion;
+use frame_support::dispatch::DispatchError;
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -35,11 +42,10 @@ pub mod pallet {
 	use super::*;
 	use frame_support::{
 		pallet_prelude::*,
-		sp_runtime::{traits::Zero, ArithmeticError, FixedU128, PerThing, Permill},
+		sp_runtime::{traits::Zero, ArithmeticError, FixedU128, Permill},
 		traits::UnixTime,
 	};
 	use frame_system::{ensure_root, ensure_signed, pallet_prelude::*, WeightInfo};
-	use oracle::OracleKey;
 	use sp_arithmetic::per_things::Rounding;
 
 	#[pallet::config]
@@ -64,15 +70,15 @@ pub mod pallet {
 		// might be needed?
 		//type AssetRegistry: Inspect;
 
+        /// Used for fetching prices of currencies from oracle
+        type PriceGetter: PriceGetter<CurrencyIdOf<Self>>;
+
 		/// Min amount of native token to buyout
 		#[pallet::constant]
 		type MinAmountToBuyout: Get<BalanceOf<Self>>;
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
-
-		//Going to get rid of this
-		type MyUnsignedFixedPoint: PerThing + From<u32> + Into<FixedU128>;
 	}
 
 	#[pallet::pallet]
@@ -168,7 +174,9 @@ pub mod pallet {
 			if let Some(buyout_limit) = BuyoutLimit::<T>::get() {
 				let now = T::UnixTime::now().as_secs();
 				let current_period =
-					(now / BUYOUT_LIMIT_PERIOD_IN_SEC) * BUYOUT_LIMIT_PERIOD_IN_SEC;
+                now.checked_div(BUYOUT_LIMIT_PERIOD_IN_SEC)
+                .and_then(|n| Some(n.saturating_mul(BUYOUT_LIMIT_PERIOD_IN_SEC)))
+                .unwrap_or_default();
 				let (mut buyouts, last_buyout) = Buyouts::<T>::get(account_id);
 
 				if !buyouts.is_zero() && last_buyout < current_period {
@@ -176,7 +184,8 @@ pub mod pallet {
 					Buyouts::<T>::insert(account_id, (buyouts, now));
 				};
 
-				ensure!(buyouts + buyout_amount <= buyout_limit, Error::<T>::BuyoutLimitExceeded);
+                // maybe I can do it easier than this
+				ensure!(buyouts.saturated_into::<u128>().saturating_add(buyout_amount.saturated_into::<u128>()) <= buyout_limit.saturated_into::<u128>(), Error::<T>::BuyoutLimitExceeded);
 			}
 
 			Ok(())
@@ -205,20 +214,12 @@ pub mod pallet {
 			buyout_amount: BalanceOf<T>,
 		) -> Result<BalanceOf<T>, DispatchError> {
 			let basic_asset = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
-			ensure!(asset != basic_asset, Error::<T>::WrongAssetToBuyout,);
-			//TODO fix this
-			let basic_asset_price_with_fee = {
-				let basic_asset_price =
-					oracle::Pallet::<T>::get_price(OracleKey::ExchangeRate(basic_asset))?.into();
-				basic_asset_price *
-					(T::MyUnsignedFixedPoint::from(T::SellFee::get()) +
-						T::MyUnsignedFixedPoint::one())
-			};
-			let exchange_asset_price =
-				oracle::Pallet::<T>::get_price(OracleKey::ExchangeRate(asset))?.into();
+			ensure!(asset != basic_asset, Error::<T>::WrongAssetToBuyout);
+
+            let (basic_asset_price_with_fee, exchange_asset_price) = Self::fetch_prices((&basic_asset, &asset))?;
 
 			let exchange_amount = Self::multiply_by_rational(
-				buyout_amount.into(),
+				buyout_amount.saturated_into::<u128>(),
 				basic_asset_price_with_fee.into_inner(),
 				exchange_asset_price.into_inner(),
 			)
@@ -237,22 +238,12 @@ pub mod pallet {
 
 			ensure!(asset != basic_asset, Error::<T>::WrongAssetToBuyout,);
 
-			//TODO fix this
-			let basic_asset_price_with_fee = {
-				let basic_asset_price =
-					oracle::Pallet::<T>::get_price(OracleKey::ExchangeRate(basic_asset))?.into();
-				(basic_asset_price *
-					(T::MyUnsignedFixedPoint::from(T::SellFee::get()) +
-						T::MyUnsignedFixedPoint::one()))
-				.into_inner()
-			};
-			let exchange_asset_price =
-				oracle::Pallet::<T>::get_price(OracleKey::ExchangeRate(asset))?.into();
+			let (basic_asset_price_with_fee, exchange_asset_price) = Self::fetch_prices((&basic_asset, &asset))?;
 
 			let buyout_amount = Self::multiply_by_rational(
-				exchange_amount.into(),
-				exchange_asset_price,
-				basic_asset_price_with_fee,
+				exchange_amount.saturated_into::<u128>(),
+				exchange_asset_price.into_inner(),
+				basic_asset_price_with_fee.into_inner(),
 			)
 			.map(|b| b.try_into().ok())
 			.flatten()
@@ -289,22 +280,28 @@ pub mod pallet {
 			Self::ensure_buyout_limit_not_exceeded(&who, buyout_amount)?;
 			let treasury_account_id = T::TreasuryAccount::get();
 
-			Self::exchange(
-				(&who, &treasury_account_id),
-				(&asset, &basic_asset),
-				(exchange_amount, buyout_amount),
-			)
-			.map_err(|(error, maybe_acc)| match maybe_acc {
-				Some(acc) =>
-					if acc == treasury_account_id {
-						Error::<T>::InsufficientTreasuryBalance.into()
-					} else if acc == who {
-						Error::<T>::InsufficientAccountBalance.into()
-					} else {
-						error
-					},
-				_ => error,
-			})?;
+            // Start exchanging
+            // Check for exchanging zero values and same accounts
+			if exchange_amount.is_zero() && buyout_amount.is_zero() || who == treasury_account_id {
+				return Ok(())
+			}
+
+			// Check both balances before transfer
+			let user_balance = T::Currency::free_balance(asset, &who);
+			let treasury_balance = T::Currency::free_balance(basic_asset, &treasury_account_id);
+
+			if user_balance < exchange_amount {
+				return Err(Error::<T>::InsufficientAccountBalance.into())
+			}
+			if treasury_balance < buyout_amount {
+				return Err(Error::<T>::InsufficientTreasuryBalance.into())
+			}
+
+			// Transfer from user account to treasury then viceversa
+			T::Currency::transfer(asset, &who, &treasury_account_id, exchange_amount)
+				.map_err(|_| Error::<T>::ExchangeFailure)?;
+			T::Currency::transfer(basic_asset, &treasury_account_id, &who, buyout_amount)
+				.map_err(|_| Error::<T>::ExchangeFailure)?;
 
 			Self::update_buyouts(&who, buyout_amount);
 			Self::deposit_event(Event::<T>::Buyout { who, buyout_amount, asset, exchange_amount });
@@ -326,48 +323,22 @@ pub mod pallet {
 			)
 		}
 
-		// Not sure if this is going to be like this
-		fn exchange(
-			accounts: (&AccountIdOf<T>, &AccountIdOf<T>),
-			assets: (&CurrencyIdOf<T>, &CurrencyIdOf<T>),
-			values: (BalanceOf<T>, BalanceOf<T>),
-		) -> Result<(), (DispatchError, Option<T::AccountId>)> {
-			// Ensure that the asset provided to be exchanged is not the same as native asset
-			ensure!(assets.0 != assets.1, (Error::<T>::WrongAssetToBuyout.into(), None));
-
-			// Check for exchanging zero values and same accounts
-			if values.0.is_zero() && values.1.is_zero() || accounts.0 == accounts.1 {
-				return Ok(())
-			}
-
-			// Check both balances before transfer
-			let user_balance = T::Currency::free_balance(*assets.0, accounts.0);
-			let treasury_balance = T::Currency::free_balance(*assets.1, accounts.1);
-
-			if user_balance < values.0 {
-				return Err((Error::<T>::ExchangeFailure.into(), Some(accounts.0.clone())))
-			}
-			if treasury_balance < values.1 {
-				return Err((Error::<T>::ExchangeFailure.into(), Some(accounts.1.clone())))
-			}
-
-			// Transfer from user account to treasury then viceversa
-			T::Currency::transfer(*assets.0, accounts.0, accounts.1, values.0)
-				.map_err(|_| (Error::<T>::ExchangeFailure.into(), Some(accounts.0.clone())))?;
-			T::Currency::transfer(*assets.1, accounts.1, accounts.0, values.1)
-				.map_err(|_| (Error::<T>::ExchangeFailure.into(), Some(accounts.1.clone())))?;
-
-			// Deposit an event for the exchange
-			Self::deposit_event(Event::<T>::Exchange {
-				from: accounts.0.clone(),
-				from_asset: *assets.0,
-				from_amount: values.0,
-				to: accounts.1.clone(),
-				to_asset: *assets.1,
-				to_amount: values.1,
-			});
-
-			Ok(())
-		}
+        fn fetch_prices(
+            assets: (&CurrencyIdOf<T>, &CurrencyIdOf<T>),
+        ) -> Result<(FixedU128, FixedU128), DispatchError> {
+            let basic_asset_price: FixedU128 = T::PriceGetter::get_price::<FixedU128>(*assets.0)?.into();
+            let exchange_asset_price: FixedU128 = T::PriceGetter::get_price::<FixedU128>(*assets.1)?.into();
+            Ok((basic_asset_price, exchange_asset_price))
+        }
 	}
+}
+
+pub trait PriceGetter<CurrencyId> 
+where 
+    CurrencyId: Clone + PartialEq + Eq + Debug,
+{
+    /// Gets a current price for a given currency
+    fn get_price<FixedNumber: FixedPointNumber + One + Zero + Debug>(
+        currency_id: CurrencyId,
+    ) -> Result<FixedNumber, sp_runtime::DispatchError>;
 }

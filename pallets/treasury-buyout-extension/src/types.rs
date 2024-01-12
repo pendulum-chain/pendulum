@@ -4,7 +4,7 @@ use scale_info::TypeInfo;
 
 /// Type of amount
 #[derive(Copy, Clone, Debug, Encode, Decode, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
-pub(crate) enum Amount<Balance> {
+pub enum Amount<Balance> {
 	/// Amount of native asset user get for buyout
 	Buyout(Balance),
 	/// Amount of exchange asset user give for buyout

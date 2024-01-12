@@ -15,15 +15,14 @@ mod tests;
 mod types;
 
 use crate::types::{Amount, BUYOUT_LIMIT_PERIOD_IN_SEC};
+use frame_support::{dispatch::DispatchError, sp_runtime::SaturatedConversion};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_std::fmt::Debug;
 use sp_runtime::{
-    traits::{One, Zero},
-    FixedPointNumber,
+	traits::{One, Zero},
+	FixedPointNumber,
 };
-use frame_support::sp_runtime::SaturatedConversion;
-use frame_support::dispatch::DispatchError;
+use sp_std::fmt::Debug;
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -70,8 +69,8 @@ pub mod pallet {
 		// might be needed?
 		//type AssetRegistry: Inspect;
 
-        /// Used for fetching prices of currencies from oracle
-        type PriceGetter: PriceGetter<CurrencyIdOf<Self>>;
+		/// Used for fetching prices of currencies from oracle
+		type PriceGetter: PriceGetter<CurrencyIdOf<Self>>;
 
 		/// Min amount of native token to buyout
 		#[pallet::constant]
@@ -173,10 +172,10 @@ pub mod pallet {
 		) -> DispatchResult {
 			if let Some(buyout_limit) = BuyoutLimit::<T>::get() {
 				let now = T::UnixTime::now().as_secs();
-				let current_period =
-                now.checked_div(BUYOUT_LIMIT_PERIOD_IN_SEC)
-                .and_then(|n| Some(n.saturating_mul(BUYOUT_LIMIT_PERIOD_IN_SEC)))
-                .unwrap_or_default();
+				let current_period = now
+					.checked_div(BUYOUT_LIMIT_PERIOD_IN_SEC)
+					.and_then(|n| Some(n.saturating_mul(BUYOUT_LIMIT_PERIOD_IN_SEC)))
+					.unwrap_or_default();
 				let (mut buyouts, last_buyout) = Buyouts::<T>::get(account_id);
 
 				if !buyouts.is_zero() && last_buyout < current_period {
@@ -184,8 +183,14 @@ pub mod pallet {
 					Buyouts::<T>::insert(account_id, (buyouts, now));
 				};
 
-                // maybe I can do it easier than this
-				ensure!(buyouts.saturated_into::<u128>().saturating_add(buyout_amount.saturated_into::<u128>()) <= buyout_limit.saturated_into::<u128>(), Error::<T>::BuyoutLimitExceeded);
+				// maybe I can do it easier than this
+				ensure!(
+					buyouts
+						.saturated_into::<u128>()
+						.saturating_add(buyout_amount.saturated_into::<u128>()) <=
+						buyout_limit.saturated_into::<u128>(),
+					Error::<T>::BuyoutLimitExceeded
+				);
 			}
 
 			Ok(())
@@ -216,7 +221,8 @@ pub mod pallet {
 			let basic_asset = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
 			ensure!(asset != basic_asset, Error::<T>::WrongAssetToBuyout);
 
-            let (basic_asset_price_with_fee, exchange_asset_price) = Self::fetch_prices((&basic_asset, &asset))?;
+			let (basic_asset_price_with_fee, exchange_asset_price) =
+				Self::fetch_prices((&basic_asset, &asset))?;
 
 			let exchange_amount = Self::multiply_by_rational(
 				buyout_amount.saturated_into::<u128>(),
@@ -236,9 +242,10 @@ pub mod pallet {
 		) -> Result<BalanceOf<T>, DispatchError> {
 			let basic_asset = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
 
-			ensure!(asset != basic_asset, Error::<T>::WrongAssetToBuyout,);
+			ensure!(asset != basic_asset, Error::<T>::WrongAssetToBuyout);
 
-			let (basic_asset_price_with_fee, exchange_asset_price) = Self::fetch_prices((&basic_asset, &asset))?;
+			let (basic_asset_price_with_fee, exchange_asset_price) =
+				Self::fetch_prices((&basic_asset, &asset))?;
 
 			let buyout_amount = Self::multiply_by_rational(
 				exchange_amount.saturated_into::<u128>(),
@@ -280,8 +287,8 @@ pub mod pallet {
 			Self::ensure_buyout_limit_not_exceeded(&who, buyout_amount)?;
 			let treasury_account_id = T::TreasuryAccount::get();
 
-            // Start exchanging
-            // Check for exchanging zero values and same accounts
+			// Start exchanging
+			// Check for exchanging zero values and same accounts
 			if exchange_amount.is_zero() && buyout_amount.is_zero() || who == treasury_account_id {
 				return Ok(())
 			}
@@ -323,22 +330,24 @@ pub mod pallet {
 			)
 		}
 
-        fn fetch_prices(
-            assets: (&CurrencyIdOf<T>, &CurrencyIdOf<T>),
-        ) -> Result<(FixedU128, FixedU128), DispatchError> {
-            let basic_asset_price: FixedU128 = T::PriceGetter::get_price::<FixedU128>(*assets.0)?.into();
-            let exchange_asset_price: FixedU128 = T::PriceGetter::get_price::<FixedU128>(*assets.1)?.into();
-            Ok((basic_asset_price, exchange_asset_price))
-        }
+		fn fetch_prices(
+			assets: (&CurrencyIdOf<T>, &CurrencyIdOf<T>),
+		) -> Result<(FixedU128, FixedU128), DispatchError> {
+			let basic_asset_price: FixedU128 =
+				T::PriceGetter::get_price::<FixedU128>(*assets.0)?.into();
+			let exchange_asset_price: FixedU128 =
+				T::PriceGetter::get_price::<FixedU128>(*assets.1)?.into();
+			Ok((basic_asset_price, exchange_asset_price))
+		}
 	}
 }
 
-pub trait PriceGetter<CurrencyId> 
-where 
-    CurrencyId: Clone + PartialEq + Eq + Debug,
+pub trait PriceGetter<CurrencyId>
+where
+	CurrencyId: Clone + PartialEq + Eq + Debug,
 {
-    /// Gets a current price for a given currency
-    fn get_price<FixedNumber: FixedPointNumber + One + Zero + Debug>(
-        currency_id: CurrencyId,
-    ) -> Result<FixedNumber, sp_runtime::DispatchError>;
+	/// Gets a current price for a given currency
+	fn get_price<FixedNumber: FixedPointNumber + One + Zero + Debug>(
+		currency_id: CurrencyId,
+	) -> Result<FixedNumber, sp_runtime::DispatchError>;
 }

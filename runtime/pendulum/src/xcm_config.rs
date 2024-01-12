@@ -32,6 +32,7 @@ use xcm_executor::{
 use runtime_common::{
 	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
 	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
+	RelativeValue,
 };
 
 use crate::{
@@ -100,41 +101,26 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	}
 }
 
-pub struct RelativeValue {
-	num: Balance,
-	denominator: Balance,
-}
-
-impl RelativeValue {
-	fn adjust_amount_by_relative_value(amount: Balance, relative_value: RelativeValue) -> Balance {
-		if relative_value.denominator == 0 {
-			// Or probably error
-			return amount
-		}
-		// Calculate the adjusted amount
-		let adjusted_amount = amount * relative_value.denominator / relative_value.num;
-		adjusted_amount
-	}
-}
+type RelativeValueOf = RelativeValue<Balance>;
 
 pub struct RelayRelativeValue;
 impl RelayRelativeValue {
-	fn get_relative_value(id: CurrencyId) -> Option<RelativeValue> {
+	fn get_relative_value(id: CurrencyId) -> Option<RelativeValueOf> {
 		match id {
 			CurrencyId::XCM(f) => match f {
-				xcm_assets::RELAY_DOT => Some(RelativeValue { num: 98, denominator: 1 }),
-				xcm_assets::ASSETHUB_USDT => Some(RelativeValue { num: 12, denominator: 1 }),
-				xcm_assets::ASSETHUB_USDC => Some(RelativeValue { num: 12, denominator: 1 }),
-				xcm_assets::EQUILIBRIUM_EQD => Some(RelativeValue { num: 12, denominator: 1 }),
-				xcm_assets::MOONBEAM_BRZ => Some(RelativeValue { num: 23, denominator: 10 }),
-				xcm_assets::POLKADEX_PDEX => Some(RelativeValue { num: 14, denominator: 1 }),
-				xcm_assets::MOONBEAM_GLMR => Some(RelativeValue { num: 55, denominator: 10 }),
+				xcm_assets::RELAY_DOT => Some(RelativeValueOf { num: 98, denominator: 1 }),
+				xcm_assets::ASSETHUB_USDT => Some(RelativeValueOf { num: 12, denominator: 1 }),
+				xcm_assets::ASSETHUB_USDC => Some(RelativeValueOf { num: 12, denominator: 1 }),
+				xcm_assets::EQUILIBRIUM_EQD => Some(RelativeValueOf { num: 12, denominator: 1 }),
+				xcm_assets::MOONBEAM_BRZ => Some(RelativeValueOf { num: 23, denominator: 10 }),
+				xcm_assets::POLKADEX_PDEX => Some(RelativeValueOf { num: 14, denominator: 1 }),
+				xcm_assets::MOONBEAM_GLMR => Some(RelativeValueOf { num: 55, denominator: 10 }),
 				_ => None,
 			},
 
-			CurrencyId::Native => Some(RelativeValue { num: 1, denominator: 1 }),
-			assets::tokens::EURC_ID => Some(RelativeValue { num: 13, denominator: 1 }),
-			_ => Some(RelativeValue { num: 10, denominator: 1 }),
+			CurrencyId::Native => Some(RelativeValueOf { num: 1, denominator: 1 }),
+			assets::tokens::EURC_ID => Some(RelativeValueOf { num: 13, denominator: 1 }),
+			_ => Some(RelativeValueOf { num: 10, denominator: 1 }),
 		}
 	}
 }
@@ -331,7 +317,7 @@ impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImple
 		// and adjust the amount inversily proportional to the value
 		if let Some(relative_value) = RelayRelativeValue::get_relative_value(asset_id) {
 			let adjusted_amount =
-				RelativeValue::adjust_amount_by_relative_value(amount, relative_value);
+				RelativeValue::<Balance>::divide_by_relative_value(amount, relative_value);
 			log::info!("amount to be charged: {:?} in asset: {:?}", adjusted_amount, asset_id);
 			return Ok(adjusted_amount)
 		} else {

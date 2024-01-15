@@ -225,8 +225,8 @@ pub mod pallet {
 				Self::fetch_prices((&basic_asset, &asset))?;
 
 			// Add fee to the basic asset price
-			let basic_asset_price_with_fee = basic_asset_price
-				* (FixedU128::from(T::SellFee::get()) + FixedU128::one());
+			let basic_asset_price_with_fee =
+				basic_asset_price * (FixedU128::from(T::SellFee::get()) + FixedU128::one());
 
 			let exchange_amount = Self::multiply_by_rational(
 				buyout_amount.saturated_into::<u128>(),
@@ -252,8 +252,8 @@ pub mod pallet {
 				Self::fetch_prices((&basic_asset, &asset))?;
 
 			// Add fee to the basic asset price
-			let basic_asset_price_with_fee = basic_asset_price
-				* (FixedU128::from(T::SellFee::get()) + FixedU128::one());
+			let basic_asset_price_with_fee =
+				basic_asset_price * (FixedU128::from(T::SellFee::get()) + FixedU128::one());
 
 			let buyout_amount = Self::multiply_by_rational(
 				exchange_amount.saturated_into::<u128>(),
@@ -338,7 +338,7 @@ pub mod pallet {
 			)
 		}
 
-        // Use NoPrice error here maybe
+		// Use NoPrice error here maybe
 		fn fetch_prices(
 			assets: (&CurrencyIdOf<T>, &CurrencyIdOf<T>),
 		) -> Result<(FixedU128, FixedU128), DispatchError> {

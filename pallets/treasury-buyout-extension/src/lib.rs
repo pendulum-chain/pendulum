@@ -221,8 +221,12 @@ pub mod pallet {
 			let basic_asset = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
 			ensure!(asset != basic_asset, Error::<T>::WrongAssetToBuyout);
 
-			let (basic_asset_price_with_fee, exchange_asset_price) =
+			let (basic_asset_price, exchange_asset_price) =
 				Self::fetch_prices((&basic_asset, &asset))?;
+
+			// Add fee to the basic asset price
+			let basic_asset_price_with_fee = basic_asset_price
+				* (FixedU128::from(T::SellFee::get()) + FixedU128::one());
 
 			let exchange_amount = Self::multiply_by_rational(
 				buyout_amount.saturated_into::<u128>(),
@@ -244,8 +248,12 @@ pub mod pallet {
 
 			ensure!(asset != basic_asset, Error::<T>::WrongAssetToBuyout);
 
-			let (basic_asset_price_with_fee, exchange_asset_price) =
+			let (basic_asset_price, exchange_asset_price) =
 				Self::fetch_prices((&basic_asset, &asset))?;
+
+			// Add fee to the basic asset price
+			let basic_asset_price_with_fee = basic_asset_price
+				* (FixedU128::from(T::SellFee::get()) + FixedU128::one());
 
 			let buyout_amount = Self::multiply_by_rational(
 				exchange_amount.saturated_into::<u128>(),

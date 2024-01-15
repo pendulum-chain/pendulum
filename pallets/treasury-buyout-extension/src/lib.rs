@@ -338,14 +338,15 @@ pub mod pallet {
 			)
 		}
 
-		// Use NoPrice error here maybe
 		fn fetch_prices(
 			assets: (&CurrencyIdOf<T>, &CurrencyIdOf<T>),
 		) -> Result<(FixedU128, FixedU128), DispatchError> {
-			let basic_asset_price: FixedU128 =
-				T::PriceGetter::get_price::<FixedU128>(*assets.0)?.into();
-			let exchange_asset_price: FixedU128 =
-				T::PriceGetter::get_price::<FixedU128>(*assets.1)?.into();
+			let basic_asset_price: FixedU128 = T::PriceGetter::get_price::<FixedU128>(*assets.0)
+				.map_err(|_| Error::<T>::NoPrice)?
+				.into();
+			let exchange_asset_price: FixedU128 = T::PriceGetter::get_price::<FixedU128>(*assets.1)
+				.map_err(|_| Error::<T>::NoPrice)?
+				.into();
 			Ok((basic_asset_price, exchange_asset_price))
 		}
 	}

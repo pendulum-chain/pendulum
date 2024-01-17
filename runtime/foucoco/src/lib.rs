@@ -833,6 +833,8 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native;
+	#[derive(Clone, Eq, PartialEq, Debug, TypeInfo)]
+	pub const StringLimit: u32 = 50;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -844,7 +846,7 @@ impl orml_currencies::Config for Runtime {
 
 impl orml_asset_registry::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type CustomMetadata = asset_registry::CustomMetadata;
+	type CustomMetadata = asset_registry::CustomMetadata<StringLimit>;
 	type AssetId = CurrencyId;
 	type AuthorityOrigin = asset_registry::AssetAuthority;
 	type AssetProcessor = asset_registry::CustomAssetProcessor;

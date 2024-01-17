@@ -5,24 +5,18 @@ use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::Get;
+use sp_runtime::{BoundedVec, DispatchError};
 use sp_std::fmt::Debug;
-use sp_runtime::{DispatchError, BoundedVec};
 use spacewalk_primitives::CurrencyId;
 
-#[derive(
-	Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen
-)]
-pub struct CustomMetadata<T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync> 
-{
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
+pub struct CustomMetadata<T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync> {
 	pub dia_keys: DiaKeys<T>,
 	pub fee_per_second: u128,
 }
 
-#[derive(
-	Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen
-)]
-pub struct DiaKeys<T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync> 
-{
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
+pub struct DiaKeys<T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync> {
 	pub blockchain: BoundedVec<u8, T>,
 	pub symbol: BoundedVec<u8, T>,
 }
@@ -32,8 +26,10 @@ pub struct DiaKeys<T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync>
 )]
 pub struct CustomAssetProcessor;
 
-impl<T> AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata<T>>> for CustomAssetProcessor
-where T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync + 'static
+impl<T> AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata<T>>>
+	for CustomAssetProcessor
+where
+	T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync + 'static,
 {
 	fn pre_register(
 		id: Option<CurrencyId>,

@@ -6,7 +6,8 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-mod assets;
+pub mod assets;
+mod chain_ext;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
@@ -18,6 +19,7 @@ use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 pub use parachain_staking::InflationInfo;
 
 use codec::Encode;
+use scale_info::TypeInfo;
 
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -28,6 +30,9 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, SaturatedConversion,
 };
+
+use bifrost_farming as farming;
+use bifrost_farming_rpc_runtime_api as farming_rpc_runtime_api;
 
 pub use spacewalk_primitives::CurrencyId;
 
@@ -57,7 +62,7 @@ use frame_system::{
 pub use sp_runtime::{traits::AccountIdConversion, MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index,
+	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
 	ProxyType, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
@@ -81,6 +86,7 @@ use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 // XCM Imports
+use crate::chain_ext::Psp22Extension;
 use xcm_executor::XcmExecutor;
 
 /// The address format for describing accounts.
@@ -164,10 +170,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("pendulum"),
 	impl_name: create_runtime_str!("pendulum"),
 	authoring_version: 1,
-	spec_version: 9,
+	spec_version: 11,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 9,
+	transaction_version: 10,
 	state_version: 1,
 };
 
@@ -271,7 +277,9 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::ZenlinkProtocol(_) |
 			RuntimeCall::DiaOracleModule(_) |
 			RuntimeCall::VestingManager(_) |
+			RuntimeCall::TokenAllowance(_) |
 			RuntimeCall::AssetRegistry(_) |
+			RuntimeCall::Farming(_) |
 			RuntimeCall::Proxy(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -676,8 +684,14 @@ impl pallet_child_bounties::Config for Runtime {
 }
 
 parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		NANOUNIT
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		// Since the xcm trader uses Tokens to get the minimum
+		// balance of both it's assets and native, we need to
+		// handle native here
+		match currency_id{
+			CurrencyId::Native => EXISTENTIAL_DEPOSIT,
+			_ => NANOUNIT
+		}
 	};
 }
 
@@ -722,6 +736,8 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native;
+	#[derive(Clone, Eq, PartialEq, Debug, TypeInfo)]
+	pub const StringLimit: u32 = 50;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -733,7 +749,7 @@ impl orml_currencies::Config for Runtime {
 
 impl orml_asset_registry::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type CustomMetadata = asset_registry::CustomMetadata;
+	type CustomMetadata = asset_registry::CustomMetadata<StringLimit>;
 	type AssetId = CurrencyId;
 	type AuthorityOrigin = asset_registry::AssetAuthority;
 	type AssetProcessor = asset_registry::CustomAssetProcessor;
@@ -859,7 +875,7 @@ impl pallet_contracts::Config for Runtime {
 	type CallStack = [pallet_contracts::Frame<Self>; 5];
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-	type ChainExtension = ();
+	type ChainExtension = Psp22Extension;
 	type DeletionQueueDepth = DeletionQueueDepth;
 	type DeletionWeightLimit = DeletionWeightLimit;
 	type Schedule = Schedule;
@@ -906,6 +922,23 @@ impl dia_oracle::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 	type AuthorityId = dia_oracle::crypto::DiaAuthId;
 	type WeightInfo = dia_oracle::weights::DiaWeightInfo<Runtime>;
+}
+
+parameter_types! {
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"pe/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"pe/fmrir");
+	pub PendulumTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
+impl farming::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureRoot<AccountId>;
+	type WeightInfo = farming::weights::BifrostWeight<Runtime>;
+	type TreasuryAccount = PendulumTreasuryAccount;
+	type Keeper = FarmingKeeperPalletId;
+	type RewardIssuer = FarmingRewardIssuerPalletId;
 }
 
 impl frame_system::offchain::SigningTypes for Runtime {
@@ -1003,6 +1036,13 @@ impl pallet_proxy::Config for Runtime {
 	type AnnouncementDepositFactor = AnnouncementDepositFactor;
 }
 
+impl orml_currencies_allowance_extension::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo =
+		orml_currencies_allowance_extension::default_weights::SubstrateWeight<Runtime>;
+	type MaxAllowedCurrencies = ConstU32<256>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -1060,10 +1100,16 @@ construct_runtime!(
 		RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 57,
 		DiaOracleModule: dia_oracle::{Pallet, Storage, Call, Event<T>} = 58,
 
+		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
+
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
 
+		//Farming
+		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 		// Asset Metadata
 		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
+
+
 
 		VestingManager: vesting_manager::{Pallet, Call, Event<T>} = 100
 	}
@@ -1086,6 +1132,7 @@ mod benches {
 		// Other
 		[orml_asset_registry, runtime_common::benchmarking::orml_asset_registry::Pallet::<Runtime>]
 		[pallet_xcm, PolkadotXcm]
+		[orml_currencies_allowance_extension, TokenAllowance]
 	);
 }
 
@@ -1286,16 +1333,32 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl farming_rpc_runtime_api::FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId> for Runtime {
+		fn get_farming_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_farming_rewards(&who, pid).unwrap_or(Vec::new())
+		}
+
+		fn get_gauge_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			Farming::get_gauge_rewards(&who, pid).unwrap_or(Vec::new())
+		}
+	}
+
 	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {
-		fn on_runtime_upgrade() -> (Weight, Weight) {
-			log::info!("try-runtime::on_runtime_upgrade pendulum.");
-			let weight = Executive::try_runtime_upgrade().unwrap();
+		fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
+			let weight = Executive::try_runtime_upgrade(checks).unwrap();
 			(weight, RuntimeBlockWeights::get().max_block)
 		}
 
-		fn execute_block_no_check(block: Block) -> Weight {
-			Executive::execute_block_no_check(block)
+		fn execute_block(
+			block: Block,
+			state_root_check: bool,
+			signature_check: bool,
+			select: frame_try_runtime::TryStateSelect
+		) -> Weight {
+			// NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+			// have a backtrace here.
+			Executive::try_execute_block(block, state_root_check, signature_check, select).expect("execute-block failed")
 		}
 	}
 

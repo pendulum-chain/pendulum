@@ -64,6 +64,9 @@ use runtime_common::{
 	Index, PoolId, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
+#[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
+use oracle::testing_utils::MockDataFeeder;
+
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 
 use dia_oracle::DiaOracle;
@@ -375,9 +378,9 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::TokenAllowance(_) |
 			RuntimeCall::AssetRegistry(_) |
 			RuntimeCall::Proxy(_) |
-			RuntimeCall::RewardDistribution(_) => true,
-			// All pallets are allowed, but exhaustive match is defensive
-			// in the case of adding new pallets.
+			RuntimeCall::OrmlExtension(_) |
+			RuntimeCall::RewardDistribution(_) => true, // All pallets are allowed, but exhaustive match is defensive
+			                                            // in the case of adding new pallets.
 		}
 	}
 }
@@ -778,8 +781,14 @@ impl pallet_child_bounties::Config for Runtime {
 }
 
 parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		NANOUNIT
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		// Since the xcm trader uses Tokens to get the minimum
+		// balance of both it's assets and native, we need to
+		// handle native here
+		match currency_id{
+			CurrencyId::Native => EXISTENTIAL_DEPOSIT,
+			_ => NANOUNIT
+		}
 	};
 }
 
@@ -824,6 +833,8 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native;
+	#[derive(Clone, Eq, PartialEq, Debug, TypeInfo)]
+	pub const StringLimit: u32 = 50;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -835,7 +846,7 @@ impl orml_currencies::Config for Runtime {
 
 impl orml_asset_registry::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type CustomMetadata = asset_registry::CustomMetadata;
+	type CustomMetadata = asset_registry::CustomMetadata<StringLimit>;
 	type AssetId = CurrencyId;
 	type AuthorityOrigin = asset_registry::AssetAuthority;
 	type AssetProcessor = asset_registry::CustomAssetProcessor;
@@ -931,6 +942,35 @@ impl pallet_vesting::Config for Runtime {
 	type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
 	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 	const MAX_VESTING_SCHEDULES: u32 = 10;
+}
+pub struct CurrencyIdCheckerImpl;
+impl orml_tokens_management_extension::CurrencyIdCheck for CurrencyIdCheckerImpl {
+	type CurrencyId = CurrencyId;
+
+	// We allow any currency of the `Token` variant
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
+		matches!(currency_id, CurrencyId::Token(_))
+	}
+
+	// for benchmarks we allow native. See orml-tokens-management-extension benchmark implementation
+	#[cfg(feature = "runtime-benchmarks")]
+	fn is_valid_currency_id(currency_id: &Self::CurrencyId) -> bool {
+		matches!(currency_id, CurrencyId::Native)
+	}
+}
+
+parameter_types! {
+	pub const DepositCurrency: CurrencyId = CurrencyId::Native;
+	pub const AssetDeposit: Balance = 10 * UNIT;
+}
+
+impl orml_tokens_management_extension::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = orml_tokens_management_extension::default_weights::SubstrateWeight<Runtime>;
+	type CurrencyIdChecker = CurrencyIdCheckerImpl;
+	type DepositCurrency = DepositCurrency;
+	type AssetDeposit = AssetDeposit;
 }
 
 const fn deposit(items: u32, bytes: u32) -> Balance {
@@ -1522,33 +1562,12 @@ impl staking::Config for Runtime {
 	type MaxRewardCurrencies = MaxRewardCurrencies;
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-pub struct DataFeederBenchmark<K, V, A>(PhantomData<(K, V, A)>);
-
-#[cfg(feature = "runtime-benchmarks")]
-impl<K, V, A> orml_traits::DataFeeder<K, V, A> for DataFeederBenchmark<K, V, A> {
-	fn feed_value(_who: A, _key: K, _value: V) -> DispatchResult {
-		Ok(())
-	}
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-impl<K, V, A> orml_traits::DataProvider<K, V> for DataFeederBenchmark<K, V, A> {
-	fn get(_key: &K) -> Option<V> {
-		None
-	}
-}
-
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
-	type DataFeedProvider = DataFeederBenchmark<
-		oracle::OracleKey,
-		oracle::TimestampedValue<UnsignedFixedPoint, Moment>,
-		Self::AccountId,
-	>;
+	type DataFeeder = MockDataFeeder<Self::AccountId, Moment>;
 }
 
 parameter_types! {
@@ -1795,6 +1814,7 @@ construct_runtime!(
 		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,
 
 		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
+		OrmlExtension: orml_tokens_management_extension::{Pallet, Storage, Call, Event<T>} = 81,
 
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 
@@ -1831,6 +1851,7 @@ mod benches {
 		[pallet_xcm, PolkadotXcm]
 
 		[orml_currencies_allowance_extension, TokenAllowance]
+		[orml_tokens_management_extension, OrmlExtension]
 	);
 }
 
@@ -2044,16 +2065,23 @@ impl_runtime_apis! {
 
 	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {
-		fn on_runtime_upgrade() -> (Weight, Weight) {
-			log::info!("try-runtime::on_runtime_upgrade foucoco.");
-			let weight = Executive::try_runtime_upgrade().unwrap();
+		fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
+			let weight = Executive::try_runtime_upgrade(checks).unwrap();
 			(weight, RuntimeBlockWeights::get().max_block)
 		}
 
-		fn execute_block_no_check(block: Block) -> Weight {
-			Executive::execute_block_no_check(block)
+		fn execute_block(
+			block: Block,
+			state_root_check: bool,
+			signature_check: bool,
+			select: frame_try_runtime::TryStateSelect
+		) -> Weight {
+			// NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+			// have a backtrace here.
+			Executive::try_execute_block(block, state_root_check, signature_check, select).expect("execute-block failed")
 		}
 	}
+
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {

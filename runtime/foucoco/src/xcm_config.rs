@@ -1,12 +1,5 @@
-use super::{
-	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
-};
-use crate::assets::{
-	native_locations::{native_location_external_pov, native_location_local_pov},
-	xcm_assets,
-};
 use core::marker::PhantomData;
+
 use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ConstU32, ContainsPair, Everything, Nothing},
@@ -15,21 +8,30 @@ use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
 };
+use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
-use runtime_common::parachains::moonbase_alpha_relay::moonbase_alpha;
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, FungiblesAdapter, IsConcrete, NoChecking, ParentIsPreset,
-	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	AccountId32Aliases, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds,
+	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
 };
-use xcm_executor::{
-	traits::{JustTry, ShouldExecute},
-	XcmExecutor,
+use xcm_executor::{traits::ShouldExecute, XcmExecutor};
+
+use runtime_common::parachains::moonbase_alpha_relay::moonbase_alpha;
+
+use crate::assets::{
+	native_locations::{native_location_external_pov, native_location_local_pov},
+	xcm_assets,
+};
+
+use super::{
+	AccountId, Balance, Balances, Currencies, CurrencyId, FoucocoTreasuryAccount, ParachainInfo,
+	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, WeightToFee,
+	XcmpQueue,
 };
 
 parameter_types! {
@@ -103,10 +105,8 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 /// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		if location == MultiLocation::parent() {
-			return Ok(CurrencyId::XCM(0))
-		}
-		Err(location)
+		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
+			.ok_or(location)
 	}
 }
 
@@ -127,39 +127,18 @@ where
 	}
 }
 
-/// Means for transacting assets besides the native currency on this chain.
-pub type FungiblesTransactor = FungiblesAdapter<
+/// Means for transacting the currencies of this parachain
+pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	// Use this fungibles implementation
-	Tokens,
-	// This means that this adapter should handle any token that `CurrencyIdConvert` can convert
-	// to `CurrencyId`, the `CurrencyId` type of `Tokens`, the fungibles implementation it uses.
-	ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
-	// Convert an XCM MultiLocation into a local account id
-	LocationToAccountId,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly)
+	Currencies,
+	(), // We don't handle unknown assets.
+	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
 	AccountId,
-	// We dont allow teleports.
-	NoChecking,
-	// The account to use for tracking teleports.
-	CheckingAccount,
->;
-
-/// Means for transacting the native currency on this chain.
-pub type CurrencyTransactor = CurrencyAdapter<
-	// Use this currency:
-	Balances,
-	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<RelayLocation>,
-	// Convert an XCM MultiLocation into a local account id:
 	LocationToAccountId,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly):
-	AccountId,
-	// We don't track any teleports of `Balances`.
-	(),
+	CurrencyId,
+	CurrencyIdConvert,
+	DepositToAlternative<FoucocoTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
-
-/// Means for transacting assets on this chain.
-pub type AssetTransactors = (CurrencyTransactor, FungiblesTransactor);
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
@@ -268,7 +247,7 @@ impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
 	type XcmSender = XcmRouter;
 	// How to withdraw and deposit an asset.
-	type AssetTransactor = AssetTransactors;
+	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	// Teleporting is disabled.

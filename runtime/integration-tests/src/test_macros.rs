@@ -236,11 +236,12 @@ macro_rules! parachain1_transfer_incorrect_asset_to_parachain2_should_fail {
 
 		$parachain2::execute_with(|| {
 			use $para2_runtime::{RuntimeEvent, System};
+			//most likely this is not emitid because buy execution fails
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Fail {
 					message_hash: _,
-					error: xcm::v3::Error::FailedToTransactAsset(..),
+					error: xcm::v3::Error::AssetNotFound,
 					weight: _
 				})
 			)));
@@ -262,7 +263,8 @@ macro_rules! parachain1_transfer_asset_to_parachain2 {
 		$para1_asset_id:ident,
 		$para2_runtime:ident,
 		$parachain2: ident,
-		$parachain2_id:ident
+		$parachain2_id:ident,
+		$tx_fee:ident
 	) => {{
 		use crate::mock::{ALICE, BOB, TEN_UNITS, UNIT};
 		use frame_support::traits::{fungibles::Inspect, Currency};
@@ -353,7 +355,7 @@ macro_rules! parachain1_transfer_asset_to_parachain2 {
 
 			assert_eq!(
 				$para2_runtime::Tokens::balance($para2_runtime::CurrencyId::XCM(1), &BOB.into()),
-				TEN_UNITS
+				TEN_UNITS - $tx_fee
 			);
 		});
 	}};
@@ -368,7 +370,8 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 		$para2_runtime:ident,
 		$parachain2: ident,
 		$parachain2_id:ident,
-		$network_id: ident
+		$network_id: ident,
+		$tx_fee: ident
 	) => {{
 		use crate::mock::{BOB, TEN_UNITS, UNIT};
 		use frame_support::traits::{fungible::Mutate, fungibles::Inspect};
@@ -384,17 +387,22 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 			$para1_asset_id,
 			$para2_runtime,
 			$parachain2,
-			$parachain2_id
+			$parachain2_id,
+			$tx_fee
 		);
 
 		$parachain1::execute_with(|| {});
 
+		let received_amount_after_fee = TEN_UNITS - $tx_fee;
 		$parachain2::execute_with(|| {
 			use $para2_runtime::{
 				Balances, CurrencyId, RuntimeEvent, RuntimeOrigin, System, Tokens, XTokens,
 			};
 
-			assert_eq!(TEN_UNITS, Tokens::balance(CurrencyId::XCM(1), &AccountId::from(BOB)));
+			assert_eq!(
+				received_amount_after_fee,
+				Tokens::balance(CurrencyId::XCM(1), &AccountId::from(BOB))
+			);
 			// ensure sender has enough balance to be charged as fee
 			assert_ok!(Balances::mint_into(&AccountId::from(BOB), TEN_UNITS));
 
@@ -416,7 +424,7 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 			));
 
 			assert_eq!(
-				TEN_UNITS - 1 * UNIT, //initial balance - one unit
+				received_amount_after_fee - 1 * UNIT, //initial balance - one unit
 				Tokens::balance(CurrencyId::XCM(1), &AccountId::from(BOB))
 			);
 
@@ -469,21 +477,22 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
         $parachain2_runtime:ident,
         $parachain2:ident,
         $parachain1_id:ident,
-        $parachain2_id:ident
+        $parachain2_id:ident,
+		$tx_fee:ident
     ) => {{
-		use crate::mock::{units, ALICE, BOB};
+		use crate::mock::{ALICE, BOB, UNIT, NATIVE_INITIAL_BALANCE};
 		use frame_support::traits::fungibles::Inspect;
 		use polkadot_core_primitives::Balance;
 		use xcm::latest::{
 			Junction, Junction::AccountId32, Junctions::X2, MultiLocation, WeightLimit,
 		};
+		use orml_traits::MultiCurrency;
 		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;
 		use $parachain2_runtime::CurrencyId as Parachain2CurrencyId;
 
-
 		$mocknet::reset();
 
-		let transfer_amount: Balance = units(10);
+		let transfer_amount: Balance = UNIT;
 		let asset_location = MultiLocation::new(
 			1,
 			X2(Junction::Parachain($parachain1_id), Junction::PalletInstance(10)),
@@ -492,11 +501,12 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Used for checking BOB's balance
 		let para1_native_currency_on_para2 = Parachain2CurrencyId::from($parachain1_id);
 
-		// Get ALICE's balance on parachain1 before the transfer
-		let native_tokens_before: Balance = units(100);
+		// Get ALICE's balance on parachain1 before the transfer (defined in mock config)
+		let native_tokens_before: Balance = NATIVE_INITIAL_BALANCE;
+
 		$parachain1::execute_with(|| {
 			assert_eq!(
-				$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::Native, &ALICE.into()),
+				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &ALICE.into()),
 				native_tokens_before
 			);
 		});
@@ -537,6 +547,10 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Verify BOB's balance on parachain2 after receiving
 		// Should increase by the transfer amount
 		$parachain2::execute_with(|| {
+			use $parachain2_runtime::{ System};
+			for i in System::events().iter() {
+				println!("para 2 events {}: {:?}\n", stringify!($para2_runtime), i);
+			}
 			assert_eq!(
 				$parachain2_runtime::Tokens::balance(para1_native_currency_on_para2, &BOB.into()),
 				transfer_amount
@@ -546,7 +560,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Verify ALICE's balance on parachain1 after transfer
 		$parachain1::execute_with(|| {
 			assert_eq!(
-				$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::Native, &ALICE.into()),
+				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &ALICE.into()),
 				native_tokens_before - transfer_amount
 			);
 		});
@@ -590,15 +604,105 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Verify ALICE's balance on parachain1 after receiving
 		// Should become the same amount as initial balance before both transfers
 		$parachain1::execute_with(|| {
+			use $parachain1_runtime::{System, Treasury};
+			for i in System::events().iter() {
+				println!("para 1 events {}: {:?}\n", stringify!($para2_runtime), i);
+			}
 			assert_eq!(
-				$parachain1_runtime::Tokens::balance(Parachain1CurrencyId::Native, &ALICE.into()),
-				native_tokens_before
+				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &ALICE.into()),
+				native_tokens_before - $tx_fee
+			);
+
+			assert_eq!(
+				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &Treasury::account_id()),
+				$tx_fee
 			);
 		});
 	}};
 }
 
+// NOTE this test is only relevant to the pendulum runtime configuration
+macro_rules! moonbeam_transfers_token_and_handle_automation {
+	(
+        $mocknet:ident,
+        $parachain1_runtime:ident,
+        $parachain1:ident,
+        $parachain2_runtime:ident,
+        $parachain2:ident,
+        $parachain1_id:ident,
+        $parachain2_id:ident,
+		$expected_fee:ident
+    ) => {{
+		use crate::mock::{units, ALICE};
+		use polkadot_core_primitives::Balance;
+		use xcm::latest::{
+			Junction, Junction::{ GeneralKey, PalletInstance}, Junctions::{X3}, MultiLocation, WeightLimit,
+		};
+		use pendulum_runtime::assets::xcm_assets;
+		use orml_traits::MultiCurrency;
+
+		use $parachain2_runtime::CurrencyId as Parachain2CurrencyId;
+
+		$mocknet::reset();
+
+		let transfer_amount: Balance = units(100);
+		let mut treasury_balance_before: Balance = 0;
+		// get the balance of the treasury before sending the message
+		$parachain1::execute_with(|| {
+			use $parachain1_runtime::{ PendulumTreasuryAccount};
+			treasury_balance_before = $parachain1_runtime::Currencies::free_balance(xcm_assets::MOONBEAM_BRZ_id(), &PendulumTreasuryAccount::get());
+		});
+		// We mock parachain 2 as beeing moonriver in this case.
+		// Sending "Token" variant which is equivalent to BRZ mock token Multilocation
+		// in the sibling definition
+		$parachain2::execute_with(|| {
+			use $parachain2_runtime::{XTokens, Tokens,RuntimeOrigin};
+
+			assert_ok!(Tokens::set_balance(RuntimeOrigin::root().into(), ALICE.clone().into(), Parachain2CurrencyId::Token,transfer_amount, 0));
+
+			// We must ensure that the destination Multilocation is of the structure
+			// the intercept excepts so it calls automation pallet
+
+			// TODO replace instance 99 with automation pallet index when added
+			assert_ok!(XTokens::transfer(
+				$parachain2_runtime::RuntimeOrigin::signed(ALICE.into()),
+				Parachain2CurrencyId::Token,
+				transfer_amount,
+				Box::new(
+					MultiLocation::new(
+						1,
+						X3(
+							Junction::Parachain($parachain1_id),
+							PalletInstance(99),
+							GeneralKey {length:32 , data:[1u8;32]}
+						)
+					)
+					.into()
+				),
+				WeightLimit::Unlimited
+			));
+		});
+
+		$parachain1::execute_with(|| {
+			use $parachain1_runtime::{RuntimeEvent, System, Treasury};
+			// given the configuration in pendulum's xcm_config, we expect the callback (in this case a Remark)
+			// to be executed
+			assert!(System::events().iter().any(|r| matches!(
+				r.event,
+				RuntimeEvent::System(frame_system::Event::Remarked { .. })
+			)));
+
+			assert_eq!(
+				$parachain1_runtime::Currencies::free_balance(xcm_assets::MOONBEAM_BRZ_id(), &Treasury::account_id()),
+				$expected_fee
+			);
+
+
+		});
+	}};
+}
 // macros defined at the bottom of this file to prevent unresolved imports
+pub(super) use moonbeam_transfers_token_and_handle_automation;
 pub(super) use parachain1_transfer_asset_to_parachain2;
 pub(super) use parachain1_transfer_asset_to_parachain2_and_back;
 pub(super) use parachain1_transfer_incorrect_asset_to_parachain2_should_fail;

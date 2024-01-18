@@ -7,6 +7,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod assets;
+mod chain_ext;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
@@ -20,6 +21,7 @@ use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 pub use parachain_staking::InflationInfo;
 
 use codec::Encode;
+use scale_info::TypeInfo;
 
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -98,9 +100,13 @@ use spacewalk_primitives::{
 	UnsignedInner,
 };
 
+#[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
+use oracle::testing_utils::MockDataFeeder;
+
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 // XCM Imports
+use crate::chain_ext::Psp22Extension;
 use xcm_executor::XcmExecutor;
 
 pub type VaultId = primitives::VaultId<AccountId, CurrencyId>;
@@ -241,10 +247,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 12,
+	spec_version: 13,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 12,
+	transaction_version: 13,
 	state_version: 1,
 };
 
@@ -361,6 +367,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::VaultRegistry(_) |
 			RuntimeCall::PooledVaultRewards(_) |
 			RuntimeCall::Farming(_) |
+			RuntimeCall::TokenAllowance(_) |
 			RuntimeCall::AssetRegistry(_) |
 			RuntimeCall::Proxy(_) |
 			RuntimeCall::RewardDistribution(_) => true,
@@ -770,8 +777,14 @@ impl pallet_child_bounties::Config for Runtime {
 }
 
 parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		NANOUNIT
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		// Since the xcm trader uses Tokens to get the minimum
+		// balance of both it's assets and native, we need to
+		// handle native here
+		match currency_id{
+			CurrencyId::Native => EXISTENTIAL_DEPOSIT,
+			_ => NANOUNIT
+		}
 	};
 }
 
@@ -818,6 +831,8 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native;
+	#[derive(Clone, Eq, PartialEq, Debug, TypeInfo)]
+	pub const StringLimit: u32 = 50;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -829,7 +844,7 @@ impl orml_currencies::Config for Runtime {
 
 impl orml_asset_registry::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type CustomMetadata = asset_registry::CustomMetadata;
+	type CustomMetadata = asset_registry::CustomMetadata<StringLimit>;
 	type AssetId = CurrencyId;
 	type AuthorityOrigin = asset_registry::AssetAuthority;
 	type AssetProcessor = asset_registry::CustomAssetProcessor;
@@ -955,7 +970,7 @@ impl pallet_contracts::Config for Runtime {
 	type CallStack = [pallet_contracts::Frame<Self>; 5];
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-	type ChainExtension = ();
+	type ChainExtension = Psp22Extension;
 	type DeletionQueueDepth = DeletionQueueDepth;
 	type DeletionWeightLimit = DeletionWeightLimit;
 	type Schedule = Schedule;
@@ -1117,11 +1132,7 @@ impl oracle::Config for Runtime {
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
-	type DataFeedProvider = DataFeederBenchmark<
-		oracle::OracleKey,
-		oracle::TimestampedValue<UnsignedFixedPoint, Moment>,
-		Self::AccountId,
-	>;
+	type DataFeeder = MockDataFeeder<Self::AccountId, Moment>;
 }
 
 parameter_types! {
@@ -1296,6 +1307,14 @@ impl pallet_proxy::Config for Runtime {
 	type AnnouncementDepositBase = AnnouncementDepositBase;
 	type AnnouncementDepositFactor = AnnouncementDepositFactor;
 }
+
+impl orml_currencies_allowance_extension::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo =
+		orml_currencies_allowance_extension::default_weights::SubstrateWeight<Runtime>;
+	type MaxAllowedCurrencies = ConstU32<256>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -1371,6 +1390,8 @@ construct_runtime!(
 		ClientsInfo: clients_info::{Pallet, Call, Storage, Event<T>} = 72,
 		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,
 
+		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
+
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 
 		// Asset Metadata
@@ -1406,6 +1427,8 @@ mod benches {
 		// Other
 		[orml_asset_registry, runtime_common::benchmarking::orml_asset_registry::Pallet::<Runtime>]
 		[pallet_xcm, PolkadotXcm]
+
+		[orml_currencies_allowance_extension, TokenAllowance]
 	);
 }
 
@@ -1618,14 +1641,21 @@ impl_runtime_apis! {
 
 	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {
-		fn on_runtime_upgrade() -> (Weight, Weight) {
+		fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
 			log::info!("try-runtime::on_runtime_upgrade amplitude.");
-			let weight = Executive::try_runtime_upgrade().unwrap();
+			let weight = Executive::try_runtime_upgrade(checks).unwrap();
 			(weight, RuntimeBlockWeights::get().max_block)
 		}
 
-		fn execute_block_no_check(block: Block) -> Weight {
-			Executive::execute_block_no_check(block)
+		fn execute_block(
+			block: Block,
+			state_root_check: bool,
+			signature_check: bool,
+			select: frame_try_runtime::TryStateSelect
+		) -> Weight {
+			// NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+			// have a backtrace here.
+			Executive::try_execute_block(block, state_root_check, signature_check, select).expect("execute-block failed")
 		}
 	}
 

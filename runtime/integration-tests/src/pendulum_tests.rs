@@ -2,7 +2,8 @@ use crate::{
 	mock::{para_ext, polkadot_relay_ext, ParachainType, USDT_ASSET_ID},
 	sibling,
 	test_macros::{
-		parachain1_transfer_asset_to_parachain2, parachain1_transfer_asset_to_parachain2_and_back,
+		moonbeam_transfers_token_and_handle_automation, parachain1_transfer_asset_to_parachain2,
+		parachain1_transfer_asset_to_parachain2_and_back,
 		parachain1_transfer_incorrect_asset_to_parachain2_should_fail,
 		transfer_10_relay_token_from_parachain_to_relay_chain,
 		transfer_20_relay_token_from_relay_chain_to_parachain,
@@ -12,11 +13,15 @@ use crate::{
 };
 
 use frame_support::assert_ok;
+use runtime_common::parachains::polkadot::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
 use statemint_runtime as polkadot_asset_hub_runtime;
 use xcm::latest::NetworkId;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
 
-const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 3200000000; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
+const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 32653061; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
+const MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 1391304347; //Fees that we will charge in incoming Moonbeam's BRZ. Depends on the RelativeValue struct implementation.
+const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 266666666;
+const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 3200000000;
 
 decl_test_relay_chain! {
 	pub struct PolkadotRelay {
@@ -56,12 +61,23 @@ decl_test_parachain! {
 	}
 }
 
+decl_test_parachain! {
+	pub struct MoonbeamParachain {
+		Runtime = sibling::Runtime,
+		RuntimeOrigin = sibling::RuntimeOrigin,
+		XcmpMessageHandler = sibling::XcmpQueue,
+		DmpMessageHandler = sibling::DmpQueue,
+		new_ext = para_ext(ParachainType::Moonbeam),
+	}
+}
+
 decl_test_network! {
 	pub struct PolkadotMockNet {
 		relay_chain = PolkadotRelay,
 		parachains = vec![
 			(1000, AssetHubParachain),
 			(2094, PendulumParachain),
+			(2004, MoonbeamParachain),
 			(9999, SiblingParachain),
 		],
 	}
@@ -110,7 +126,8 @@ fn assethub_transfer_asset_to_pendulum() {
 		USDT_ASSET_ID,
 		pendulum_runtime,
 		PendulumParachain,
-		PENDULUM_ID
+		PENDULUM_ID,
+		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }
 
@@ -126,7 +143,8 @@ fn assethub_transfer_asset_to_pendulum_and_back() {
 		pendulum_runtime,
 		PendulumParachain,
 		PENDULUM_ID,
-		network_id
+		network_id,
+		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }
 
@@ -139,6 +157,21 @@ fn transfer_native_token_from_pendulum_to_sibling_parachain_and_back() {
 		sibling,
 		SiblingParachain,
 		PENDULUM_ID,
-		SIBLING_ID
+		SIBLING_ID,
+		NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN
+	);
+}
+
+#[test]
+fn moonbeam_transfers_token_and_handle_automation() {
+	moonbeam_transfers_token_and_handle_automation!(
+		PolkadotMockNet,
+		pendulum_runtime,
+		PendulumParachain,
+		sibling,
+		MoonbeamParachain,
+		PENDULUM_ID,
+		MOONBEAM_PARA_ID,
+		MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }

@@ -1,7 +1,40 @@
-use super::{
-	AccountId, Balance, Balances, CurrencyId, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
-	RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens, WeightToFee, XcmpQueue,
+use core::marker::PhantomData;
+
+use cumulus_primitives_utility::{
+	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,
 };
+use frame_support::{
+	log, match_types, parameter_types,
+	traits::{ContainsPair, Everything, Nothing},
+	weights::{Weight, WeightToFee as WeightToFeeTrait},
+};
+use orml_traits::{
+	location::{RelativeReserveProvider, Reserve},
+	parameter_type_with_key,
+};
+use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
+use pallet_xcm::XcmPassthrough;
+use polkadot_parachain::primitives::Sibling;
+use sp_runtime::traits::Convert;
+use xcm::latest::{prelude::*, Weight as XCMWeight};
+use xcm_builder::{
+	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
+	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
+	FixedWeightBounds, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
+	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+	SovereignSignedViaLocation, TakeWeightCredit,
+};
+use xcm_executor::{
+	traits::{JustTry, ShouldExecute},
+	XcmExecutor,
+};
+
+use runtime_common::{
+	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
+	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
+	RelativeValue,
+};
+
 use crate::{
 	assets::{
 		self,
@@ -13,30 +46,11 @@ use crate::{
 	},
 	ConstU32,
 };
-use core::marker::PhantomData;
-use frame_support::{
-	log, match_types, parameter_types,
-	traits::{ContainsPair, Everything, Nothing},
-};
-use orml_traits::{
-	location::{RelativeReserveProvider, Reserve},
-	parameter_type_with_key,
-};
-use pallet_xcm::XcmPassthrough;
-use polkadot_parachain::primitives::Sibling;
-use polkadot_runtime_common::impls::ToAuthor;
-use runtime_common::parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex};
-use sp_runtime::traits::Convert;
-use xcm::latest::{prelude::*, Weight as XCMWeight};
-use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
-	FixedWeightBounds, FungiblesAdapter, NoChecking, ParentIsPreset, RelayChainAsNative,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
-};
-use xcm_executor::{
-	traits::{JustTry, ShouldExecute},
-	XcmExecutor,
+
+use super::{
+	AccountId, Balance, Balances, Currencies, CurrencyId, ParachainInfo, ParachainSystem,
+	PendulumTreasuryAccount, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
+	System, Tokens, WeightToFee, XcmpQueue,
 };
 
 parameter_types! {
@@ -76,12 +90,37 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				xcm_assets::EQUILIBRIUM_EQD => Some(equilibrium::EQD_location()),
 				xcm_assets::MOONBEAM_BRZ => Some(moonbeam::BRZ_location()),
 				xcm_assets::POLKADEX_PDEX => Some(polkadex::PDEX_location()),
+				xcm_assets::MOONBEAM_GLMR => Some(moonbeam::GLMR_location()),
 				_ => None,
 			},
 
 			CurrencyId::Native => Some(native_location_external_pov()),
 			assets::tokens::EURC_ID => Some(EURC_location_external_pov()),
 			_ => None,
+		}
+	}
+}
+
+type RelativeValueOf = RelativeValue<Balance>;
+
+pub struct RelayRelativeValue;
+impl RelayRelativeValue {
+	fn get_relative_value(id: CurrencyId) -> Option<RelativeValueOf> {
+		match id {
+			CurrencyId::XCM(f) => match f {
+				xcm_assets::RELAY_DOT => Some(RelativeValueOf { num: 98, denominator: 1 }),
+				xcm_assets::ASSETHUB_USDT => Some(RelativeValueOf { num: 12, denominator: 1 }),
+				xcm_assets::ASSETHUB_USDC => Some(RelativeValueOf { num: 12, denominator: 1 }),
+				xcm_assets::EQUILIBRIUM_EQD => Some(RelativeValueOf { num: 12, denominator: 1 }),
+				xcm_assets::MOONBEAM_BRZ => Some(RelativeValueOf { num: 23, denominator: 10 }),
+				xcm_assets::POLKADEX_PDEX => Some(RelativeValueOf { num: 14, denominator: 1 }),
+				xcm_assets::MOONBEAM_GLMR => Some(RelativeValueOf { num: 55, denominator: 10 }),
+				_ => None,
+			},
+
+			CurrencyId::Native => Some(RelativeValueOf { num: 1, denominator: 1 }),
+			assets::tokens::EURC_ID => Some(RelativeValueOf { num: 13, denominator: 1 }),
+			_ => Some(RelativeValueOf { num: 10, denominator: 1 }),
 		}
 	}
 }
@@ -96,6 +135,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			loc if loc == equilibrium::EQD_location() => Some(xcm_assets::EQUILIBRIUM_EQD_id()),
 			loc if loc == moonbeam::BRZ_location() => Some(xcm_assets::MOONBEAM_BRZ_id()),
 			loc if loc == polkadex::PDEX_location() => Some(xcm_assets::POLKADEX_PDEX_id()),
+			loc if loc == moonbeam::GLMR_location() => Some(xcm_assets::MOONBEAM_GLMR_id()),
 
 			// Our native currency location without re-anchoring
 			loc if loc == native_location_external_pov() => Some(CurrencyId::Native),
@@ -145,23 +185,6 @@ where
 		false
 	}
 }
-
-/// Means for transacting the fungibles assets of ths parachain.
-pub type FungiblesTransactor = FungiblesAdapter<
-	// Use this fungibles implementation
-	Tokens,
-	// This means that this adapter should handle any token that `CurrencyIdConvert` can convert
-	// to `CurrencyId`, the `CurrencyId` type of `Tokens`, the fungibles implementation it uses.
-	ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
-	// Convert an XCM MultiLocation into a local account id
-	LocationToAccountId,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly)
-	AccountId,
-	// We dont allow teleports.
-	NoChecking,
-	// The account to use for tracking teleports.
-	CheckingAccount,
->;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
@@ -263,14 +286,115 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
-pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
+match_types! {
+	pub type ParentOrParentsPlurality: impl Contains<MultiLocation> = {
+		MultiLocation { parents: 1, interior: Here } |
+		MultiLocation { parents: 1, interior: X1(Plurality { .. }) }
+	};
+}
+
+pub type Barrier = (
+	TakeWeightCredit,
+	AllowTopLevelPaidExecutionFrom<Everything>,
+	// Parent and its plurality get free execution
+	AllowUnpaidExecutionFrom<ParentOrParentsPlurality>,
+	// Expected responses are OK.
+	AllowKnownQueryResponses<PolkadotXcm>,
+	// Subscriptions for version tracking are OK.
+	AllowSubscriptionsFrom<Everything>,
+);
+
+pub struct ChargeWeightInFungiblesImplementation;
+impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImplementation {
+	fn charge_weight_in_fungibles(
+		asset_id: CurrencyId,
+		weight: Weight,
+	) -> Result<Balance, XcmError> {
+		let amount = <WeightToFee as WeightToFeeTrait>::weight_to_fee(&weight);
+
+		// since this is calibrated (in theory) for the native of the relay
+		// we should just have a multiplier for relative "value" of that token
+		// and adjust the amount inversily proportional to the value
+		if let Some(relative_value) = RelayRelativeValue::get_relative_value(asset_id) {
+			let adjusted_amount =
+				RelativeValue::<Balance>::divide_by_relative_value(amount, relative_value);
+			log::info!("amount to be charged: {:?} in asset: {:?}", adjusted_amount, asset_id);
+			return Ok(adjusted_amount)
+		} else {
+			log::info!("amount to be charged: {:?} in asset: {:?}", amount, asset_id);
+			return Ok(amount)
+		}
+	}
+}
+
+/// Means for transacting the currencies of this parachain
+type Transactor = MultiCurrencyAdapter<
+	Currencies,
+	(), // We don't handle unknown assets.
+	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
+	AccountId,
+	LocationToAccountId,
+	CurrencyId,
+	CurrencyIdConvert,
+	DepositToAlternative<PendulumTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
+>;
+
+pub type Traders = (
+	TakeFirstAssetTrader<
+		AccountId,
+		ChargeWeightInFungiblesImplementation,
+		ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
+		Tokens,
+		XcmFeesTo32ByteAccount<Transactor, AccountId, PendulumTreasuryAccount>,
+	>,
+);
+
+// We will allow for BRZ location from moonbeam
+pub struct AutomationPalletConfigPendulum;
+
+impl AutomationPalletConfig for AutomationPalletConfigPendulum {
+	fn matches_asset(asset: &MultiAsset) -> Option<u128> {
+		let expected_multiloc = moonbeam::BRZ_location();
+
+		match asset {
+			MultiAsset {
+				id: AssetId::Concrete(loc),
+				fun: Fungibility::Fungible(amount_deposited),
+			} if loc == &expected_multiloc => return Some(*amount_deposited),
+			_ => return None,
+		}
+	}
+
+	// TODO modify with automation's pallet instance
+	fn matches_beneficiary(beneficiary_location: &MultiLocation) -> Option<AssetData> {
+		if let MultiLocation {
+			parents: 0,
+			interior: X2(PalletInstance(99), GeneralKey { length, data }),
+		} = beneficiary_location
+		{
+			let asset_data = AssetData { length: *length, data: *data };
+			Some(asset_data)
+		} else {
+			None
+		}
+	}
+
+	fn callback(_length: u8, _data: [u8; 32], _amount: u128) -> Result<(), XcmError> {
+		// TODO change to call the actual automation pallet, with data and length
+		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0; 32])), [0; 1].to_vec());
+		Ok(())
+	}
+}
+
+pub type LocalAssetTransactor =
+	CustomTransactorInterceptor<Transactor, AutomationPalletConfigPendulum>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
 	type XcmSender = XcmRouter;
 	// How to withdraw and deposit an asset.
-	type AssetTransactor = FungiblesTransactor;
+	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	// Teleporting is disabled.
@@ -278,8 +402,7 @@ impl xcm_executor::Config for XcmConfig {
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type Trader =
-		UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>;
+	type Trader = Traders;
 	type ResponseHandler = PolkadotXcm;
 	type AssetTrap = PolkadotXcm;
 	type AssetLocker = ();

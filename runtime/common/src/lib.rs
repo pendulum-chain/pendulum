@@ -2,12 +2,13 @@
 #![allow(non_snake_case)]
 
 use sp_runtime::{
-	traits::{IdentifyAccount, Verify},
+	traits::{CheckedDiv, IdentifyAccount, Saturating, Verify},
 	DispatchError, MultiSignature,
 };
 
 pub mod asset_registry;
 pub mod chain_ext;
+pub mod custom_transactor;
 mod proxy_type;
 pub mod stellar;
 pub mod zenlink;
@@ -67,6 +68,29 @@ pub mod opaque {
 	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 	/// Opaque block identifier type.
 	pub type BlockId = generic::BlockId<Block>;
+}
+
+pub struct RelativeValue<Amount> {
+	pub num: Amount,
+	pub denominator: Amount,
+}
+
+impl<Amount: CheckedDiv<Output = Amount> + Saturating + Clone> RelativeValue<Amount> {
+	pub fn divide_by_relative_value(
+		amount: Amount,
+		relative_value: RelativeValue<Amount>,
+	) -> Amount {
+		// Calculate the adjusted amount
+		if let Some(adjusted_amount) = amount
+			.clone()
+			.saturating_mul(relative_value.denominator)
+			.checked_div(&relative_value.num)
+		{
+			return adjusted_amount
+		}
+		// We should never specify a numerator of 0, but just to be safe
+		return amount
+	}
 }
 
 #[macro_use]
@@ -156,11 +180,13 @@ pub mod parachains {
 		pub mod moonbeam {
 			use xcm::latest::{
 				Junction::{AccountKey20, PalletInstance, Parachain},
-				Junctions::X3,
+				Junctions::{X2, X3},
 			};
 
 			pub const PARA_ID: u32 = 2004;
 			pub const ASSET_PALLET_INDEX: u8 = 110;
+			pub const BALANCES_PALLET_INDEX: u8 = 10;
+
 			// 0xD65A1872f2E2E26092A443CB86bb5d8572027E6E
 			// extracted using `H160::from_str("...")` then `as_bytes()`
 			pub const BRZ_ASSET_ACCOUNT_IN_BYTES: [u8; 20] = [
@@ -175,6 +201,11 @@ pub mod parachains {
 					PalletInstance(ASSET_PALLET_INDEX),
 					AccountKey20 { network: None, key: BRZ_ASSET_ACCOUNT_IN_BYTES }
 				)
+			);
+
+			parachain_asset_location!(
+				GLMR,
+				X2(Parachain(PARA_ID), PalletInstance(BALANCES_PALLET_INDEX))
 			);
 		}
 
@@ -200,10 +231,10 @@ pub mod parachains {
 				Junction::{PalletInstance, Parachain},
 				Junctions::X2,
 			};
-	
+
 			pub const PARA_ID: u32 = 1000;
 			pub const BALANCES_PALLET_INDEX: u8 = 3;
-	
+
 			parachain_asset_location!(
 				DEV,
 				X2(Parachain(PARA_ID), PalletInstance(BALANCES_PALLET_INDEX))
@@ -231,6 +262,16 @@ mod tests {
 			junctions.next(),
 			Some(&AccountKey20 { network: None, key: moonbeam::BRZ_ASSET_ACCOUNT_IN_BYTES })
 		);
+		assert_eq!(junctions.next(), None);
+	}
+
+	#[test]
+	fn test_GLMR() {
+		let glmr_loc = moonbeam::GLMR_location();
+		let mut junctions = glmr_loc.interior().into_iter();
+
+		assert_eq!(junctions.next(), Some(&Parachain(moonbeam::PARA_ID)));
+		assert_eq!(junctions.next(), Some(&PalletInstance(moonbeam::BALANCES_PALLET_INDEX)));
 		assert_eq!(junctions.next(), None);
 	}
 

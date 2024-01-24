@@ -331,6 +331,7 @@ pub fn pendulum_config() -> PendulumChainSpec {
 				vesting_schedules.clone(),
 				multisig_genesis.clone(),
 				pendulum::PARACHAIN_ID.into(),
+				false,
 			)
 		},
 		// Bootnodes
@@ -412,6 +413,10 @@ pub fn development_config() -> DevelopmentChainSpec {
 	)
 }
 
+fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
+	VaultCurrencyPair { collateral: currency_id, wrapped: MAINNET_USDC_CURRENCY_ID }
+}
+
 fn amplitude_genesis(
 	invulnerables: Vec<AccountId>,
 	signatories: Vec<AccountId>,
@@ -420,10 +425,6 @@ fn amplitude_genesis(
 	id: ParaId,
 	start_shutdown: bool,
 ) -> amplitude_runtime::GenesisConfig {
-	fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
-		VaultCurrencyPair { collateral: currency_id, wrapped: MAINNET_USDC_CURRENCY_ID }
-	}
-
 	let mut balances: Vec<_> = signatories
 		.iter()
 		.cloned()
@@ -852,6 +853,7 @@ fn pendulum_genesis(
 	vesting_schedules: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	sudo_account: AccountId,
 	id: ParaId,
+	start_shutdown: bool,
 ) -> pendulum_runtime::GenesisConfig {
 	let mut genesis_issuance = pendulum::TOTAL_INITIAL_ISSUANCE;
 	for balance in balances.clone() {
@@ -921,6 +923,84 @@ fn pendulum_genesis(
 			..Default::default()
 		},
 		vesting: pendulum_runtime::VestingConfig { vesting: vesting_schedules },
+		issue: pendulum_runtime::IssueConfig {
+			issue_period: amplitude_runtime::DAYS,
+			issue_minimum_transfer_amount: 1000,
+			limit_volume_amount: None,
+			limit_volume_currency_id: XCM(0),
+			current_volume_amount: 0u32.into(),
+			interval_length: (60u32 * 60 * 24),
+			last_interval_index: 0u32,
+		},
+		redeem: pendulum_runtime::RedeemConfig {
+			redeem_period: pendulum_runtime::DAYS,
+			redeem_minimum_transfer_amount: 1000,
+			limit_volume_amount: None,
+			limit_volume_currency_id: XCM(0),
+			current_volume_amount: 0u32.into(),
+			interval_length: (60u32 * 60 * 24),
+			last_interval_index: 0u32,
+		},
+		replace: pendulum_runtime::ReplaceConfig {
+			replace_period: pendulum_runtime::DAYS,
+			replace_minimum_transfer_amount: 1000,
+		},
+		security: pendulum_runtime::SecurityConfig {
+			initial_status: if start_shutdown {
+				pendulum_runtime::StatusCode::Shutdown
+			} else {
+				pendulum_runtime::StatusCode::Error
+			},
+		},
+		oracle: pendulum_runtime::OracleConfig {
+			max_delay: u32::MAX,
+			oracle_keys: vec![
+				Key::ExchangeRate(CurrencyId::XCM(0)),
+				Key::ExchangeRate(MAINNET_USDC_CURRENCY_ID),
+			],
+		},
+		vault_registry: pendulum_runtime::VaultRegistryConfig {
+			minimum_collateral_vault: vec![(XCM(0), 0)],
+			punishment_delay: pendulum_runtime::DAYS,
+			secure_collateral_threshold: vec![(
+				default_pair(XCM(0)),
+				FixedU128::checked_from_rational(150, 100).unwrap(),
+			)],
+			/* 150% */
+			premium_redeem_threshold: vec![(
+				default_pair(XCM(0)),
+				FixedU128::checked_from_rational(130, 100).unwrap(),
+			)],
+			/* 130% */
+			liquidation_collateral_threshold: vec![(
+				default_pair(XCM(0)),
+				FixedU128::checked_from_rational(120, 100).unwrap(),
+			)],
+			/* 120% */
+			system_collateral_ceiling: vec![(
+				default_pair(XCM(0)),
+				60_000 * 10u128.pow(pendulum::TOKEN_DECIMALS),
+			)],
+		},
+		stellar_relay: pendulum_runtime::StellarRelayConfig::default(),
+		fee: pendulum_runtime::FeeConfig {
+			issue_fee: FixedU128::checked_from_rational(15, 10000).unwrap(), // 0.15%
+			issue_griefing_collateral: FixedU128::checked_from_rational(5, 100000).unwrap(), // 0.005%
+			redeem_fee: FixedU128::checked_from_rational(5, 1000).unwrap(),  // 0.5%
+			premium_redeem_fee: FixedU128::checked_from_rational(5, 100).unwrap(), // 5%
+			punishment_fee: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
+			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
+		},
+		nomination: pendulum_runtime::NominationConfig { is_nomination_enabled: false },
+		dia_oracle_module: amplitude_runtime::DiaOracleModuleConfig {
+			authorized_accounts: authorized_oracles,
+			supported_currencies: vec![foucoco_runtime::AssetId::new(
+				b"Polkadot".to_vec(),
+				b"DOT".to_vec(),
+			)],
+			batching_api: b"http://dia-00.pendulumchain.tech:8070/currencies".to_vec(),
+			coin_infos_map: vec![],
+		},
 	}
 }
 

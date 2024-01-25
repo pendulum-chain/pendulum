@@ -992,15 +992,6 @@ fn pendulum_genesis(
 			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 		},
 		nomination: pendulum_runtime::NominationConfig { is_nomination_enabled: false },
-		dia_oracle_module: amplitude_runtime::DiaOracleModuleConfig {
-			authorized_accounts: authorized_oracles,
-			supported_currencies: vec![foucoco_runtime::AssetId::new(
-				b"Polkadot".to_vec(),
-				b"DOT".to_vec(),
-			)],
-			batching_api: b"http://dia-00.pendulumchain.tech:8070/currencies".to_vec(),
-			coin_infos_map: vec![],
-		},
 	}
 }
 

@@ -39,7 +39,7 @@ pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 #[allow(type_alias_bounds)]
 pub(crate) type CurrencyIdOf<T> =
 	<<T as orml_currencies::Config>::MultiCurrency as MultiCurrency<
-		<T as frame_system::Config>::AccountId,
+		<T as frame_system::Config>::AccountId
 	>>::CurrencyId;
 
 #[allow(type_alias_bounds)]
@@ -65,7 +65,7 @@ pub mod pallet {
 
 		/// Used for getting the treasury account
 		#[pallet::constant]
-		type TreasuryAccount: Get<Self::AccountId>;
+		type TreasuryAccount: Get<AccountIdOf<Self>>;
 
 		/// Timestamp provider
 		type UnixTime: UnixTime;
@@ -367,7 +367,7 @@ where
 	CurrencyId: Clone + PartialEq + Eq + Debug,
 {
 	/// Gets a current price for a given currency
-	fn get_price<FixedNumber: FixedPointNumber + One + Zero + Debug>(
+	fn get_price<FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>>(
 		currency_id: CurrencyId,
 	) -> Result<FixedNumber, sp_runtime::DispatchError>;
 }

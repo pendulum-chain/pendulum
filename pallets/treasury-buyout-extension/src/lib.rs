@@ -32,7 +32,6 @@ use sp_runtime::{ArithmeticError, FixedU128};
 use sp_arithmetic::per_things::Rounding;
 use frame_support::traits::UnixTime;
 
-
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -74,8 +73,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type SellFee: Get<Permill>;
 
-		// might be needed?
-		//type AssetRegistry: Inspect;
+		/// Type that allows for checking if currency type is ownable by users
+		type CurrencyIdChecker: CurrencyIdChecker<CurrencyIdOf<Self>>;
 
 		/// Used for fetching prices of currencies from oracle
 		type PriceGetter: PriceGetter<CurrencyIdOf<Self>>;
@@ -207,9 +206,9 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	fn ensure_not_native_buyout(asset: &CurrencyIdOf<T>) -> DispatchResult {
+	fn ensure_allowed_asset_for_buyout(asset: &CurrencyIdOf<T>) -> DispatchResult {
 		ensure!(
-			asset != &<T as orml_currencies::Config>::GetNativeCurrencyId::get(),
+			T::CurrencyIdChecker::is_allowed_currency_id(asset),
 			Error::<T>::WrongAssetToBuyout
 		);
 
@@ -299,7 +298,7 @@ impl<T: Config> Pallet<T> {
 		asset: CurrencyIdOf<T>,
 		amount: Amount<BalanceOf<T>>,
 	) -> DispatchResult {
-		Self::ensure_not_native_buyout(&asset)?;
+		Self::ensure_allowed_asset_for_buyout(&asset)?;
 		let basic_asset = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
 		let (buyout_amount, exchange_amount) =
 			Self::split_to_buyout_and_exchange(asset, amount)?;
@@ -360,6 +359,13 @@ impl<T: Config> Pallet<T> {
 			.into();
 		Ok((basic_asset_price, exchange_asset_price))
 	}
+}
+
+pub trait CurrencyIdChecker<CurrencyId> 
+where
+	CurrencyId: Clone + PartialEq + Eq + Debug,
+{
+	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool;
 }
 
 pub trait PriceGetter<CurrencyId>
@@ -470,7 +476,7 @@ where
     ) -> TransactionValidity {
         if let Some(local_call) = call.is_sub_type() {
             if let Call::buyout { asset, amount } = local_call {
-                Pallet::<T>::ensure_not_native_buyout(asset).map_err(|_| {
+                Pallet::<T>::ensure_allowed_asset_for_buyout(asset).map_err(|_| {
                     InvalidTransaction::Custom(ValidityError::WrongAssetToBuyout.into())
                 })?;
 

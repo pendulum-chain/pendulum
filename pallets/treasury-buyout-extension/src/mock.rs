@@ -1,5 +1,5 @@
 use crate::{
-	self as treasury_buyout_extension, Config, PriceGetter,
+	self as treasury_buyout_extension, Config, PriceGetter, CurrencyIdChecker,
 };
 use frame_support::{
 	pallet_prelude::GenesisBuild,
@@ -40,7 +40,7 @@ pub type Balance = u128;
 pub type BlockNumber = u64;
 pub type Index = u64;
 pub type Amount = i64;
-pub type CurrencyId = u64;
+pub type CurrencyId = spacewalk_primitives::CurrencyId;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -77,7 +77,7 @@ pub type TestEvent = RuntimeEvent;
 
 parameter_types! {
 	pub const MaxLocks: u32 = 50;
-	pub const GetNativeCurrencyId: CurrencyId = 0;
+	pub const GetNativeCurrencyId: CurrencyId = spacewalk_primitives::CurrencyId::Native;
 }
 
 parameter_type_with_key! {
@@ -144,13 +144,22 @@ impl orml_currencies::Config for Test {
 	type WeightInfo = ();
 }
 
-pub struct TimeMock {}
+pub struct TimeMock;
 
 impl UnixTime for TimeMock {
     fn now() -> core::time::Duration {
         //core::time::Duration::from_millis(CURRENT_TIME.with(|v| *v.borrow()))
         core::time::Duration::from_millis(1598006981634)
     }
+}
+
+pub struct CurrencyIdCheckerImpl;
+
+impl CurrencyIdChecker<CurrencyId> for CurrencyIdCheckerImpl {
+	// We allow only XCM assets
+	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool {
+		matches!(currency_id, spacewalk_primitives::CurrencyId::XCM(_))
+	}
 }
 
 pub struct OracleMock;
@@ -179,6 +188,8 @@ impl Config for Test {
     type UnixTime = TimeMock;
     /// Fee from the native asset buyouts
     type SellFee =  SellFee;
+	/// Type that allows for checking if currency type is ownable by users
+	type CurrencyIdChecker = CurrencyIdCheckerImpl;
     /// Used for fetching prices of currencies from oracle
     type PriceGetter = OracleMock;
     /// Min amount of native token to buyout

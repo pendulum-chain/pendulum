@@ -156,9 +156,14 @@ impl UnixTime for TimeMock {
 pub struct CurrencyIdCheckerImpl;
 
 impl CurrencyIdChecker<CurrencyId> for CurrencyIdCheckerImpl {
-	// We allow only XCM assets
+	// We allow only some XCM assets
+	// Specifically, we allow USDC, USDT, DOT, GLMR
 	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool {
-		matches!(currency_id, spacewalk_primitives::CurrencyId::XCM(_))
+		matches!(currency_id, spacewalk_primitives::CurrencyId::XCM(0) |
+        	spacewalk_primitives::CurrencyId::XCM(1) |
+        	spacewalk_primitives::CurrencyId::XCM(2) |
+        	spacewalk_primitives::CurrencyId::XCM(6)
+		)
 	}
 }
 

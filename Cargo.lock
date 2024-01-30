@@ -13661,14 +13661,10 @@ dependencies = [
 name = "treasury-buyout-extension"
 version = "1.0.0"
 dependencies = [
- "dia-oracle",
- "dia-oracle-runtime-api",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "mocktopus",
- "oracle",
- "orml-asset-registry",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",

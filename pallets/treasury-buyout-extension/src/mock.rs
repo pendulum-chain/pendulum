@@ -32,6 +32,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call},
+		TreasuryBuyoutExtension: treasury_buyout_extension::{Pallet, Storage, Call, Event<T>},
 	}
 );
 
@@ -40,7 +41,7 @@ pub type Balance = u128;
 pub type BlockNumber = u64;
 pub type Index = u64;
 pub type Amount = i64;
-pub type CurrencyId = spacewalk_primitives::CurrencyId;
+pub type CurrencyId = u64;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -77,7 +78,7 @@ pub type TestEvent = RuntimeEvent;
 
 parameter_types! {
 	pub const MaxLocks: u32 = 50;
-	pub const GetNativeCurrencyId: CurrencyId = spacewalk_primitives::CurrencyId::Native;
+	pub const GetNativeCurrencyId: CurrencyId = u64::MAX;
 }
 
 parameter_type_with_key! {
@@ -118,9 +119,8 @@ parameter_types! {
 	pub const ExistentialDeposit: Balance = 1000;
 	pub const MaxReserves: u32 = 50;
     pub const TreasuryAccount: AccountId = u64::MAX;
-    pub const SellFee: Permill = Permill::from_percent(10);
+    pub const SellFee: Permill = Permill::from_percent(1);
     pub const MinAmountToBuyout: Balance = 100 * UNIT;
-
 }
 
 impl pallet_balances::Config for Test {
@@ -149,7 +149,7 @@ pub struct TimeMock;
 impl UnixTime for TimeMock {
     fn now() -> core::time::Duration {
         //core::time::Duration::from_millis(CURRENT_TIME.with(|v| *v.borrow()))
-        core::time::Duration::from_millis(1598006981634)
+        core::time::Duration::from_millis(1706624641)
     }
 }
 
@@ -159,10 +159,10 @@ impl CurrencyIdChecker<CurrencyId> for CurrencyIdCheckerImpl {
 	// We allow only some XCM assets
 	// Specifically, we allow USDC, USDT, DOT, GLMR
 	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool {
-		matches!(currency_id, spacewalk_primitives::CurrencyId::XCM(0) |
-        	spacewalk_primitives::CurrencyId::XCM(1) |
-        	spacewalk_primitives::CurrencyId::XCM(2) |
-        	spacewalk_primitives::CurrencyId::XCM(6)
+		matches!(currency_id, 0u64 |
+        	1u64 |
+        	2u64 |
+        	3u64
 		)
 	}
 }
@@ -175,9 +175,13 @@ impl PriceGetter<CurrencyId> for OracleMock {
     where
         FixedNumber: FixedPointNumber + One + Zero + Debug  + TryFrom<FixedU128>,
     {
-		//TODO: get price from oracle
+		//TODO: Get price from oracle?
+		// This simulates price fetching error for testing pre_dispatch validation but only for one specific supported asset
+		if currency_id == 2u64 {
+			return Err(DispatchError::Other("No price"))
+		}
+
 		let price: FixedNumber = FixedNumber::one().try_into().map_err(|_| DispatchError::Other("FixedU128 convert"))?;
-		
 		Ok(price)
     }
 }
@@ -207,21 +211,22 @@ impl Config for Test {
 // ------- Constants and Genesis Config ------ //
 
 pub const USER: u64 = 0;
+pub const TREASURY_ACCOUNT: u64 = TreasuryAccount::get();
 
-pub const USERS_INITIAL_BALANCE: u128 = 1000000;
-pub const DEPOSIT: u128 = 5000;
+pub const USERS_INITIAL_BALANCE: u128 = 200 * UNIT;
+pub const TREASURY_INITIAL_BALANCE: u128 = 1000 * UNIT;
+
 pub struct ExtBuilder;
 
 impl ExtBuilder {
 	pub fn build() -> sp_io::TestExternalities {
 		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-		let native_currency_id = GetNativeCurrencyId::get();
-		//let dot_currency_id = 
+		let dot_currency_id = 0u64;
 
 		orml_tokens::GenesisConfig::<Test> {
 			balances: vec![
-				(USER, native_currency_id, USERS_INITIAL_BALANCE),
+				(USER, dot_currency_id, USERS_INITIAL_BALANCE),
 			],
 		}
 		.assimilate_storage(&mut storage)
@@ -230,6 +235,7 @@ impl ExtBuilder {
 		pallet_balances::GenesisConfig::<Test> {
 			balances: vec![
 				(USER, USERS_INITIAL_BALANCE),
+				(TREASURY_ACCOUNT, TREASURY_INITIAL_BALANCE),
 			],
 		}
 		.assimilate_storage(&mut storage)

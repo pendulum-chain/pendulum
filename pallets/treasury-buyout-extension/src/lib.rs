@@ -14,7 +14,7 @@ mod tests;
 
 mod types;
 
-use crate::types::{Amount, BUYOUT_LIMIT_PERIOD_IN_SEC};
+use crate::types::{Amount, AccountIdOf, CurrencyIdOf, BalanceOf, BUYOUT_LIMIT_PERIOD_IN_SEC};
 use codec::{Decode, Encode};
 use sp_runtime::traits::{DispatchInfoOf, SignedExtension};
 use frame_support::{dispatch::{DispatchError, DispatchResult}, sp_runtime::SaturatedConversion, traits::{IsSubType, Get}, ensure};
@@ -32,17 +32,7 @@ use sp_runtime::{ArithmeticError, FixedU128};
 use sp_arithmetic::per_things::Rounding;
 use frame_support::traits::UnixTime;
 
-#[allow(type_alias_bounds)]
-pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-
-#[allow(type_alias_bounds)]
-pub(crate) type CurrencyIdOf<T> =
-	<<T as orml_currencies::Config>::MultiCurrency as MultiCurrency<
-		<T as frame_system::Config>::AccountId
-	>>::CurrencyId;
-
-#[allow(type_alias_bounds)]
-type BalanceOf<T: Config> = <<T as Config>::Currency as MultiCurrency<AccountIdOf<T>>>::Balance;
+pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -151,6 +141,7 @@ pub mod pallet {
 			asset: CurrencyIdOf<T>,
 			exchange_amount: BalanceOf<T>,
 		},
+		//TODO should we delete this?
 		// Exchange event
 		Exchange {
 			from: AccountIdOf<T>,
@@ -193,7 +184,6 @@ impl<T: Config> Pallet<T> {
 				Buyouts::<T>::insert(account_id, (buyouts, now));
 			};
 
-			// maybe I can do it easier than this
 			ensure!(
 				buyouts
 					.saturated_into::<u128>()
@@ -277,6 +267,7 @@ impl<T: Config> Pallet<T> {
 		buyout_amount
 	}
 
+	//TODO add comment here
 	fn split_to_buyout_and_exchange(
 		asset: CurrencyIdOf<T>,
 		amount: Amount<BalanceOf<T>>,
@@ -328,6 +319,7 @@ impl<T: Config> Pallet<T> {
 		T::Currency::transfer(basic_asset, &treasury_account_id, &who, buyout_amount)
 			.map_err(|_| Error::<T>::ExchangeFailure)?;
 
+		//TODO emit Exchange event or Buyout event based on amount passed in this function?
 		Self::update_buyouts(&who, buyout_amount);
 		Self::deposit_event(Event::<T>::Buyout { who, buyout_amount, asset, exchange_amount });
 

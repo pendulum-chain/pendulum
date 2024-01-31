@@ -5,19 +5,22 @@ use crate::types::{AccountIdOf, BalanceOf, CurrencyIdOf};
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use mock::CurrencyId;
 use sp_std::prelude::*;
+use spacewalk_primitives::CurrencyId;
+
+pub trait Config:
+    orml_currencies::Config + orml_tokens::Config + currency::Config + crate::Config
+{
+}
 
 fn get_test_currency<T: Config>() -> CurrencyIdOf<T> {
-	// DOT
-	// Still have issues with this
-	<<T as orml_currencies::Config>::MultiCurrency as orml_tokens::Config>::CurrencyId::XCM(0)
+	// This only works for Amplitude and Foucoco
+    <T as currency::Config>::GetRelayChainCurrencyId::get()
 }
 
 // Mint some tokens to the caller and treasury accounts
 fn set_up_accounts<T: Config>(caller_account: &AccountIdOf<T>, treasury_account: &AccountIdOf<T>) {
 	let token_currency_id = get_test_currency::<T>();
-	//let token_currency_id = spacewalk_primitives::CurrencyId::XCM(0);
 	let native_currency_id = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
 
 	let amount: BalanceOf<T> = 1_000_000_000_000_000u128.try_into().unwrap_or_default();
@@ -38,7 +41,6 @@ fn set_up_accounts<T: Config>(caller_account: &AccountIdOf<T>, treasury_account:
 benchmarks! {
 	buyout {
 		let token_currency_id = get_test_currency::<T>();
-		//let token_currency_id = spacewalk_primitives::CurrencyId::XCM(0);
 		let native_currency_id = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
 		let caller_account = account("Caller", 0, 0);
 		let treasury_account = <T as pallet::Config>::TreasuryAccount::get();

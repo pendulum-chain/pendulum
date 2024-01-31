@@ -80,6 +80,17 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+
+		/// Allows caller to buyout a given amount of native token.
+		/// Caller can specify either buyout amount of native token that he wants or exchange amount of an allowed asset.
+		///
+		/// Parameters
+		///
+		/// - `origin`: Caller's origin.
+		/// - `asset`: Exchange asset used for buyout of basic asset.
+		/// - `amount`: Amount of basic asset to buyout or amount of asset to exchange.
+		/// 
+		/// Emits `Buyout` event when successful.
 		#[pallet::call_index(0)]
 		//TODO add weight
 		//#[pallet::weight((T::WeightInfo::buyout(), Pays::No))]
@@ -94,6 +105,14 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Allows root to update the buyout limit.
+		///
+		/// Parameters
+		///
+		/// - `origin`: Origin must be root.
+		/// - `limit`: New buyout limit. If None, then buyouts are not limited.
+		///
+		///	Emits `BuyoutLimitUpdated` event when successful.
 		#[pallet::call_index(1)]
 		//TODO add weight
 		// #[pallet::weight(T::WeightInfo::update_buyout_limit())]
@@ -107,7 +126,7 @@ pub mod pallet {
 				Some(limit) => BuyoutLimit::<T>::put(limit),
 				None => BuyoutLimit::<T>::kill(),
 			}
-
+			Self::deposit_event(Event::<T>::BuyoutLimitUpdated { limit });
 			Ok(().into())
 		}
 	}
@@ -119,7 +138,6 @@ pub mod pallet {
 		/// Daily buyout limit exceeded
 		BuyoutLimitExceeded,
 		/// One of transacted currencies is missing price information
-		/// or the price is outdated
 		NoPrice,
 		/// The treasury balance is too low for an operation
 		InsufficientTreasuryBalance,
@@ -140,7 +158,7 @@ pub mod pallet {
 			exchange_amount: BalanceOf<T>,
 		},
 		//TODO should we delete this?
-		// Exchange event
+		/// Exchange event
 		Exchange {
 			from: AccountIdOf<T>,
 			from_asset: CurrencyIdOf<T>,
@@ -149,10 +167,14 @@ pub mod pallet {
 			to_asset: CurrencyIdOf<T>,
 			to_amount: BalanceOf<T>,
 		},
+		/// Buyout limit updated event
+		BuyoutLimitUpdated {
+			limit: Option<BalanceOf<T>>,
+		},
 	}
 
 	/// Stores limit amount user could by for a period.
-	/// When `None` - buyouts not limited
+	/// When `None` - buyouts are not limited
 	#[pallet::storage]
 	pub type BuyoutLimit<T: Config> = StorageValue<_, BalanceOf<T>, OptionQuery>;
 
@@ -163,6 +185,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
+	/// Ensures that buyout limit is not exceeded for the current buyout period
 	fn ensure_buyout_limit_not_exceeded(
 		account_id: &AccountIdOf<T>,
 		buyout_amount: BalanceOf<T>,
@@ -192,6 +215,8 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
+	/// Ensures that asset is allowed for buyout
+	/// The concrete implementation of CurrencyIdChecker trait must be provided by the runtime
 	fn ensure_allowed_asset_for_buyout(asset: &CurrencyIdOf<T>) -> DispatchResult {
 		ensure!(
 			T::CurrencyIdChecker::is_allowed_currency_id(asset),
@@ -201,6 +226,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
+	/// Updates buyouts storage for the account
 	fn update_buyouts(account_id: &AccountIdOf<T>, buyout_amount: BalanceOf<T>) {
 		if BuyoutLimit::<T>::get().is_some() {
 			Buyouts::<T>::mutate(account_id, |(prev_buyouts, last)| {
@@ -210,6 +236,7 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
+	/// Used for calculating amount of exchange asset user will get for buyout_amount of basic asset
 	fn calc_amount_to_exchange(
 		asset: CurrencyIdOf<T>,
 		buyout_amount: BalanceOf<T>,
@@ -235,6 +262,7 @@ impl<T: Config> Pallet<T> {
 		exchange_amount
 	}
 
+	/// Used for calculating buyout amount of basic asset user will get for exchange_amount of exchange asset
 	fn calc_buyout_amount(
 		asset: CurrencyIdOf<T>,
 		exchange_amount: BalanceOf<T>,
@@ -261,7 +289,8 @@ impl<T: Config> Pallet<T> {
 		buyout_amount
 	}
 
-	//TODO add comment here
+	/// Used for splitting calculations of amount based on the input given
+	/// If user's call contains buyout amount, then exchange amount is calculated and viceversa 
 	fn split_to_buyout_and_exchange(
 		asset: CurrencyIdOf<T>,
 		amount: Amount<BalanceOf<T>>,
@@ -284,8 +313,10 @@ impl<T: Config> Pallet<T> {
 		amount: Amount<BalanceOf<T>>,
 	) -> DispatchResult {
 		Self::ensure_allowed_asset_for_buyout(&asset)?;
+
 		let basic_asset = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
 		let (buyout_amount, exchange_amount) = Self::split_to_buyout_and_exchange(asset, amount)?;
+		
 		Self::ensure_buyout_limit_not_exceeded(&who, buyout_amount)?;
 		let treasury_account_id = T::TreasuryAccount::get();
 
@@ -312,13 +343,15 @@ impl<T: Config> Pallet<T> {
 		T::Currency::transfer(basic_asset, &treasury_account_id, &who, buyout_amount)
 			.map_err(|_| Error::<T>::ExchangeFailure)?;
 
-		//TODO emit Exchange event or Buyout event based on amount passed in this function?
+		//TODO emit Exchange event or Buyout event based on Amount variant passed in this function?
 		Self::update_buyouts(&who, buyout_amount);
 		Self::deposit_event(Event::<T>::Buyout { who, buyout_amount, asset, exchange_amount });
 
 		Ok(())
 	}
 
+	/// Used for calculating exchange amount based on buyout amount(a), price of basic asset with fee(b) and price of exchange asset(c)
+	/// or buyout amount based on exchange amount(a), price of exchange asset(b) and price of basic asset with fee(c) 
 	fn multiply_by_rational(
 		a: impl Into<u128>,
 		b: impl Into<u128>,
@@ -333,6 +366,8 @@ impl<T: Config> Pallet<T> {
 		)
 	}
 
+	/// Used for fetching asset prices
+	/// The concrete implementation of PriceGetter trait must be provided by the runtime e.g. oracle pallet
 	fn fetch_prices(
 		assets: (&CurrencyIdOf<T>, &CurrencyIdOf<T>),
 	) -> Result<(FixedU128, FixedU128), DispatchError> {
@@ -346,6 +381,8 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
+/// Used for checking if asset is allowed for buyout
+/// The concrete implementation of CurrencyIdChecker trait must be provided by the runtime
 pub trait CurrencyIdChecker<CurrencyId>
 where
 	CurrencyId: Clone + PartialEq + Eq + Debug,
@@ -353,6 +390,8 @@ where
 	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool;
 }
 
+/// Used for fetching prices of assets
+/// This trait must be implemented by the runtime e.g. oracle pallet
 pub trait PriceGetter<CurrencyId>
 where
 	CurrencyId: Clone + PartialEq + Eq + Debug,
@@ -449,9 +488,10 @@ where
 	}
 
 	/// Checks:
+	/// - asset is allowed for buyout
 	/// - buyout_amount is greater or equal `MinAmountToBuyout`
-	/// - `who` has enough to make buyout
-	/// - buyout limit not exceeded for `who`
+	/// - `who` has enough balance to make buyout
+	/// - buyout limit is not exceeded for `who`
 	fn validate(
 		&self,
 		who: &Self::AccountId,

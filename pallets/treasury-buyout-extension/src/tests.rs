@@ -402,6 +402,7 @@ mod signed_extension {
 	fn validate_when_no_price_found_fails() {
 		run_test(|| {
 			let user = USER;
+            // For currency id 2u64 there is no price defined in the mock in order to test this case
 			let buyout_call = RuntimeCall::TreasuryBuyoutExtension(crate::Call::buyout {
 				asset: 2u64,
 				amount: Amount::Buyout(100 * UNIT),

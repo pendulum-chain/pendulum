@@ -14,7 +14,6 @@ pub trait Config:
 }
 
 fn get_test_currency<T: Config>() -> CurrencyIdOf<T> {
-	// This only works for Amplitude and Foucoco
     <T as currency::Config>::GetRelayChainCurrencyId::get()
 }
 

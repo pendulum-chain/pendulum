@@ -9,7 +9,8 @@ use orml_traits::MultiCurrency;
 use sp_arithmetic::{traits::One, FixedU128};
 use sp_runtime::{
 	traits::BadOrigin,
-	transaction_validity::{InvalidTransaction, TransactionValidityError}, SaturatedConversion,
+	transaction_validity::{InvalidTransaction, TransactionValidityError},
+	SaturatedConversion,
 };
 
 fn get_free_balance(currency_id: CurrencyIdOf<Test>, account: &AccountId) -> Balance {
@@ -17,7 +18,7 @@ fn get_free_balance(currency_id: CurrencyIdOf<Test>, account: &AccountId) -> Bal
 }
 
 fn run_to_block(new_block: <Test as frame_system::Config>::BlockNumber) {
-    frame_system::Pallet::<Test>::set_block_number(new_block);
+	frame_system::Pallet::<Test>::set_block_number(new_block);
 }
 
 #[test]
@@ -255,7 +256,7 @@ fn attempt_buyout_after_buyout_limit_exceeded_fails() {
 
 		// With buyout limit
 		BuyoutLimit::<Test>::put(150 * UNIT);
-        // Previous buyout at current_block
+		// Previous buyout at current_block
 		Buyouts::<Test>::insert(user, (100 * UNIT, current_block));
 
 		assert_eq!(Buyouts::<Test>::get(user), (100 * UNIT, current_block));
@@ -288,9 +289,9 @@ fn buyout_after_buyout_limit_reset_succeeds() {
 
 		assert_eq!(Buyouts::<Test>::get(user), (150 * UNIT, current_block));
 
-        let buyout_period: u32 = BuyoutPeriod::get();
-        // Skip buyout_period + 1 blocks, when the initial buyout period has already passed
-        run_to_block((current_block + buyout_period + 1).into());
+		let buyout_period: u32 = BuyoutPeriod::get();
+		// Skip buyout_period + 1 blocks, when the initial buyout period has already passed
+		run_to_block((current_block + buyout_period + 1).into());
 
 		assert_ok!(crate::Pallet::<Test>::buyout(
 			RuntimeOrigin::signed(user),
@@ -298,7 +299,8 @@ fn buyout_after_buyout_limit_reset_succeeds() {
 			Amount::Buyout(buyout_amount),
 		));
 
-        let new_current_block = frame_system::Pallet::<Test>::block_number().saturated_into::<u32>();
+		let new_current_block =
+			frame_system::Pallet::<Test>::block_number().saturated_into::<u32>();
 		// Buyouts should be reset and the total buyout amount should be equal to the last buyout amount
 		assert_eq!(Buyouts::<Test>::get(user), (100 * UNIT, new_current_block));
 	});
@@ -411,7 +413,7 @@ mod signed_extension {
 	fn validate_when_no_price_found_fails() {
 		run_test(|| {
 			let user = USER;
-            // For currency id 2u64 there is no price defined in the mock in order to test this case
+			// For currency id 2u64 there is no price defined in the mock in order to test this case
 			let buyout_call = RuntimeCall::TreasuryBuyoutExtension(crate::Call::buyout {
 				asset: 2u64,
 				amount: Amount::Buyout(100 * UNIT),
@@ -462,11 +464,12 @@ mod signed_extension {
 				amount: Amount::Buyout(100 * UNIT),
 			});
 
-            let current_block = frame_system::Pallet::<Test>::block_number().saturated_into::<u32>();
-            
-            // With buyout limit
+			let current_block =
+				frame_system::Pallet::<Test>::block_number().saturated_into::<u32>();
+
+			// With buyout limit
 			BuyoutLimit::<Test>::put(100 * UNIT);
-            // Previous buyout at current_block
+			// Previous buyout at current_block
 			Buyouts::<Test>::insert(&user, (80 * UNIT, current_block));
 
 			let check = CheckBuyout::<Test>::new();

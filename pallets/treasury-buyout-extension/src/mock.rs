@@ -1,4 +1,7 @@
-use crate::{self as treasury_buyout_extension, Config, AllowedCurrencyIdVerifier, PriceGetter, default_weights::SubstrateWeight};
+use crate::{
+	self as treasury_buyout_extension, default_weights::SubstrateWeight, AllowedCurrencyIdVerifier,
+	Config, PriceGetter,
+};
 use frame_support::{
 	pallet_prelude::GenesisBuild,
 	parameter_types,
@@ -142,7 +145,6 @@ impl orml_currencies::Config for Test {
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type WeightInfo = ();
 }
-
 
 pub struct AllowedCurrencyIdVerifierImpl;
 impl AllowedCurrencyIdVerifier<CurrencyId> for AllowedCurrencyIdVerifierImpl {

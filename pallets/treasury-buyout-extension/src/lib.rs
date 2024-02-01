@@ -15,7 +15,10 @@ mod tests;
 
 mod types;
 
-use crate::{types::{AccountIdOf, Amount, BalanceOf, CurrencyIdOf}, default_weights::WeightInfo};
+use crate::{
+	default_weights::WeightInfo,
+	types::{AccountIdOf, Amount, BalanceOf, CurrencyIdOf},
+};
 use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
@@ -86,7 +89,6 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-
 		/// Allows caller to buyout a given amount of native token.
 		/// Caller can specify either buyout amount of native token that he wants or exchange amount of an allowed asset.
 		///
@@ -95,7 +97,7 @@ pub mod pallet {
 		/// - `origin`: Caller's origin.
 		/// - `asset`: Exchange asset used for buyout of basic asset.
 		/// - `amount`: Amount of basic asset to buyout or amount of asset to exchange.
-		/// 
+		///
 		/// Emits `Buyout` event when successful.
 		#[pallet::call_index(0)]
 		#[pallet::weight((<T as pallet::Config>::WeightInfo::buyout(), Pays::No))]
@@ -160,9 +162,7 @@ pub mod pallet {
 			exchange_amount: BalanceOf<T>,
 		},
 		/// Buyout limit updated event
-		BuyoutLimitUpdated {
-			limit: Option<BalanceOf<T>>,
-		},
+		BuyoutLimitUpdated { limit: Option<BalanceOf<T>> },
 	}
 
 	/// Stores limit amount user could by for a period.
@@ -284,7 +284,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Used for splitting calculations of amount based on the input given
-	/// If user's call contains buyout amount, then exchange amount is calculated and viceversa 
+	/// If user's call contains buyout amount, then exchange amount is calculated and viceversa
 	fn split_to_buyout_and_exchange(
 		asset: CurrencyIdOf<T>,
 		amount: Amount<BalanceOf<T>>,
@@ -310,7 +310,7 @@ impl<T: Config> Pallet<T> {
 
 		let basic_asset = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
 		let (buyout_amount, exchange_amount) = Self::split_to_buyout_and_exchange(asset, amount)?;
-		
+
 		Self::ensure_buyout_limit_not_exceeded(&who, buyout_amount)?;
 		let treasury_account_id = T::TreasuryAccount::get();
 
@@ -344,7 +344,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Used for calculating exchange amount based on buyout amount(a), price of basic asset with fee(b) and price of exchange asset(c)
-	/// or buyout amount based on exchange amount(a), price of exchange asset(b) and price of basic asset with fee(c) 
+	/// or buyout amount based on exchange amount(a), price of exchange asset(b) and price of basic asset with fee(c)
 	fn multiply_by_rational(
 		a: impl Into<u128>,
 		b: impl Into<u128>,

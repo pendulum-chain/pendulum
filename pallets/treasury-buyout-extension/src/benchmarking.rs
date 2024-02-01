@@ -53,5 +53,8 @@ benchmarks! {
 	}: update_buyout_limit(RawOrigin::Root, Some(100_000_000_000_000u128.try_into().unwrap_or_default()))
 }
 
-impl_benchmark_test_suite!(TreasuryBuyoutExtension, crate::mock::ExtBuilder::build(), crate::mock::Test);
-
+impl_benchmark_test_suite!(
+	TreasuryBuyoutExtension,
+	crate::mock::ExtBuilder::build(),
+	crate::mock::Test
+);

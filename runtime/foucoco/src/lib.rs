@@ -28,11 +28,11 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H256};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto, One, Zero, 
+		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
+		One, Zero,
 	},
-	FixedU128,
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, FixedPointNumber, SaturatedConversion,
+	ApplyExtrinsicResult, DispatchError, FixedPointNumber, FixedU128, SaturatedConversion,
 };
 use sp_std::fmt::Debug;
 
@@ -995,9 +995,14 @@ impl orml_tokens_management_extension::Config for Runtime {
 }
 
 pub struct AllowedCurrencyIdVerifierImpl;
-impl treasury_buyout_extension::AllowedCurrencyIdVerifier<CurrencyId> for AllowedCurrencyIdVerifierImpl {
+impl treasury_buyout_extension::AllowedCurrencyIdVerifier<CurrencyId>
+	for AllowedCurrencyIdVerifierImpl
+{
 	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool {
-		matches!(currency_id, CurrencyId::XCM(0) | CurrencyId::XCM(1) | CurrencyId::XCM(2) | CurrencyId::XCM(6))
+		matches!(
+			currency_id,
+			CurrencyId::XCM(0) | CurrencyId::XCM(1) | CurrencyId::XCM(2) | CurrencyId::XCM(6)
+		)
 	}
 }
 pub struct OracleWrapper(Oracle);
@@ -1006,7 +1011,7 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OracleWrapper {
 	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
 	where
 		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
-	{	
+	{
 		let key = OracleKey::ExchangeRate(currency_id);
 		let asset_price = Oracle::get_price(key.clone())?;
 
@@ -1021,15 +1026,15 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OracleWrapper {
 	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
 	where
 		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
-	{	
+	{
 		Security::set_status(StatusCode::Running);
 		let key = OracleKey::ExchangeRate(currency_id);
 		let rate = FixedU128::checked_from_rational(100, 1).unwrap();
 		let account = AccountId::from([0u8; 32]);
 		Oracle::feed_values(account, vec![(key.clone(), rate)]);
-	
+
 		let asset_price = Oracle::get_price(key.clone()).unwrap();
-		
+
 		let converted_asset_price = FixedNumber::try_from(asset_price);
 
 		match converted_asset_price {
@@ -1037,7 +1042,6 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OracleWrapper {
 			Err(_) => Err(DispatchError::Other("Failed to convert price")),
 		}
 	}
-
 }
 
 parameter_types! {

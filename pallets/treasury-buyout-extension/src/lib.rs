@@ -1,4 +1,5 @@
 #![deny(warnings)]
+#![cfg_attr(test, feature(proc_macro_hygiene))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -14,13 +15,13 @@ mod tests;
 
 mod types;
 
-use crate::types::{AccountIdOf, Amount, BalanceOf, CurrencyIdOf, BUYOUT_LIMIT_PERIOD_IN_SEC};
+use crate::{types::{AccountIdOf, Amount, BalanceOf, CurrencyIdOf}, default_weights::WeightInfo};
 use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	ensure,
 	sp_runtime::SaturatedConversion,
-	traits::{Get, IsSubType, UnixTime},
+	traits::{Get, IsSubType},
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -39,8 +40,8 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{pallet_prelude::*, sp_runtime::Permill, traits::UnixTime};
-	use frame_system::{ensure_root, ensure_signed, pallet_prelude::*, WeightInfo};
+	use frame_support::{pallet_prelude::*, sp_runtime::Permill};
+	use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + orml_currencies::Config {
@@ -54,15 +55,16 @@ pub mod pallet {
 		#[pallet::constant]
 		type TreasuryAccount: Get<AccountIdOf<Self>>;
 
-		/// Timestamp provider
-		type UnixTime: UnixTime;
+		/// Buyout period in blocks
+		#[pallet::constant]
+		type BuyoutPeriod: Get<u32>;
 
 		/// Fee from the native asset buyouts
 		#[pallet::constant]
 		type SellFee: Get<Permill>;
 
 		/// Type that allows for checking if currency type is ownable by users
-		type CurrencyIdChecker: CurrencyIdChecker<CurrencyIdOf<Self>>;
+		type AllowedCurrencyIdVerifier: AllowedCurrencyIdVerifier<CurrencyIdOf<Self>>;
 
 		/// Used for fetching prices of currencies from oracle
 		type PriceGetter: PriceGetter<CurrencyIdOf<Self>>;
@@ -73,6 +75,10 @@ pub mod pallet {
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
+
+		/// Currency id of the relay chain
+		#[cfg(feature = "runtime-benchmarks")]
+		type RelayChainCurrencyId: Get<CurrencyIdOf<Self>>;
 	}
 
 	#[pallet::pallet]
@@ -92,9 +98,7 @@ pub mod pallet {
 		/// 
 		/// Emits `Buyout` event when successful.
 		#[pallet::call_index(0)]
-		//TODO add weight
-		//#[pallet::weight((T::WeightInfo::buyout(), Pays::No))]
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		#[pallet::weight((<T as pallet::Config>::WeightInfo::buyout(), Pays::No))]
 		pub fn buyout(
 			origin: OriginFor<T>,
 			asset: CurrencyIdOf<T>,
@@ -114,9 +118,7 @@ pub mod pallet {
 		///
 		///	Emits `BuyoutLimitUpdated` event when successful.
 		#[pallet::call_index(1)]
-		//TODO add weight
-		// #[pallet::weight(T::WeightInfo::update_buyout_limit())]
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::update_buyout_limit())]
 		pub fn update_buyout_limit(
 			origin: OriginFor<T>,
 			limit: Option<BalanceOf<T>>,
@@ -135,7 +137,7 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Attempt to exchange native token to native token
 		WrongAssetToBuyout,
-		/// Daily buyout limit exceeded
+		/// Buyout limit exceeded for the current period
 		BuyoutLimitExceeded,
 		/// One of transacted currencies is missing price information
 		NoPrice,
@@ -157,16 +159,6 @@ pub mod pallet {
 			asset: CurrencyIdOf<T>,
 			exchange_amount: BalanceOf<T>,
 		},
-		//TODO should we delete this?
-		/// Exchange event
-		Exchange {
-			from: AccountIdOf<T>,
-			from_asset: CurrencyIdOf<T>,
-			from_amount: BalanceOf<T>,
-			to: AccountIdOf<T>,
-			to_asset: CurrencyIdOf<T>,
-			to_amount: BalanceOf<T>,
-		},
 		/// Buyout limit updated event
 		BuyoutLimitUpdated {
 			limit: Option<BalanceOf<T>>,
@@ -181,7 +173,7 @@ pub mod pallet {
 	/// Stores amount of buyouts (amount, timestamp of last buyout)
 	#[pallet::storage]
 	pub type Buyouts<T: Config> =
-		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (BalanceOf<T>, u64), ValueQuery>;
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (BalanceOf<T>, u32), ValueQuery>;
 }
 
 impl<T: Config> Pallet<T> {
@@ -191,10 +183,12 @@ impl<T: Config> Pallet<T> {
 		buyout_amount: BalanceOf<T>,
 	) -> DispatchResult {
 		if let Some(buyout_limit) = BuyoutLimit::<T>::get() {
-			let now = T::UnixTime::now().as_secs();
+			let buyout_period = T::BuyoutPeriod::get();
+			// Get current block number
+			let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u32>();
 			let current_period = now
-				.checked_div(BUYOUT_LIMIT_PERIOD_IN_SEC)
-				.and_then(|n| Some(n.saturating_mul(BUYOUT_LIMIT_PERIOD_IN_SEC)))
+				.checked_div(buyout_period)
+				.and_then(|n| Some(n.saturating_mul(buyout_period)))
 				.unwrap_or_default();
 			let (mut buyouts, last_buyout) = Buyouts::<T>::get(account_id);
 
@@ -216,10 +210,10 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Ensures that asset is allowed for buyout
-	/// The concrete implementation of CurrencyIdChecker trait must be provided by the runtime
+	/// The concrete implementation of AllowedCurrencyIdVerifier trait must be provided by the runtime
 	fn ensure_allowed_asset_for_buyout(asset: &CurrencyIdOf<T>) -> DispatchResult {
 		ensure!(
-			T::CurrencyIdChecker::is_allowed_currency_id(asset),
+			T::AllowedCurrencyIdVerifier::is_allowed_currency_id(asset),
 			Error::<T>::WrongAssetToBuyout
 		);
 
@@ -231,7 +225,7 @@ impl<T: Config> Pallet<T> {
 		if BuyoutLimit::<T>::get().is_some() {
 			Buyouts::<T>::mutate(account_id, |(prev_buyouts, last)| {
 				*prev_buyouts = *prev_buyouts + buyout_amount;
-				*last = T::UnixTime::now().as_secs();
+				*last = <frame_system::Pallet<T>>::block_number().saturated_into::<u32>();
 			});
 		}
 	}
@@ -343,7 +337,6 @@ impl<T: Config> Pallet<T> {
 		T::Currency::transfer(basic_asset, &treasury_account_id, &who, buyout_amount)
 			.map_err(|_| Error::<T>::ExchangeFailure)?;
 
-		//TODO emit Exchange event or Buyout event based on Amount variant passed in this function?
 		Self::update_buyouts(&who, buyout_amount);
 		Self::deposit_event(Event::<T>::Buyout { who, buyout_amount, asset, exchange_amount });
 
@@ -382,8 +375,8 @@ impl<T: Config> Pallet<T> {
 }
 
 /// Used for checking if asset is allowed for buyout
-/// The concrete implementation of CurrencyIdChecker trait must be provided by the runtime
-pub trait CurrencyIdChecker<CurrencyId>
+/// The concrete implementation of this trait must be provided by the runtime
+pub trait AllowedCurrencyIdVerifier<CurrencyId>
 where
 	CurrencyId: Clone + PartialEq + Eq + Debug,
 {

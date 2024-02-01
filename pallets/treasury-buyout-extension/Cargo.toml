@@ -25,9 +25,6 @@ orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-modul
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.40", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.40", default-features = false }
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "d05b0015d15ca39cc780889bcc095335e9862a36"}
-currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "20a3dd191dc352f989f90a1a48eacb8ff6d9ac85" }
-
 [dev-dependencies]
 mocktopus = "0.8.0"
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
@@ -35,9 +32,7 @@ sp-io = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.
 
 pallet-balances = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40"}
 
-# Spacewalk libraries
 spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "d05b0015d15ca39cc780889bcc095335e9862a36"}
-
 
 [features]
 default = ["std"]
@@ -55,13 +50,13 @@ std = [
   "orml-tokens/std",
   "orml-traits/std",
   "frame-benchmarking/std",
-  "pallet-treasury/std",
-  "spacewalk-primitives/std",
-  "currency/std"
+  "pallet-balances/std",
+  "spacewalk-primitives/std"
 ]
 
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks"
 ]

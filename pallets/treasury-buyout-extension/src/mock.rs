@@ -1,8 +1,8 @@
-use crate::{self as treasury_buyout_extension, Config, CurrencyIdChecker, PriceGetter};
+use crate::{self as treasury_buyout_extension, Config, AllowedCurrencyIdVerifier, PriceGetter, default_weights::SubstrateWeight};
 use frame_support::{
 	pallet_prelude::GenesisBuild,
 	parameter_types,
-	traits::{ConstU32, Everything, UnixTime},
+	traits::{ConstU32, Everything},
 };
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
@@ -78,6 +78,7 @@ pub type TestEvent = RuntimeEvent;
 parameter_types! {
 	pub const MaxLocks: u32 = 50;
 	pub const GetNativeCurrencyId: CurrencyId = u64::MAX;
+	pub const RelayChainCurrencyId: CurrencyId = 0u64;
 }
 
 parameter_type_with_key! {
@@ -120,13 +121,12 @@ parameter_types! {
 	pub const TreasuryAccount: AccountId = u64::MAX;
 	pub const SellFee: Permill = Permill::from_percent(1);
 	pub const MinAmountToBuyout: Balance = 100 * UNIT;
+	pub const BuyoutPeriod: u32 = 7200;
 }
 
 impl pallet_balances::Config for Test {
 	type MaxLocks = MaxLocks;
-	/// The type for recording an account's balance.
 	type Balance = Balance;
-	/// The ubiquitous event type.
 	type RuntimeEvent = RuntimeEvent;
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
@@ -143,34 +143,21 @@ impl orml_currencies::Config for Test {
 	type WeightInfo = ();
 }
 
-pub struct TimeMock;
 
-impl UnixTime for TimeMock {
-	fn now() -> core::time::Duration {
-		//core::time::Duration::from_millis(CURRENT_TIME.with(|v| *v.borrow()))
-		core::time::Duration::from_millis(1706624641)
-	}
-}
-
-pub struct CurrencyIdCheckerImpl;
-
-impl CurrencyIdChecker<CurrencyId> for CurrencyIdCheckerImpl {
-	// We allow only some XCM assets
-	// Specifically, we allow USDC, USDT, DOT, GLMR
+pub struct AllowedCurrencyIdVerifierImpl;
+impl AllowedCurrencyIdVerifier<CurrencyId> for AllowedCurrencyIdVerifierImpl {
+	// We allow only some assets
 	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool {
 		matches!(currency_id, 0u64 | 1u64 | 2u64 | 3u64)
 	}
 }
 
 pub struct OracleMock;
-
-// Maybe put it in text ext?
 impl PriceGetter<CurrencyId> for OracleMock {
 	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
 	where
 		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
 	{
-		//TODO: Get price from oracle?
 		// This simulates price fetching error for testing pre_dispatch validation but only for one specific supported asset
 		if currency_id == 2u64 {
 			return Err(DispatchError::Other("No price"))
@@ -190,18 +177,21 @@ impl Config for Test {
 	type Currency = Currencies;
 	/// Used for getting the treasury account
 	type TreasuryAccount = TreasuryAccount;
-	/// Timestamp provider
-	type UnixTime = TimeMock;
+	/// Buyout period in blocks
+	type BuyoutPeriod = BuyoutPeriod;
 	/// Fee from the native asset buyouts
 	type SellFee = SellFee;
 	/// Type that allows for checking if currency type is ownable by users
-	type CurrencyIdChecker = CurrencyIdCheckerImpl;
+	type AllowedCurrencyIdVerifier = AllowedCurrencyIdVerifierImpl;
 	/// Used for fetching prices of currencies from oracle
 	type PriceGetter = OracleMock;
 	/// Min amount of native token to buyout
 	type MinAmountToBuyout = MinAmountToBuyout;
+	/// Currency id of relay chain
+	#[cfg(feature = "runtime-benchmarks")]
+	type RelayChainCurrencyId = RelayChainCurrencyId;
 	/// Weight information for extrinsics in this pallet.
-	type WeightInfo = ();
+	type WeightInfo = SubstrateWeight<Test>;
 }
 
 // ------- Constants and Genesis Config ------ //
@@ -218,7 +208,7 @@ impl ExtBuilder {
 	pub fn build() -> sp_io::TestExternalities {
 		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-		let dot_currency_id = 0u64;
+		let dot_currency_id = RelayChainCurrencyId::get();
 
 		orml_tokens::GenesisConfig::<Test> {
 			balances: vec![(USER, dot_currency_id, USERS_INITIAL_BALANCE)],

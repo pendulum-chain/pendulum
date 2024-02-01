@@ -24,5 +24,3 @@ pub enum Amount<Balance> {
 	/// Amount of exchange asset user give for buyout
 	Exchange(Balance),
 }
-
-pub(crate) const BUYOUT_LIMIT_PERIOD_IN_SEC: u64 = 86400; // 1 day

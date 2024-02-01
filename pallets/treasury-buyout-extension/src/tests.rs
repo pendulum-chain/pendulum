@@ -4,16 +4,20 @@ use crate::{
 	types::{Amount, CurrencyIdOf},
 	BuyoutLimit, Buyouts, Config, Error, PriceGetter, ValidityError,
 };
-use frame_support::{assert_err, assert_noop, assert_ok, traits::UnixTime};
+use frame_support::{assert_err, assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::{traits::One, FixedU128};
 use sp_runtime::{
 	traits::BadOrigin,
-	transaction_validity::{InvalidTransaction, TransactionValidityError},
+	transaction_validity::{InvalidTransaction, TransactionValidityError}, SaturatedConversion,
 };
 
 fn get_free_balance(currency_id: CurrencyIdOf<Test>, account: &AccountId) -> Balance {
 	<orml_currencies::Pallet<Test> as MultiCurrency<AccountId>>::free_balance(currency_id, account)
+}
+
+fn run_to_block(new_block: <Test as frame_system::Config>::BlockNumber) {
+    frame_system::Pallet::<Test>::set_block_number(new_block);
 }
 
 #[test]
@@ -225,7 +229,7 @@ fn attempt_buyout_with_wrong_currency_fails() {
 fn buyout_with_previous_existing_buyouts_succeeds() {
 	run_test(|| {
 		let user = USER;
-		let dot_currency_id = 0u64;
+		let dot_currency_id = RelayChainCurrencyId::get();
 		let exchange_amount = 100 * UNIT;
 
 		// With buyout limit and buyouts of previous periods
@@ -244,18 +248,19 @@ fn buyout_with_previous_existing_buyouts_succeeds() {
 fn attempt_buyout_after_buyout_limit_exceeded_fails() {
 	run_test(|| {
 		let user = USER;
-		let dot_currency_id = 0u64;
+		let dot_currency_id = RelayChainCurrencyId::get();
 		let exchange_amount = 100 * UNIT;
 
-		let now = <TimeMock as UnixTime>::now().as_secs();
+		let current_block = frame_system::Pallet::<Test>::block_number().saturated_into::<u32>();
 
-		// With buyout limit and buyouts of previous periods
+		// With buyout limit
 		BuyoutLimit::<Test>::put(150 * UNIT);
-		Buyouts::<Test>::insert(user, (100 * UNIT, now));
+        // Previous buyout at current_block
+		Buyouts::<Test>::insert(user, (100 * UNIT, current_block));
 
-		assert_eq!(Buyouts::<Test>::get(user), (100 * UNIT, now));
+		assert_eq!(Buyouts::<Test>::get(user), (100 * UNIT, current_block));
 
-		// This buyout attempt should fail because the limit is exceeded
+		// This buyout attempt should fail because the limit is exceeded for the current period
 		assert_noop!(
 			crate::Pallet::<Test>::buyout(
 				RuntimeOrigin::signed(user),
@@ -271,27 +276,31 @@ fn attempt_buyout_after_buyout_limit_exceeded_fails() {
 fn buyout_after_buyout_limit_reset_succeeds() {
 	run_test(|| {
 		let user = USER;
-		let dot_currency_id = 0u64;
+		let dot_currency_id = RelayChainCurrencyId::get();
 		let buyout_amount = 100 * UNIT;
 
-		let now = <TimeMock as UnixTime>::now().as_secs();
+		let current_block = frame_system::Pallet::<Test>::block_number().saturated_into::<u32>();
 
-		// With buyout limit and buyouts of previous periods
+		// With buyout limit
 		BuyoutLimit::<Test>::put(200 * UNIT);
-		// Previous buyout at some time in the past, more than 24 hours ago
-		Buyouts::<Test>::insert(user, (150 * UNIT, 0));
+		// Previous buyout at current_block
+		Buyouts::<Test>::insert(user, (150 * UNIT, current_block));
 
-		assert_eq!(Buyouts::<Test>::get(user), (150 * UNIT, 0));
+		assert_eq!(Buyouts::<Test>::get(user), (150 * UNIT, current_block));
 
-		// This buyout attempt should fail because the limit is exceeded
+        let buyout_period: u32 = BuyoutPeriod::get();
+        // Skip buyout_period + 1 blocks, when the initial buyout period has already passed
+        run_to_block((current_block + buyout_period + 1).into());
+
 		assert_ok!(crate::Pallet::<Test>::buyout(
 			RuntimeOrigin::signed(user),
 			dot_currency_id,
 			Amount::Buyout(buyout_amount),
 		));
 
+        let new_current_block = frame_system::Pallet::<Test>::block_number().saturated_into::<u32>();
 		// Buyouts should be reset and the total buyout amount should be equal to the last buyout amount
-		assert_eq!(Buyouts::<Test>::get(user), (100 * UNIT, now));
+		assert_eq!(Buyouts::<Test>::get(user), (100 * UNIT, new_current_block));
 	});
 }
 
@@ -299,7 +308,7 @@ fn buyout_after_buyout_limit_reset_succeeds() {
 fn attempt_buyout_with_insufficient_user_balance_fails() {
 	run_test(|| {
 		let user = USER;
-		let dot_currency_id = 0u64;
+		let dot_currency_id = RelayChainCurrencyId::get();
 		let buyout_amount = 10000 * UNIT;
 
 		// This buyout attempt should fail because the user balance is insufficient
@@ -319,7 +328,7 @@ fn attempt_buyout_with_insufficient_treasury_balance_fails() {
 	run_test(|| {
 		let user = USER;
 		let native_currency_id = GetNativeCurrencyId::get();
-		let dot_currency_id = 0u64;
+		let dot_currency_id = RelayChainCurrencyId::get();
 		let buyout_amount = 100 * UNIT;
 
 		// Transfer all treasury balance to user just for testing purposes
@@ -378,7 +387,7 @@ mod signed_extension {
 			let native_currency_id = GetNativeCurrencyId::get();
 			let brz_currency_id = 4u64;
 
-			// call with unsupported asset
+			// Call with unsupported asset
 			for asset in [native_currency_id, brz_currency_id] {
 				let buyout_call = RuntimeCall::TreasuryBuyoutExtension(crate::Call::buyout {
 					asset,
@@ -424,7 +433,7 @@ mod signed_extension {
 	fn validate_when_not_enough_to_buyout_fails() {
 		run_test(|| {
 			let user = USER;
-			let dot_currency_id = 0u64;
+			let dot_currency_id = RelayChainCurrencyId::get();
 			let buyout_call = RuntimeCall::TreasuryBuyoutExtension(crate::Call::buyout {
 				asset: dot_currency_id,
 				amount: Amount::Buyout(1000 * UNIT),
@@ -446,16 +455,19 @@ mod signed_extension {
 	fn validate_when_buyout_limit_exceeded_fails() {
 		run_test(|| {
 			let user = USER;
-			let dot_currency_id = 0u64;
+			let dot_currency_id = RelayChainCurrencyId::get();
 
 			let buyout_call = RuntimeCall::TreasuryBuyoutExtension(crate::Call::buyout {
 				asset: dot_currency_id,
 				amount: Amount::Buyout(100 * UNIT),
 			});
 
-			let now = TimeMock::now().as_secs();
+            let current_block = frame_system::Pallet::<Test>::block_number().saturated_into::<u32>();
+            
+            // With buyout limit
 			BuyoutLimit::<Test>::put(100 * UNIT);
-			Buyouts::<Test>::insert(&user, (80 * UNIT, now));
+            // Previous buyout at current_block
+			Buyouts::<Test>::insert(&user, (80 * UNIT, current_block));
 
 			let check = CheckBuyout::<Test>::new();
 			let info = info_from_weight(Weight::zero());
@@ -473,7 +485,7 @@ mod signed_extension {
 	fn validate_when_less_than_min_amount_to_buyout_fails() {
 		run_test(|| {
 			let user = USER;
-			let dot_currency_id = 0u64;
+			let dot_currency_id = RelayChainCurrencyId::get();
 
 			let buyout_call = RuntimeCall::TreasuryBuyoutExtension(crate::Call::buyout {
 				asset: dot_currency_id,
@@ -496,7 +508,7 @@ mod signed_extension {
 	fn validate_succeeds() {
 		run_test(|| {
 			let user = USER;
-			let dot_currency_id = 0u64;
+			let dot_currency_id = RelayChainCurrencyId::get();
 
 			let buyout_call = RuntimeCall::TreasuryBuyoutExtension(crate::Call::buyout {
 				asset: dot_currency_id,

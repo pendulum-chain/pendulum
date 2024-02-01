@@ -33,7 +33,7 @@ sp-io = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.
 pallet-balances = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40"}
 
 # Spacewalk libraries
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "d05b0015d15ca39cc780889bcc095335e9862a36"}
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8"}
 
 
 [features]
@@ -58,4 +58,11 @@ runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+]
+
+try-runtime = [
+    "frame-system/try-runtime",
+    "frame-support/try-runtime",
+    "orml-currencies/try-runtime",
+    "orml-tokens/try-runtime",
 ]

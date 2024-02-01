@@ -21,6 +21,7 @@ use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
 pub use parachain_staking::InflationInfo;
 
 use codec::Encode;
+use scale_info::TypeInfo;
 
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -778,7 +779,7 @@ impl pallet_child_bounties::Config for Runtime {
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		// Since the xcm trader uses Tokens to get the minimum
-		// balance of both it's assets and native, we need to 
+		// balance of both it's assets and native, we need to
 		// handle native here
 		match currency_id{
 			CurrencyId::Native => EXISTENTIAL_DEPOSIT,
@@ -830,6 +831,8 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native;
+	#[derive(Clone, Eq, PartialEq, Debug, TypeInfo)]
+	pub const StringLimit: u32 = 50;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -841,7 +844,7 @@ impl orml_currencies::Config for Runtime {
 
 impl orml_asset_registry::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type CustomMetadata = asset_registry::CustomMetadata;
+	type CustomMetadata = asset_registry::CustomMetadata<StringLimit>;
 	type AssetId = CurrencyId;
 	type AuthorityOrigin = asset_registry::AssetAuthority;
 	type AssetProcessor = asset_registry::CustomAssetProcessor;
@@ -1638,14 +1641,21 @@ impl_runtime_apis! {
 
 	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {
-		fn on_runtime_upgrade() -> (Weight, Weight) {
+		fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
 			log::info!("try-runtime::on_runtime_upgrade amplitude.");
-			let weight = Executive::try_runtime_upgrade().unwrap();
+			let weight = Executive::try_runtime_upgrade(checks).unwrap();
 			(weight, RuntimeBlockWeights::get().max_block)
 		}
 
-		fn execute_block_no_check(block: Block) -> Weight {
-			Executive::execute_block_no_check(block)
+		fn execute_block(
+			block: Block,
+			state_root_check: bool,
+			signature_check: bool,
+			select: frame_try_runtime::TryStateSelect
+		) -> Weight {
+			// NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+			// have a backtrace here.
+			Executive::try_execute_block(block, state_root_check, signature_check, select).expect("execute-block failed")
 		}
 	}
 

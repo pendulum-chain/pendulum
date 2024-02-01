@@ -52,6 +52,11 @@ where
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
 	module.merge(Staking::new(client.clone()).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
+	module.merge(Issue::new(client.clone()).into_rpc())?;
+	module.merge(Redeem::new(client.clone()).into_rpc())?;
+	module.merge(Replace::new(client.clone()).into_rpc())?;
+	module.merge(VaultRegistry::new(client.clone()).into_rpc())?;
+	module.merge(Oracle::new(client.clone()).into_rpc())?;
 	module.merge(FarmingRpc::new(client.clone()).into_rpc())?;
 	module.merge(ZenlinkProtocol::new(client).into_rpc())?;
 	Ok(module)

@@ -1032,6 +1032,7 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OracleWrapper {
 
 		let key = OracleKey::ExchangeRate(currency_id);
 		let rate = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
+		// Needed for feeding values to the oracle but is never used in the oracle
 		let account = AccountId::from([0u8; 32]);
 		Oracle::feed_values(account, vec![(key.clone(), rate)]);
 

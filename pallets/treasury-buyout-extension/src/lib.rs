@@ -79,7 +79,7 @@ pub mod pallet {
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 
-		/// Currency id of the relay chain
+		/// Currency id of the relay chain, only used in benchmarks
 		#[cfg(feature = "runtime-benchmarks")]
 		type RelayChainCurrencyId: Get<CurrencyIdOf<Self>>;
 	}

@@ -280,7 +280,7 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "staking",
  "stellar-relay",
  "substrate-wasm-builder",
@@ -2080,7 +2080,7 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
 ]
 
 [[package]]
@@ -2873,7 +2873,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "staking",
 ]
 
@@ -3100,7 +3100,7 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "staking",
  "stellar-relay",
  "substrate-wasm-builder",
@@ -4188,7 +4188,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "stellar-relay",
  "vault-registry",
 ]
@@ -5472,7 +5472,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
 ]
 
 [[package]]
@@ -5485,7 +5485,7 @@ dependencies = [
  "serde",
  "sp-api",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
 ]
 
 [[package]]
@@ -5878,7 +5878,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "staking",
  "vault-registry",
 ]
@@ -6045,7 +6045,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "spin 0.9.8",
  "staking",
 ]
@@ -6203,7 +6203,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
 ]
 
 [[package]]
@@ -7749,7 +7749,7 @@ dependencies = [
  "sp-session",
  "sp-timestamp",
  "sp-transaction-pool",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "substrate-build-script-utils",
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
@@ -7855,7 +7855,7 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "staking",
  "stellar-relay",
  "substrate-wasm-builder",
@@ -9205,7 +9205,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
 ]
 
 [[package]]
@@ -9659,7 +9659,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "stellar-relay",
  "vault-registry",
 ]
@@ -9823,7 +9823,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "stellar-relay",
  "vault-registry",
 ]
@@ -9854,7 +9854,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
 ]
 
 [[package]]
@@ -9882,7 +9882,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "staking",
 ]
 
@@ -10101,7 +10101,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "xcm",
  "xcm-executor",
  "zenlink-protocol",
@@ -10146,7 +10146,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-tracing",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "statemine-runtime",
  "statemint-runtime",
  "xcm",
@@ -12671,6 +12671,24 @@ dependencies = [
 
 [[package]]
 name = "spacewalk-primitives"
+version = "1.0.0"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=d05b0015d15ca39cc780889bcc095335e9862a36#d05b0015d15ca39cc780889bcc095335e9862a36"
+dependencies = [
+ "base58",
+ "bstringify",
+ "frame-support",
+ "hex",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "substrate-stellar-sdk",
+]
+
+[[package]]
+name = "spacewalk-primitives"
 version = "1.0.3"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=22c52abbecda0c1cdaa4187678fe7bcc2d6868c8#22c52abbecda0c1cdaa4187678fe7bcc2d6868c8"
 dependencies = [
@@ -12751,7 +12769,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
 ]
 
 [[package]]
@@ -12955,7 +12973,7 @@ dependencies = [
  "sha2 0.10.7",
  "sp-core",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
 ]
 
 [[package]]
@@ -13665,7 +13683,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives 1.0.0 (git+https://github.com/pendulum-chain/spacewalk?rev=d05b0015d15ca39cc780889bcc095335e9862a36)",
+ "spacewalk-primitives 1.0.0",
 ]
 
 [[package]]
@@ -13973,7 +13991,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "spacewalk-primitives",
+ "spacewalk-primitives 1.0.3",
  "staking",
 ]
 

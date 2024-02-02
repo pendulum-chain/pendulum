@@ -25,8 +25,9 @@ fn run_to_block(new_block: <Test as frame_system::Config>::BlockNumber) {
 fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 	run_test(|| {
 		let user = USER;
-		let initial_user_dot_balance = get_free_balance(0u64, &user);
-		let initial_treasury_dot_balance = get_free_balance(0u64, &TreasuryAccount::get());
+        let dot_currency_id = RelayChainCurrencyId::get();
+		let initial_user_dot_balance = get_free_balance(dot_currency_id, &user);
+		let initial_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
 
 		let initial_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
 		let initial_treasury_native_balance =
@@ -38,7 +39,7 @@ fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 		let exchange_amount = 100 * UNIT;
 		assert_ok!(crate::Pallet::<Test>::buyout(
 			RuntimeOrigin::signed(user),
-			0u64,
+			dot_currency_id,
 			Amount::Exchange(exchange_amount),
 		));
 
@@ -48,7 +49,7 @@ fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 		>(GetNativeCurrencyId::get())
 		.expect("This is mocked so it should not fail");
 		let exchange_asset_price =
-			<OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<FixedU128>(0u64)
+			<OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<FixedU128>(dot_currency_id)
 				.expect("This is mocked so it should not fail");
 
 		// Add fee to basic asset price
@@ -63,10 +64,10 @@ fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 		)
 		.expect("This is mocked so it should not fail");
 
-		let final_user_dot_balance = get_free_balance(0u64, &user);
+		let final_user_dot_balance = get_free_balance(dot_currency_id, &user);
 		let final_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
 
-		let final_treasury_dot_balance = get_free_balance(0u64, &TreasuryAccount::get());
+		let final_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
 		let final_treasury_native_balance =
 			get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
 
@@ -89,8 +90,9 @@ fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 fn buyout_using_dot_given_buyout_amount_in_native_succeeds() {
 	run_test(|| {
 		let user = USER;
-		let initial_user_dot_balance = get_free_balance(0u64, &user);
-		let initial_treasury_dot_balance = get_free_balance(0u64, &TreasuryAccount::get());
+        let dot_currency_id = RelayChainCurrencyId::get();
+		let initial_user_dot_balance = get_free_balance(dot_currency_id, &user);
+		let initial_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
 
 		let initial_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
 		let initial_treasury_native_balance =
@@ -102,7 +104,7 @@ fn buyout_using_dot_given_buyout_amount_in_native_succeeds() {
 		let buyout_amount = 100 * UNIT;
 		assert_ok!(crate::Pallet::<Test>::buyout(
 			RuntimeOrigin::signed(user),
-			0u64,
+			dot_currency_id,
 			Amount::Buyout(buyout_amount),
 		));
 
@@ -112,7 +114,7 @@ fn buyout_using_dot_given_buyout_amount_in_native_succeeds() {
 		>(GetNativeCurrencyId::get())
 		.expect("This is mocked so it should not fail");
 		let exchange_asset_price =
-			<OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<FixedU128>(0u64)
+			<OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<FixedU128>(dot_currency_id)
 				.expect("This is mocked so it should not fail");
 
 		// Add fee to basic asset price
@@ -127,10 +129,10 @@ fn buyout_using_dot_given_buyout_amount_in_native_succeeds() {
 		)
 		.expect("This is mocked so it should not fail");
 
-		let final_user_dot_balance = get_free_balance(0u64, &user);
+		let final_user_dot_balance = get_free_balance(dot_currency_id, &user);
 		let final_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
 
-		let final_treasury_dot_balance = get_free_balance(0u64, &TreasuryAccount::get());
+		let final_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
 		let final_treasury_native_balance =
 			get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
 

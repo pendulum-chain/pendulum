@@ -124,6 +124,7 @@ parameter_types! {
 	pub const TreasuryAccount: AccountId = u64::MAX;
 	pub const SellFee: Permill = Permill::from_percent(1);
 	pub const MinAmountToBuyout: Balance = 100 * UNIT;
+	// 24 hours in blocks (where average block time is 12 seconds)
 	pub const BuyoutPeriod: u32 = 7200;
 }
 

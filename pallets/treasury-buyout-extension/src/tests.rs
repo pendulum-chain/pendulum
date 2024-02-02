@@ -23,7 +23,7 @@ fn run_to_block(new_block: <Test as frame_system::Config>::BlockNumber) {
 
 #[test]
 fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
-	run_test(|| {
+    run_test(|| {
         let user = USER;
         let dot_currency_id = RelayChainCurrencyId::get();
         let initial_user_dot_balance = get_free_balance(dot_currency_id, &user);
@@ -88,7 +88,7 @@ fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 
 #[test]
 fn buyout_using_dot_given_buyout_amount_in_native_succeeds() {
-	run_test(|| {
+    run_test(|| {
         let user = USER;
         let dot_currency_id = RelayChainCurrencyId::get();
         let initial_user_dot_balance = get_free_balance(dot_currency_id, &user);
@@ -249,7 +249,7 @@ fn buyout_with_previous_existing_buyouts_succeeds() {
 
 #[test]
 fn attempt_buyout_after_buyout_limit_exceeded_fails() {
-	run_test(|| {
+    run_test(|| {
         let user = USER;
         let dot_currency_id = RelayChainCurrencyId::get();
         let exchange_amount = 100 * UNIT;

@@ -170,7 +170,7 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type BuyoutLimit<T: Config> = StorageValue<_, BalanceOf<T>, OptionQuery>;
 
-	/// Stores amount of buyouts (amount, timestamp of last buyout)
+	/// Stores amount of buyouts (amount, block number of last buyout)
 	#[pallet::storage]
 	pub type Buyouts<T: Config> =
 		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (BalanceOf<T>, u32), ValueQuery>;

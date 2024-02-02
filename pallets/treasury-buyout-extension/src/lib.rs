@@ -118,7 +118,7 @@ pub mod pallet {
 		/// - `origin`: Origin must be root.
 		/// - `limit`: New buyout limit. If None, then buyouts are not limited.
 		///
-		///	Emits `BuyoutLimitUpdated` event when successful.
+		/// Emits `BuyoutLimitUpdated` event when successful.
 		#[pallet::call_index(1)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::update_buyout_limit())]
 		pub fn update_buyout_limit(

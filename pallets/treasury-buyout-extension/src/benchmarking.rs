@@ -8,7 +8,7 @@ use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use sp_std::prelude::*;
 
-// Mint some tokens to the caller and treasury accounts
+// Mint some tokens to caller and treasury accounts
 fn set_up_accounts<T: Config>(caller_account: &AccountIdOf<T>, treasury_account: &AccountIdOf<T>) {
 	let token_currency_id = T::RelayChainCurrencyId::get();
 	let native_currency_id = <T as orml_currencies::Config>::GetNativeCurrencyId::get();

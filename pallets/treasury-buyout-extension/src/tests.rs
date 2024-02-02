@@ -24,7 +24,7 @@ fn run_to_block(new_block: <Test as frame_system::Config>::BlockNumber) {
 #[test]
 fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 	run_test(|| {
-		let user = USER;
+        let user = USER;
         let dot_currency_id = RelayChainCurrencyId::get();
 		let initial_user_dot_balance = get_free_balance(dot_currency_id, &user);
 		let initial_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
@@ -89,7 +89,7 @@ fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 #[test]
 fn buyout_using_dot_given_buyout_amount_in_native_succeeds() {
 	run_test(|| {
-		let user = USER;
+        let user = USER;
         let dot_currency_id = RelayChainCurrencyId::get();
 		let initial_user_dot_balance = get_free_balance(dot_currency_id, &user);
 		let initial_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
@@ -266,7 +266,7 @@ fn attempt_buyout_after_buyout_limit_exceeded_fails() {
         // Skip to exactly the last block before the buyout period ends
         let buyout_period: u32 = BuyoutPeriod::get();
         let new_current_block = buyout_period - 1;
-		run_to_block((new_current_block).into());
+        run_to_block((new_current_block).into());
 
 		// This buyout attempt for 100 * UNIT should fail because the limit is exceeded for the current period
         // Buyout limit is 150 * UNIT and the previous buyout was 100 * UNIT

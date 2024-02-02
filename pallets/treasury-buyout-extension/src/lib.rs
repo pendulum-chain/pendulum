@@ -482,7 +482,7 @@ where
 
 	/// Checks:
 	/// - asset is allowed for buyout
-	/// - buyout_amount is greater or equal `MinAmountToBuyout`
+	/// - buyout amount is greater or equal `MinAmountToBuyout`
 	/// - `who` has enough balance to make buyout
 	/// - buyout limit is not exceeded for `who`
 	fn validate(

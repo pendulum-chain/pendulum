@@ -1029,11 +1029,11 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OracleWrapper {
 	{
 		Security::set_status(StatusCode::Running);
 		let key = OracleKey::ExchangeRate(currency_id);
-		let rate = FixedU128::checked_from_rational(100, 1).unwrap();
+		let rate = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
 		let account = AccountId::from([0u8; 32]);
 		Oracle::feed_values(account, vec![(key.clone(), rate)]);
 
-		let asset_price = Oracle::get_price(key.clone()).unwrap();
+		let asset_price = Oracle::get_price(key.clone()).unwrap_or(FixedU128::one());
 
 		let converted_asset_price = FixedNumber::try_from(asset_price);
 

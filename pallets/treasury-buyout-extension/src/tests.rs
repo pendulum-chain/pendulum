@@ -26,64 +26,64 @@ fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 	run_test(|| {
         let user = USER;
         let dot_currency_id = RelayChainCurrencyId::get();
-		let initial_user_dot_balance = get_free_balance(dot_currency_id, &user);
-		let initial_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
-
-		let initial_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
-		let initial_treasury_native_balance =
-			get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
-
-		assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
-		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
-
-		let exchange_amount = 100 * UNIT;
-		assert_ok!(crate::Pallet::<Test>::buyout(
-			RuntimeOrigin::signed(user),
-			dot_currency_id,
-			Amount::Exchange(exchange_amount),
-		));
-
-		// Fetch prices from Oracle mock
-		let basic_asset_price = <OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<
-			FixedU128,
-		>(GetNativeCurrencyId::get())
-		.expect("This is mocked so it should not fail");
-		let exchange_asset_price =
-			<OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<FixedU128>(dot_currency_id)
-				.expect("This is mocked so it should not fail");
-
-		// Add fee to basic asset price
-		let basic_asset_price_with_fee =
-			basic_asset_price * (FixedU128::from(SellFee::get()) + FixedU128::one());
-
-		// Calculate Native buyout amount
-		let buyout_amount = crate::Pallet::<Test>::multiply_by_rational(
-			exchange_amount,
-			exchange_asset_price.into_inner(),
-			basic_asset_price_with_fee.into_inner(),
-		)
-		.expect("This is mocked so it should not fail");
-
-		let final_user_dot_balance = get_free_balance(dot_currency_id, &user);
-		let final_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
-
-		let final_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
-		let final_treasury_native_balance =
-			get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
-
-		assert_eq!(final_user_dot_balance, initial_user_dot_balance - exchange_amount);
-		assert_eq!(final_treasury_dot_balance, initial_treasury_dot_balance + exchange_amount);
-
-		assert_eq!(final_user_native_balance, initial_user_native_balance + buyout_amount);
-		assert_eq!(final_treasury_native_balance, initial_treasury_native_balance - buyout_amount);
-
-		// Verify Buyout event was emitted
-		assert!(System::events().iter().any(|record| matches!(
-			record.event,
-			TestEvent::TreasuryBuyoutExtension(crate::Event::Buyout { who, buyout_amount: amount, .. })
-			if who == user && amount == buyout_amount
-		)));
-	});
+        let initial_user_dot_balance = get_free_balance(dot_currency_id, &user);
+        let initial_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
+        
+        let initial_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
+        let initial_treasury_native_balance =
+            get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
+            
+        assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
+        assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
+        
+        let exchange_amount = 100 * UNIT;
+        assert_ok!(crate::Pallet::<Test>::buyout(
+            RuntimeOrigin::signed(user),
+            dot_currency_id,
+            Amount::Exchange(exchange_amount),
+        ));
+        
+        // Fetch prices from Oracle mock
+        let basic_asset_price = <OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<
+            FixedU128,
+        >(GetNativeCurrencyId::get())
+        .expect("This is mocked so it should not fail");
+        let exchange_asset_price =
+            <OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<FixedU128>(dot_currency_id)
+                .expect("This is mocked so it should not fail");
+        
+        // Add fee to basic asset price
+        let basic_asset_price_with_fee =
+            basic_asset_price * (FixedU128::from(SellFee::get()) + FixedU128::one());
+            
+        // Calculate Native buyout amount
+        let buyout_amount = crate::Pallet::<Test>::multiply_by_rational(
+            exchange_amount,
+            exchange_asset_price.into_inner(),
+            basic_asset_price_with_fee.into_inner(),
+        )
+        .expect("This is mocked so it should not fail");
+    
+        let final_user_dot_balance = get_free_balance(dot_currency_id, &user);
+        let final_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
+        
+        let final_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
+        let final_treasury_native_balance =
+            get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
+            
+        assert_eq!(final_user_dot_balance, initial_user_dot_balance - exchange_amount);
+        assert_eq!(final_treasury_dot_balance, initial_treasury_dot_balance + exchange_amount);
+        
+        assert_eq!(final_user_native_balance, initial_user_native_balance + buyout_amount);
+        assert_eq!(final_treasury_native_balance, initial_treasury_native_balance - buyout_amount);
+        
+        // Verify Buyout event was emitted
+        assert!(System::events().iter().any(|record| matches!(
+            record.event,
+            TestEvent::TreasuryBuyoutExtension(crate::Event::Buyout { who, buyout_amount: amount, .. })
+            if who == user && amount == buyout_amount
+        )));
+    });
 }
 
 #[test]
@@ -91,64 +91,64 @@ fn buyout_using_dot_given_buyout_amount_in_native_succeeds() {
 	run_test(|| {
         let user = USER;
         let dot_currency_id = RelayChainCurrencyId::get();
-		let initial_user_dot_balance = get_free_balance(dot_currency_id, &user);
-		let initial_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
-
-		let initial_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
-		let initial_treasury_native_balance =
-			get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
-
-		assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
-		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
-
-		let buyout_amount = 100 * UNIT;
-		assert_ok!(crate::Pallet::<Test>::buyout(
-			RuntimeOrigin::signed(user),
-			dot_currency_id,
-			Amount::Buyout(buyout_amount),
-		));
-
-		// Fetch prices from Oracle mock
-		let basic_asset_price = <OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<
-			FixedU128,
-		>(GetNativeCurrencyId::get())
-		.expect("This is mocked so it should not fail");
-		let exchange_asset_price =
-			<OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<FixedU128>(dot_currency_id)
-				.expect("This is mocked so it should not fail");
-
-		// Add fee to basic asset price
-		let basic_asset_price_with_fee =
-			basic_asset_price * (FixedU128::from(SellFee::get()) + FixedU128::one());
-
-		// Calculate DOT exchange amount
-		let exchange_amount = crate::Pallet::<Test>::multiply_by_rational(
-			buyout_amount,
-			basic_asset_price_with_fee.into_inner(),
-			exchange_asset_price.into_inner(),
-		)
-		.expect("This is mocked so it should not fail");
-
-		let final_user_dot_balance = get_free_balance(dot_currency_id, &user);
-		let final_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
-
-		let final_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
-		let final_treasury_native_balance =
-			get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
-
-		assert_eq!(final_user_dot_balance, initial_user_dot_balance - exchange_amount);
-		assert_eq!(final_treasury_dot_balance, initial_treasury_dot_balance + exchange_amount);
-
-		assert_eq!(final_user_native_balance, initial_user_native_balance + buyout_amount);
-		assert_eq!(final_treasury_native_balance, initial_treasury_native_balance - buyout_amount);
-
-		// Verify Buyout event was emitted
-		assert!(System::events().iter().any(|record| matches!(
-			record.event,
-			TestEvent::TreasuryBuyoutExtension(crate::Event::Buyout { who, buyout_amount: amount, .. })
-			if who == user && amount == buyout_amount
-		)));
-	});
+        let initial_user_dot_balance = get_free_balance(dot_currency_id, &user);
+        let initial_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
+        
+        let initial_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
+        let initial_treasury_native_balance =
+            get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
+            
+        assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
+        assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
+        
+        let buyout_amount = 100 * UNIT;
+        assert_ok!(crate::Pallet::<Test>::buyout(
+            RuntimeOrigin::signed(user),
+            dot_currency_id,
+            Amount::Buyout(buyout_amount),
+        ));
+        
+        // Fetch prices from Oracle mock
+        let basic_asset_price = <OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<
+            FixedU128,
+        >(GetNativeCurrencyId::get())
+        .expect("This is mocked so it should not fail");
+        let exchange_asset_price =
+            <OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<FixedU128>(dot_currency_id)
+                .expect("This is mocked so it should not fail");
+            
+        // Add fee to basic asset price
+        let basic_asset_price_with_fee =
+            basic_asset_price * (FixedU128::from(SellFee::get()) + FixedU128::one());
+        
+        // Calculate DOT exchange amount
+        let exchange_amount = crate::Pallet::<Test>::multiply_by_rational(
+            buyout_amount,
+            basic_asset_price_with_fee.into_inner(),
+            exchange_asset_price.into_inner(),
+        )
+        .expect("This is mocked so it should not fail");
+    
+        let final_user_dot_balance = get_free_balance(dot_currency_id, &user);
+        let final_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
+        
+        let final_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
+        let final_treasury_native_balance =
+            get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
+        
+        assert_eq!(final_user_dot_balance, initial_user_dot_balance - exchange_amount);
+        assert_eq!(final_treasury_dot_balance, initial_treasury_dot_balance + exchange_amount);
+        
+        assert_eq!(final_user_native_balance, initial_user_native_balance + buyout_amount);
+        assert_eq!(final_treasury_native_balance, initial_treasury_native_balance - buyout_amount);
+        
+        // Verify Buyout event was emitted
+        assert!(System::events().iter().any(|record| matches!(
+            record.event,
+            TestEvent::TreasuryBuyoutExtension(crate::Event::Buyout { who, buyout_amount: amount, .. })
+            if who == user && amount == buyout_amount
+        )));
+    });
 }
 
 #[test]
@@ -250,35 +250,35 @@ fn buyout_with_previous_existing_buyouts_succeeds() {
 #[test]
 fn attempt_buyout_after_buyout_limit_exceeded_fails() {
 	run_test(|| {
-		let user = USER;
-		let dot_currency_id = RelayChainCurrencyId::get();
-		let exchange_amount = 100 * UNIT;
-
-		let current_block = frame_system::Pallet::<Test>::block_number().saturated_into::<u32>();
-
-		// With buyout limit
-		BuyoutLimit::<Test>::put(150 * UNIT);
-		// Buyout at current_block
-		Buyouts::<Test>::insert(user, (100 * UNIT, current_block));
-
-		assert_eq!(Buyouts::<Test>::get(user), (100 * UNIT, current_block));
-
+        let user = USER;
+        let dot_currency_id = RelayChainCurrencyId::get();
+        let exchange_amount = 100 * UNIT;
+        
+        let current_block = frame_system::Pallet::<Test>::block_number().saturated_into::<u32>();
+        
+        // With buyout limit
+        BuyoutLimit::<Test>::put(150 * UNIT);
+        // Buyout at current_block
+        Buyouts::<Test>::insert(user, (100 * UNIT, current_block));
+        
+        assert_eq!(Buyouts::<Test>::get(user), (100 * UNIT, current_block));
+        
         // Skip to exactly the last block before the buyout period ends
         let buyout_period: u32 = BuyoutPeriod::get();
         let new_current_block = buyout_period - 1;
         run_to_block((new_current_block).into());
-
-		// This buyout attempt for 100 * UNIT should fail because the limit is exceeded for the current period
+        
+        // This buyout attempt for 100 * UNIT should fail because the limit is exceeded for the current period
         // Buyout limit is 150 * UNIT and the previous buyout was 100 * UNIT
-		assert_noop!(
-			crate::Pallet::<Test>::buyout(
-				RuntimeOrigin::signed(user),
-				dot_currency_id,
-				Amount::Exchange(exchange_amount),
-			),
-			Error::<Test>::BuyoutLimitExceeded
-		);
-	});
+        assert_noop!(
+            crate::Pallet::<Test>::buyout(
+                RuntimeOrigin::signed(user),
+                dot_currency_id,
+                Amount::Exchange(exchange_amount),
+            ),
+            Error::<Test>::BuyoutLimitExceeded
+        );
+    });
 }
 
 #[test]

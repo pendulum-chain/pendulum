@@ -65,6 +65,10 @@ parameter_types! {
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
 /// when determining ownership of accounts for asset transacting and when attempting to use XCM
 /// `Transact` in order to determine the dispatch Origin.
+/// 
+/// TODO maybe: the beneficiary of the automation pallet is PalletInstance(XX), will any of these
+/// conversions be useful? Otherwise MultiCurrencyAdapter will not be able to deposit (no account),
+/// and will default to the unkown branch.
 pub type LocationToAccountId = (
 	// The parent (Relay-chain) origin converts to the parent `AccountId`.
 	ParentIsPreset<AccountId>,

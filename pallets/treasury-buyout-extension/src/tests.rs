@@ -258,12 +258,18 @@ fn attempt_buyout_after_buyout_limit_exceeded_fails() {
 
 		// With buyout limit
 		BuyoutLimit::<Test>::put(150 * UNIT);
-		// Previous buyout at current_block
+		// Buyout at current_block
 		Buyouts::<Test>::insert(user, (100 * UNIT, current_block));
 
 		assert_eq!(Buyouts::<Test>::get(user), (100 * UNIT, current_block));
 
-		// This buyout attempt should fail because the limit is exceeded for the current period
+        // Skip to exactly the last block before the buyout period ends
+        let buyout_period: u32 = BuyoutPeriod::get();
+        let new_current_block = buyout_period - 1;
+		run_to_block((new_current_block).into());
+
+		// This buyout attempt for 100 * UNIT should fail because the limit is exceeded for the current period
+        // Buyout limit is 150 * UNIT and the previous buyout was 100 * UNIT
 		assert_noop!(
 			crate::Pallet::<Test>::buyout(
 				RuntimeOrigin::signed(user),

@@ -1027,7 +1027,9 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OracleWrapper {
 	where
 		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
 	{
+		// Forcefully set chain status to running when benchmarking so that the oracle doesn't fail
 		Security::set_status(StatusCode::Running);
+
 		let key = OracleKey::ExchangeRate(currency_id);
 		let rate = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
 		let account = AccountId::from([0u8; 32]);

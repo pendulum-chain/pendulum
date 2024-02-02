@@ -153,6 +153,7 @@ pub type SignedExtra = (
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	treasury_buyout_extension::CheckBuyout<Runtime>,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -1587,6 +1588,7 @@ where
 			frame_system::CheckNonce::<Runtime>::from(index),
 			frame_system::CheckWeight::<Runtime>::new(),
 			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+			treasury_buyout_extension::CheckBuyout::<Runtime>::new(),
 		);
 
 		let raw_payload = SignedPayload::new(call, extra).ok()?;

@@ -8,6 +8,7 @@ use frame_support::{
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
+	asset_registry::Inspect,
 };
 use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
@@ -26,7 +27,7 @@ use xcm_executor::{
 	XcmExecutor,
 };
 
-use runtime_common::{parachains::kusama::asset_hub, RelativeValue};
+use runtime_common::{parachains::kusama::asset_hub};
 
 use cumulus_primitives_utility::{
 	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,
@@ -43,7 +44,7 @@ use crate::{
 use super::{
 	AccountId, AmplitudeTreasuryAccount, Balance, Balances, Currencies, CurrencyId, ParachainInfo,
 	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens,
-	WeightToFee, XcmpQueue,
+	WeightToFee, XcmpQueue, AssetRegistry,
 };
 
 parameter_types! {
@@ -113,22 +114,6 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 	}
 }
 
-type RelativeValueOf = RelativeValue<Balance>;
-
-pub struct RelayRelativeValue;
-impl RelayRelativeValue {
-	fn get_relative_value(id: CurrencyId) -> Option<RelativeValueOf> {
-		match id {
-			CurrencyId::XCM(index) => match index {
-				xcm_assets::RELAY_KSM => Some(RelativeValueOf { num: 100, denominator: 1 }),
-				xcm_assets::ASSETHUB_USDT => Some(RelativeValueOf { num: 20, denominator: 4 }),
-				_ => None,
-			},
-			CurrencyId::Native => Some(RelativeValueOf { num: 1, denominator: 1 }),
-			_ => Some(RelativeValueOf { num: 1, denominator: 1 }),
-		}
-	}
-}
 
 /// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
 /// Here we need to know the canonical representation of all the tokens we handle in order to
@@ -295,16 +280,18 @@ impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImple
 		weight: Weight,
 	) -> Result<Balance, XcmError> {
 		let amount = <WeightToFee as WeightToFeeTrait>::weight_to_fee(&weight);
+		
+		let location = CurrencyIdConvert::convert(asset_id).ok_or(XcmError::AssetNotFound)?;
+		let asset_id_metadata = AssetRegistry::metadata_by_location(&location).ok_or(XcmError::AssetNotFound)?;
+		let fee_per_second = asset_id_metadata.additional.fee_per_second;
 
-		if let Some(relative_value) = RelayRelativeValue::get_relative_value(asset_id) {
-			let adjusted_amount =
-				RelativeValue::<Balance>::divide_by_relative_value(amount, relative_value);
-			log::info!("amount to be charged: {:?} in asset: {:?}", adjusted_amount, asset_id);
-			return Ok(adjusted_amount)
-		} else {
-			log::info!("amount to be charged: {:?} in asset: {:?}", amount, asset_id);
-			return Ok(amount)
-		}
+		// if we assume the fee per second for Native is 1 and the baseline,
+		// then multipling the amount by the fee per second of the asset will give us the adjusted amount
+		let adjusted_amount = amount.checked_mul(fee_per_second).ok_or(XcmError::Overflow)?;
+
+		log::info!("amount to be charged: {:?} in asset: {:?}", adjusted_amount, asset_id);
+		return Ok(adjusted_amount)
+
 	}
 }
 

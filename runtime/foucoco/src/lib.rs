@@ -176,7 +176,7 @@ impl oracle::dia::NativeCurrencyKey for SpacewalkNativeCurrency {
 	}
 
 	fn native_chain() -> Vec<u8> {
-		"AMPLITUDE".as_bytes().to_vec()
+		"Amplitude".as_bytes().to_vec()
 	}
 }
 

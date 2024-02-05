@@ -994,9 +994,7 @@ impl orml_tokens_management_extension::Config for Runtime {
 }
 
 pub struct AllowedCurrencyCheckerImpl;
-impl treasury_buyout_extension::AllowedCurrencyChecker<CurrencyId>
-	for AllowedCurrencyCheckerImpl
-{
+impl treasury_buyout_extension::AllowedCurrencyChecker<CurrencyId> for AllowedCurrencyCheckerImpl {
 	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool {
 		matches!(
 			currency_id,
@@ -1030,7 +1028,7 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 		Security::set_status(StatusCode::Running);
 
 		let key = OracleKey::ExchangeRate(currency_id);
-	
+
 		// Attempt to get the price once and use the result to decide if feeding a value is necessary
 		match Oracle::get_price(key.clone()) {
 			Ok(asset_price) => {
@@ -1041,8 +1039,7 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 			},
 			Err(_) => {
 				// Price not found, feed the default value
-				let rate = FixedU128::checked_from_rational(100, 1)
-					.expect("This is a valid ratio");
+				let rate = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
 				// Account used for feeding values
 				let account = AccountId::from([0u8; 32]);
 				Oracle::feed_values(account, vec![(key.clone(), rate)])?;
@@ -1051,9 +1048,8 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 				let converted_asset_price = FixedNumber::try_from(rate)
 					.map_err(|_| DispatchError::Other("Failed to convert price"))?;
 				Ok(converted_asset_price)
-			}
+			},
 		}
-
 	}
 }
 

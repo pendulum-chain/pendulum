@@ -28,7 +28,10 @@ use frame_support::{
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_arithmetic::{per_things::Rounding, traits::{CheckedAdd, Saturating}};
+use sp_arithmetic::{
+	per_things::Rounding,
+	traits::{CheckedAdd, Saturating},
+};
 use sp_runtime::{
 	traits::{DispatchInfoOf, One, SignedExtension, Zero},
 	transaction_validity::{
@@ -87,7 +90,7 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
-	
+
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Attempt to exchange native token to native token
@@ -194,7 +197,8 @@ impl<T: Config> Pallet<T> {
 		if let Some(buyout_limit) = BuyoutLimit::<T>::get() {
 			let buyout_period = T::BuyoutPeriod::get();
 			// Get current block number
-			let current_block_number = <frame_system::Pallet<T>>::block_number().saturated_into::<u32>();
+			let current_block_number =
+				<frame_system::Pallet<T>>::block_number().saturated_into::<u32>();
 			let current_period_start_number = current_block_number
 				.checked_div(buyout_period)
 				.and_then(|n| Some(n.saturating_mul(buyout_period)))
@@ -207,9 +211,7 @@ impl<T: Config> Pallet<T> {
 			};
 
 			ensure!(
-				buyouts
-					.saturating_add(buyout_amount) <=
-					buyout_limit,
+				buyouts.saturating_add(buyout_amount) <= buyout_limit,
 				Error::<T>::BuyoutLimitExceeded
 			);
 		}
@@ -249,7 +251,9 @@ impl<T: Config> Pallet<T> {
 		let (basic_asset_price, exchange_asset_price) = Self::fetch_prices((&basic_asset, &asset))?;
 
 		// Add fee to the basic asset price
-		let fee_plus_one = FixedU128::from(T::SellFee::get()).checked_add(&FixedU128::one()).ok_or(Error::<T>::MathError)?;
+		let fee_plus_one = FixedU128::from(T::SellFee::get())
+			.checked_add(&FixedU128::one())
+			.ok_or(Error::<T>::MathError)?;
 		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
 		let exchange_amount = Self::multiply_by_rational(
@@ -276,7 +280,9 @@ impl<T: Config> Pallet<T> {
 		let (basic_asset_price, exchange_asset_price) = Self::fetch_prices((&basic_asset, &asset))?;
 
 		// Add fee to the basic asset price
-		let fee_plus_one = FixedU128::from(T::SellFee::get()).checked_add(&FixedU128::one()).ok_or(Error::<T>::MathError)?;
+		let fee_plus_one = FixedU128::from(T::SellFee::get())
+			.checked_add(&FixedU128::one())
+			.ok_or(Error::<T>::MathError)?;
 		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
 		let buyout_amount = Self::multiply_by_rational(
@@ -328,7 +334,7 @@ impl<T: Config> Pallet<T> {
 			return Err(Error::<T>::BuyoutWithTreasuryAccount.into())
 		}
 		// Check for exchanging zero values
-		if exchange_amount.is_zero() && buyout_amount.is_zero()  {
+		if exchange_amount.is_zero() && buyout_amount.is_zero() {
 			return Err(Error::<T>::LessThanMinBuyoutAmount.into())
 		}
 

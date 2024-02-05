@@ -3,7 +3,7 @@ use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use orml_asset_registry::AssetMetadata;
 use sp_std::{vec, vec::Vec};
-use crate::asset_registry::{CustomMetadata, DiaKeys, StringLimit};
+use crate::asset_registry::{CustomMetadata, DiaKeys};
 use spacewalk_primitives::CurrencyId;
 use xcm::{
 	latest::MultiLocation,
@@ -82,8 +82,8 @@ pub mod benchmarks {
 			Some(Some(location.into())),
 			Some(CustomMetadata {
 				dia_keys: DiaKeys {
-					blockchain: BoundedVec::<u8, StringLimit>::truncate_from(longest_vec()),
-					symbol: BoundedVec::<u8, StringLimit>::truncate_from(longest_vec()),
+					blockchain: BoundedVec::truncate_from(longest_vec()),
+					symbol: BoundedVec::truncate_from(longest_vec()),
 				},
 				fee_per_second: 123,
 			}),

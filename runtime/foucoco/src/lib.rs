@@ -993,9 +993,9 @@ impl orml_tokens_management_extension::Config for Runtime {
 	type AssetDeposit = AssetDeposit;
 }
 
-pub struct AllowedCurrencyIdVerifierImpl;
+pub struct AllowedCurrencyCheckerImpl;
 impl treasury_buyout_extension::AllowedCurrencyChecker<CurrencyId>
-	for AllowedCurrencyIdVerifierImpl
+	for AllowedCurrencyCheckerImpl
 {
 	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool {
 		matches!(
@@ -1030,15 +1030,20 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 		Security::set_status(StatusCode::Running);
 
 		let key = OracleKey::ExchangeRate(currency_id);
-		let rate = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
-		// Needed for feeding values to the oracle but is never used in the oracle
-		let account = AccountId::from([0u8; 32]);
-		Oracle::feed_values(account, vec![(key.clone(), rate)])?;
-
-		let asset_price = Oracle::get_price(key.clone()).unwrap_or(FixedU128::one());
-
+	
+		// Attempt to get the price first before deciding to feed a new value
+		if Oracle::get_price(key.clone()).is_err() {
+			// Price not found, feed the default value
+			let rate = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
+			let account = AccountId::from([0u8; 32]); // Account used for feeding values
+			Oracle::feed_values(account, vec![(key.clone(), rate)])?;
+		}
+		
+		// Get asset's price
+		// In case there's still no price available, just return the default value
+		let asset_price = Oracle::get_price(key).unwrap_or(FixedU128::one());
 		let converted_asset_price = FixedNumber::try_from(asset_price);
-
+	
 		match converted_asset_price {
 			Ok(price) => Ok(price),
 			Err(_) => Err(DispatchError::Other("Failed to convert price")),
@@ -1059,7 +1064,7 @@ impl treasury_buyout_extension::Config for Runtime {
 	type TreasuryAccount = FoucocoTreasuryAccount;
 	type BuyoutPeriod = BuyoutPeriod;
 	type SellFee = SellFee;
-	type AllowedCurrencyVerifier = AllowedCurrencyIdVerifierImpl;
+	type AllowedCurrencyChecker = AllowedCurrencyCheckerImpl;
 	type PriceGetter = OraclePriceGetter;
 	type MinAmountToBuyout = MinAmountToBuyout;
 	#[cfg(feature = "runtime-benchmarks")]

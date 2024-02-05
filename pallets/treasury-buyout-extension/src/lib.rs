@@ -68,7 +68,7 @@ pub mod pallet {
 		type SellFee: Get<Permill>;
 
 		/// Type that allows for checking if currency type is ownable by users
-		type AllowedCurrencyVerifier: AllowedCurrencyChecker<CurrencyIdOf<Self>>;
+		type AllowedCurrencyChecker: AllowedCurrencyChecker<CurrencyIdOf<Self>>;
 
 		/// Used for fetching prices of currencies from oracle
 		type PriceGetter: PriceGetter<CurrencyIdOf<Self>>;
@@ -106,6 +106,8 @@ pub mod pallet {
 		BuyoutWithTreasuryAccount,
 		/// Exchange failed
 		ExchangeFailure,
+		/// Math error
+		MathError,
 	}
 
 	#[pallet::event]
@@ -192,16 +194,16 @@ impl<T: Config> Pallet<T> {
 		if let Some(buyout_limit) = BuyoutLimit::<T>::get() {
 			let buyout_period = T::BuyoutPeriod::get();
 			// Get current block number
-			let now = <frame_system::Pallet<T>>::block_number().saturated_into::<u32>();
-			let current_period = now
+			let current_block_number = <frame_system::Pallet<T>>::block_number().saturated_into::<u32>();
+			let current_period_start_number = current_block_number
 				.checked_div(buyout_period)
 				.and_then(|n| Some(n.saturating_mul(buyout_period)))
 				.unwrap_or_default();
 			let (mut buyouts, last_buyout) = Buyouts::<T>::get(account_id);
 
-			if !buyouts.is_zero() && last_buyout < current_period {
+			if !buyouts.is_zero() && last_buyout < current_period_start_number {
 				buyouts = Default::default();
-				Buyouts::<T>::insert(account_id, (buyouts, now));
+				Buyouts::<T>::insert(account_id, (buyouts, current_block_number));
 			};
 
 			ensure!(
@@ -216,10 +218,10 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Ensures that asset is allowed for buyout
-	/// The concrete implementation of AllowedCurrencyIdVerifier trait must be provided by the runtime
+	/// The concrete implementation of AllowedCurrencyChecker trait must be provided by the runtime
 	fn ensure_asset_allowed_for_buyout(asset: &CurrencyIdOf<T>) -> DispatchResult {
 		ensure!(
-			T::AllowedCurrencyVerifier::is_allowed_currency_id(asset),
+			T::AllowedCurrencyChecker::is_allowed_currency_id(asset),
 			Error::<T>::WrongAssetToBuyout
 		);
 
@@ -247,7 +249,7 @@ impl<T: Config> Pallet<T> {
 		let (basic_asset_price, exchange_asset_price) = Self::fetch_prices((&basic_asset, &asset))?;
 
 		// Add fee to the basic asset price
-		let fee_plus_one = FixedU128::from(T::SellFee::get()).checked_add(&FixedU128::one()).expect("This should never fail");
+		let fee_plus_one = FixedU128::from(T::SellFee::get()).checked_add(&FixedU128::one()).ok_or(Error::<T>::MathError)?;
 		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
 		let exchange_amount = Self::multiply_by_rational(
@@ -274,7 +276,7 @@ impl<T: Config> Pallet<T> {
 		let (basic_asset_price, exchange_asset_price) = Self::fetch_prices((&basic_asset, &asset))?;
 
 		// Add fee to the basic asset price
-		let fee_plus_one = FixedU128::from(T::SellFee::get()).checked_add(&FixedU128::one()).expect("This should never fail");
+		let fee_plus_one = FixedU128::from(T::SellFee::get()).checked_add(&FixedU128::one()).ok_or(Error::<T>::MathError)?;
 		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
 		let buyout_amount = Self::multiply_by_rational(

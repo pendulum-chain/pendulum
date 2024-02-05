@@ -138,8 +138,8 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Allows caller to buyout a given amount of native token.
-		/// Buyout amount given as input is the amount of native token that caller will receive in exchange for an amount of an allowed asset
-		/// Exchange amount given as input is the amount of an allowed asset that caller will give in exchange for an amount of native token
+		/// When denoting the `amount` as `Buyout` the caller will receive this exact amount of the native token in exchange for a corresponding amount of an allowed asset.
+		/// When denoting the `amount` as `Exchange`, the caller will spend this exact amount of an allowed asset in exchange for a corresponding amount of the native token.
 		///
 		/// Parameters
 		///

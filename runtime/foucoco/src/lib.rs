@@ -994,7 +994,7 @@ impl orml_tokens_management_extension::Config for Runtime {
 }
 
 pub struct AllowedCurrencyIdVerifierImpl;
-impl treasury_buyout_extension::AllowedCurrencyIdVerifier<CurrencyId>
+impl treasury_buyout_extension::AllowedCurrencyChecker<CurrencyId>
 	for AllowedCurrencyIdVerifierImpl
 {
 	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool {
@@ -1004,8 +1004,8 @@ impl treasury_buyout_extension::AllowedCurrencyIdVerifier<CurrencyId>
 		)
 	}
 }
-pub struct OracleWrapper(Oracle);
-impl treasury_buyout_extension::PriceGetter<CurrencyId> for OracleWrapper {
+pub struct OraclePriceGetter(Oracle);
+impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
 	where
@@ -1059,8 +1059,8 @@ impl treasury_buyout_extension::Config for Runtime {
 	type TreasuryAccount = FoucocoTreasuryAccount;
 	type BuyoutPeriod = BuyoutPeriod;
 	type SellFee = SellFee;
-	type AllowedCurrencyIdVerifier = AllowedCurrencyIdVerifierImpl;
-	type PriceGetter = OracleWrapper;
+	type AllowedCurrencyVerifier = AllowedCurrencyIdVerifierImpl;
+	type PriceGetter = OraclePriceGetter;
 	type MinAmountToBuyout = MinAmountToBuyout;
 	#[cfg(feature = "runtime-benchmarks")]
 	type RelayChainCurrencyId = RelayChainCurrencyId;

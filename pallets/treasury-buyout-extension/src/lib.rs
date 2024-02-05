@@ -28,7 +28,7 @@ use frame_support::{
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_arithmetic::per_things::Rounding;
+use sp_arithmetic::{per_things::Rounding, traits::{CheckedAdd, Saturating}};
 use sp_runtime::{
 	traits::{DispatchInfoOf, One, SignedExtension, Zero},
 	transaction_validity::{
@@ -58,7 +58,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type TreasuryAccount: Get<AccountIdOf<Self>>;
 
-		/// Buyout period in blocks
+		/// Buyout period in blocks in which a caller can buyout up to the amount limit stored in `BuyoutLimit`
+		/// When attempting to buyout after this period, the buyout limit is reset for the caller
 		#[pallet::constant]
 		type BuyoutPeriod: Get<u32>;
 
@@ -67,7 +68,7 @@ pub mod pallet {
 		type SellFee: Get<Permill>;
 
 		/// Type that allows for checking if currency type is ownable by users
-		type AllowedCurrencyIdVerifier: AllowedCurrencyIdVerifier<CurrencyIdOf<Self>>;
+		type AllowedCurrencyVerifier: AllowedCurrencyChecker<CurrencyIdOf<Self>>;
 
 		/// Used for fetching prices of currencies from oracle
 		type PriceGetter: PriceGetter<CurrencyIdOf<Self>>;
@@ -86,11 +87,57 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
+	
+	#[pallet::error]
+	pub enum Error<T> {
+		/// Attempt to exchange native token to native token
+		WrongAssetToBuyout,
+		/// Buyout limit exceeded for the current period
+		BuyoutLimitExceeded,
+		/// One of transacted currencies is missing price information
+		NoPrice,
+		/// The treasury balance is too low for an operation
+		InsufficientTreasuryBalance,
+		/// The account balance is too low for an operation
+		InsufficientAccountBalance,
+		/// Less than minimum amoount allowed for buyout
+		LessThanMinBuyoutAmount,
+		/// Attempt to use treasury account for buyout
+		BuyoutWithTreasuryAccount,
+		/// Exchange failed
+		ExchangeFailure,
+	}
+
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+		/// Buyout event
+		Buyout {
+			who: AccountIdOf<T>,
+			buyout_amount: BalanceOf<T>,
+			asset: CurrencyIdOf<T>,
+			exchange_amount: BalanceOf<T>,
+		},
+		/// Buyout limit updated event
+		BuyoutLimitUpdated { limit: Option<BalanceOf<T>> },
+	}
+
+	/// Stores buyout limit amount user could buy for a period of `BuyoutPeriod` blocks.
+	/// Each user can buyout up to this amount in a period. After each period passes, buyout limit is reset
+	/// When `None` - buyouts are not limited
+	#[pallet::storage]
+	pub type BuyoutLimit<T: Config> = StorageValue<_, BalanceOf<T>, OptionQuery>;
+
+	/// Stores amount of buyouts (amount, block number of last buyout)
+	#[pallet::storage]
+	pub type Buyouts<T: Config> =
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (BalanceOf<T>, u32), ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Allows caller to buyout a given amount of native token.
-		/// Caller can specify either buyout amount of native token that he wants or exchange amount of an allowed asset.
+		/// Buyout amount given as input is the amount of native token that caller will receive in exchange for an amount of an allowed asset
+		/// Exchange amount given as input is the amount of an allowed asset that caller will give in exchange for an amount of native token
 		///
 		/// Parameters
 		///
@@ -134,46 +181,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 	}
-
-	#[pallet::error]
-	pub enum Error<T> {
-		/// Attempt to exchange native token to native token
-		WrongAssetToBuyout,
-		/// Buyout limit exceeded for the current period
-		BuyoutLimitExceeded,
-		/// One of transacted currencies is missing price information
-		NoPrice,
-		/// The treasury balance is too low for an operation
-		InsufficientTreasuryBalance,
-		/// The account balance is too low for an operation
-		InsufficientAccountBalance,
-		/// Exchange failed
-		ExchangeFailure,
-	}
-
-	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		/// Buyout event
-		Buyout {
-			who: AccountIdOf<T>,
-			buyout_amount: BalanceOf<T>,
-			asset: CurrencyIdOf<T>,
-			exchange_amount: BalanceOf<T>,
-		},
-		/// Buyout limit updated event
-		BuyoutLimitUpdated { limit: Option<BalanceOf<T>> },
-	}
-
-	/// Stores limit amount user could by for a period.
-	/// When `None` - buyouts are not limited
-	#[pallet::storage]
-	pub type BuyoutLimit<T: Config> = StorageValue<_, BalanceOf<T>, OptionQuery>;
-
-	/// Stores amount of buyouts (amount, block number of last buyout)
-	#[pallet::storage]
-	pub type Buyouts<T: Config> =
-		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (BalanceOf<T>, u32), ValueQuery>;
 }
 
 impl<T: Config> Pallet<T> {
@@ -199,9 +206,8 @@ impl<T: Config> Pallet<T> {
 
 			ensure!(
 				buyouts
-					.saturated_into::<u128>()
-					.saturating_add(buyout_amount.saturated_into::<u128>()) <=
-					buyout_limit.saturated_into::<u128>(),
+					.saturating_add(buyout_amount) <=
+					buyout_limit,
 				Error::<T>::BuyoutLimitExceeded
 			);
 		}
@@ -211,9 +217,9 @@ impl<T: Config> Pallet<T> {
 
 	/// Ensures that asset is allowed for buyout
 	/// The concrete implementation of AllowedCurrencyIdVerifier trait must be provided by the runtime
-	fn ensure_allowed_asset_for_buyout(asset: &CurrencyIdOf<T>) -> DispatchResult {
+	fn ensure_asset_allowed_for_buyout(asset: &CurrencyIdOf<T>) -> DispatchResult {
 		ensure!(
-			T::AllowedCurrencyIdVerifier::is_allowed_currency_id(asset),
+			T::AllowedCurrencyVerifier::is_allowed_currency_id(asset),
 			Error::<T>::WrongAssetToBuyout
 		);
 
@@ -224,7 +230,7 @@ impl<T: Config> Pallet<T> {
 	fn update_buyouts(account_id: &AccountIdOf<T>, buyout_amount: BalanceOf<T>) {
 		if BuyoutLimit::<T>::get().is_some() {
 			Buyouts::<T>::mutate(account_id, |(prev_buyouts, last)| {
-				*prev_buyouts = *prev_buyouts + buyout_amount;
+				*prev_buyouts = prev_buyouts.saturating_add(buyout_amount);
 				*last = <frame_system::Pallet<T>>::block_number().saturated_into::<u32>();
 			});
 		}
@@ -241,8 +247,8 @@ impl<T: Config> Pallet<T> {
 		let (basic_asset_price, exchange_asset_price) = Self::fetch_prices((&basic_asset, &asset))?;
 
 		// Add fee to the basic asset price
-		let basic_asset_price_with_fee =
-			basic_asset_price * (FixedU128::from(T::SellFee::get()) + FixedU128::one());
+		let fee_plus_one = FixedU128::from(T::SellFee::get()).checked_add(&FixedU128::one()).expect("This should never fail");
+		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
 		let exchange_amount = Self::multiply_by_rational(
 			buyout_amount.saturated_into::<u128>(),
@@ -268,8 +274,8 @@ impl<T: Config> Pallet<T> {
 		let (basic_asset_price, exchange_asset_price) = Self::fetch_prices((&basic_asset, &asset))?;
 
 		// Add fee to the basic asset price
-		let basic_asset_price_with_fee =
-			basic_asset_price * (FixedU128::from(T::SellFee::get()) + FixedU128::one());
+		let fee_plus_one = FixedU128::from(T::SellFee::get()).checked_add(&FixedU128::one()).expect("This should never fail");
+		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
 		let buyout_amount = Self::multiply_by_rational(
 			exchange_amount.saturated_into::<u128>(),
@@ -306,7 +312,7 @@ impl<T: Config> Pallet<T> {
 		asset: CurrencyIdOf<T>,
 		amount: Amount<BalanceOf<T>>,
 	) -> DispatchResult {
-		Self::ensure_allowed_asset_for_buyout(&asset)?;
+		Self::ensure_asset_allowed_for_buyout(&asset)?;
 
 		let basic_asset = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
 		let (buyout_amount, exchange_amount) = Self::split_to_buyout_and_exchange(asset, amount)?;
@@ -315,9 +321,13 @@ impl<T: Config> Pallet<T> {
 		let treasury_account_id = T::TreasuryAccount::get();
 
 		// Start exchanging
-		// Check for exchanging zero values and same accounts
-		if exchange_amount.is_zero() && buyout_amount.is_zero() || who == treasury_account_id {
-			return Ok(())
+		// Check for same accounts
+		if who == treasury_account_id {
+			return Err(Error::<T>::BuyoutWithTreasuryAccount.into())
+		}
+		// Check for exchanging zero values
+		if exchange_amount.is_zero() && buyout_amount.is_zero()  {
+			return Err(Error::<T>::LessThanMinBuyoutAmount.into())
 		}
 
 		// Check both balances before transfer
@@ -376,7 +386,7 @@ impl<T: Config> Pallet<T> {
 
 /// Used for checking if asset is allowed for buyout
 /// The concrete implementation of this trait must be provided by the runtime
-pub trait AllowedCurrencyIdVerifier<CurrencyId>
+pub trait AllowedCurrencyChecker<CurrencyId>
 where
 	CurrencyId: Clone + PartialEq + Eq + Debug,
 {
@@ -494,7 +504,7 @@ where
 	) -> TransactionValidity {
 		if let Some(local_call) = call.is_sub_type() {
 			if let Call::buyout { asset, amount } = local_call {
-				Pallet::<T>::ensure_allowed_asset_for_buyout(asset).map_err(|_| {
+				Pallet::<T>::ensure_asset_allowed_for_buyout(asset).map_err(|_| {
 					InvalidTransaction::Custom(ValidityError::WrongAssetToBuyout.into())
 				})?;
 

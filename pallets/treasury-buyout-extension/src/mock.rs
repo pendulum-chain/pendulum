@@ -1,5 +1,5 @@
 use crate::{
-	self as treasury_buyout_extension, default_weights::SubstrateWeight, AllowedCurrencyIdVerifier,
+	self as treasury_buyout_extension, default_weights::SubstrateWeight, AllowedCurrencyChecker,
 	Config, PriceGetter,
 };
 use frame_support::{
@@ -148,7 +148,7 @@ impl orml_currencies::Config for Test {
 }
 
 pub struct AllowedCurrencyIdVerifierImpl;
-impl AllowedCurrencyIdVerifier<CurrencyId> for AllowedCurrencyIdVerifierImpl {
+impl AllowedCurrencyChecker<CurrencyId> for AllowedCurrencyIdVerifierImpl {
 	// We allow only some assets
 	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool {
 		matches!(currency_id, 0u64 | 1u64 | 2u64 | 3u64)
@@ -185,7 +185,7 @@ impl Config for Test {
 	/// Fee from the native asset buyouts
 	type SellFee = SellFee;
 	/// Type that allows for checking if currency type is ownable by users
-	type AllowedCurrencyIdVerifier = AllowedCurrencyIdVerifierImpl;
+	type AllowedCurrencyVerifier = AllowedCurrencyIdVerifierImpl;
 	/// Used for fetching prices of currencies from oracle
 	type PriceGetter = OracleMock;
 	/// Min amount of native token to buyout

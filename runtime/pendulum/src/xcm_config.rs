@@ -8,9 +8,11 @@ use frame_support::{
 	traits::{ContainsPair, Everything, Nothing},
 	weights::{Weight, WeightToFee as WeightToFeeTrait},
 };
+use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
+	MultiCurrency,
 };
 use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
@@ -22,7 +24,7 @@ use xcm_builder::{
 	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
 	FixedWeightBounds, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeWeightCredit,
+	SovereignSignedViaLocation, TakeWeightCredit, TakeRevenue
 };
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
@@ -32,7 +34,7 @@ use xcm_executor::{
 use runtime_common::{
 	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
 	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
-	RelativeValue,
+	FixedConversionRateProvider
 };
 
 use crate::{
@@ -50,7 +52,7 @@ use crate::{
 use super::{
 	AccountId, Balance, Balances, Currencies, CurrencyId, ParachainInfo, ParachainSystem,
 	PendulumTreasuryAccount, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
-	System, Tokens, WeightToFee, XcmpQueue,
+	System, Tokens, WeightToFee, XcmpQueue, AssetRegistry, StringLimit
 };
 
 parameter_types! {
@@ -97,30 +99,6 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 			CurrencyId::Native => Some(native_location_external_pov()),
 			assets::tokens::EURC_ID => Some(EURC_location_external_pov()),
 			_ => None,
-		}
-	}
-}
-
-type RelativeValueOf = RelativeValue<Balance>;
-
-pub struct RelayRelativeValue;
-impl RelayRelativeValue {
-	fn get_relative_value(id: CurrencyId) -> Option<RelativeValueOf> {
-		match id {
-			CurrencyId::XCM(f) => match f {
-				xcm_assets::RELAY_DOT => Some(RelativeValueOf { num: 98, denominator: 1 }),
-				xcm_assets::ASSETHUB_USDT => Some(RelativeValueOf { num: 12, denominator: 1 }),
-				xcm_assets::ASSETHUB_USDC => Some(RelativeValueOf { num: 12, denominator: 1 }),
-				xcm_assets::EQUILIBRIUM_EQD => Some(RelativeValueOf { num: 12, denominator: 1 }),
-				xcm_assets::MOONBEAM_BRZ => Some(RelativeValueOf { num: 23, denominator: 10 }),
-				xcm_assets::POLKADEX_PDEX => Some(RelativeValueOf { num: 14, denominator: 1 }),
-				xcm_assets::MOONBEAM_GLMR => Some(RelativeValueOf { num: 55, denominator: 10 }),
-				_ => None,
-			},
-
-			CurrencyId::Native => Some(RelativeValueOf { num: 1, denominator: 1 }),
-			assets::tokens::EURC_ID => Some(RelativeValueOf { num: 13, denominator: 1 }),
-			_ => Some(RelativeValueOf { num: 10, denominator: 1 }),
 		}
 	}
 }
@@ -304,28 +282,27 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 );
 
-pub struct ChargeWeightInFungiblesImplementation;
-impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImplementation {
-	fn charge_weight_in_fungibles(
-		asset_id: CurrencyId,
-		weight: Weight,
-	) -> Result<Balance, XcmError> {
-		let amount = <WeightToFee as WeightToFeeTrait>::weight_to_fee(&weight);
 
-		// since this is calibrated (in theory) for the native of the relay
-		// we should just have a multiplier for relative "value" of that token
-		// and adjust the amount inversily proportional to the value
-		if let Some(relative_value) = RelayRelativeValue::get_relative_value(asset_id) {
-			let adjusted_amount =
-				RelativeValue::<Balance>::divide_by_relative_value(amount, relative_value);
-			log::info!("amount to be charged: {:?} in asset: {:?}", adjusted_amount, asset_id);
-			return Ok(adjusted_amount)
-		} else {
-			log::info!("amount to be charged: {:?} in asset: {:?}", amount, asset_id);
-			return Ok(amount)
+pub struct ToTreasury;
+impl TakeRevenue for ToTreasury {
+	fn take_revenue(revenue: MultiAsset) {
+		use xcm_executor::traits::Convert;
+
+		if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue {
+			if let Ok(currency_id) =
+				<CurrencyIdConvert as Convert<MultiLocation, CurrencyId>>::convert(location)
+			{
+				Currencies::deposit(currency_id, &PendulumTreasuryAccount::get(), amount);
+			}
 		}
 	}
 }
+
+pub type Traders = (AssetRegistryTrader<
+	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, StringLimit>>,
+	ToTreasury,
+>);
+
 
 /// Means for transacting the currencies of this parachain
 type Transactor = MultiCurrencyAdapter<
@@ -338,16 +315,6 @@ type Transactor = MultiCurrencyAdapter<
 	CurrencyIdConvert,
 	DepositToAlternative<PendulumTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
-
-pub type Traders = (
-	TakeFirstAssetTrader<
-		AccountId,
-		ChargeWeightInFungiblesImplementation,
-		ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
-		Tokens,
-		XcmFeesTo32ByteAccount<Transactor, AccountId, PendulumTreasuryAccount>,
-	>,
-);
 
 // We will allow for BRZ location from moonbeam
 pub struct AutomationPalletConfigPendulum;

@@ -1,7 +1,7 @@
 use crate::{sibling, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID};
 use amplitude_runtime::CurrencyId as AmplitudeCurrencyId;
 use frame_support::traits::GenesisBuild;
-use pendulum_runtime::{CurrencyId as PendulumCurrencyId, StringLimit};
+use pendulum_runtime::CurrencyId as PendulumCurrencyId;
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
 use polkadot_parachain::primitives::Id as ParaId;
 use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
@@ -13,15 +13,10 @@ use xcm_emulator::Weight;
 
 use codec::Encode;
 use frame_support::BoundedVec;
-use runtime_common::asset_registry::{CustomMetadata, DiaKeys};
+use runtime_common::asset_registry::{CustomMetadata, DiaKeys, StringLimit};
 
 use xcm::{
-	v3::{
-		Junction,
-		Junction::{GeneralIndex, GeneralKey, PalletInstance, Parachain},
-		Junctions::{Here, X1, X3},
-		MultiLocation, WeightLimit,
-	},
+	v3::{Junction::PalletInstance, Junctions::X1, MultiLocation},
 	VersionedMultiLocation,
 };
 
@@ -240,7 +235,7 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 					0,
 					X1(PalletInstance(10)),
 				))),
-				additional: CustomMetadata::<StringLimit> {
+				additional: CustomMetadata {
 					dia_keys: DiaKeys::<StringLimit> {
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
@@ -258,7 +253,7 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 				symbol: "USDT".as_bytes().to_vec(),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(asset_hub::USDT_location())),
-				additional: CustomMetadata::<StringLimit> {
+				additional: CustomMetadata {
 					dia_keys: DiaKeys::<StringLimit> {
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
@@ -276,7 +271,7 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 				symbol: "DOT".as_bytes().to_vec(),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(MultiLocation::parent())),
-				additional: CustomMetadata::<StringLimit> {
+				additional: CustomMetadata {
 					dia_keys: DiaKeys::<StringLimit> {
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
@@ -294,7 +289,7 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 				symbol: "BRZ".as_bytes().to_vec(),
 				existential_deposit: 1_000u128,
 				location: Some(xcm::VersionedMultiLocation::V3(moonbeam::BRZ_location())),
-				additional: CustomMetadata::<StringLimit> {
+				additional: CustomMetadata {
 					dia_keys: DiaKeys::<StringLimit> {
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
@@ -320,7 +315,7 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 					0,
 					X1(PalletInstance(10)),
 				))),
-				additional: CustomMetadata::<StringLimit> {
+				additional: CustomMetadata {
 					dia_keys: DiaKeys::<StringLimit> {
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
@@ -338,7 +333,7 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 				symbol: "USDT".as_bytes().to_vec(),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(asset_hub::USDT_location())),
-				additional: CustomMetadata::<StringLimit> {
+				additional: CustomMetadata {
 					dia_keys: DiaKeys::<StringLimit> {
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
@@ -356,7 +351,7 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 				symbol: "KSM".as_bytes().to_vec(),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(MultiLocation::parent())),
-				additional: CustomMetadata::<StringLimit> {
+				additional: CustomMetadata {
 					dia_keys: DiaKeys::<StringLimit> {
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),

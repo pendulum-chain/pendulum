@@ -2,14 +2,10 @@
 #![allow(non_snake_case)]
 
 use sp_runtime::{
-	traits::{CheckedDiv, IdentifyAccount, PhantomData, Saturating, Verify},
+	traits::{IdentifyAccount, PhantomData, Verify},
 	DispatchError, MultiSignature,
 };
 
-use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND};
-use scale_info::TypeInfo;
-use sp_runtime::traits::Get;
-use sp_std::fmt::Debug;
 use spacewalk_primitives::CurrencyId;
 use xcm::opaque::v3::MultiLocation;
 
@@ -77,16 +73,15 @@ pub mod opaque {
 	pub type BlockId = generic::BlockId<Block>;
 }
 
-pub struct FixedConversionRateProvider<OrmlAssetRegistry, T>(PhantomData<(OrmlAssetRegistry, T)>);
+pub struct FixedConversionRateProvider<OrmlAssetRegistry>(PhantomData<OrmlAssetRegistry>);
 
 impl<
-		T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync + 'static,
 		OrmlAssetRegistry: orml_traits::asset_registry::Inspect<
 			AssetId = CurrencyId,
 			Balance = Balance,
-			CustomMetadata = asset_registry::CustomMetadata<T>,
+			CustomMetadata = asset_registry::CustomMetadata,
 		>,
-	> orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<OrmlAssetRegistry, T>
+	> orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<OrmlAssetRegistry>
 {
 	fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
 		let metadata = OrmlAssetRegistry::metadata_by_location(location)?;

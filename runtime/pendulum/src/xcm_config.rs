@@ -4,12 +4,11 @@ use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ContainsPair, Everything, Nothing},
-	weights::{Weight, WeightToFee as WeightToFeeTrait},
 };
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
-	parameter_type_with_key, 
+	parameter_type_with_key,
 };
 use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
@@ -18,15 +17,11 @@ use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
-	FixedWeightBounds, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeWeightCredit,
+	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds,
+	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
-use xcm_executor::{
-	traits::{JustTry, ShouldExecute},
-	XcmExecutor,
-};
+use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
 use runtime_common::{
 	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
@@ -49,7 +44,7 @@ use crate::{
 use super::{
 	AccountId, AssetRegistry, Balance, Balances, Currencies, CurrencyId, ParachainInfo,
 	ParachainSystem, PendulumTreasuryAccount, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent,
-	RuntimeOrigin, StringLimit, System, Tokens, WeightToFee, XcmpQueue,
+	RuntimeOrigin, System, XcmpQueue,
 };
 
 parameter_types! {
@@ -279,10 +274,10 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 );
 
-pub type Traders = (AssetRegistryTrader<
-	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, StringLimit>>,
+pub type Traders = AssetRegistryTrader<
+	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry>>,
 	XcmFeesTo32ByteAccount<Transactor, AccountId, PendulumTreasuryAccount>,
->);
+>;
 
 /// Means for transacting the currencies of this parachain
 type Transactor = MultiCurrencyAdapter<

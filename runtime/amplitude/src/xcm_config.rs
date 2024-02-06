@@ -3,12 +3,13 @@ use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ContainsPair, Everything, Nothing},
-	weights::{Weight, WeightToFee as WeightToFeeTrait},
+	weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight, WeightToFee as WeightToFeeTrait},
 };
+use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
+	asset_registry::Inspect,
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
-	asset_registry::Inspect,
 };
 use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
@@ -27,7 +28,7 @@ use xcm_executor::{
 	XcmExecutor,
 };
 
-use runtime_common::{parachains::kusama::asset_hub};
+use runtime_common::{parachains::kusama::asset_hub, FixedConversionRateProvider};
 
 use cumulus_primitives_utility::{
 	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,
@@ -42,9 +43,9 @@ use crate::{
 };
 
 use super::{
-	AccountId, AmplitudeTreasuryAccount, Balance, Balances, Currencies, CurrencyId, ParachainInfo,
-	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens,
-	WeightToFee, XcmpQueue, AssetRegistry,
+	AccountId, AmplitudeTreasuryAccount, AssetRegistry, Balance, Balances, Currencies, CurrencyId,
+	ParachainInfo, ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
+	Tokens, WeightToFee, XcmpQueue, StringLimit,
 };
 
 parameter_types! {
@@ -113,7 +114,6 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 		}
 	}
 }
-
 
 /// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
 /// Here we need to know the canonical representation of all the tokens we handle in order to
@@ -273,37 +273,10 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 );
 
-pub struct ChargeWeightInFungiblesImplementation;
-impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImplementation {
-	fn charge_weight_in_fungibles(
-		asset_id: CurrencyId,
-		weight: Weight,
-	) -> Result<Balance, XcmError> {
-		let amount = <WeightToFee as WeightToFeeTrait>::weight_to_fee(&weight);
-		
-		let location = CurrencyIdConvert::convert(asset_id).ok_or(XcmError::AssetNotFound)?;
-		let asset_id_metadata = AssetRegistry::metadata_by_location(&location).ok_or(XcmError::AssetNotFound)?;
-		let fee_per_second = asset_id_metadata.additional.fee_per_second;
-
-		// if we assume the fee per second for Native is 1 and the baseline,
-		// then multipling the amount by the fee per second of the asset will give us the adjusted amount
-		let adjusted_amount = amount.checked_mul(fee_per_second).ok_or(XcmError::Overflow)?;
-
-		log::info!("amount to be charged: {:?} in asset: {:?}", adjusted_amount, asset_id);
-		return Ok(adjusted_amount)
-
-	}
-}
-
-pub type Traders = (
-	TakeFirstAssetTrader<
-		AccountId,
-		ChargeWeightInFungiblesImplementation,
-		ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
-		Tokens,
-		XcmFeesTo32ByteAccount<LocalAssetTransactor, AccountId, AmplitudeTreasuryAccount>,
-	>,
-);
+pub type Traders = (AssetRegistryTrader<
+	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, StringLimit>>,
+	XcmFeesTo32ByteAccount<LocalAssetTransactor, AccountId, AmplitudeTreasuryAccount>,
+>);
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {

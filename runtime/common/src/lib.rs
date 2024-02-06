@@ -2,9 +2,16 @@
 #![allow(non_snake_case)]
 
 use sp_runtime::{
-	traits::{CheckedDiv, IdentifyAccount, Saturating, Verify},
+	traits::{CheckedDiv, IdentifyAccount, PhantomData, Saturating, Verify},
 	DispatchError, MultiSignature,
 };
+
+use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND};
+use spacewalk_primitives::CurrencyId;
+use xcm::opaque::v3::MultiLocation;
+use sp_std::fmt::Debug;
+use scale_info::TypeInfo;
+use sp_runtime::traits::Get;
 
 pub mod asset_registry;
 pub mod chain_ext;
@@ -74,6 +81,29 @@ pub struct RelativeValue<Amount> {
 	pub num: Amount,
 	pub denominator: Amount,
 }
+
+pub struct FixedConversionRateProvider<OrmlAssetRegistry, T>(PhantomData<(OrmlAssetRegistry, T)>);
+
+impl<
+		T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync + 'static,
+		OrmlAssetRegistry: orml_traits::asset_registry::Inspect<
+			AssetId = CurrencyId,
+			Balance = Balance,
+			CustomMetadata = asset_registry::CustomMetadata<T>,
+		>,
+	> orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<OrmlAssetRegistry, T>
+{
+	fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
+		let metadata = OrmlAssetRegistry::metadata_by_location(location)?;
+		Some(metadata.additional.fee_per_second)
+	}
+}
+
+// pub fn default_per_second(decimals: u32) -> Balance {
+// 	let base_weight = Balance::from(ExtrinsicBaseWeight::get().ref_time());
+// 	let default_per_second = WEIGHT_REF_TIME_PER_SECOND as u128 / base_weight;
+// 	default_per_second
+// }
 
 impl<Amount: CheckedDiv<Output = Amount> + Saturating + Clone> RelativeValue<Amount> {
 	pub fn divide_by_relative_value(
@@ -189,7 +219,8 @@ pub mod parachains {
 
 			// The address of the BRZ token on Moonbeam `0x3225edCe8aD30Ae282e62fa32e7418E4b9cf197b` as byte array
 			pub const BRZ_ASSET_ACCOUNT_IN_BYTES: [u8; 20] = [
-				50, 37, 237, 206, 138, 211, 10, 226, 130, 230, 47, 163, 46, 116, 24, 228, 185, 207, 25, 123
+				50, 37, 237, 206, 138, 211, 10, 226, 130, 230, 47, 163, 46, 116, 24, 228, 185, 207,
+				25, 123,
 			];
 
 			parachain_asset_location!(

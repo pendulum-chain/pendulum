@@ -9,7 +9,7 @@ use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
 	asset_registry::Inspect,
 	location::{RelativeReserveProvider, Reserve},
-	parameter_type_with_key, MultiCurrency,
+	parameter_type_with_key, 
 };
 use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
@@ -21,7 +21,7 @@ use xcm_builder::{
 	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
 	FixedWeightBounds, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
+	SovereignSignedViaLocation, TakeWeightCredit,
 };
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute, TransactAsset},

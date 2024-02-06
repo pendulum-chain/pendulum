@@ -683,7 +683,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 				WeightLimit::Unlimited
 			));
 		});
-		
+
 		$parachain1::execute_with(|| {
 			use $parachain1_runtime::{RuntimeEvent, System, Treasury};
 			// given the configuration in pendulum's xcm_config, we expect the callback (in this case a Remark)

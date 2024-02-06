@@ -16,6 +16,8 @@ use statemine_runtime as kusama_asset_hub_runtime;
 use xcm::latest::NetworkId;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
 
+// Since in the mock definition all the assets are defined with the same fee_per_second value
+// the total fees for every asset will be the same.
 const KSM_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
 const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
 const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;

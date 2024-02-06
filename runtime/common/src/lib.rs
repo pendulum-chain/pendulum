@@ -77,11 +77,6 @@ pub mod opaque {
 	pub type BlockId = generic::BlockId<Block>;
 }
 
-pub struct RelativeValue<Amount> {
-	pub num: Amount,
-	pub denominator: Amount,
-}
-
 pub struct FixedConversionRateProvider<OrmlAssetRegistry, T>(PhantomData<(OrmlAssetRegistry, T)>);
 
 impl<
@@ -96,30 +91,6 @@ impl<
 	fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
 		let metadata = OrmlAssetRegistry::metadata_by_location(location)?;
 		Some(metadata.additional.fee_per_second)
-	}
-}
-
-// pub fn default_per_second(decimals: u32) -> Balance {
-// 	let base_weight = Balance::from(ExtrinsicBaseWeight::get().ref_time());
-// 	let default_per_second = WEIGHT_REF_TIME_PER_SECOND as u128 / base_weight;
-// 	default_per_second
-// }
-
-impl<Amount: CheckedDiv<Output = Amount> + Saturating + Clone> RelativeValue<Amount> {
-	pub fn divide_by_relative_value(
-		amount: Amount,
-		relative_value: RelativeValue<Amount>,
-	) -> Amount {
-		// Calculate the adjusted amount
-		if let Some(adjusted_amount) = amount
-			.clone()
-			.saturating_mul(relative_value.denominator)
-			.checked_div(&relative_value.num)
-		{
-			return adjusted_amount
-		}
-		// We should never specify a numerator of 0, but just to be safe
-		return amount
 	}
 }
 

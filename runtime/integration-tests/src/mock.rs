@@ -1,7 +1,7 @@
 use crate::{sibling, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID};
+use amplitude_runtime::CurrencyId as AmplitudeCurrencyId;
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::{CurrencyId as PendulumCurrencyId, StringLimit};
-use amplitude_runtime::{CurrencyId as AmplitudeCurrencyId};
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
 use polkadot_parachain::primitives::Id as ParaId;
 use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
@@ -426,7 +426,6 @@ impl Builder<PendulumCurrencyId> for ExtBuilderParachain<PendulumCurrencyId> {
 					ORML_INITIAL_BALANCE,
 					PendulumCurrencyId,
 					assets_metadata_pendulum
-					
 				)
 			},
 			ParachainType::Amplitude => {

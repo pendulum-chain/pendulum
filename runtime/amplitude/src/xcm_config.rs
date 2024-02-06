@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ContainsPair, Everything, Nothing},
-	weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight, WeightToFee as WeightToFeeTrait},
+	weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
 };
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
@@ -43,7 +43,7 @@ use crate::{
 use super::{
 	AccountId, AmplitudeTreasuryAccount, AssetRegistry, Balance, Balances, Currencies, CurrencyId,
 	ParachainInfo, ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
-	StringLimit, Tokens, WeightToFee, XcmpQueue,
+	StringLimit, Tokens, XcmpQueue,
 };
 
 parameter_types! {

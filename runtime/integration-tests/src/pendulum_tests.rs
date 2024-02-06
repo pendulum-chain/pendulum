@@ -18,8 +18,10 @@ use statemint_runtime as polkadot_asset_hub_runtime;
 use xcm::latest::NetworkId;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
 
-const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000; //The fees that relay chain will charge when transfer DOT to parachain. sovereign account of some parachain will receive transfer_amount - DOT_FEE
-const MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000; //Fees that we will charge in incoming Moonbeam's BRZ. Depends on the RelativeValue struct implementation.
+// Since in the mock definition all the assets are defined with the same fee_per_second value
+// the total fees for every asset will be the same.
+const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
+const MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
 const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
 const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
 

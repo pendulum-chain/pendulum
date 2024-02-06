@@ -30,9 +30,7 @@ use xcm_executor::{
 
 use runtime_common::{parachains::kusama::asset_hub, FixedConversionRateProvider};
 
-use cumulus_primitives_utility::{
-	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,
-};
+use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 
 use crate::{
 	assets::{
@@ -273,24 +271,9 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 );
 
-pub struct ToTreasury;
-impl TakeRevenue for ToTreasury {
-	fn take_revenue(revenue: MultiAsset) {
-		use xcm_executor::traits::Convert;
-
-		if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue {
-			if let Ok(currency_id) =
-				<CurrencyIdConvert as Convert<MultiLocation, CurrencyId>>::convert(location)
-			{
-				Currencies::deposit(currency_id, &AmplitudeTreasuryAccount::get(), amount);
-			}
-		}
-	}
-}
-
 pub type Traders = (AssetRegistryTrader<
 	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, StringLimit>>,
-	ToTreasury,
+	XcmFeesTo32ByteAccount<LocalAssetTransactor, AccountId, AmplitudeTreasuryAccount>,
 >);
 
 pub struct XcmConfig;

@@ -236,7 +236,7 @@ macro_rules! parachain1_transfer_incorrect_asset_to_parachain2_should_fail {
 
 		$parachain2::execute_with(|| {
 			use $para2_runtime::{RuntimeEvent, System};
-			//since the asset registry trader cannot find the fee per second for the asset, 
+			//since the asset registry trader cannot find the fee per second for the asset,
 			//it will return TooExpensive error.
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
@@ -683,7 +683,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 				WeightLimit::Unlimited
 			));
 		});
-
+		
 		$parachain1::execute_with(|| {
 			use $parachain1_runtime::{RuntimeEvent, System, Treasury};
 			// given the configuration in pendulum's xcm_config, we expect the callback (in this case a Remark)

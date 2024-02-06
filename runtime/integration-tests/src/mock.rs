@@ -1,6 +1,7 @@
 use crate::{sibling, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID};
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::{CurrencyId as PendulumCurrencyId, StringLimit};
+use amplitude_runtime::{CurrencyId as AmplitudeCurrencyId};
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
 use polkadot_parachain::primitives::Id as ParaId;
 use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
@@ -17,14 +18,16 @@ use runtime_common::asset_registry::{CustomMetadata, DiaKeys};
 use xcm::{
 	v3::{
 		Junction,
-		Junction::{GeneralKey, PalletInstance, GeneralIndex, Parachain},
-		Junctions::{X1, X3, Here},
+		Junction::{GeneralIndex, GeneralKey, PalletInstance, Parachain},
+		Junctions::{Here, X1, X3},
 		MultiLocation, WeightLimit,
 	},
 	VersionedMultiLocation,
 };
 
-use runtime_common::parachains::polkadot::{moonbeam::PARA_ID as MOONBEAM_PARA_ID, moonbeam, asset_hub};
+use runtime_common::parachains::polkadot::{
+	asset_hub, moonbeam, moonbeam::PARA_ID as MOONBEAM_PARA_ID,
+};
 use statemine_runtime as kusama_asset_hub_runtime;
 use statemint_runtime as polkadot_asset_hub_runtime;
 
@@ -224,7 +227,147 @@ fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
 		..Default::default()
 	}
 }
+fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)> {
+	vec![
+		(
+			PendulumCurrencyId::Native,
+			orml_asset_registry::AssetMetadata {
+				decimals: 12u32,
+				name: "Pendulum".as_bytes().to_vec(),
+				symbol: "PEN".as_bytes().to_vec(),
+				existential_deposit: 1_000u128,
+				location: Some(VersionedMultiLocation::V3(MultiLocation::new(
+					0,
+					X1(PalletInstance(10)),
+				))),
+				additional: CustomMetadata::<StringLimit> {
+					dia_keys: DiaKeys::<StringLimit> {
+						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
+						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
+					},
+					fee_per_second: UNIT,
+				},
+			}
+			.encode(),
+		),
+		(
+			PendulumCurrencyId::XCM(1),
+			orml_asset_registry::AssetMetadata {
+				decimals: 12u32,
+				name: "USDT Assethub".as_bytes().to_vec(),
+				symbol: "USDT".as_bytes().to_vec(),
+				existential_deposit: 1_000u128,
+				location: Some(VersionedMultiLocation::V3(asset_hub::USDT_location())),
+				additional: CustomMetadata::<StringLimit> {
+					dia_keys: DiaKeys::<StringLimit> {
+						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
+						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
+					},
+					fee_per_second: UNIT,
+				},
+			}
+			.encode(),
+		),
+		(
+			PendulumCurrencyId::XCM(0),
+			orml_asset_registry::AssetMetadata {
+				decimals: 12u32,
+				name: "Polkadot".as_bytes().to_vec(),
+				symbol: "DOT".as_bytes().to_vec(),
+				existential_deposit: 1_000u128,
+				location: Some(VersionedMultiLocation::V3(MultiLocation::parent())),
+				additional: CustomMetadata::<StringLimit> {
+					dia_keys: DiaKeys::<StringLimit> {
+						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
+						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
+					},
+					fee_per_second: UNIT,
+				},
+			}
+			.encode(),
+		),
+		(
+			PendulumCurrencyId::XCM(6),
+			orml_asset_registry::AssetMetadata {
+				decimals: 12u32,
+				name: "Moonbeam BRZ".as_bytes().to_vec(),
+				symbol: "BRZ".as_bytes().to_vec(),
+				existential_deposit: 1_000u128,
+				location: Some(xcm::VersionedMultiLocation::V3(moonbeam::BRZ_location())),
+				additional: CustomMetadata::<StringLimit> {
+					dia_keys: DiaKeys::<StringLimit> {
+						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
+						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
+					},
+					fee_per_second: UNIT,
+				},
+			}
+			.encode(),
+		),
+	]
+}
 
+fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>)> {
+	vec![
+		(
+			AmplitudeCurrencyId::Native,
+			orml_asset_registry::AssetMetadata {
+				decimals: 12u32,
+				name: "Amplitude".as_bytes().to_vec(),
+				symbol: "AMPE".as_bytes().to_vec(),
+				existential_deposit: 1_000u128,
+				location: Some(VersionedMultiLocation::V3(MultiLocation::new(
+					0,
+					X1(PalletInstance(10)),
+				))),
+				additional: CustomMetadata::<StringLimit> {
+					dia_keys: DiaKeys::<StringLimit> {
+						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
+						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
+					},
+					fee_per_second: UNIT,
+				},
+			}
+			.encode(),
+		),
+		(
+			AmplitudeCurrencyId::XCM(1),
+			orml_asset_registry::AssetMetadata {
+				decimals: 12u32,
+				name: "USDT Assethub".as_bytes().to_vec(),
+				symbol: "USDT".as_bytes().to_vec(),
+				existential_deposit: 1_000u128,
+				location: Some(VersionedMultiLocation::V3(asset_hub::USDT_location())),
+				additional: CustomMetadata::<StringLimit> {
+					dia_keys: DiaKeys::<StringLimit> {
+						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
+						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
+					},
+					fee_per_second: UNIT,
+				},
+			}
+			.encode(),
+		),
+		(
+			AmplitudeCurrencyId::XCM(0),
+			orml_asset_registry::AssetMetadata {
+				decimals: 12u32,
+				name: "Kusama".as_bytes().to_vec(),
+				symbol: "KSM".as_bytes().to_vec(),
+				existential_deposit: 1_000u128,
+				location: Some(VersionedMultiLocation::V3(MultiLocation::parent())),
+				additional: CustomMetadata::<StringLimit> {
+					dia_keys: DiaKeys::<StringLimit> {
+						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
+						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
+					},
+					fee_per_second: UNIT,
+				},
+			}
+			.encode(),
+		),
+	]
+}
 pub fn para_ext(chain: ParachainType) -> sp_io::TestExternalities {
 	match chain {
 		ParachainType::PolkadotAssetHub =>
@@ -270,152 +413,8 @@ impl Builder<PendulumCurrencyId> for ExtBuilderParachain<PendulumCurrencyId> {
 	}
 
 	fn build(self) -> TestExternalities {
-		let initial_asset_registry_pendulum: Vec<(PendulumCurrencyId, Vec<u8>)> = vec![
-			(
-				PendulumCurrencyId::Native,
-				orml_asset_registry::AssetMetadata {
-					decimals: 12u32,
-					name: "Pendulum".as_bytes().to_vec(),
-					symbol: "PEN".as_bytes().to_vec(),
-					existential_deposit: 1_000u128,
-					location: Some(VersionedMultiLocation::V3(
-						MultiLocation::new(0, X1(PalletInstance(10))),
-					)),
-					additional: CustomMetadata::<StringLimit> {
-						dia_keys: DiaKeys::<StringLimit> {
-							blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
-							symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
-						},
-						fee_per_second: UNIT,
-					},
-				}
-				.encode(),
-			),
-			(
-				PendulumCurrencyId::XCM(1),
-				orml_asset_registry::AssetMetadata {
-					decimals: 12u32,
-					name: "USDT Assethub".as_bytes().to_vec(),
-					symbol: "USDT".as_bytes().to_vec(),
-					existential_deposit: 1_000u128,
-					location: Some(VersionedMultiLocation::V3(
-						asset_hub::USDT_location()
-					)),
-					additional: CustomMetadata::<StringLimit> {
-						dia_keys: DiaKeys::<StringLimit> {
-							blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
-							symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
-						},
-						fee_per_second: UNIT,
-					},
-				}
-				.encode(),
-			),
-			(
-				PendulumCurrencyId::XCM(0),
-				orml_asset_registry::AssetMetadata {
-					decimals: 12u32,
-					name: "Polkadot".as_bytes().to_vec(),
-					symbol: "DOT".as_bytes().to_vec(),
-					existential_deposit: 1_000u128,
-					location: Some(VersionedMultiLocation::V3(
-						MultiLocation::parent()
-					)),
-					additional: CustomMetadata::<StringLimit> {
-						dia_keys: DiaKeys::<StringLimit> {
-							blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
-							symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
-						},
-						fee_per_second: UNIT,
-					},
-				}
-				.encode(),
-			),
-			(
-				PendulumCurrencyId::XCM(6),
-				orml_asset_registry::AssetMetadata {
-					decimals: 12u32,
-					name: "Moonbeam".as_bytes().to_vec(),
-					symbol: "GLMR".as_bytes().to_vec(),
-					existential_deposit: 1_000u128,
-					location: Some(
-						xcm::VersionedMultiLocation::V3(moonbeam::GLMR_location())
-					),
-					additional: CustomMetadata::<StringLimit> {
-						dia_keys: DiaKeys::<StringLimit> {
-							blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
-							symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
-						},
-						fee_per_second: UNIT,
-					},
-				}
-				.encode(),
-			),
-
-		];
-		let initial_asset_registry_amplitude: Vec<(PendulumCurrencyId, Vec<u8>)> = vec![
-			(
-				PendulumCurrencyId::Native,
-				orml_asset_registry::AssetMetadata {
-					decimals: 12u32,
-					name: "Pendulum".as_bytes().to_vec(),
-					symbol: "PEN".as_bytes().to_vec(),
-					existential_deposit: 1_000u128,
-					location: Some(VersionedMultiLocation::V3(
-						MultiLocation::new(0, X1(PalletInstance(10))),
-					)),
-					additional: CustomMetadata::<StringLimit> {
-						dia_keys: DiaKeys::<StringLimit> {
-							blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
-							symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
-						},
-						fee_per_second: UNIT,
-					},
-				}
-				.encode(),
-			),
-			(
-				PendulumCurrencyId::XCM(1),
-				orml_asset_registry::AssetMetadata {
-					decimals: 12u32,
-					name: "USDT Assethub".as_bytes().to_vec(),
-					symbol: "USDT".as_bytes().to_vec(),
-					existential_deposit: 1_000u128,
-					location: Some(VersionedMultiLocation::V3(
-						asset_hub::USDT_location()
-					)),
-					additional: CustomMetadata::<StringLimit> {
-						dia_keys: DiaKeys::<StringLimit> {
-							blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
-							symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
-						},
-						fee_per_second: UNIT,
-					},
-				}
-				.encode(),
-			),
-			(
-				PendulumCurrencyId::XCM(0),
-				orml_asset_registry::AssetMetadata {
-					decimals: 12u32,
-					name: "Kusama".as_bytes().to_vec(),
-					symbol: "KSM".as_bytes().to_vec(),
-					existential_deposit: 1_000u128,
-					location: Some(VersionedMultiLocation::V3(
-						MultiLocation::parent() 
-					)),
-					additional: CustomMetadata::<StringLimit> {
-						dia_keys: DiaKeys::<StringLimit> {
-							blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
-							symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
-						},
-						fee_per_second: UNIT,
-					},
-				}
-				.encode(),
-			),
-
-		];
+		let assets_metadata_pendulum = assets_metadata_for_registry_pendulum();
+		let assets_metadata_amplitude = assets_metadata_for_registry_amplitude();
 		match self.chain {
 			ParachainType::Pendulum => {
 				use pendulum_runtime::{Runtime, System};
@@ -426,7 +425,8 @@ impl Builder<PendulumCurrencyId> for ExtBuilderParachain<PendulumCurrencyId> {
 					NATIVE_INITIAL_BALANCE,
 					ORML_INITIAL_BALANCE,
 					PendulumCurrencyId,
-					initial_asset_registry_pendulum
+					assets_metadata_pendulum
+					
 				)
 			},
 			ParachainType::Amplitude => {
@@ -438,7 +438,7 @@ impl Builder<PendulumCurrencyId> for ExtBuilderParachain<PendulumCurrencyId> {
 					NATIVE_INITIAL_BALANCE,
 					ORML_INITIAL_BALANCE,
 					PendulumCurrencyId,
-					initial_asset_registry_amplitude
+					assets_metadata_amplitude
 				)
 			},
 			_ => panic!("cannot use this chain to build"),

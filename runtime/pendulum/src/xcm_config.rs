@@ -1,8 +1,6 @@
 use core::marker::PhantomData;
 
-use cumulus_primitives_utility::{
-	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,
-};
+use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ContainsPair, Everything, Nothing},
@@ -11,8 +9,7 @@ use frame_support::{
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
-	parameter_type_with_key,
-	MultiCurrency,
+	parameter_type_with_key, MultiCurrency,
 };
 use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
@@ -24,7 +21,7 @@ use xcm_builder::{
 	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
 	FixedWeightBounds, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeWeightCredit, TakeRevenue
+	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute},
@@ -34,7 +31,7 @@ use xcm_executor::{
 use runtime_common::{
 	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
 	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
-	FixedConversionRateProvider
+	FixedConversionRateProvider,
 };
 
 use crate::{
@@ -50,9 +47,9 @@ use crate::{
 };
 
 use super::{
-	AccountId, Balance, Balances, Currencies, CurrencyId, ParachainInfo, ParachainSystem,
-	PendulumTreasuryAccount, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
-	System, Tokens, WeightToFee, XcmpQueue, AssetRegistry, StringLimit
+	AccountId, AssetRegistry, Balance, Balances, Currencies, CurrencyId, ParachainInfo,
+	ParachainSystem, PendulumTreasuryAccount, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent,
+	RuntimeOrigin, StringLimit, System, Tokens, WeightToFee, XcmpQueue,
 };
 
 parameter_types! {
@@ -282,27 +279,10 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 );
 
-
-pub struct ToTreasury;
-impl TakeRevenue for ToTreasury {
-	fn take_revenue(revenue: MultiAsset) {
-		use xcm_executor::traits::Convert;
-
-		if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue {
-			if let Ok(currency_id) =
-				<CurrencyIdConvert as Convert<MultiLocation, CurrencyId>>::convert(location)
-			{
-				Currencies::deposit(currency_id, &PendulumTreasuryAccount::get(), amount);
-			}
-		}
-	}
-}
-
 pub type Traders = (AssetRegistryTrader<
 	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, StringLimit>>,
-	ToTreasury,
+	XcmFeesTo32ByteAccount<Transactor, AccountId, PendulumTreasuryAccount>,
 >);
-
 
 /// Means for transacting the currencies of this parachain
 type Transactor = MultiCurrencyAdapter<

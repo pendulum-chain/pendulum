@@ -9,7 +9,7 @@ use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
 	asset_registry::Inspect,
 	location::{RelativeReserveProvider, Reserve},
-	parameter_type_with_key,
+	parameter_type_with_key, MultiCurrency,
 };
 use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
@@ -21,10 +21,10 @@ use xcm_builder::{
 	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
 	FixedWeightBounds, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeWeightCredit,
+	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::{
-	traits::{JustTry, ShouldExecute},
+	traits::{JustTry, ShouldExecute, TransactAsset},
 	XcmExecutor,
 };
 
@@ -45,7 +45,7 @@ use crate::{
 use super::{
 	AccountId, AmplitudeTreasuryAccount, AssetRegistry, Balance, Balances, Currencies, CurrencyId,
 	ParachainInfo, ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
-	Tokens, WeightToFee, XcmpQueue, StringLimit,
+	StringLimit, Tokens, WeightToFee, XcmpQueue,
 };
 
 parameter_types! {
@@ -273,9 +273,24 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 );
 
+pub struct ToTreasury;
+impl TakeRevenue for ToTreasury {
+	fn take_revenue(revenue: MultiAsset) {
+		use xcm_executor::traits::Convert;
+
+		if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue {
+			if let Ok(currency_id) =
+				<CurrencyIdConvert as Convert<MultiLocation, CurrencyId>>::convert(location)
+			{
+				Currencies::deposit(currency_id, &AmplitudeTreasuryAccount::get(), amount);
+			}
+		}
+	}
+}
+
 pub type Traders = (AssetRegistryTrader<
 	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, StringLimit>>,
-	XcmFeesTo32ByteAccount<LocalAssetTransactor, AccountId, AmplitudeTreasuryAccount>,
+	ToTreasury,
 >);
 
 pub struct XcmConfig;

@@ -7,11 +7,11 @@ use sp_runtime::{
 };
 
 use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND};
-use spacewalk_primitives::CurrencyId;
-use xcm::opaque::v3::MultiLocation;
-use sp_std::fmt::Debug;
 use scale_info::TypeInfo;
 use sp_runtime::traits::Get;
+use sp_std::fmt::Debug;
+use spacewalk_primitives::CurrencyId;
+use xcm::opaque::v3::MultiLocation;
 
 pub mod asset_registry;
 pub mod chain_ext;

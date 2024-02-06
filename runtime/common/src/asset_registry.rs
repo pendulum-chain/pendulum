@@ -10,8 +10,16 @@ use sp_std::fmt::Debug;
 use spacewalk_primitives::CurrencyId;
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
-pub struct CustomMetadata<T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync> {
-	pub dia_keys: DiaKeys<T>,
+pub struct StringLimit; 
+impl Get<u32> for StringLimit {
+	fn get() -> u32 {
+		50
+	}
+}
+
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
+pub struct CustomMetadata {
+	pub dia_keys: DiaKeys<StringLimit>,
 	pub fee_per_second: u128,
 }
 
@@ -26,15 +34,11 @@ pub struct DiaKeys<T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync> {
 )]
 pub struct CustomAssetProcessor;
 
-impl<T> AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata<T>>>
-	for CustomAssetProcessor
-where
-	T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync + 'static,
-{
+impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for CustomAssetProcessor {
 	fn pre_register(
 		id: Option<CurrencyId>,
-		metadata: AssetMetadata<Balance, CustomMetadata<T>>,
-	) -> Result<(CurrencyId, AssetMetadata<Balance, CustomMetadata<T>>), DispatchError> {
+		metadata: AssetMetadata<Balance, CustomMetadata>,
+	) -> Result<(CurrencyId, AssetMetadata<Balance, CustomMetadata>), DispatchError> {
 		match id {
 			Some(id) => Ok((id, metadata)),
 			None => Err(DispatchError::Other("asset-registry: AssetId is required")),
@@ -43,7 +47,7 @@ where
 
 	fn post_register(
 		_id: CurrencyId,
-		_asset_metadata: AssetMetadata<Balance, CustomMetadata<T>>,
+		_asset_metadata: AssetMetadata<Balance, CustomMetadata>,
 	) -> Result<(), DispatchError> {
 		Ok(())
 	}

@@ -11,6 +11,7 @@ members = [
 	"pallets/vesting-manager",
 	"pallets/orml-currencies-allowance-extension",
 	"pallets/orml-tokens-management-extension",
+	"pallets/treasury-buyout-extension",
 	"runtime/common",
 	"runtime/amplitude",
 	"runtime/foucoco",

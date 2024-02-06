@@ -22,6 +22,7 @@ paste = "1.0.14"
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 serde = { version = "1.0.144", optional = true, features = ["derive"] }
 smallvec = "1.9.0"
+cfg-if = "1.0.0"
 
 # Local
 runtime-common = { path = "../common", default-features = false }
@@ -106,6 +107,7 @@ parachain-staking = { path = "../../pallets/parachain-staking", default-features
 
 orml-currencies-allowance-extension = {path = "../../pallets/orml-currencies-allowance-extension", default-features = false}
 orml-tokens-management-extension = {path = "../../pallets/orml-tokens-management-extension", default-features = false}
+treasury-buyout-extension = {path = "../../pallets/treasury-buyout-extension", default-features = false}
 
 # DIA
 dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.40" }
@@ -240,7 +242,7 @@ std = [
     "module-pallet-staking-rpc-runtime-api/std",
     "spacewalk-primitives/std",
     "orml-currencies-allowance-extension/std",
-
+    "treasury-buyout-extension/std",
     "bifrost-farming/std",
     "bifrost-farming-rpc-runtime-api/std",
 ]
@@ -271,7 +273,8 @@ runtime-benchmarks = [
     "oracle/testing-utils",
     "runtime-common/runtime-benchmarks",
     "orml-currencies-allowance-extension/runtime-benchmarks",
-    "orml-tokens-management-extension/runtime-benchmarks"
+    "orml-tokens-management-extension/runtime-benchmarks",
+    "treasury-buyout-extension/runtime-benchmarks"
 ]
 
 try-runtime = [

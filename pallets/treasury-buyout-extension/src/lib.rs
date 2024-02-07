@@ -109,8 +109,6 @@ pub mod pallet {
 		BuyoutWithTreasuryAccount,
 		/// Exchange failed
 		ExchangeFailure,
-		/// Math error
-		MathError,
 	}
 
 	#[pallet::event]
@@ -205,6 +203,8 @@ impl<T: Config> Pallet<T> {
 				.unwrap_or_default();
 			let (mut buyouts, last_buyout) = Buyouts::<T>::get(account_id);
 
+			// Check if caller's last buyout was in the previous period
+			// If true, reset buyout amount limit for the caller since this is the first buyout in the current period
 			if !buyouts.is_zero() && last_buyout < current_period_start_number {
 				buyouts = Default::default();
 				Buyouts::<T>::insert(account_id, (buyouts, current_block_number));
@@ -253,7 +253,7 @@ impl<T: Config> Pallet<T> {
 		// Add fee to the basic asset price
 		let fee_plus_one = FixedU128::from(T::SellFee::get())
 			.checked_add(&FixedU128::one())
-			.ok_or(Error::<T>::MathError)?;
+			.ok_or::<DispatchError>(ArithmeticError::Overflow.into())?;
 		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
 		let exchange_amount = Self::multiply_by_rational(
@@ -282,7 +282,7 @@ impl<T: Config> Pallet<T> {
 		// Add fee to the basic asset price
 		let fee_plus_one = FixedU128::from(T::SellFee::get())
 			.checked_add(&FixedU128::one())
-			.ok_or(Error::<T>::MathError)?;
+			.ok_or::<DispatchError>(ArithmeticError::Overflow.into())?;
 		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
 		let buyout_amount = Self::multiply_by_rational(

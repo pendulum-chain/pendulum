@@ -336,6 +336,8 @@ try-runtime = [
     "dia-oracle/try-runtime",
     "orml-currencies-allowance-extension/try-runtime",
     "orml-tokens-management-extension/try-runtime",
+
+    "treasury-buyout-extension/try-runtime",
     
     "bifrost-farming/try-runtime",
 

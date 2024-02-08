@@ -1,7 +1,7 @@
 #![cfg(test)]
 use crate::{
 	mock::*,
-	types::{Amount, CurrencyIdOf, BuyoutAssetUpdate},
+	types::{Amount, BuyoutAssetUpdate, CurrencyIdOf},
 	BuyoutLimit, Buyouts, Config, Error, PriceGetter, ValidityError,
 };
 use frame_support::{assert_err, assert_noop, assert_ok};
@@ -195,52 +195,44 @@ fn user_update_buyout_amount_limit_fails() {
 #[test]
 fn root_update_allowed_currencies_succeeds() {
 	run_test(|| {
-        let dot_currency_id = RelayChainCurrencyId::get();
+		let dot_currency_id = RelayChainCurrencyId::get();
 
-        // Since dot is already added to allowed currencies in the genesis, remove it first
-        let updates = vec![
-            BuyoutAssetUpdate::Remove(dot_currency_id),
-        ];
+		// Since dot is already added to allowed currencies in the genesis, remove it first
+		let updates = vec![BuyoutAssetUpdate::Remove(dot_currency_id)];
 
-        assert_ok!(crate::Pallet::<Test>::update_allowed_assets(
-			RuntimeOrigin::root(),
-			updates,
-		));
+		assert_ok!(crate::Pallet::<Test>::update_allowed_assets(RuntimeOrigin::root(), updates,));
 
-        // Test user buyout after allowed currencies update
-        // It should fail because dot is not allowed for buyout
-        let user = USER;
+		// Test user buyout after allowed currencies update
+		// It should fail because dot is not allowed for buyout
+		let user = USER;
 		let exchange_amount = 100 * UNIT;
 
 		assert_noop!(
-            crate::Pallet::<Test>::buyout(
-                RuntimeOrigin::signed(user),
-                dot_currency_id,
-                Amount::Exchange(exchange_amount),
-            ),
-            Error::<Test>::WrongAssetToBuyout
-        );
+			crate::Pallet::<Test>::buyout(
+				RuntimeOrigin::signed(user),
+				dot_currency_id,
+				Amount::Exchange(exchange_amount),
+			),
+			Error::<Test>::WrongAssetToBuyout
+		);
 
-        // Add dot back to allowed currencies among some others
-        let updates = vec![
-            BuyoutAssetUpdate::Remove(0),
-            BuyoutAssetUpdate::Add(3),
-            // Duplicating the same updates should not fail
-            BuyoutAssetUpdate::Add(3),
-            BuyoutAssetUpdate::Remove(2),
-            BuyoutAssetUpdate::Add(dot_currency_id),
-            BuyoutAssetUpdate::Remove(6),
-            // Duplicating the same updates should not fail
-            BuyoutAssetUpdate::Remove(6),
-        ];
+		// Add dot back to allowed currencies among some others
+		let updates = vec![
+			BuyoutAssetUpdate::Remove(0),
+			BuyoutAssetUpdate::Add(3),
+			// Duplicating the same updates should not fail
+			BuyoutAssetUpdate::Add(3),
+			BuyoutAssetUpdate::Remove(2),
+			BuyoutAssetUpdate::Add(dot_currency_id),
+			BuyoutAssetUpdate::Remove(6),
+			// Duplicating the same updates should not fail
+			BuyoutAssetUpdate::Remove(6),
+		];
 
-        assert_ok!(crate::Pallet::<Test>::update_allowed_assets(
-			RuntimeOrigin::root(),
-			updates,
-		));
+		assert_ok!(crate::Pallet::<Test>::update_allowed_assets(RuntimeOrigin::root(), updates,));
 
-        // Test user buyout after allowed currencies update
-        // It should succeed because dot is now allowed for buyout
+		// Test user buyout after allowed currencies update
+		// It should succeed because dot is now allowed for buyout
 		assert_ok!(crate::Pallet::<Test>::buyout(
 			RuntimeOrigin::signed(user),
 			dot_currency_id,
@@ -254,21 +246,18 @@ fn user_update_allowed_currencies_fails() {
 	run_test(|| {
 		let user = USER;
 
-        let updates = vec![
-            BuyoutAssetUpdate::Remove(1),
-            BuyoutAssetUpdate::Add(3),
-            BuyoutAssetUpdate::Remove(2),
-            BuyoutAssetUpdate::Add(4),
-            BuyoutAssetUpdate::Remove(6),
-        ];
+		let updates = vec![
+			BuyoutAssetUpdate::Remove(1),
+			BuyoutAssetUpdate::Add(3),
+			BuyoutAssetUpdate::Remove(2),
+			BuyoutAssetUpdate::Add(4),
+			BuyoutAssetUpdate::Remove(6),
+		];
 
-        assert_noop!(
-            crate::Pallet::<Test>::update_allowed_assets(
-                RuntimeOrigin::signed(user),
-                updates,
-            ),
-            BadOrigin
-        );
+		assert_noop!(
+			crate::Pallet::<Test>::update_allowed_assets(RuntimeOrigin::signed(user), updates,),
+			BadOrigin
+		);
 	});
 }
 
@@ -277,46 +266,40 @@ fn root_update_allowed_currencies_with_native_fails() {
 	run_test(|| {
 		let native_currency_id = GetNativeCurrencyId::get();
 
-        let updates = vec![
-            BuyoutAssetUpdate::Remove(1),
-            BuyoutAssetUpdate::Add(3),
-            BuyoutAssetUpdate::Remove(6),
-            BuyoutAssetUpdate::Add(native_currency_id),
-        ];
+		let updates = vec![
+			BuyoutAssetUpdate::Remove(1),
+			BuyoutAssetUpdate::Add(3),
+			BuyoutAssetUpdate::Remove(6),
+			BuyoutAssetUpdate::Add(native_currency_id),
+		];
 
-        assert_noop!(
-            crate::Pallet::<Test>::update_allowed_assets(
-                RuntimeOrigin::root(),
-                updates,
-            ),
-            Error::<Test>::NativeTokenNotAllowed
-        );
+		assert_noop!(
+			crate::Pallet::<Test>::update_allowed_assets(RuntimeOrigin::root(), updates,),
+			Error::<Test>::NativeTokenNotAllowed
+		);
 	});
 }
 
 #[test]
 fn root_attempt_update_allowed_currencies_exceeds_updates_limit_fails() {
 	run_test(|| {
-        let max_allowed_currency_updates = MaxAllowedCurrencyUpdates::get() as usize;
-        let exceeding_updates_number = max_allowed_currency_updates + 10;
+		let max_allowed_currency_updates = MaxAllowedCurrencyUpdates::get() as usize;
+		let exceeding_updates_number = max_allowed_currency_updates + 10;
 
-        // Creating a vector of updates with alternating add and remove operations
-        let mut updates = Vec::with_capacity(max_allowed_currency_updates);
-        for i in 0..exceeding_updates_number {
-            if i % 2 == 0 {
-                updates.push(BuyoutAssetUpdate::Add(1));
-            } else {
-                updates.push(BuyoutAssetUpdate::Remove(1));
-            }
-        }
+		// Creating a vector of updates with alternating add and remove operations
+		let mut updates = Vec::with_capacity(max_allowed_currency_updates);
+		for i in 0..exceeding_updates_number {
+			if i % 2 == 0 {
+				updates.push(BuyoutAssetUpdate::Add(1));
+			} else {
+				updates.push(BuyoutAssetUpdate::Remove(1));
+			}
+		}
 
-        assert_noop!(
-            crate::Pallet::<Test>::update_allowed_assets(
-                RuntimeOrigin::root(),
-                updates,
-            ),
-            Error::<Test>::ExceedsNumberOfAllowedUpdates
-        );
+		assert_noop!(
+			crate::Pallet::<Test>::update_allowed_assets(RuntimeOrigin::root(), updates,),
+			Error::<Test>::ExceedsNumberOfAllowedUpdates
+		);
 	});
 }
 

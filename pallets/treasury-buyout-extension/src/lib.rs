@@ -17,7 +17,7 @@ mod types;
 
 use crate::{
 	default_weights::WeightInfo,
-	types::{AccountIdOf, Amount, BalanceOf, CurrencyIdOf, BuyoutAssetUpdate},
+	types::{AccountIdOf, Amount, BalanceOf, BuyoutAssetUpdate, CurrencyIdOf},
 };
 use codec::{Decode, Encode};
 use frame_support::{
@@ -131,7 +131,10 @@ pub mod pallet {
 		BuyoutLimitUpdated { limit: Option<BalanceOf<T>> },
 
 		/// Updated allowed assets for buyout event
-		AllowedAssetsForBuyoutUpdated { added_assets: Vec<Option<CurrencyIdOf<T>>>, removed_assets: Vec<Option<CurrencyIdOf<T>>> },
+		AllowedAssetsForBuyoutUpdated {
+			added_assets: Vec<Option<CurrencyIdOf<T>>>,
+			removed_assets: Vec<Option<CurrencyIdOf<T>>>,
+		},
 	}
 
 	/// Stores buyout limit amount user could buy for a period of `BuyoutPeriod` blocks.
@@ -253,10 +256,7 @@ pub mod pallet {
 				match update {
 					BuyoutAssetUpdate::Add(asset) => {
 						// Ensure native token is not added to the allowed assets for buyout
-						ensure!(
-							asset != basic_asset,
-							Error::<T>::NativeTokenNotAllowed
-						);
+						ensure!(asset != basic_asset, Error::<T>::NativeTokenNotAllowed);
 						AllowedCurrencies::<T>::insert(asset, ());
 						added_assets.push(Some(asset));
 					},
@@ -266,8 +266,11 @@ pub mod pallet {
 					},
 				}
 			}
-			
-			Self::deposit_event(Event::<T>::AllowedAssetsForBuyoutUpdated { added_assets, removed_assets });
+
+			Self::deposit_event(Event::<T>::AllowedAssetsForBuyoutUpdated {
+				added_assets,
+				removed_assets,
+			});
 			Ok(().into())
 		}
 	}
@@ -308,10 +311,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Ensures that asset is allowed for buyout
 	fn ensure_asset_allowed_for_buyout(asset: &CurrencyIdOf<T>) -> DispatchResult {
-		ensure!(
-			AllowedCurrencies::<T>::get(asset) == Some(()),
-			Error::<T>::WrongAssetToBuyout
-		);
+		ensure!(AllowedCurrencies::<T>::get(asset) == Some(()), Error::<T>::WrongAssetToBuyout);
 
 		Ok(())
 	}

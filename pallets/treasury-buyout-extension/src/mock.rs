@@ -1,6 +1,5 @@
 use crate::{
-	self as treasury_buyout_extension, default_weights::SubstrateWeight,
-	Config, PriceGetter,
+	self as treasury_buyout_extension, default_weights::SubstrateWeight, Config, PriceGetter,
 };
 use frame_support::{
 	pallet_prelude::GenesisBuild,
@@ -223,12 +222,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		treasury_buyout_extension::GenesisConfig::<Test> {
-			allowed_currencies: vec![
-				dot_currency_id, 
-				1, 
-				2, 
-				6
-			],
+			allowed_currencies: vec![dot_currency_id, 1, 2, 6],
 		}
 		.assimilate_storage(&mut storage)
 		.unwrap();

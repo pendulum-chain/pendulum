@@ -1,5 +1,5 @@
 use crate::{
-	self as treasury_buyout_extension, default_weights::SubstrateWeight, AllowedCurrencyChecker,
+	self as treasury_buyout_extension, default_weights::SubstrateWeight,
 	Config, PriceGetter,
 };
 use frame_support::{
@@ -126,6 +126,8 @@ parameter_types! {
 	pub const MinAmountToBuyout: Balance = 100 * UNIT;
 	// 24 hours in blocks (where average block time is 12 seconds)
 	pub const BuyoutPeriod: u32 = 7200;
+	// Maximum number of storage updates for allowed currencies in one extrinsic call
+	pub const MaxAllowedCurrencyUpdates: u32 = 20;
 }
 
 impl pallet_balances::Config for Test {
@@ -145,14 +147,6 @@ impl orml_currencies::Config for Test {
 	type NativeCurrency = BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type WeightInfo = ();
-}
-
-pub struct AllowedCurrencyCheckerImpl;
-impl AllowedCurrencyChecker<CurrencyId> for AllowedCurrencyCheckerImpl {
-	// We allow only some assets
-	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool {
-		matches!(currency_id, 0u64 | 1u64 | 2u64 | 3u64)
-	}
 }
 
 pub struct OracleMock;
@@ -184,17 +178,17 @@ impl Config for Test {
 	type BuyoutPeriod = BuyoutPeriod;
 	/// Fee from the native asset buyouts
 	type SellFee = SellFee;
-	/// Type that allows for checking if currency type is ownable by users
-	type AllowedCurrencyChecker = AllowedCurrencyCheckerImpl;
 	/// Used for fetching prices of currencies from oracle
 	type PriceGetter = OracleMock;
 	/// Min amount of native token to buyout
 	type MinAmountToBuyout = MinAmountToBuyout;
+	/// Maximum number of storage updates for allowed currencies in one extrinsic call
+	type MaxAllowedCurrencyUpdates = MaxAllowedCurrencyUpdates;
+	/// Weight information for extrinsics in this pallet.
+	type WeightInfo = SubstrateWeight<Test>;
 	/// Currency id of relay chain
 	#[cfg(feature = "runtime-benchmarks")]
 	type RelayChainCurrencyId = RelayChainCurrencyId;
-	/// Weight information for extrinsics in this pallet.
-	type WeightInfo = SubstrateWeight<Test>;
 }
 
 // ------- Constants and Genesis Config ------ //
@@ -223,6 +217,17 @@ impl ExtBuilder {
 			balances: vec![
 				(USER, USERS_INITIAL_BALANCE),
 				(TREASURY_ACCOUNT, TREASURY_INITIAL_BALANCE),
+			],
+		}
+		.assimilate_storage(&mut storage)
+		.unwrap();
+
+		treasury_buyout_extension::GenesisConfig::<Test> {
+			allowed_currencies: vec![
+				dot_currency_id, 
+				1, 
+				2, 
+				6
 			],
 		}
 		.assimilate_storage(&mut storage)

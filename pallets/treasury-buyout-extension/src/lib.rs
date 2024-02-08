@@ -17,7 +17,7 @@ mod types;
 
 use crate::{
 	default_weights::WeightInfo,
-	types::{AccountIdOf, Amount, BalanceOf, CurrencyIdOf},
+	types::{AccountIdOf, Amount, BalanceOf, CurrencyIdOf, BuyoutAssetUpdate},
 };
 use codec::{Decode, Encode};
 use frame_support::{
@@ -25,6 +25,7 @@ use frame_support::{
 	ensure,
 	sp_runtime::SaturatedConversion,
 	traits::{Get, IsSubType},
+	transactional,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -39,7 +40,7 @@ use sp_runtime::{
 	},
 	ArithmeticError, FixedPointNumber, FixedU128,
 };
-use sp_std::{fmt::Debug, marker::PhantomData};
+use sp_std::{fmt::Debug, marker::PhantomData, vec::Vec};
 
 pub use pallet::*;
 
@@ -70,15 +71,16 @@ pub mod pallet {
 		#[pallet::constant]
 		type SellFee: Get<Permill>;
 
-		/// Type that allows for checking if currency type is ownable by users
-		type AllowedCurrencyChecker: AllowedCurrencyChecker<CurrencyIdOf<Self>>;
-
 		/// Used for fetching prices of currencies from oracle
 		type PriceGetter: PriceGetter<CurrencyIdOf<Self>>;
 
 		/// Min amount of native token to buyout
 		#[pallet::constant]
 		type MinAmountToBuyout: Get<BalanceOf<Self>>;
+
+		/// Maximum number of allowed currencies storage updates in one extrinsic call
+		#[pallet::constant]
+		type MaxAllowedCurrencyUpdates: Get<u32>;
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
@@ -93,6 +95,10 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// Attempt to add native token to allowed assets
+		NativeTokenNotAllowed,
+		/// Exceeds number of allowed currencies storage updates in one extrinsic call
+		ExceedsNumberOfAllowedUpdates,
 		/// Attempt to exchange native token to native token
 		WrongAssetToBuyout,
 		/// Buyout limit exceeded for the current period
@@ -123,6 +129,9 @@ pub mod pallet {
 		},
 		/// Buyout limit updated event
 		BuyoutLimitUpdated { limit: Option<BalanceOf<T>> },
+
+		/// Updated allowed assets for buyout event
+		AllowedAssetsForBuyoutUpdated { added_assets: Vec<Option<CurrencyIdOf<T>>>, removed_assets: Vec<Option<CurrencyIdOf<T>>> },
 	}
 
 	/// Stores buyout limit amount user could buy for a period of `BuyoutPeriod` blocks.
@@ -135,6 +144,32 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type Buyouts<T: Config> =
 		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (BalanceOf<T>, u32), ValueQuery>;
+
+	/// Stores allowed currencies for buyout
+	#[pallet::storage]
+	pub(super) type AllowedCurrencies<T: Config> =
+		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, ()>;
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub allowed_currencies: Vec<CurrencyIdOf<T>>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { allowed_currencies: vec![] }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			for i in &self.allowed_currencies.clone() {
+				AllowedCurrencies::<T>::insert(i, ());
+			}
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -183,6 +218,58 @@ pub mod pallet {
 			Self::deposit_event(Event::<T>::BuyoutLimitUpdated { limit });
 			Ok(().into())
 		}
+
+		/// Allows root to update the allowed currencies for buyout.
+		///
+		/// Parameters
+		///
+		/// - `origin`: Origin must be root.
+		/// - `updates`: List of updates to be applied to `AllowedCurrencies` storage.
+		///
+		/// Emits `AllowedAssetsForBuyoutUpdated` event when successful.
+		#[pallet::call_index(2)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::update_allowed_assets())]
+		#[transactional]
+		pub fn update_allowed_assets(
+			origin: OriginFor<T>,
+			updates: Vec<BuyoutAssetUpdate<CurrencyIdOf<T>>>,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			// Ensure number of `AllowedCurrencies` storage updates doesn't exceed the maximum allowed
+			ensure!(
+				updates.len() <= T::MaxAllowedCurrencyUpdates::get() as usize,
+				Error::<T>::ExceedsNumberOfAllowedUpdates
+			);
+
+			// Used for ensuring that native token is not allowed for buyout
+			let basic_asset = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
+
+			// Used for the event data
+			let mut added_assets = Vec::new();
+			let mut removed_assets = Vec::new();
+
+			for update in updates.clone() {
+				match update {
+					BuyoutAssetUpdate::Add(asset) => {
+						// Ensure native token is not added to the allowed assets for buyout
+						ensure!(
+							asset != basic_asset,
+							Error::<T>::NativeTokenNotAllowed
+						);
+						AllowedCurrencies::<T>::insert(asset, ());
+						added_assets.push(Some(asset));
+					},
+					BuyoutAssetUpdate::Remove(asset) => {
+						AllowedCurrencies::<T>::remove(asset);
+						removed_assets.push(Some(asset));
+					},
+				}
+			}
+			
+			Self::deposit_event(Event::<T>::AllowedAssetsForBuyoutUpdated { added_assets, removed_assets });
+			Ok(().into())
+		}
 	}
 }
 
@@ -220,10 +307,9 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Ensures that asset is allowed for buyout
-	/// The concrete implementation of AllowedCurrencyChecker trait must be provided by the runtime
 	fn ensure_asset_allowed_for_buyout(asset: &CurrencyIdOf<T>) -> DispatchResult {
 		ensure!(
-			T::AllowedCurrencyChecker::is_allowed_currency_id(asset),
+			AllowedCurrencies::<T>::get(asset) == Some(()),
 			Error::<T>::WrongAssetToBuyout
 		);
 
@@ -390,15 +476,6 @@ impl<T: Config> Pallet<T> {
 			.into();
 		Ok((basic_asset_price, exchange_asset_price))
 	}
-}
-
-/// Used for checking if asset is allowed for buyout
-/// The concrete implementation of this trait must be provided by the runtime
-pub trait AllowedCurrencyChecker<CurrencyId>
-where
-	CurrencyId: Clone + PartialEq + Eq + Debug,
-{
-	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool;
 }
 
 /// Used for fetching prices of assets

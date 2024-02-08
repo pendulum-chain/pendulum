@@ -24,3 +24,11 @@ pub enum Amount<Balance> {
 	/// Amount of exchange asset user give for buyout
 	Exchange(Balance),
 }
+
+#[derive(Copy, Clone, Debug, Encode, Decode, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+pub enum BuyoutAssetUpdate<CurrencyId> {
+	/// Asset to be added to allowed assets for buyout
+	Add(CurrencyId),
+	/// Asset to be removed from allowed assets for buyout
+	Remove(CurrencyId),
+}

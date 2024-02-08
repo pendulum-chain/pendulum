@@ -25,7 +25,6 @@ jobs:
           sudo rm -rf /usr/local/share/boost
           sudo rm -rf /opt/hostedtoolcache
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          sudo apt-get remove -y '^llvm-.*' --fix-missing
           sudo apt-get remove -y 'php.*' --fix-missing
           sudo apt-get remove -y '^mongodb-.*' --fix-missing
           sudo apt-get remove -y '^mysql-.*' --fix-missing

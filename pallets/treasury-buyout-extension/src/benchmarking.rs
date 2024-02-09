@@ -56,18 +56,14 @@ benchmarks! {
 
 	update_allowed_assets {
 		let token_currency_id = T::RelayChainCurrencyId::get();
-		let max_allowed_currency_updates = T::MaxAllowedCurrencyUpdates::get();
+		let max_allowed_currencies_for_buyout = T::MaxAllowedBuyoutCurrencies::get();
 
-		// Creating a vector of updates with alternating add and remove operations
-		let mut updates = Vec::with_capacity(max_allowed_currency_updates.try_into().unwrap_or_default());
-		for i in 0..max_allowed_currency_updates {
-			if i % 2 == 0 {
-				updates.push(BuyoutAssetUpdate::Add(token_currency_id));
-			} else {
-				updates.push(BuyoutAssetUpdate::Remove(token_currency_id));
-			}
+		// Creating a vector of currencies of size `MaxAllowedBuyoutCurrencies`
+		let mut allowed_currencies = Vec::with_capacity(max_allowed_currencies_for_buyout.try_into().unwrap_or_default());
+		for i in 0..max_allowed_currencies_for_buyout {
+			allowed_currencies.push(token_currency_id);
 		}
-	}: update_allowed_assets(RawOrigin::Root, updates)
+	}: update_allowed_assets(RawOrigin::Root, allowed_currencies)
 }
 
 impl_benchmark_test_suite!(

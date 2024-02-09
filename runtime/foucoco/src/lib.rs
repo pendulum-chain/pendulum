@@ -1048,8 +1048,8 @@ parameter_types! {
 	pub const MinAmountToBuyout: Balance = 100 * UNIT;
 	// 24 hours in blocks (where average block time is 12 seconds)
 	pub const BuyoutPeriod: u32 = 7200;
-	// Maximum number of storage updates for allowed currencies in one extrinsic call
-	pub const MaxAllowedCurrencyUpdates: u32 = 20;
+	// Maximum number of allowed currencies for buyout
+	pub const MaxAllowedBuyoutCurrencies: u32 = 20;
 }
 
 impl treasury_buyout_extension::Config for Runtime {
@@ -1060,7 +1060,7 @@ impl treasury_buyout_extension::Config for Runtime {
 	type SellFee = SellFee;
 	type PriceGetter = OraclePriceGetter;
 	type MinAmountToBuyout = MinAmountToBuyout;
-	type MaxAllowedCurrencyUpdates = MaxAllowedCurrencyUpdates;
+	type MaxAllowedBuyoutCurrencies = MaxAllowedBuyoutCurrencies;
 	type WeightInfo = treasury_buyout_extension::default_weights::SubstrateWeight<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type RelayChainCurrencyId = RelayChainCurrencyId;

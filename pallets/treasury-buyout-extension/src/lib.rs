@@ -17,7 +17,7 @@ mod types;
 
 use crate::{
 	default_weights::WeightInfo,
-	types::{AccountIdOf, Amount, BalanceOf, BuyoutAssetUpdate, CurrencyIdOf},
+	types::{AccountIdOf, Amount, BalanceOf, CurrencyIdOf},
 };
 use codec::{Decode, Encode};
 use frame_support::{
@@ -78,9 +78,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type MinAmountToBuyout: Get<BalanceOf<Self>>;
 
-		/// Maximum number of allowed currencies storage updates in one extrinsic call
+		/// Maximum number of allowed currencies for buyout
 		#[pallet::constant]
-		type MaxAllowedCurrencyUpdates: Get<u32>;
+		type MaxAllowedBuyoutCurrencies: Get<u32>;
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
@@ -95,10 +95,12 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// Storage clearing of `AllowedCurrencies` failed
+		StorageClearingFailure,
 		/// Attempt to add native token to allowed assets
 		NativeTokenNotAllowed,
-		/// Exceeds number of allowed currencies storage updates in one extrinsic call
-		ExceedsNumberOfAllowedUpdates,
+		/// Exceeds number of allowed currencies for buyout
+		ExceedsNumberOfAllowedCurrencies,
 		/// Attempt to exchange native token to native token
 		WrongAssetToBuyout,
 		/// Buyout limit exceeded for the current period
@@ -132,8 +134,7 @@ pub mod pallet {
 
 		/// Updated allowed assets for buyout event
 		AllowedAssetsForBuyoutUpdated {
-			added_assets: Vec<Option<CurrencyIdOf<T>>>,
-			removed_assets: Vec<Option<CurrencyIdOf<T>>>,
+			allowed_assets: Vec<CurrencyIdOf<T>>,
 		},
 	}
 
@@ -151,7 +152,7 @@ pub mod pallet {
 	/// Stores allowed currencies for buyout
 	#[pallet::storage]
 	pub(super) type AllowedCurrencies<T: Config> =
-		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, ()>;
+		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, (), OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -223,11 +224,12 @@ pub mod pallet {
 		}
 
 		/// Allows root to update the allowed currencies for buyout.
-		///
+		/// `AllowedCurrencies` storage will be reset and updated with provided `assets`.
+		/// 
 		/// Parameters
 		///
 		/// - `origin`: Origin must be root.
-		/// - `updates`: List of updates to be applied to `AllowedCurrencies` storage.
+		/// - `assets`: List of assets to be inserted into `AllowedCurrencies` storage.
 		///
 		/// Emits `AllowedAssetsForBuyoutUpdated` event when successful.
 		#[pallet::call_index(2)]
@@ -235,41 +237,45 @@ pub mod pallet {
 		#[transactional]
 		pub fn update_allowed_assets(
 			origin: OriginFor<T>,
-			updates: Vec<BuyoutAssetUpdate<CurrencyIdOf<T>>>,
+			assets: Vec<CurrencyIdOf<T>>,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			// Ensure number of `AllowedCurrencies` storage updates doesn't exceed the maximum allowed
+			let max_allowed_currencies_for_buyout = T::MaxAllowedBuyoutCurrencies::get();
+			// Ensure number of currencies doesn't exceed the maximum allowed
 			ensure!(
-				updates.len() <= T::MaxAllowedCurrencyUpdates::get() as usize,
-				Error::<T>::ExceedsNumberOfAllowedUpdates
+				assets.len() <= max_allowed_currencies_for_buyout as usize,
+				Error::<T>::ExceedsNumberOfAllowedCurrencies
 			);
 
-			// Used for ensuring that native token is not allowed for buyout
+			// Ensure that native token is not allowed for buyout
 			let basic_asset = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
+			ensure!(
+				!assets.iter().any(|asset| *asset == basic_asset),
+				Error::<T>::NativeTokenNotAllowed
+			);
 
-			// Used for the event data
-			let mut added_assets = Vec::new();
-			let mut removed_assets = Vec::new();
+			// Clear `AllowedCurrencies` storage
+			// `AllowedCurrencies` should have at most `max_allowed_currencies_for_buyout` entries
+			let result = AllowedCurrencies::<T>::clear(max_allowed_currencies_for_buyout, None);
+			// If storage clearing returns cursor which is `Some`, then clearing was not entirely successful
+			ensure!(result.maybe_cursor.is_none(), Error::<T>::StorageClearingFailure);
 
-			for update in updates.clone() {
-				match update {
-					BuyoutAssetUpdate::Add(asset) => {
-						// Ensure native token is not added to the allowed assets for buyout
-						ensure!(asset != basic_asset, Error::<T>::NativeTokenNotAllowed);
-						AllowedCurrencies::<T>::insert(asset, ());
-						added_assets.push(Some(asset));
-					},
-					BuyoutAssetUpdate::Remove(asset) => {
-						AllowedCurrencies::<T>::remove(asset);
-						removed_assets.push(Some(asset));
-					},
+
+			// Used for event data
+			let mut allowed_assets = Vec::new();
+
+			// Update `AllowedCurrencies` storage with provided `assets`
+			for asset in assets.clone() {
+				// Check for duplicates
+				if !AllowedCurrencies::<T>::contains_key(&asset) {
+					AllowedCurrencies::<T>::insert(asset, ());
+					allowed_assets.push(asset);
 				}
 			}
 
 			Self::deposit_event(Event::<T>::AllowedAssetsForBuyoutUpdated {
-				added_assets,
-				removed_assets,
+				allowed_assets
 			});
 			Ok(().into())
 		}

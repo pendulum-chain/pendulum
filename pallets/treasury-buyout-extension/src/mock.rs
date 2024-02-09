@@ -125,8 +125,8 @@ parameter_types! {
 	pub const MinAmountToBuyout: Balance = 100 * UNIT;
 	// 24 hours in blocks (where average block time is 12 seconds)
 	pub const BuyoutPeriod: u32 = 7200;
-	// Maximum number of storage updates for allowed currencies in one extrinsic call
-	pub const MaxAllowedCurrencyUpdates: u32 = 20;
+	// Maximum number of allowed currencies for buyout
+	pub const MaxAllowedBuyoutCurrencies: u32 = 20;
 }
 
 impl pallet_balances::Config for Test {
@@ -182,7 +182,7 @@ impl Config for Test {
 	/// Min amount of native token to buyout
 	type MinAmountToBuyout = MinAmountToBuyout;
 	/// Maximum number of storage updates for allowed currencies in one extrinsic call
-	type MaxAllowedCurrencyUpdates = MaxAllowedCurrencyUpdates;
+	type MaxAllowedBuyoutCurrencies = MaxAllowedBuyoutCurrencies;
 	/// Weight information for extrinsics in this pallet.
 	type WeightInfo = SubstrateWeight<Test>;
 	/// Currency id of relay chain

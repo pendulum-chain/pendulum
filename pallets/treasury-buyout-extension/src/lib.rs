@@ -133,9 +133,7 @@ pub mod pallet {
 		BuyoutLimitUpdated { limit: Option<BalanceOf<T>> },
 
 		/// Updated allowed assets for buyout event
-		AllowedAssetsForBuyoutUpdated {
-			allowed_assets: Vec<CurrencyIdOf<T>>,
-		},
+		AllowedAssetsForBuyoutUpdated { allowed_assets: Vec<CurrencyIdOf<T>> },
 	}
 
 	/// Stores buyout limit amount user could buy for a period of `BuyoutPeriod` blocks.
@@ -225,7 +223,7 @@ pub mod pallet {
 
 		/// Allows root to update the allowed currencies for buyout.
 		/// `AllowedCurrencies` storage will be reset and updated with provided `assets`.
-		/// 
+		///
 		/// Parameters
 		///
 		/// - `origin`: Origin must be root.
@@ -261,7 +259,6 @@ pub mod pallet {
 			// If storage clearing returns cursor which is `Some`, then clearing was not entirely successful
 			ensure!(result.maybe_cursor.is_none(), Error::<T>::StorageClearingFailure);
 
-
 			// Used for event data
 			let mut allowed_assets = Vec::new();
 
@@ -274,9 +271,7 @@ pub mod pallet {
 				}
 			}
 
-			Self::deposit_event(Event::<T>::AllowedAssetsForBuyoutUpdated {
-				allowed_assets
-			});
+			Self::deposit_event(Event::<T>::AllowedAssetsForBuyoutUpdated { allowed_assets });
 			Ok(().into())
 		}
 	}

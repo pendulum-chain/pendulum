@@ -239,8 +239,8 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			let max_allowed_currencies_for_buyout = T::MaxAllowedBuyoutCurrencies::get();
 			// Ensure number of currencies doesn't exceed the maximum allowed
+			let max_allowed_currencies_for_buyout = T::MaxAllowedBuyoutCurrencies::get();
 			ensure!(
 				assets.len() <= max_allowed_currencies_for_buyout as usize,
 				Error::<T>::ExceedsNumberOfAllowedCurrencies

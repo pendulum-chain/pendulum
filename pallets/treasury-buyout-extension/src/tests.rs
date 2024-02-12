@@ -220,7 +220,7 @@ fn root_update_allowed_currencies_succeeds() {
 		);
 
 		// Add dot back to allowed currencies among some others
-        // Order of insertion is the order of the currencies in the input vector
+		// Order of insertion is the order of the currencies in the input vector
 		let allowed_currencies = vec![
 			3u64,
 			// Duplicating the same currency should not fail
@@ -235,18 +235,13 @@ fn root_update_allowed_currencies_succeeds() {
 			allowed_currencies
 		));
 
-        // Expected allowed currencies after update
-        // Order of insertion in the storage respects the order of the currencies in the input vector
-        // The order of the currencies in the event vector is the order of insertion
-        // Duplicates are skipped
-        let expected_allowed_currencies = vec![
-            3u64,
-            2u64,
-            dot_currency_id,
-            6u64,
-        ];
+		// Expected allowed currencies after update
+		// Order of insertion in the storage respects the order of the currencies in the input vector
+		// The order of the currencies in the event vector is the order of insertion
+		// Duplicates are skipped
+		let expected_allowed_currencies = vec![3u64, 2u64, dot_currency_id, 6u64];
 
-        assert!(System::events().iter().any(|r| matches!(
+		assert!(System::events().iter().any(|r| matches!(
             r.event,
             RuntimeEvent::TreasuryBuyoutExtension(crate::Event::AllowedAssetsForBuyoutUpdated { allowed_assets: ref a }) if a == &expected_allowed_currencies
         )));

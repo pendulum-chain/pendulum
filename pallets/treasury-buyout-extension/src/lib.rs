@@ -231,7 +231,7 @@ pub mod pallet {
 		///
 		/// Emits `AllowedAssetsForBuyoutUpdated` event when successful.
 		#[pallet::call_index(2)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::update_allowed_assets())]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::update_allowed_assets(T::MaxAllowedBuyoutCurrencies::get()))]
 		#[transactional]
 		pub fn update_allowed_assets(
 			origin: OriginFor<T>,

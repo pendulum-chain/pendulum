@@ -291,7 +291,7 @@ fn root_update_allowed_currencies_with_native_fails() {
 fn root_attempt_update_allowed_currencies_exceeds_limit_fails() {
 	run_test(|| {
 		let max_allowed_currencies_for_buyout = MaxAllowedBuyoutCurrencies::get() as usize;
-		let exceeding_currencies_number = max_allowed_currencies_for_buyout + 10;
+		let exceeding_currencies_number = max_allowed_currencies_for_buyout + 1;
 
 		// Create vector with currencies that exceeds the maximum number of allowed currencies for buyout
 		let mut allowed_currencies = Vec::with_capacity(max_allowed_currencies_for_buyout);

@@ -55,14 +55,15 @@ benchmarks! {
 	}: update_buyout_limit(RawOrigin::Root, Some(100_000_000_000_000u128.try_into().unwrap_or_default()))
 
 	update_allowed_assets {
-		let token_currency_id = T::RelayChainCurrencyId::get();
-		let max_allowed_currencies_for_buyout = T::MaxAllowedBuyoutCurrencies::get();
+        // This has to come first. Ranges are inclusive on both sides so we start from 1, see
+		// [here](https://tidelabs.github.io/tidechain/frame_benchmarking/v1/macro.benchmarks.html)
+		let n in 1..T::MaxAllowedBuyoutCurrencies::get();
 
-		// Creating a vector of currencies of size `MaxAllowedBuyoutCurrencies`
-		let mut allowed_currencies = Vec::with_capacity(max_allowed_currencies_for_buyout.try_into().unwrap_or_default());
-		for i in 0..max_allowed_currencies_for_buyout {
-			allowed_currencies.push(token_currency_id);
-		}
+		let token_currency_id = T::RelayChainCurrencyId::get();
+
+		// It does not really matter that it's the same currency as the loop of the extrinsic
+		// will iterate over it the same amount of times.
+		let allowed_currencies = vec![token_currency_id; n as usize];
 	}: update_allowed_assets(RawOrigin::Root, allowed_currencies)
 }
 

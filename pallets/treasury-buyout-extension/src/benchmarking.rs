@@ -55,7 +55,7 @@ benchmarks! {
 	}: update_buyout_limit(RawOrigin::Root, Some(100_000_000_000_000u128.try_into().unwrap_or_default()))
 
 	update_allowed_assets {
-        // This has to come first. Ranges are inclusive on both sides so we start from 1, see
+		// This has to come first. Ranges are inclusive on both sides so we start from 1, see
 		// [here](https://tidelabs.github.io/tidechain/frame_benchmarking/v1/macro.benchmarks.html)
 		let n in 1..T::MaxAllowedBuyoutCurrencies::get();
 

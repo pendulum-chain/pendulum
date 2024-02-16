@@ -2,12 +2,11 @@
 #![allow(non_snake_case)]
 
 use sp_runtime::{
-	traits::{IdentifyAccount, PhantomData, Verify},
+	traits::{IdentifyAccount, Verify},
 	DispatchError, MultiSignature,
 };
 
 use spacewalk_primitives::CurrencyId;
-use xcm::opaque::v3::MultiLocation;
 
 pub mod asset_registry;
 pub mod chain_ext;
@@ -71,22 +70,6 @@ pub mod opaque {
 	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 	/// Opaque block identifier type.
 	pub type BlockId = generic::BlockId<Block>;
-}
-
-pub struct FixedConversionRateProvider<OrmlAssetRegistry>(PhantomData<OrmlAssetRegistry>);
-
-impl<
-		OrmlAssetRegistry: orml_traits::asset_registry::Inspect<
-			AssetId = CurrencyId,
-			Balance = Balance,
-			CustomMetadata = asset_registry::CustomMetadata,
-		>,
-	> orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<OrmlAssetRegistry>
-{
-	fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
-		let metadata = OrmlAssetRegistry::metadata_by_location(location)?;
-		Some(metadata.additional.fee_per_second)
-	}
 }
 
 #[macro_use]

@@ -26,7 +26,7 @@ use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 use runtime_common::{
 	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
 	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
-	FixedConversionRateProvider,
+	asset_registry::FixedConversionRateProvider,
 };
 
 use crate::{

@@ -22,7 +22,7 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
-use runtime_common::{parachains::kusama::asset_hub, FixedConversionRateProvider};
+use runtime_common::{parachains::kusama::asset_hub, asset_registry::FixedConversionRateProvider};
 
 use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 

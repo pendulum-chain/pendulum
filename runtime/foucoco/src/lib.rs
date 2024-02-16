@@ -181,7 +181,7 @@ impl oracle::dia::NativeCurrencyKey for SpacewalkNativeCurrency {
 	}
 
 	fn native_chain() -> Vec<u8> {
-		"AMPLITUDE".as_bytes().to_vec()
+		"Amplitude".as_bytes().to_vec()
 	}
 }
 
@@ -277,7 +277,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("foucoco"),
 	impl_name: create_runtime_str!("foucoco"),
 	authoring_version: 1,
-	spec_version: 7,
+	spec_version: 8,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 7,

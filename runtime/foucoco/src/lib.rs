@@ -229,7 +229,9 @@ cfg_if::cfg_if! {
 pub struct ConvertPrice;
 impl Convert<u128, Option<UnsignedFixedPoint>> for ConvertPrice {
 	fn convert(price: u128) -> Option<UnsignedFixedPoint> {
-		Some(UnsignedFixedPoint::from_inner(price))
+		// The DIA batching server returns the price in 1e12 format, see [here](https://github.com/pendulum-chain/oracle-pallet/blob/716073885de01f923a0fe44a05bd2a0bd45db555/dia-batching-server/src/price_updater.rs#L141)
+		// but our UnsignedFixedPoint implementation expects the price in 1e18 format.
+		Some(UnsignedFixedPoint::from_rational(price, 1_000_000_000_000))
 	}
 }
 

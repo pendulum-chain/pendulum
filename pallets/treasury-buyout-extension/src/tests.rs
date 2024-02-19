@@ -193,6 +193,120 @@ fn user_update_buyout_amount_limit_fails() {
 }
 
 #[test]
+fn root_update_allowed_currencies_succeeds() {
+	run_test(|| {
+		let dot_currency_id = RelayChainCurrencyId::get();
+
+		// Since dot is already added to allowed currencies in the genesis, provide some other allowed currencies that will overwrite the storage
+		let allowed_currencies = vec![1u64, 2u64, 3u64];
+
+		assert_ok!(crate::Pallet::<Test>::update_allowed_assets(
+			RuntimeOrigin::root(),
+			allowed_currencies
+		));
+
+		// Test user buyout after allowed currencies update
+		// It should fail because dot is not allowed for buyout
+		let user = USER;
+		let exchange_amount = 100 * UNIT;
+
+		assert_noop!(
+			crate::Pallet::<Test>::buyout(
+				RuntimeOrigin::signed(user),
+				dot_currency_id,
+				Amount::Exchange(exchange_amount),
+			),
+			Error::<Test>::WrongAssetToBuyout
+		);
+
+		// Add dot back to allowed currencies among some others
+		// Order of insertion is the order of the currencies in the input vector
+		let allowed_currencies = vec![
+			3u64,
+			// Duplicating the same currency should not fail
+			3u64,
+			2u64,
+			dot_currency_id,
+			6u64,
+		];
+
+		assert_ok!(crate::Pallet::<Test>::update_allowed_assets(
+			RuntimeOrigin::root(),
+			allowed_currencies
+		));
+
+		// Expected allowed currencies after update
+		// Order of insertion in the storage respects the order of the currencies in the input vector
+		// The order of the currencies in the event vector is the order of insertion
+		// Duplicates are skipped
+		let expected_allowed_currencies = vec![3u64, 2u64, dot_currency_id, 6u64];
+
+		assert!(System::events().iter().any(|r| matches!(
+            r.event,
+            RuntimeEvent::TreasuryBuyoutExtension(crate::Event::AllowedAssetsForBuyoutUpdated { allowed_assets: ref a }) if a == &expected_allowed_currencies
+        )));
+
+		// Test user buyout after allowed currencies update
+		// It should succeed because dot is now allowed for buyout
+		assert_ok!(crate::Pallet::<Test>::buyout(
+			RuntimeOrigin::signed(user),
+			dot_currency_id,
+			Amount::Exchange(exchange_amount),
+		));
+	});
+}
+
+#[test]
+fn user_update_allowed_currencies_fails() {
+	run_test(|| {
+		let user = USER;
+
+		let allowed_currencies = vec![1u64, 2u64, 3u64, 4u64, 6u64];
+
+		assert_noop!(
+			crate::Pallet::<Test>::update_allowed_assets(
+				RuntimeOrigin::signed(user),
+				allowed_currencies
+			),
+			BadOrigin
+		);
+	});
+}
+
+#[test]
+fn root_update_allowed_currencies_with_native_fails() {
+	run_test(|| {
+		let native_currency_id = GetNativeCurrencyId::get();
+
+		let allowed_currencies = vec![1u64, 3u64, 6u64, native_currency_id];
+
+		assert_noop!(
+			crate::Pallet::<Test>::update_allowed_assets(RuntimeOrigin::root(), allowed_currencies),
+			Error::<Test>::NativeTokenNotAllowed
+		);
+	});
+}
+
+#[test]
+fn root_attempt_update_allowed_currencies_exceeds_limit_fails() {
+	run_test(|| {
+		let max_allowed_currencies_for_buyout = MaxAllowedBuyoutCurrencies::get() as usize;
+		let exceeding_currencies_number = max_allowed_currencies_for_buyout + 1;
+
+		// Create vector with currencies that exceeds the maximum number of allowed currencies for buyout
+		let mut allowed_currencies = Vec::with_capacity(max_allowed_currencies_for_buyout);
+		for i in 0..exceeding_currencies_number {
+			allowed_currencies.push(i as u64);
+		}
+
+		assert_noop!(
+			crate::Pallet::<Test>::update_allowed_assets(RuntimeOrigin::root(), allowed_currencies),
+			Error::<Test>::ExceedsNumberOfAllowedCurrencies
+		);
+	});
+}
+
+#[test]
 fn attempt_buyout_with_wrong_currency_fails() {
 	run_test(|| {
 		let user = USER;

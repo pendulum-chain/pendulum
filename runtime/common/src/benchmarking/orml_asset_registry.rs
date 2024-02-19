@@ -5,11 +5,13 @@ use frame_system::RawOrigin;
 use orml_asset_registry::AssetMetadata;
 use sp_runtime::BoundedVec;
 use sp_std::{vec, vec::Vec};
+use crate::asset_registry::{CustomMetadata, DiaKeys};
 use spacewalk_primitives::CurrencyId;
 use xcm::{
 	latest::MultiLocation,
 	opaque::lts::{Junction::*, Junctions::*},
 };
+use sp_runtime::BoundedVec;
 
 pub struct Pallet<T: Config>(orml_asset_registry::Pallet<T>);
 pub trait Config:
@@ -45,7 +47,7 @@ pub mod benchmarks {
 					symbol: BoundedVec::truncate_from(longest_vec()),
 				},
 				fee_per_second: 123,
-			},
+			}
 		}
 	}
 

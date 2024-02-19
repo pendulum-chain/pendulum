@@ -25,6 +25,7 @@ use frame_support::{
 	ensure,
 	sp_runtime::SaturatedConversion,
 	traits::{Get, IsSubType},
+	transactional,
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -39,7 +40,7 @@ use sp_runtime::{
 	},
 	ArithmeticError, FixedPointNumber, FixedU128,
 };
-use sp_std::{fmt::Debug, marker::PhantomData};
+use sp_std::{fmt::Debug, marker::PhantomData, vec::Vec};
 
 pub use pallet::*;
 
@@ -70,15 +71,16 @@ pub mod pallet {
 		#[pallet::constant]
 		type SellFee: Get<Permill>;
 
-		/// Type that allows for checking if currency type is ownable by users
-		type AllowedCurrencyChecker: AllowedCurrencyChecker<CurrencyIdOf<Self>>;
-
 		/// Used for fetching prices of currencies from oracle
 		type PriceGetter: PriceGetter<CurrencyIdOf<Self>>;
 
 		/// Min amount of native token to buyout
 		#[pallet::constant]
 		type MinAmountToBuyout: Get<BalanceOf<Self>>;
+
+		/// Maximum number of allowed currencies for buyout
+		#[pallet::constant]
+		type MaxAllowedBuyoutCurrencies: Get<u32>;
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
@@ -93,6 +95,12 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// Storage clearing of `AllowedCurrencies` failed
+		StorageClearingFailure,
+		/// Attempt to add native token to allowed assets
+		NativeTokenNotAllowed,
+		/// Exceeds number of allowed currencies for buyout
+		ExceedsNumberOfAllowedCurrencies,
 		/// Attempt to exchange native token to native token
 		WrongAssetToBuyout,
 		/// Buyout limit exceeded for the current period
@@ -109,8 +117,6 @@ pub mod pallet {
 		BuyoutWithTreasuryAccount,
 		/// Exchange failed
 		ExchangeFailure,
-		/// Math error
-		MathError,
 	}
 
 	#[pallet::event]
@@ -125,6 +131,9 @@ pub mod pallet {
 		},
 		/// Buyout limit updated event
 		BuyoutLimitUpdated { limit: Option<BalanceOf<T>> },
+
+		/// Updated allowed assets for buyout event
+		AllowedAssetsForBuyoutUpdated { allowed_assets: Vec<CurrencyIdOf<T>> },
 	}
 
 	/// Stores buyout limit amount user could buy for a period of `BuyoutPeriod` blocks.
@@ -137,6 +146,32 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type Buyouts<T: Config> =
 		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, (BalanceOf<T>, u32), ValueQuery>;
+
+	/// Stores allowed currencies for buyout
+	#[pallet::storage]
+	pub(super) type AllowedCurrencies<T: Config> =
+		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, (), OptionQuery>;
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub allowed_currencies: Vec<CurrencyIdOf<T>>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { allowed_currencies: vec![] }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			for i in &self.allowed_currencies.clone() {
+				AllowedCurrencies::<T>::insert(i, ());
+			}
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -185,6 +220,60 @@ pub mod pallet {
 			Self::deposit_event(Event::<T>::BuyoutLimitUpdated { limit });
 			Ok(().into())
 		}
+
+		/// Allows root to update the allowed currencies for buyout.
+		/// `AllowedCurrencies` storage will be reset and updated with provided `assets`.
+		///
+		/// Parameters
+		///
+		/// - `origin`: Origin must be root.
+		/// - `assets`: List of assets to be inserted into `AllowedCurrencies` storage.
+		///
+		/// Emits `AllowedAssetsForBuyoutUpdated` event when successful.
+		#[pallet::call_index(2)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::update_allowed_assets(T::MaxAllowedBuyoutCurrencies::get()))]
+		#[transactional]
+		pub fn update_allowed_assets(
+			origin: OriginFor<T>,
+			assets: Vec<CurrencyIdOf<T>>,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			// Ensure number of currencies doesn't exceed the maximum allowed
+			let max_allowed_currencies_for_buyout = T::MaxAllowedBuyoutCurrencies::get();
+			ensure!(
+				assets.len() <= max_allowed_currencies_for_buyout as usize,
+				Error::<T>::ExceedsNumberOfAllowedCurrencies
+			);
+
+			// Ensure that native token is not allowed for buyout
+			let basic_asset = <T as orml_currencies::Config>::GetNativeCurrencyId::get();
+			ensure!(
+				!assets.iter().any(|asset| *asset == basic_asset),
+				Error::<T>::NativeTokenNotAllowed
+			);
+
+			// Clear `AllowedCurrencies` storage
+			// `AllowedCurrencies` should have at most `max_allowed_currencies_for_buyout` entries
+			let result = AllowedCurrencies::<T>::clear(max_allowed_currencies_for_buyout, None);
+			// If storage clearing returns cursor which is `Some`, then clearing was not entirely successful
+			ensure!(result.maybe_cursor.is_none(), Error::<T>::StorageClearingFailure);
+
+			// Used for event data
+			let mut allowed_assets = Vec::new();
+
+			// Update `AllowedCurrencies` storage with provided `assets`
+			for asset in assets.clone() {
+				// Check for duplicates
+				if !AllowedCurrencies::<T>::contains_key(&asset) {
+					AllowedCurrencies::<T>::insert(asset, ());
+					allowed_assets.push(asset);
+				}
+			}
+
+			Self::deposit_event(Event::<T>::AllowedAssetsForBuyoutUpdated { allowed_assets });
+			Ok(().into())
+		}
 	}
 }
 
@@ -205,6 +294,8 @@ impl<T: Config> Pallet<T> {
 				.unwrap_or_default();
 			let (mut buyouts, last_buyout) = Buyouts::<T>::get(account_id);
 
+			// Check if caller's last buyout was in the previous period
+			// If true, reset buyout amount limit for the caller since this is the first buyout in the current period
 			if !buyouts.is_zero() && last_buyout < current_period_start_number {
 				buyouts = Default::default();
 				Buyouts::<T>::insert(account_id, (buyouts, current_block_number));
@@ -220,12 +311,8 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Ensures that asset is allowed for buyout
-	/// The concrete implementation of AllowedCurrencyChecker trait must be provided by the runtime
 	fn ensure_asset_allowed_for_buyout(asset: &CurrencyIdOf<T>) -> DispatchResult {
-		ensure!(
-			T::AllowedCurrencyChecker::is_allowed_currency_id(asset),
-			Error::<T>::WrongAssetToBuyout
-		);
+		ensure!(AllowedCurrencies::<T>::get(asset) == Some(()), Error::<T>::WrongAssetToBuyout);
 
 		Ok(())
 	}
@@ -253,7 +340,7 @@ impl<T: Config> Pallet<T> {
 		// Add fee to the basic asset price
 		let fee_plus_one = FixedU128::from(T::SellFee::get())
 			.checked_add(&FixedU128::one())
-			.ok_or(Error::<T>::MathError)?;
+			.ok_or::<DispatchError>(ArithmeticError::Overflow.into())?;
 		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
 		let exchange_amount = Self::multiply_by_rational(
@@ -282,7 +369,7 @@ impl<T: Config> Pallet<T> {
 		// Add fee to the basic asset price
 		let fee_plus_one = FixedU128::from(T::SellFee::get())
 			.checked_add(&FixedU128::one())
-			.ok_or(Error::<T>::MathError)?;
+			.ok_or::<DispatchError>(ArithmeticError::Overflow.into())?;
 		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
 		let buyout_amount = Self::multiply_by_rational(
@@ -390,15 +477,6 @@ impl<T: Config> Pallet<T> {
 			.into();
 		Ok((basic_asset_price, exchange_asset_price))
 	}
-}
-
-/// Used for checking if asset is allowed for buyout
-/// The concrete implementation of this trait must be provided by the runtime
-pub trait AllowedCurrencyChecker<CurrencyId>
-where
-	CurrencyId: Clone + PartialEq + Eq + Debug,
-{
-	fn is_allowed_currency_id(currency_id: &CurrencyId) -> bool;
 }
 
 /// Used for fetching prices of assets

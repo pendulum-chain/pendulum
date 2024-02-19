@@ -4,6 +4,7 @@ use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ConstU32, ContainsPair, Everything, Nothing},
 };
+use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
@@ -15,13 +16,14 @@ use polkadot_runtime_common::impls::ToAuthor;
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds,
+	AccountId32Aliases, AllowUnpaidExecutionFrom, AllowSubscriptionsFrom,AllowTopLevelPaidExecutionFrom, AllowKnownQueryResponses, EnsureXcmOrigin, FixedWeightBounds,
 	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, UsingComponents,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
+use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 
-use runtime_common::parachains::moonbase_alpha_relay::moonbase_alpha;
+use runtime_common::{parachains::moonbase_alpha_relay::moonbase_alpha, asset_registry::FixedConversionRateProvider};
 
 use crate::assets::{
 	native_locations::{native_location_external_pov, native_location_local_pov},
@@ -29,7 +31,7 @@ use crate::assets::{
 };
 
 use super::{
-	AccountId, Balance, Balances, Currencies, CurrencyId, FoucocoTreasuryAccount, ParachainInfo,
+	AccountId, AssetRegistry, Balance, Balances, Currencies, CurrencyId, FoucocoTreasuryAccount, ParachainInfo,
 	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, WeightToFee,
 	XcmpQueue,
 };
@@ -170,13 +172,6 @@ parameter_types! {
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
-match_types! {
-	pub type ParentOrParentsExecutivePlurality: impl Contains<MultiLocation> = {
-		MultiLocation { parents: 1, interior: Here } |
-		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }
-	};
-}
-
 //TODO: move DenyThenTry to polkadot's xcm module.
 /// Deny executing the xcm message if it matches any of the Deny filter regardless of anything else.
 /// If it passes the Deny, and matches one of the Allow cases then it is let through.
@@ -240,7 +235,28 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	}
 }
 
-pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
+match_types! {
+	pub type ParentOrParentsPlurality: impl Contains<MultiLocation> = {
+		MultiLocation { parents: 1, interior: Here } |
+		MultiLocation { parents: 1, interior: X1(Plurality { .. }) }
+	};
+}
+
+pub type Barrier = (
+	TakeWeightCredit,
+	AllowTopLevelPaidExecutionFrom<Everything>,
+	// Parent and its plurality get free execution
+	AllowUnpaidExecutionFrom<ParentOrParentsPlurality>,
+	// Expected responses are OK.
+	AllowKnownQueryResponses<PolkadotXcm>,
+	// Subscriptions for version tracking are OK.
+	AllowSubscriptionsFrom<Everything>,
+);
+
+pub type Traders = AssetRegistryTrader<
+	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry>>,
+	XcmFeesTo32ByteAccount<LocalAssetTransactor, AccountId, FoucocoTreasuryAccount>,
+>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
@@ -255,8 +271,7 @@ impl xcm_executor::Config for XcmConfig {
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type Trader =
-		UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>;
+	type Trader = Traders;
 	type ResponseHandler = PolkadotXcm;
 	type AssetTrap = PolkadotXcm;
 	type AssetLocker = ();

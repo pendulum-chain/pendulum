@@ -9,6 +9,8 @@ pub const INITIAL_COLLATOR_STAKING: Balance = 10_000 * UNIT;
 pub const COLLATOR_ADDITIONAL: Balance = 10 * UNIT;
 
 pub const OFF_CHAIN_WORKER_ADDRESS: &str = "6m69vWMouLarYCbJGJisVaDDpfNGETkD5hsDWf2T7osW4Cn1";
+pub const ALICIA: &str = "6mfqoTMHrMeVMyKwjqomUjVomPMJ4AjdCm1VReFtk7Be8wqr";
+
 
 pub const TOKEN_DECIMALS: u32 = 12;
 

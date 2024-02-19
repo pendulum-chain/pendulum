@@ -192,6 +192,8 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 
 	let offchain_worker_price_feeder =
 		AccountId::from_ss58check(foucoco::OFF_CHAIN_WORKER_ADDRESS).unwrap();
+	let alicia =
+		AccountId::from_ss58check(foucoco::ALICIA).unwrap();
 
 	FoucocoChainSpec::from_genesis(
 		// Name
@@ -204,8 +206,8 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 				// initial collators.
 				invulnerables.clone(),
 				signatories.clone(),
-				vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
-				sudo_account.clone(),
+				vec![sudo_account.clone(), offchain_worker_price_feeder.clone(), alicia.clone()],
+				alicia.clone(),
 				foucoco::PARACHAIN_ID.into(),
 				false,
 			)
@@ -637,8 +639,9 @@ fn foucoco_genesis(
 
 	let token_balances = balances
 		.iter()
-		.flat_map(|k| vec![(k.0.clone(), XCM(0), u128::pow(10, 18))])
+		.flat_map(|k| vec![(k.0.clone(), XCM(0), 10*u128::pow(10, 18)), (k.0.clone(), XCM(6), 10*u128::pow(10, 18)), (k.0.clone(), CurrencyId::StellarNative, 10*u128::pow(10, 18))])
 		.collect();
+	
 
 	let stakers: Vec<_> = invulnerables
 		.iter()

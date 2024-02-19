@@ -18,8 +18,8 @@ use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain
 
 // Since in the mock definition all the assets are defined with the same fee_per_second value
 // the total fees for every asset will be the same.
-const KSM_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
-const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
+const KSM_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 200000000; // /20 native token value fee per second
+const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 400000000;// /10 native token value fee per second
 const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
 
 decl_test_relay_chain! {

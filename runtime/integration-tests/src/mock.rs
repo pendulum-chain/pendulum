@@ -258,7 +258,7 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
 					},
-					fee_per_second: UNIT,
+					fee_per_second: UNIT/2,
 				},
 			}
 			.encode(),
@@ -276,7 +276,7 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
 					},
-					fee_per_second: UNIT,
+					fee_per_second: UNIT/4,
 				},
 			}
 			.encode(),
@@ -294,7 +294,7 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
 					},
-					fee_per_second: UNIT,
+					fee_per_second: 2*UNIT,
 				},
 			}
 			.encode(),
@@ -338,7 +338,7 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
 					},
-					fee_per_second: UNIT,
+					fee_per_second: UNIT/10,
 				},
 			}
 			.encode(),
@@ -356,7 +356,7 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
 					},
-					fee_per_second: UNIT,
+					fee_per_second: UNIT/20,
 				},
 			}
 			.encode(),
@@ -431,7 +431,7 @@ impl Builder<PendulumCurrencyId> for ExtBuilderParachain<PendulumCurrencyId> {
 					System,
 					NATIVE_INITIAL_BALANCE,
 					ORML_INITIAL_BALANCE,
-					PendulumCurrencyId,
+					AmplitudeCurrencyId,
 					assets_metadata_amplitude
 				)
 			},

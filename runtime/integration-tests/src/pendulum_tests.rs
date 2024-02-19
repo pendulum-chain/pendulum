@@ -20,10 +20,10 @@ use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain
 
 // Since in the mock definition all the assets are defined with the same fee_per_second value
 // the total fees for every asset will be the same.
-const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
-const MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
-const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
-const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
+const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 1000000000; // /4 native token value fee per second 
+const MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 8000000000; // 2x native token value fee per second
+const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 2000000000; // /2 native token value fee per second
+const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000; 
 
 decl_test_relay_chain! {
 	pub struct PolkadotRelay {

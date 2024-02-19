@@ -6,8 +6,6 @@ use sp_runtime::{
 	DispatchError, MultiSignature,
 };
 
-use spacewalk_primitives::CurrencyId;
-
 pub mod asset_registry;
 pub mod chain_ext;
 pub mod custom_transactor;

@@ -27,27 +27,27 @@ smallvec = "1.9.0"
 runtime-common = { path = "../common", default-features = false }
 
 # Custom libraries for Spacewalk
-clients-info = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-security = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-staking = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-oracle = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-stellar-relay = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-fee = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-vault-registry = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-redeem = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-issue = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-nomination = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-replace = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-module-issue-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
-module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8" }
+clients-info = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+security = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+staking = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+oracle = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+stellar-relay = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+fee = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+vault-registry = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+redeem = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+issue = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+nomination = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+replace = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+module-issue-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
 module-pallet-staking-rpc-runtime-api = { path = "../../pallets/parachain-staking/rpc/runtime-api", default-features = false }
-pooled-rewards = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8"}
-reward-distribution = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "22c52abbecda0c1cdaa4187678fe7bcc2d6868c8"}
+pooled-rewards = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+reward-distribution = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
 
 
 # Substrate
@@ -104,11 +104,11 @@ orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-modu
 # KILT
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
 
-orml-currencies-allowance-extension = {path = "../../pallets/orml-currencies-allowance-extension", default-features = false}
+orml-currencies-allowance-extension = { path = "../../pallets/orml-currencies-allowance-extension", default-features = false }
 
 
 # Pendulum Pallets
-vesting-manager = {path = "../../pallets/vesting-manager", default-features = false}
+vesting-manager = { path = "../../pallets/vesting-manager", default-features = false }
 
 # DIA
 dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.40" }
@@ -181,9 +181,9 @@ std = [
     "pallet-contracts-primitives/std",
     "pallet-democracy/std",
     "pallet-identity/std",
-	"pallet-multisig/std",
+    "pallet-multisig/std",
     "pallet-preimage/std",
-	"pallet-proxy/std",
+    "pallet-proxy/std",
     "pallet-insecure-randomness-collective-flip/std",
     "pallet-scheduler/std",
     "pallet-session/std",
@@ -218,7 +218,6 @@ std = [
     "zenlink-protocol-runtime-api/std",
     "bifrost-farming/std",
     "bifrost-farming-rpc-runtime-api/std",
-    
     #custom libraries from spacewalk
     "security/std",
     "staking/std",
@@ -238,11 +237,10 @@ std = [
     "module-pallet-staking-rpc-runtime-api/std",
     "module-vault-registry-rpc-runtime-api/std",
     "spacewalk-primitives/std",
-	# custom libraries from pendulum
-	"orml-currencies-allowance-extension/std",
-	"parachain-staking/std",
-	"vesting-manager/std",
-
+    # custom libraries from pendulum
+    "orml-currencies-allowance-extension/std",
+    "parachain-staking/std",
+    "vesting-manager/std",
 ]
 
 runtime-benchmarks = [
@@ -253,25 +251,22 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
-
-	"fee/runtime-benchmarks",
-	"issue/runtime-benchmarks",
-	"nomination/runtime-benchmarks",
-	"oracle/runtime-benchmarks",
-	"redeem/runtime-benchmarks",
-	"replace/runtime-benchmarks",
-	"stellar-relay/runtime-benchmarks",
-	"vault-registry/runtime-benchmarks",
-
+    "fee/runtime-benchmarks",
+    "issue/runtime-benchmarks",
+    "nomination/runtime-benchmarks",
+    "oracle/runtime-benchmarks",
+    "redeem/runtime-benchmarks",
+    "replace/runtime-benchmarks",
+    "stellar-relay/runtime-benchmarks",
+    "vault-registry/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",
     "cumulus-pallet-session-benchmarking/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
-	"pallet-collective/runtime-benchmarks",
-
+    "pallet-collective/runtime-benchmarks",
     "runtime-common/runtime-benchmarks",
-	"orml-currencies-allowance-extension/runtime-benchmarks"
+    "orml-currencies-allowance-extension/runtime-benchmarks"
 ]
 
 try-runtime = [
@@ -289,9 +284,9 @@ try-runtime = [
     "pallet-contracts/try-runtime",
     "pallet-democracy/try-runtime",
     "pallet-identity/try-runtime",
-	"pallet-multisig/try-runtime",
+    "pallet-multisig/try-runtime",
     "pallet-preimage/try-runtime",
-	"pallet-proxy/try-runtime",
+    "pallet-proxy/try-runtime",
     "pallet-insecure-randomness-collective-flip/try-runtime",
     "pallet-scheduler/try-runtime",
     "pallet-session/try-runtime",
@@ -300,20 +295,16 @@ try-runtime = [
     "pallet-utility/try-runtime",
     "pallet-vesting/try-runtime",
     "pallet-xcm/try-runtime",
-    
     "parachain-staking/try-runtime",
-
     "cumulus-pallet-aura-ext/try-runtime",
     "cumulus-pallet-dmp-queue/try-runtime",
     "cumulus-pallet-parachain-system/try-runtime",
     "cumulus-pallet-xcm/try-runtime",
     "cumulus-pallet-xcmp-queue/try-runtime",
-
     "orml-asset-registry/try-runtime",
     "orml-currencies/try-runtime",
     "orml-tokens/try-runtime",
     "orml-xtokens/try-runtime",
-
     "stellar-relay/try-runtime",
     "issue/try-runtime",
     "currency/try-runtime",
@@ -328,12 +319,9 @@ try-runtime = [
     "pooled-rewards/try-runtime",
     "clients-info/try-runtime",
     "reward-distribution/try-runtime",
-
     "dia-oracle/try-runtime",
     "orml-currencies-allowance-extension/try-runtime",
     "vesting-manager/try-runtime",
-    
     "bifrost-farming/try-runtime",
-
     "zenlink-protocol/try-runtime",
 ]

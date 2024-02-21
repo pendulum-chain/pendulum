@@ -279,10 +279,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("foucoco"),
 	impl_name: create_runtime_str!("foucoco"),
 	authoring_version: 1,
-	spec_version: 8,
+	spec_version: 9,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 7,
+	transaction_version: 8,
 	state_version: 1,
 };
 
@@ -1047,7 +1047,7 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 
 parameter_types! {
 	pub const SellFee: Permill = Permill::from_percent(1);
-	pub const MinAmountToBuyout: Balance = 100 * UNIT;
+	pub const MinAmountToBuyout: Balance = NANOUNIT;
 	// 24 hours in blocks (where average block time is 12 seconds)
 	pub const BuyoutPeriod: u32 = 7200;
 	// Maximum number of allowed currencies for buyout

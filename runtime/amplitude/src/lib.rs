@@ -1375,7 +1375,7 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 
 parameter_types! {
 	pub const SellFee: Permill = Permill::from_percent(1);
-	pub const MinAmountToBuyout: Balance = NANOUNIT;
+	pub const MinAmountToBuyout: Balance = 10 * MILLIUNIT; // 0.01 AMPE or 10_000_000_000
 	// 24 hours in blocks (where average block time is 12 seconds)
 	pub const BuyoutPeriod: u32 = 7200;
 	// Maximum number of allowed currencies for buyout

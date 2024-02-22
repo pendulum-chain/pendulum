@@ -187,14 +187,30 @@ impl XCMCurrencyConversion for AmplitudeDiaOracleKeyConverter {
 	}
 }
 
-type DataProviderImpl = DiaOracleAdapter<
-	DiaOracleModule,
-	UnsignedFixedPoint,
-	Moment,
-	dia::DiaOracleKeyConvertor<AmplitudeDiaOracleKeyConverter>,
-	ConvertPrice,
-	ConvertMoment,
->;
+cfg_if::cfg_if! {
+	if #[cfg(feature = "runtime-benchmarks")] {
+		use oracle::testing_utils::{
+			MockConvertMoment, MockConvertPrice, MockDiaOracle, MockOracleKeyConvertor,
+		};
+		type DataProviderImpl = DiaOracleAdapter<
+			MockDiaOracle,
+			UnsignedFixedPoint,
+			Moment,
+			MockOracleKeyConvertor,
+			MockConvertPrice,
+			MockConvertMoment<Moment>,
+		>;
+	} else {
+		type DataProviderImpl = DiaOracleAdapter<
+			DiaOracleModule,
+			UnsignedFixedPoint,
+			Moment,
+			dia::DiaOracleKeyConvertor<AmplitudeDiaOracleKeyConverter>,
+			ConvertPrice,
+			ConvertMoment,
+		>;
+	}
+}
 
 pub struct ConvertPrice;
 

@@ -30,8 +30,30 @@ orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-l
 # orml packages { version = "0.4.1-dev" }
 # zenlink packages  { version = "*" }
 [patch.crates-io]
-orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.40" }
-orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.40" }
-orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.40" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.40" }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.40" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.40" }
 zenlink-protocol = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "polkadot-v0.9.40-protocol" }
 zenlink-protocol-runtime-api = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", branch = "polkadot-v0.9.40-protocol" }
+
+
+[patch."https://github.com/paritytech/substrate"]
+pallet-contracts = { git = "https://github.com/pendulum-chain/substrate", branch = "4-cherry-pick-fix-for-pov-over-estimation" }
+pallet-contracts-primitives = { git = "https://github.com/pendulum-chain/substrate", branch = "4-cherry-pick-fix-for-pov-over-estimation" }
+pallet-contracts-proc-macro = { git = "https://github.com/pendulum-chain/substrate", branch = "4-cherry-pick-fix-for-pov-over-estimation" }
+
+[patch."https://github.com/pendulum-chain/substrate"]
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+sp-weights = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+pallet-insecure-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }

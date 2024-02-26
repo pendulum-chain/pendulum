@@ -15,6 +15,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
 
 [dependencies]
+cfg-if = "1.0.0"
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 hex-literal = { version = "0.3.4", optional = true }
 log = { version = "0.4.17", default-features = false }
@@ -104,8 +105,8 @@ orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-modu
 # KILT
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
 
-orml-currencies-allowance-extension = { path = "../../pallets/orml-currencies-allowance-extension", default-features = false }
-
+orml-currencies-allowance-extension = {path = "../../pallets/orml-currencies-allowance-extension", default-features = false}
+treasury-buyout-extension = {path = "../../pallets/treasury-buyout-extension", default-features = false}
 
 # Pendulum Pallets
 vesting-manager = { path = "../../pallets/vesting-manager", default-features = false }
@@ -237,10 +238,12 @@ std = [
     "module-pallet-staking-rpc-runtime-api/std",
     "module-vault-registry-rpc-runtime-api/std",
     "spacewalk-primitives/std",
-    # custom libraries from pendulum
-    "orml-currencies-allowance-extension/std",
-    "parachain-staking/std",
-    "vesting-manager/std",
+	# custom libraries from pendulum
+	"orml-currencies-allowance-extension/std",
+	"treasury-buyout-extension/std",
+	"parachain-staking/std",
+	"vesting-manager/std",
+
 ]
 
 runtime-benchmarks = [
@@ -266,7 +269,8 @@ runtime-benchmarks = [
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
     "runtime-common/runtime-benchmarks",
-    "orml-currencies-allowance-extension/runtime-benchmarks"
+	"orml-currencies-allowance-extension/runtime-benchmarks",
+	"treasury-buyout-extension/runtime-benchmarks"
 ]
 
 try-runtime = [
@@ -321,6 +325,7 @@ try-runtime = [
     "reward-distribution/try-runtime",
     "dia-oracle/try-runtime",
     "orml-currencies-allowance-extension/try-runtime",
+	"treasury-buyout-extension/try-runtime",
     "vesting-manager/try-runtime",
     "bifrost-farming/try-runtime",
     "zenlink-protocol/try-runtime",

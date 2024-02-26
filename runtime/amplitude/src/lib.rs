@@ -29,14 +29,16 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
+		One, Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, FixedPointNumber, SaturatedConversion,
+	ApplyExtrinsicResult, DispatchError, FixedPointNumber, FixedU128, SaturatedConversion,
 };
 
 const CONTRACTS_DEBUG_OUTPUT: bool = true;
 
-use sp_std::{marker::PhantomData, prelude::*};
+use sp_std::{fmt::Debug, marker::PhantomData, prelude::*};
+
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -85,6 +87,7 @@ pub use nomination::Event as NominationEvent;
 use oracle::{
 	dia,
 	dia::{DiaOracleAdapter, NativeCurrencyKey, XCMCurrencyConversion},
+	OracleKey,
 };
 pub use redeem::{Event as RedeemEvent, RedeemRequest};
 pub use replace::{Event as ReplaceEvent, ReplaceRequest};
@@ -135,6 +138,7 @@ pub type SignedExtra = (
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	treasury_buyout_extension::CheckBuyout<Runtime>,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -183,14 +187,30 @@ impl XCMCurrencyConversion for AmplitudeDiaOracleKeyConverter {
 	}
 }
 
-type DataProviderImpl = DiaOracleAdapter<
-	DiaOracleModule,
-	UnsignedFixedPoint,
-	Moment,
-	dia::DiaOracleKeyConvertor<AmplitudeDiaOracleKeyConverter>,
-	ConvertPrice,
-	ConvertMoment,
->;
+cfg_if::cfg_if! {
+	if #[cfg(feature = "runtime-benchmarks")] {
+		use oracle::testing_utils::{
+			MockConvertMoment, MockConvertPrice, MockDiaOracle, MockOracleKeyConvertor,
+		};
+		type DataProviderImpl = DiaOracleAdapter<
+			MockDiaOracle,
+			UnsignedFixedPoint,
+			Moment,
+			MockOracleKeyConvertor,
+			MockConvertPrice,
+			MockConvertMoment<Moment>,
+		>;
+	} else {
+		type DataProviderImpl = DiaOracleAdapter<
+			DiaOracleModule,
+			UnsignedFixedPoint,
+			Moment,
+			dia::DiaOracleKeyConvertor<AmplitudeDiaOracleKeyConverter>,
+			ConvertPrice,
+			ConvertMoment,
+		>;
+	}
+}
 
 pub struct ConvertPrice;
 
@@ -371,6 +391,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::TokenAllowance(_) |
 			RuntimeCall::AssetRegistry(_) |
 			RuntimeCall::Proxy(_) |
+			RuntimeCall::TreasuryBuyoutExtension(_) |
 			RuntimeCall::RewardDistribution(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
@@ -1056,6 +1077,7 @@ where
 			frame_system::CheckNonce::<Runtime>::from(index),
 			frame_system::CheckWeight::<Runtime>::new(),
 			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+			treasury_buyout_extension::CheckBuyout::<Runtime>::new(),
 		);
 
 		let raw_payload = SignedPayload::new(call, extra).ok()?;
@@ -1315,6 +1337,82 @@ impl orml_currencies_allowance_extension::Config for Runtime {
 	type MaxAllowedCurrencies = ConstU32<256>;
 }
 
+pub struct OraclePriceGetter(Oracle);
+
+impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
+	where
+		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
+	{
+		let key = OracleKey::ExchangeRate(currency_id);
+		let asset_price = Oracle::get_price(key.clone())?;
+
+		let converted_asset_price = FixedNumber::try_from(asset_price);
+
+		match converted_asset_price {
+			Ok(price) => Ok(price),
+			Err(_) => Err(DispatchError::Other("Failed to convert price")),
+		}
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
+	where
+		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
+	{
+		// Forcefully set chain status to running when benchmarking so that the oracle doesn't fail
+		Security::set_status(StatusCode::Running);
+
+		let key = OracleKey::ExchangeRate(currency_id);
+
+		// Attempt to get the price once and use the result to decide if feeding a value is necessary
+		match Oracle::get_price(key.clone()) {
+			Ok(asset_price) => {
+				// If the price is successfully retrieved, use it directly
+				let converted_asset_price = FixedNumber::try_from(asset_price)
+					.map_err(|_| DispatchError::Other("Failed to convert price"))?;
+				Ok(converted_asset_price)
+			},
+			Err(_) => {
+				// Price not found, feed the default value
+				let rate = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
+				// Account used for feeding values
+				let account = AccountId::from([0u8; 32]);
+				Oracle::feed_values(account, vec![(key.clone(), rate)])?;
+
+				// If feeding was successful, just use the feeded price to spare a read
+				let converted_asset_price = FixedNumber::try_from(rate)
+					.map_err(|_| DispatchError::Other("Failed to convert price"))?;
+				Ok(converted_asset_price)
+			},
+		}
+	}
+}
+
+parameter_types! {
+	pub const SellFee: Permill = Permill::from_percent(5);
+	pub const MinAmountToBuyout: Balance = 10 * MILLIUNIT; // 0.01 AMPE or 10_000_000_000
+	// 24 hours in blocks (where average block time is 12 seconds)
+	pub const BuyoutPeriod: u32 = 7200;
+	// Maximum number of allowed currencies for buyout
+	pub const MaxAllowedBuyoutCurrencies: u32 = 20;
+}
+
+impl treasury_buyout_extension::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Currencies;
+	type TreasuryAccount = AmplitudeTreasuryAccount;
+	type BuyoutPeriod = BuyoutPeriod;
+	type SellFee = SellFee;
+	type PriceGetter = OraclePriceGetter;
+	type MinAmountToBuyout = MinAmountToBuyout;
+	type MaxAllowedBuyoutCurrencies = MaxAllowedBuyoutCurrencies;
+	type WeightInfo = treasury_buyout_extension::default_weights::SubstrateWeight<Runtime>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type RelayChainCurrencyId = RelayChainCurrencyId;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -1391,6 +1489,7 @@ construct_runtime!(
 		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,
 
 		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
+		TreasuryBuyoutExtension: treasury_buyout_extension::{Pallet, Storage, Call, Event<T>} = 82,
 
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 
@@ -1429,6 +1528,7 @@ mod benches {
 		[pallet_xcm, PolkadotXcm]
 
 		[orml_currencies_allowance_extension, TokenAllowance]
+		[treasury_buyout_extension, TreasuryBuyoutExtension]
 	);
 }
 

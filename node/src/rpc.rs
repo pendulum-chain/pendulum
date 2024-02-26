@@ -23,7 +23,7 @@ use module_vault_registry_rpc::{VaultRegistry, VaultRegistryApiServer};
 use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 use substrate_frame_rpc_system::{System, SystemApiServer};
 
-use crate::service::{AmplitudeClient, DevelopmentClient, FoucocoClient, PendulumClient};
+use crate::service::{AmplitudeClient, FoucocoClient, PendulumClient};
 
 /// A type representing all RPC extensions.
 type RpcExtension = jsonrpsee::RpcModule<()>;
@@ -63,20 +63,6 @@ where
 }
 
 /// Instantiate all RPC extensions.
-pub fn create_full_development<P>(
-	deps: FullDeps<DevelopmentClient, P>,
-) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
-where
-	P: TransactionPool + Sync + Send + 'static,
-{
-	let mut module = RpcExtension::new(());
-	let FullDeps { client, pool, deny_unsafe } = deps;
-
-	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
-	module.merge(TransactionPayment::new(client).into_rpc())?;
-	Ok(module)
-}
-
 pub fn create_full_amplitude<P>(deps: FullDeps<AmplitudeClient, P>) -> ResultRpcExtension
 where
 	P: TransactionPool + Sync + Send + 'static,

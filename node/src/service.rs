@@ -38,12 +38,10 @@ use polkadot_service::CollatorPair;
 use sc_consensus::ImportQueue;
 
 use crate::rpc::{
-	create_full_amplitude, create_full_development, create_full_foucoco, create_full_pendulum,
-	FullDeps, ResultRpcExtension,
+	create_full_amplitude, create_full_foucoco, create_full_pendulum, FullDeps, ResultRpcExtension,
 };
 
 pub use amplitude_runtime::RuntimeApi as AmplitudeRuntimeApi;
-pub use development_runtime::RuntimeApi as DevelopmentRuntimeApi;
 pub use foucoco_runtime::RuntimeApi as FoucocoRuntimeApi;
 pub use pendulum_runtime::RuntimeApi as PendulumRuntimeApi;
 
@@ -53,8 +51,6 @@ pub type FoucocoClient =
 	TFullClient<Block, FoucocoRuntimeApi, NativeElseWasmExecutor<FoucocoRuntimeExecutor>>;
 pub type PendulumClient =
 	TFullClient<Block, PendulumRuntimeApi, NativeElseWasmExecutor<PendulumRuntimeExecutor>>;
-pub type DevelopmentClient =
-	TFullClient<Block, DevelopmentRuntimeApi, NativeElseWasmExecutor<DevelopmentRuntimeExecutor>>;
 
 type ParachainBlockImport<RuntimeApi, Executor> = TParachainBlockImport<
 	Block,
@@ -92,7 +88,6 @@ pub trait ParachainRuntimeApiImpl:
 impl ParachainRuntimeApiImpl for amplitude_runtime::RuntimeApiImpl<Block, AmplitudeClient> {}
 impl ParachainRuntimeApiImpl for pendulum_runtime::RuntimeApiImpl<Block, PendulumClient> {}
 impl ParachainRuntimeApiImpl for foucoco_runtime::RuntimeApiImpl<Block, FoucocoClient> {}
-impl ParachainRuntimeApiImpl for development_runtime::RuntimeApiImpl<Block, DevelopmentClient> {}
 
 /// Amplitude executor type.
 pub struct AmplitudeRuntimeExecutor;
@@ -136,21 +131,6 @@ impl sc_executor::NativeExecutionDispatch for PendulumRuntimeExecutor {
 
 	fn native_version() -> sc_executor::NativeVersion {
 		pendulum_runtime::native_version()
-	}
-}
-
-/// Development executor instance.
-pub struct DevelopmentRuntimeExecutor;
-
-impl sc_executor::NativeExecutionDispatch for DevelopmentRuntimeExecutor {
-	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
-
-	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		development_runtime::api::dispatch(method, data)
-	}
-
-	fn native_version() -> sc_executor::NativeVersion {
-		development_runtime::native_version()
 	}
 }
 
@@ -591,25 +571,6 @@ pub async fn start_parachain_node_pendulum(
 		id,
 		hwbench,
 		create_full_pendulum,
-	)
-	.await
-}
-
-/// Start a parachain node.
-pub async fn start_parachain_node_development(
-	parachain_config: Configuration,
-	polkadot_config: Configuration,
-	collator_options: CollatorOptions,
-	id: ParaId,
-	hwbench: Option<sc_sysinfo::HwBench>,
-) -> sc_service::error::Result<(TaskManager, Arc<DevelopmentClient>)> {
-	start_node_impl(
-		parachain_config,
-		polkadot_config,
-		collator_options,
-		id,
-		hwbench,
-		create_full_development,
 	)
 	.await
 }

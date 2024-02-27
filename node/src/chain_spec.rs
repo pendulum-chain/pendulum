@@ -192,8 +192,6 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 
 	let offchain_worker_price_feeder =
 		AccountId::from_ss58check(foucoco::OFF_CHAIN_WORKER_ADDRESS).unwrap();
-	let alicia =
-		AccountId::from_ss58check(foucoco::ALICIA).unwrap();
 
 	FoucocoChainSpec::from_genesis(
 		// Name
@@ -206,8 +204,8 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 				// initial collators.
 				invulnerables.clone(),
 				signatories.clone(),
-				vec![sudo_account.clone(), offchain_worker_price_feeder.clone(), alicia.clone()],
-				alicia.clone(),
+				vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
+				sudo_account.clone(),
 				foucoco::PARACHAIN_ID.into(),
 				false,
 			)

@@ -15,20 +15,20 @@ codec = { package = "parity-scale-codec", version = "3.0.0" }
 serde = { version = "1.0.145", features = ["derive"] }
 jsonrpsee = { version = "0.16.2", features = ["server"] }
 
-module-issue-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "59896f7df1c1daf0f91103323b4d7ba3f1e186fe"}
-module-oracle-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "59896f7df1c1daf0f91103323b4d7ba3f1e186fe"}
-module-redeem-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "59896f7df1c1daf0f91103323b4d7ba3f1e186fe"}
-module-replace-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "59896f7df1c1daf0f91103323b4d7ba3f1e186fe"}
-module-vault-registry-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "59896f7df1c1daf0f91103323b4d7ba3f1e186fe"}
+module-issue-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "057dc478ca52d66318d4aaa659b0c7dc00b4d062"}
+module-oracle-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "057dc478ca52d66318d4aaa659b0c7dc00b4d062"}
+module-redeem-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "057dc478ca52d66318d4aaa659b0c7dc00b4d062"}
+module-replace-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "057dc478ca52d66318d4aaa659b0c7dc00b4d062"}
+module-vault-registry-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "057dc478ca52d66318d4aaa659b0c7dc00b4d062"}
 module-pallet-staking-rpc = { path = "../pallets/parachain-staking/rpc" }
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", rev = "59896f7df1c1daf0f91103323b4d7ba3f1e186fe"}
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", rev = "057dc478ca52d66318d4aaa659b0c7dc00b4d062"}
 
 # Local
-amplitude-runtime = {path = "../runtime/amplitude"}
-foucoco-runtime = {path = "../runtime/foucoco"}
-pendulum-runtime = {path = "../runtime/pendulum"}
-development-runtime = {path = "../runtime/development"}
-runtime-common = {path = "../runtime/common"}
+amplitude-runtime = { path = "../runtime/amplitude" }
+foucoco-runtime = { path = "../runtime/foucoco" }
+pendulum-runtime = { path = "../runtime/pendulum" }
+development-runtime = { path = "../runtime/development" }
+runtime-common = { path = "../runtime/common" }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
@@ -100,16 +100,16 @@ substrate-build-script-utils = { git = "https://github.com/paritytech/substrate"
 [features]
 default = []
 runtime-benchmarks = [
-	"amplitude-runtime/runtime-benchmarks",
-	"foucoco-runtime/runtime-benchmarks",
-	"pendulum-runtime/runtime-benchmarks",
-	"development-runtime/runtime-benchmarks",
-  	"runtime-common/runtime-benchmarks",
-	"polkadot-cli/runtime-benchmarks",
+    "amplitude-runtime/runtime-benchmarks",
+    "foucoco-runtime/runtime-benchmarks",
+    "pendulum-runtime/runtime-benchmarks",
+    "development-runtime/runtime-benchmarks",
+    "runtime-common/runtime-benchmarks",
+    "polkadot-cli/runtime-benchmarks",
 ]
 try-runtime = [
-	"amplitude-runtime/try-runtime",
-	"foucoco-runtime/try-runtime",
-	"pendulum-runtime/try-runtime",
-	"try-runtime-cli/try-runtime"
+    "amplitude-runtime/try-runtime",
+    "foucoco-runtime/try-runtime",
+    "pendulum-runtime/try-runtime",
+    "try-runtime-cli/try-runtime"
 ]

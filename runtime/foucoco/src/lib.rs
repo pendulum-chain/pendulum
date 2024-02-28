@@ -10,6 +10,7 @@ mod assets;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
+
 use crate::zenlink::*;
 use xcm::v3::MultiLocation;
 use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
@@ -29,10 +30,12 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
+		One, Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, FixedPointNumber, SaturatedConversion,
+	ApplyExtrinsicResult, DispatchError, FixedPointNumber, FixedU128, SaturatedConversion,
 };
+use sp_std::fmt::Debug;
 
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -66,6 +69,8 @@ use runtime_common::{
 
 #[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
 use oracle::testing_utils::MockDataFeeder;
+
+use oracle::OracleKey;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 
@@ -149,6 +154,7 @@ pub type SignedExtra = (
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	treasury_buyout_extension::CheckBuyout<Runtime>,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -202,13 +208,14 @@ pub type Executive = frame_executive::Executive<
 >;
 
 pub struct SpacewalkNativeCurrency;
+
 impl oracle::dia::NativeCurrencyKey for SpacewalkNativeCurrency {
 	fn native_symbol() -> Vec<u8> {
 		"AMPE".as_bytes().to_vec()
 	}
 
 	fn native_chain() -> Vec<u8> {
-		"AMPLITUDE".as_bytes().to_vec()
+		"Amplitude".as_bytes().to_vec()
 	}
 }
 
@@ -228,23 +235,43 @@ impl XCMCurrencyConversion for SpacewalkNativeCurrency {
 	}
 }
 
-type DataProviderImpl = DiaOracleAdapter<
-	DiaOracleModule,
-	UnsignedFixedPoint,
-	Moment,
-	oracle::dia::DiaOracleKeyConvertor<SpacewalkNativeCurrency>,
-	ConvertPrice,
-	ConvertMoment,
->;
+cfg_if::cfg_if! {
+	if #[cfg(feature = "runtime-benchmarks")] {
+		use oracle::testing_utils::{
+			MockConvertMoment, MockConvertPrice, MockDiaOracle, MockOracleKeyConvertor,
+		};
+		type DataProviderImpl = DiaOracleAdapter<
+			MockDiaOracle,
+			UnsignedFixedPoint,
+			Moment,
+			MockOracleKeyConvertor,
+			MockConvertPrice,
+			MockConvertMoment<Moment>,
+		>;
+	} else {
+		type DataProviderImpl = DiaOracleAdapter<
+			DiaOracleModule,
+			UnsignedFixedPoint,
+			Moment,
+			oracle::dia::DiaOracleKeyConvertor<SpacewalkNativeCurrency>,
+			ConvertPrice,
+			ConvertMoment,
+		>;
+	}
+}
 
 pub struct ConvertPrice;
+
 impl Convert<u128, Option<UnsignedFixedPoint>> for ConvertPrice {
 	fn convert(price: u128) -> Option<UnsignedFixedPoint> {
-		Some(UnsignedFixedPoint::from_inner(price))
+		// The DIA batching server returns the price in 1e12 format, see [here](https://github.com/pendulum-chain/oracle-pallet/blob/716073885de01f923a0fe44a05bd2a0bd45db555/dia-batching-server/src/price_updater.rs#L141)
+		// but our UnsignedFixedPoint implementation expects the price in 1e18 format.
+		Some(UnsignedFixedPoint::from_rational(price, 1_000_000_000_000))
 	}
 }
 
 pub struct ConvertMoment;
+
 impl Convert<u64, Option<Moment>> for ConvertMoment {
 	fn convert(moment: u64) -> Option<Moment> {
 		// The provided moment is in seconds, but we need milliseconds
@@ -263,6 +290,7 @@ impl Convert<u64, Option<Moment>> for ConvertMoment {
 ///   - Setting it to `0` will essentially disable the weight fee.
 ///   - Setting it to `1` will cause the literal `#[weight = x]` values to be charged.
 pub struct WeightToFee;
+
 impl WeightToFeePolynomial for WeightToFee {
 	type Balance = Balance;
 	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
@@ -288,10 +316,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("foucoco"),
 	impl_name: create_runtime_str!("foucoco"),
 	authoring_version: 1,
-	spec_version: 4,
+	spec_version: 10,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 4,
+	transaction_version: 8,
 	state_version: 1,
 };
 
@@ -363,6 +391,7 @@ parameter_types! {
 }
 
 pub struct BaseFilter;
+
 impl Contains<RuntimeCall> for BaseFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		match call {
@@ -411,6 +440,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::AssetRegistry(_) |
 			RuntimeCall::Proxy(_) |
 			RuntimeCall::OrmlExtension(_) |
+			RuntimeCall::TreasuryBuyoutExtension(_) |
 			RuntimeCall::RewardDistribution(_) => true, // All pallets are allowed, but exhaustive match is defensive
 			                                            // in the case of adding new pallets.
 		}
@@ -522,6 +552,7 @@ parameter_types! {
 type NegativeImbalance = <Balances as FrameCurrency<AccountId>>::NegativeImbalance;
 
 pub struct DealWithFees;
+
 impl OnUnbalanced<NegativeImbalance> for DealWithFees {
 	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
 		if let Some(mut fees) = fees_then_tips.next() {
@@ -621,7 +652,8 @@ impl pallet_democracy::Config for Runtime {
 	type EnactmentPeriod = EnactmentPeriod;
 	type LaunchPeriod = LaunchPeriod;
 	type VotingPeriod = VotingPeriod;
-	type VoteLockingPeriod = EnactmentPeriod; // Same as EnactmentPeriod
+	// Same as EnactmentPeriod
+	type VoteLockingPeriod = EnactmentPeriod;
 	type MinimumDeposit = MinimumDeposit;
 	/// A straight majority of the council can decide what their next motion is.
 	type ExternalOrigin =
@@ -675,6 +707,7 @@ parameter_types! {
 }
 
 type CouncilCollective = pallet_collective::Instance1;
+
 impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
@@ -695,6 +728,7 @@ parameter_types! {
 }
 
 type TechnicalCollective = pallet_collective::Instance2;
+
 impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
@@ -836,6 +870,7 @@ pub fn get_all_module_accounts() -> Vec<AccountId> {
 }
 
 pub struct DustRemovalWhitelist;
+
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
 		get_all_module_accounts().contains(a)
@@ -843,6 +878,7 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 }
 
 pub struct CurrencyHooks<T>(PhantomData<T>);
+
 impl<T: orml_tokens::Config> MutationHooks<T::AccountId, T::CurrencyId, T::Balance>
 	for CurrencyHooks<T>
 {
@@ -980,7 +1016,9 @@ impl pallet_vesting::Config for Runtime {
 	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
+
 pub struct CurrencyIdCheckerImpl;
+
 impl orml_tokens_management_extension::CurrencyIdCheck for CurrencyIdCheckerImpl {
 	type CurrencyId = CurrencyId;
 
@@ -1008,6 +1046,81 @@ impl orml_tokens_management_extension::Config for Runtime {
 	type CurrencyIdChecker = CurrencyIdCheckerImpl;
 	type DepositCurrency = DepositCurrency;
 	type AssetDeposit = AssetDeposit;
+}
+
+pub struct OraclePriceGetter(Oracle);
+
+impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
+	where
+		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
+	{
+		let key = OracleKey::ExchangeRate(currency_id);
+		let asset_price = Oracle::get_price(key.clone())?;
+
+		let converted_asset_price = FixedNumber::try_from(asset_price);
+
+		match converted_asset_price {
+			Ok(price) => Ok(price),
+			Err(_) => Err(DispatchError::Other("Failed to convert price")),
+		}
+	}
+	#[cfg(feature = "runtime-benchmarks")]
+	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
+	where
+		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
+	{
+		// Forcefully set chain status to running when benchmarking so that the oracle doesn't fail
+		Security::set_status(StatusCode::Running);
+
+		let key = OracleKey::ExchangeRate(currency_id);
+
+		// Attempt to get the price once and use the result to decide if feeding a value is necessary
+		match Oracle::get_price(key.clone()) {
+			Ok(asset_price) => {
+				// If the price is successfully retrieved, use it directly
+				let converted_asset_price = FixedNumber::try_from(asset_price)
+					.map_err(|_| DispatchError::Other("Failed to convert price"))?;
+				Ok(converted_asset_price)
+			},
+			Err(_) => {
+				// Price not found, feed the default value
+				let rate = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
+				// Account used for feeding values
+				let account = AccountId::from([0u8; 32]);
+				Oracle::feed_values(account, vec![(key.clone(), rate)])?;
+
+				// If feeding was successful, just use the feeded price to spare a read
+				let converted_asset_price = FixedNumber::try_from(rate)
+					.map_err(|_| DispatchError::Other("Failed to convert price"))?;
+				Ok(converted_asset_price)
+			},
+		}
+	}
+}
+
+parameter_types! {
+	pub const SellFee: Permill = Permill::from_percent(1);
+	pub const MinAmountToBuyout: Balance = NANOUNIT;
+	// 24 hours in blocks (where average block time is 12 seconds)
+	pub const BuyoutPeriod: u32 = 7200;
+	// Maximum number of allowed currencies for buyout
+	pub const MaxAllowedBuyoutCurrencies: u32 = 20;
+}
+
+impl treasury_buyout_extension::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Currencies;
+	type TreasuryAccount = FoucocoTreasuryAccount;
+	type BuyoutPeriod = BuyoutPeriod;
+	type SellFee = SellFee;
+	type PriceGetter = OraclePriceGetter;
+	type MinAmountToBuyout = MinAmountToBuyout;
+	type MaxAllowedBuyoutCurrencies = MaxAllowedBuyoutCurrencies;
+	type WeightInfo = treasury_buyout_extension::default_weights::SubstrateWeight<Runtime>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type RelayChainCurrencyId = RelayChainCurrencyId;
 }
 
 const fn deposit(items: u32, bytes: u32) -> Balance {
@@ -1523,6 +1636,7 @@ where
 			frame_system::CheckNonce::<Runtime>::from(index),
 			frame_system::CheckWeight::<Runtime>::new(),
 			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+			treasury_buyout_extension::CheckBuyout::<Runtime>::new(),
 		);
 
 		let raw_payload = SignedPayload::new(call, extra).ok()?;
@@ -1534,6 +1648,7 @@ where
 }
 
 pub struct CurrencyConvert;
+
 impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for CurrencyConvert {
 	fn convert(
 		amount: &currency::Amount<Runtime>,
@@ -1602,6 +1717,7 @@ impl staking::Config for Runtime {
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
+	type DecimalsLookup = spacewalk_primitives::AmplitudeDecimalsLookup;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
 	type DataFeeder = MockDataFeeder<Self::AccountId, Moment>;
@@ -1853,6 +1969,8 @@ construct_runtime!(
 		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
 		OrmlExtension: orml_tokens_management_extension::{Pallet, Storage, Call, Event<T>} = 81,
 
+		TreasuryBuyoutExtension: treasury_buyout_extension::{Pallet, Storage, Call, Event<T>} = 82,
+
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
 
 		// Asset Metadata
@@ -1890,6 +2008,7 @@ mod benches {
 
 		[orml_currencies_allowance_extension, TokenAllowance]
 		[orml_tokens_management_extension, OrmlExtension]
+		[treasury_buyout_extension, TreasuryBuyoutExtension]
 	);
 }
 

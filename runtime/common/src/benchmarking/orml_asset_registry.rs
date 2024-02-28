@@ -3,11 +3,13 @@ use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use orml_asset_registry::AssetMetadata;
 use sp_std::{vec, vec::Vec};
-use spacewalk_primitives::{CurrencyId, CustomMetadata};
+use crate::asset_registry::{CustomMetadata, DiaKeys};
+use spacewalk_primitives::CurrencyId;
 use xcm::{
 	latest::MultiLocation,
 	opaque::lts::{Junction::*, Junctions::*},
 };
+use sp_runtime::BoundedVec;
 
 pub struct Pallet<T: Config>(orml_asset_registry::Pallet<T>);
 pub trait Config:
@@ -37,7 +39,13 @@ pub mod benchmarks {
 			symbol: longest_vec(),
 			existential_deposit: 0,
 			location: Some(longest_multilocation().into()),
-			additional: CustomMetadata,
+			additional: CustomMetadata {
+				dia_keys: DiaKeys {
+					blockchain: BoundedVec::truncate_from(longest_vec()),
+					symbol: BoundedVec::truncate_from(longest_vec()),
+				},
+				fee_per_second: 123,
+			}
 		}
 	}
 
@@ -72,7 +80,13 @@ pub mod benchmarks {
 			Some(vec![b'b', 128]),
 			Some(1234),
 			Some(Some(location.into())),
-			Some(CustomMetadata),
+			Some(CustomMetadata {
+				dia_keys: DiaKeys {
+					blockchain: BoundedVec::truncate_from(longest_vec()),
+					symbol: BoundedVec::truncate_from(longest_vec()),
+				},
+				fee_per_second: 123,
+			}),
 		);
 	}
 

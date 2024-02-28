@@ -8,6 +8,7 @@ use frame_support::{
 	traits::{Everything, Nothing, ProcessMessageError},
 	weights::Weight,
 };
+use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
@@ -21,7 +22,6 @@ use xcm_builder::{
 	UsingComponents,
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
-use frame_system::EnsureRoot;
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const RelayNetwork: NetworkId = NetworkId::Rococo;

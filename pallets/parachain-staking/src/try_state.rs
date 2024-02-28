@@ -17,7 +17,7 @@
 // If you feel like getting in touch with us, you can do so at info@botlabs.org
 
 use frame_support::{ensure, traits::Get};
-use scale_info::prelude::{string::String,format};
+use scale_info::prelude::{format, string::String};
 use sp_runtime::{
 	traits::{CheckedAdd, Zero},
 	SaturatedConversion, Saturating,

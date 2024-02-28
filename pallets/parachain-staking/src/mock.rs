@@ -31,7 +31,7 @@ use sp_core::H256;
 use sp_runtime::{
 	impl_opaque_keys,
 	testing::{Header, UintAuthorityId},
-	traits::{BlakeTwo256, ConvertInto, IdentityLookup, OpaqueKeys, ConstU32},
+	traits::{BlakeTwo256, ConstU32, ConvertInto, IdentityLookup, OpaqueKeys},
 	Perbill, Perquintill,
 };
 use sp_std::fmt::Debug;

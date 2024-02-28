@@ -1,12 +1,10 @@
 use core::marker::PhantomData;
 
 use frame_support::{
-	log, match_types,
-	pallet_prelude::DispatchError,
-	parameter_types,
-	traits::{tokens::fungibles, ContainsPair, Everything, Nothing, ProcessMessageError},
-	weights::{Weight, WeightToFee as WeightToFeeTrait},
+	log, match_types, parameter_types,
+	traits::{ContainsPair, Everything, Nothing, ProcessMessageError},
 };
+use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
@@ -18,21 +16,15 @@ use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
-	FixedWeightBounds, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeWeightCredit,
+	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds,
+	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
-use xcm_executor::{
-	traits::{JustTry, ShouldExecute},
-	XcmExecutor,
-};
+use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
-use runtime_common::{parachains::kusama::asset_hub, RelativeValue};
+use runtime_common::{parachains::kusama::asset_hub, asset_registry::FixedConversionRateProvider};
 
-use cumulus_primitives_utility::{
-	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,
-};
+use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 
 use crate::{
 	assets::{
@@ -43,9 +35,9 @@ use crate::{
 };
 
 use super::{
-	AccountId, AmplitudeTreasuryAccount, Balance, Balances, Currencies, CurrencyId, ParachainInfo,
-	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Tokens,
-	WeightToFee, XcmpQueue,
+	AccountId, AmplitudeTreasuryAccount, AssetRegistry, Balance, Balances, Currencies, CurrencyId,
+	ParachainInfo, ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
+	XcmpQueue,
 };
 use frame_system::EnsureRoot;
 
@@ -112,23 +104,6 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 			Self::convert(id)
 		} else {
 			None
-		}
-	}
-}
-
-type RelativeValueOf = RelativeValue<Balance>;
-
-pub struct RelayRelativeValue;
-impl RelayRelativeValue {
-	fn get_relative_value(id: CurrencyId) -> Option<RelativeValueOf> {
-		match id {
-			CurrencyId::XCM(index) => match index {
-				xcm_assets::RELAY_KSM => Some(RelativeValueOf { num: 100, denominator: 1 }),
-				xcm_assets::ASSETHUB_USDT => Some(RelativeValueOf { num: 20, denominator: 4 }),
-				_ => None,
-			},
-			CurrencyId::Native => Some(RelativeValueOf { num: 1, denominator: 1 }),
-			_ => Some(RelativeValueOf { num: 1, denominator: 1 }),
 		}
 	}
 }
@@ -201,13 +176,6 @@ parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
 	pub const BaseXcmWeight: XCMWeight = XCMWeight::from_parts(150_000_000,0);
 	pub const MaxAssetsForTransfer: usize = 2;
-}
-
-match_types! {
-	pub type ParentOrParentsExecutivePlurality: impl Contains<MultiLocation> = {
-		MultiLocation { parents: 1, interior: Here } |
-		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }
-	};
 }
 
 //TODO: move DenyThenTry to polkadot's xcm module.
@@ -291,112 +259,10 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 );
 
-pub struct ChargeWeightInFungiblesImplementation;
-impl ChargeWeightInFungibles<AccountId, ConcreteAssets> for ChargeWeightInFungiblesImplementation {
-	fn charge_weight_in_fungibles(
-		asset_id: CurrencyId,
-		weight: Weight,
-	) -> Result<Balance, XcmError> {
-		let amount = <WeightToFee as WeightToFeeTrait>::weight_to_fee(&weight);
-
-		if let Some(relative_value) = RelayRelativeValue::get_relative_value(asset_id) {
-			let adjusted_amount =
-				RelativeValue::<Balance>::divide_by_relative_value(amount, relative_value);
-			log::info!("amount to be charged: {:?} in asset: {:?}", adjusted_amount, asset_id);
-			return Ok(adjusted_amount)
-		} else {
-			log::info!("amount to be charged: {:?} in asset: {:?}", amount, asset_id);
-			return Ok(amount)
-		}
-	}
-}
-
-// Workarround for TakeFirstAssetTrader
-use frame_support::traits::tokens::{
-	DepositConsequence, Fortitude, Preservation, Provenance, WithdrawConsequence,
-};
-
-pub struct ConcreteAssets;
-impl fungibles::Mutate<AccountId> for ConcreteAssets {}
-impl fungibles::Balanced<AccountId> for ConcreteAssets {
-	type OnDropCredit = fungibles::DecreaseIssuance<AccountId, Self>;
-	type OnDropDebt = fungibles::IncreaseIssuance<AccountId, Self>;
-}
-impl fungibles::Inspect<AccountId> for ConcreteAssets {
-	type AssetId = <Tokens as fungibles::Inspect<AccountId>>::AssetId;
-	type Balance = <Tokens as fungibles::Inspect<AccountId>>::Balance;
-
-	fn minimum_balance(id: Self::AssetId) -> Self::Balance {
-		Tokens::minimum_balance(id)
-	}
-
-	fn total_issuance(asset_id: Self::AssetId) -> Self::Balance {
-		Tokens::total_issuance(asset_id)
-	}
-
-	fn balance(asset_id: Self::AssetId, account_id: &AccountId) -> Self::Balance {
-		Tokens::balance(asset_id, account_id)
-	}
-
-	fn total_balance(asset_id: Self::AssetId, account_id: &AccountId) -> Self::Balance {
-		Tokens::balance(asset_id, account_id)
-	}
-
-	fn reducible_balance(
-		_: Self::AssetId,
-		_: &AccountId,
-		_: Preservation,
-		_: Fortitude,
-	) -> Self::Balance {
-		todo!()
-	}
-
-	fn can_deposit(
-		_: Self::AssetId,
-		_: &AccountId,
-		_: Self::Balance,
-		_: Provenance,
-	) -> DepositConsequence {
-		todo!()
-	}
-
-	fn can_withdraw(
-		_: Self::AssetId,
-		_: &AccountId,
-		_: Self::Balance,
-	) -> WithdrawConsequence<Self::Balance> {
-		todo!()
-	}
-
-	fn asset_exists(_: Self::AssetId) -> bool {
-		todo!()
-	}
-}
-impl fungibles::Unbalanced<AccountId> for ConcreteAssets {
-	fn handle_dust(_: fungibles::Dust<AccountId, Self>) {
-		todo!()
-	}
-	fn write_balance(
-		_: Self::AssetId,
-		_: &AccountId,
-		_: Self::Balance,
-	) -> Result<Option<Self::Balance>, DispatchError> {
-		todo!()
-	}
-
-	fn set_total_issuance(_: Self::AssetId, _: Self::Balance) {
-		todo!()
-	}
-}
-pub type Traders = (
-	TakeFirstAssetTrader<
-		AccountId,
-		ChargeWeightInFungiblesImplementation,
-		ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
-		ConcreteAssets,
-		XcmFeesTo32ByteAccount<LocalAssetTransactor, AccountId, AmplitudeTreasuryAccount>,
-	>,
-);
+pub type Traders = AssetRegistryTrader<
+	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry>>,
+	XcmFeesTo32ByteAccount<LocalAssetTransactor, AccountId, AmplitudeTreasuryAccount>,
+>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {

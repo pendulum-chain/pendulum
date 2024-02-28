@@ -48,6 +48,7 @@ parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polk
 statemint-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
 statemine-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
 
+orml-asset-registry = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.42" }
 orml-xcm = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git",  branch = "polkadot-v0.9.42" }
 orml-xcm-support = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git",  branch = "polkadot-v0.9.42" }
 orml-traits = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git",  branch = "polkadot-v0.9.42" }

@@ -10,6 +10,7 @@ mod assets;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
+
 use crate::zenlink::*;
 use xcm::v3::MultiLocation;
 use zenlink_protocol::{AssetBalance, MultiAssetsHandler, PairInfo};
@@ -175,6 +176,7 @@ pub type Executive = frame_executive::Executive<
 >;
 
 pub struct SpacewalkNativeCurrency;
+
 impl oracle::dia::NativeCurrencyKey for SpacewalkNativeCurrency {
 	fn native_symbol() -> Vec<u8> {
 		"AMPE".as_bytes().to_vec()
@@ -227,13 +229,17 @@ cfg_if::cfg_if! {
 }
 
 pub struct ConvertPrice;
+
 impl Convert<u128, Option<UnsignedFixedPoint>> for ConvertPrice {
 	fn convert(price: u128) -> Option<UnsignedFixedPoint> {
-		Some(UnsignedFixedPoint::from_inner(price))
+		// The DIA batching server returns the price in 1e12 format, see [here](https://github.com/pendulum-chain/oracle-pallet/blob/716073885de01f923a0fe44a05bd2a0bd45db555/dia-batching-server/src/price_updater.rs#L141)
+		// but our UnsignedFixedPoint implementation expects the price in 1e18 format.
+		Some(UnsignedFixedPoint::from_rational(price, 1_000_000_000_000))
 	}
 }
 
 pub struct ConvertMoment;
+
 impl Convert<u64, Option<Moment>> for ConvertMoment {
 	fn convert(moment: u64) -> Option<Moment> {
 		// The provided moment is in seconds, but we need milliseconds
@@ -252,6 +258,7 @@ impl Convert<u64, Option<Moment>> for ConvertMoment {
 ///   - Setting it to `0` will essentially disable the weight fee.
 ///   - Setting it to `1` will cause the literal `#[weight = x]` values to be charged.
 pub struct WeightToFee;
+
 impl WeightToFeePolynomial for WeightToFee {
 	type Balance = Balance;
 	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
@@ -277,10 +284,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("foucoco"),
 	impl_name: create_runtime_str!("foucoco"),
 	authoring_version: 1,
-	spec_version: 8,
+	spec_version: 10,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 7,
+	transaction_version: 8,
 	state_version: 1,
 };
 
@@ -352,6 +359,7 @@ parameter_types! {
 }
 
 pub struct BaseFilter;
+
 impl Contains<RuntimeCall> for BaseFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		match call {
@@ -508,6 +516,7 @@ parameter_types! {
 type NegativeImbalance = <Balances as FrameCurrency<AccountId>>::NegativeImbalance;
 
 pub struct DealWithFees;
+
 impl OnUnbalanced<NegativeImbalance> for DealWithFees {
 	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
 		if let Some(mut fees) = fees_then_tips.next() {
@@ -607,7 +616,8 @@ impl pallet_democracy::Config for Runtime {
 	type EnactmentPeriod = EnactmentPeriod;
 	type LaunchPeriod = LaunchPeriod;
 	type VotingPeriod = VotingPeriod;
-	type VoteLockingPeriod = EnactmentPeriod; // Same as EnactmentPeriod
+	// Same as EnactmentPeriod
+	type VoteLockingPeriod = EnactmentPeriod;
 	type MinimumDeposit = MinimumDeposit;
 	/// A straight majority of the council can decide what their next motion is.
 	type ExternalOrigin =
@@ -660,6 +670,7 @@ parameter_types! {
 }
 
 type CouncilCollective = pallet_collective::Instance1;
+
 impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
@@ -679,6 +690,7 @@ parameter_types! {
 }
 
 type TechnicalCollective = pallet_collective::Instance2;
+
 impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
@@ -819,6 +831,7 @@ pub fn get_all_module_accounts() -> Vec<AccountId> {
 }
 
 pub struct DustRemovalWhitelist;
+
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
 		get_all_module_accounts().contains(a)
@@ -826,6 +839,7 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 }
 
 pub struct CurrencyHooks<T>(PhantomData<T>);
+
 impl<T: orml_tokens::Config> MutationHooks<T::AccountId, T::CurrencyId, T::Balance>
 	for CurrencyHooks<T>
 {
@@ -963,7 +977,9 @@ impl pallet_vesting::Config for Runtime {
 	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
+
 pub struct CurrencyIdCheckerImpl;
+
 impl orml_tokens_management_extension::CurrencyIdCheck for CurrencyIdCheckerImpl {
 	type CurrencyId = CurrencyId;
 
@@ -992,7 +1008,9 @@ impl orml_tokens_management_extension::Config for Runtime {
 	type DepositCurrency = DepositCurrency;
 	type AssetDeposit = AssetDeposit;
 }
+
 pub struct OraclePriceGetter(Oracle);
+
 impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
@@ -1045,7 +1063,7 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 
 parameter_types! {
 	pub const SellFee: Permill = Permill::from_percent(1);
-	pub const MinAmountToBuyout: Balance = 100 * UNIT;
+	pub const MinAmountToBuyout: Balance = NANOUNIT;
 	// 24 hours in blocks (where average block time is 12 seconds)
 	pub const BuyoutPeriod: u32 = 7200;
 	// Maximum number of allowed currencies for buyout
@@ -1597,6 +1615,7 @@ where
 }
 
 pub struct CurrencyConvert;
+
 impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for CurrencyConvert {
 	fn convert(
 		amount: &currency::Amount<Runtime>,
@@ -1659,6 +1678,7 @@ impl staking::Config for Runtime {
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
+	type DecimalsLookup = spacewalk_primitives::AmplitudeDecimalsLookup;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
 	type DataFeeder = MockDataFeeder<Self::AccountId, Moment>;

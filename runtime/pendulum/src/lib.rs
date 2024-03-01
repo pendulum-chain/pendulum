@@ -1088,7 +1088,7 @@ impl dia_oracle::Config for Runtime {
 parameter_types! {
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"pe/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"pe/fmrir");
-	pub const FarmingBoostPalletId: PalletId = PalletId(*b"am/fmbst");
+	pub const FarmingBoostPalletId: PalletId = PalletId(*b"pe/fmbst");
 	pub PendulumTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 	pub const WhitelistMaximumLimit: u32 = 10;
 }

@@ -167,6 +167,7 @@ pub mod parachains {
 
 			parachain_asset_location!(USDC, 1337);
 			parachain_asset_location!(USDT, 1984);
+			parachain_asset_location!(PINK, 23);
 		}
 
 		pub mod equilibrium {

@@ -10122,6 +10122,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "kusama-runtime",
+ "orml-asset-registry",
  "orml-tokens",
  "orml-traits",
  "orml-xcm",

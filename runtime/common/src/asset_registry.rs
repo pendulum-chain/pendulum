@@ -1,16 +1,18 @@
 use crate::*;
 use frame_support::traits::AsEnsureOriginWithArg;
 use frame_system::EnsureRoot;
-use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
+use orml_traits::{FixedConversionRateProvider as FixedConversionRateProviderTrait,
+	asset_registry::{AssetMetadata, AssetProcessor, Inspect}};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::Get;
-use sp_runtime::{BoundedVec, DispatchError};
+use sp_runtime::{BoundedVec, DispatchError, traits::PhantomData};
 use sp_std::fmt::Debug;
 use spacewalk_primitives::CurrencyId;
+use xcm::opaque::v3::MultiLocation;
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
-pub struct StringLimit; 
+pub struct StringLimit;
 impl Get<u32> for StringLimit {
 	fn get() -> u32 {
 		50
@@ -54,3 +56,20 @@ impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for Cust
 }
 
 pub type AssetAuthority = AsEnsureOriginWithArg<EnsureRoot<AccountId>>;
+
+
+pub struct FixedConversionRateProvider<OrmlAssetRegistry>(PhantomData<OrmlAssetRegistry>);
+
+impl<
+		OrmlAssetRegistry: Inspect<
+			AssetId = CurrencyId,
+			Balance = Balance,
+			CustomMetadata = asset_registry::CustomMetadata,
+		>,
+	> FixedConversionRateProviderTrait for FixedConversionRateProvider<OrmlAssetRegistry>
+{
+	fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
+		let metadata = OrmlAssetRegistry::metadata_by_location(location)?;
+		Some(metadata.additional.fee_per_second)
+	}
+}

@@ -637,8 +637,9 @@ fn foucoco_genesis(
 
 	let token_balances = balances
 		.iter()
-		.flat_map(|k| vec![(k.0.clone(), XCM(0), u128::pow(10, 18))])
+		.flat_map(|k| vec![(k.0.clone(), XCM(0), 10*u128::pow(10, 18)), (k.0.clone(), XCM(6), 10*u128::pow(10, 18)), (k.0.clone(), CurrencyId::StellarNative, 10*u128::pow(10, 18))])
 		.collect();
+	
 
 	let stakers: Vec<_> = invulnerables
 		.iter()

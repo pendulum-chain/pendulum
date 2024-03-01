@@ -2311,7 +2311,7 @@ pub mod pallet {
 					}
 				})
 				.map(u32::saturated_from::<usize>)
-				// FIXME: Does not prevent the collator from being able to author a block in this (or potentially the next) session. See https://github.com/gianfra-t/substrate-sotrage-patch/issues/8004
+				// FIXME: Does not prevent the collator from being able to author a block in this (or potentially the next) session. See https://github.com/paritytech/substrate/issues/8004
 				.map(pallet_session::Pallet::<T>::disable_index);
 
 			CandidatePool::<T>::remove(collator);

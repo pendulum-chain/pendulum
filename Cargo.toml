@@ -16,7 +16,6 @@ members = [
 	"runtime/amplitude",
 	"runtime/foucoco",
 	"runtime/pendulum",
-	"runtime/development",
 	"runtime/integration-tests",
 ]
 

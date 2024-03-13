@@ -144,6 +144,7 @@ pub mod parachains {
 
 			parachain_asset_location!(USDC, 1337);
 			parachain_asset_location!(USDT, 1984);
+			parachain_asset_location!(PINK, 23);
 		}
 
 		pub mod equilibrium {
@@ -249,6 +250,18 @@ mod tests {
 		assert_eq!(junctions.next(), Some(&Parachain(moonbeam::PARA_ID)));
 		assert_eq!(junctions.next(), Some(&PalletInstance(moonbeam::BALANCES_PALLET_INDEX)));
 		assert_eq!(junctions.next(), None);
+	}
+
+	#[test]
+	fn test_PINK() {
+		let pink_loc = asset_hub::PINK_location();
+		let mut junctions = pink_loc.interior().into_iter();
+
+		assert_eq!(junctions.next(), Some(&Parachain(asset_hub::PARA_ID)));
+		assert_eq!(junctions.next(), Some(&PalletInstance(asset_hub::ASSET_PALLET_INDEX)));
+		assert_eq!(junctions.next(), Some(&GeneralIndex(asset_hub::PINK_ASSET_ID)));
+		assert_eq!(junctions.next(), None);
+
 	}
 
 	#[test]

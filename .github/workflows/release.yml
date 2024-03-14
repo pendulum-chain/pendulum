@@ -1,0 +1,153 @@
+name: Release
+
+env:
+  SUBWASM_VERSION: 0.20.0
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - 'main'
+
+jobs:
+  srtool:
+    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.title, 'release:') }}
+    name: SrTool check on ${{ matrix.chain }} ${{ github.event.inputs.ref }}
+    strategy:
+      fail-fast: false
+      matrix:
+        chain: ["amplitude", "pendulum"]
+        shouldReleaseAmp:
+          - ${{ contains(github.event.pull_request.title, 'amplitude') }}
+        shouldReleasePen:
+          - ${{ contains(github.event.pull_request.title, 'pendulum') }}
+        exclude:
+          - shouldReleaseAmp: false
+            chain: "amplitude"
+          - shouldReleasePen: false
+            chain: "pendulum"
+    outputs:
+      releaseAmp: ${{ matrix.shouldReleaseAmp }}
+      releasePen: ${{ matrix.shouldReleasePen }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+          fetch-depth: 0
+
+      - name: Srtool build
+        id: srtool_build
+        uses: chevdor/srtool-actions@v0.9.2
+        with:
+          chain: ${{ matrix.chain }}
+          runtime_dir: runtime/${{ matrix.chain }}
+          # this is important to avoid build fail. See https://github.com/paritytech/srtool/issues/62
+          tag: 1.66.1
+      - name: Summary
+        run: |
+          echo '${{ steps.srtool_build.outputs.json }}' | jq > ${{ matrix.chain }}-srtool-digest.json
+          cat ${{ matrix.chain }}-srtool-digest.json
+          echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
+
+      # it takes a while to build the runtime, so let's save the artifact as soon as we have it
+      - name: Archive Artifacts for ${{ matrix.chain }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.chain }}-runtime
+          path: |
+            ${{ steps.srtool_build.outputs.wasm }}
+            ${{ steps.srtool_build.outputs.wasm_compressed }}
+            ${{ matrix.chain }}-srtool-digest.json
+
+      # We now get extra information thanks to subwasm,
+      - name: Install subwasm ${{ env.SUBWASM_VERSION }}
+        run: |
+          wget https://github.com/chevdor/subwasm/releases/download/v${{ env.SUBWASM_VERSION }}/subwasm_linux_amd64_v${{ env.SUBWASM_VERSION }}.deb
+          sudo dpkg -i subwasm_linux_amd64_v${{ env.SUBWASM_VERSION }}.deb
+          subwasm --version
+      - name: Show Runtime information
+        run: |
+          subwasm info ${{ steps.srtool_build.outputs.wasm }}
+          subwasm info ${{ steps.srtool_build.outputs.wasm_compressed }}
+          subwasm --json info ${{ steps.srtool_build.outputs.wasm }} > ${{ matrix.chain }}-info.json
+          subwasm --json info ${{ steps.srtool_build.outputs.wasm_compressed }} > ${{ matrix.chain }}-info_compressed.json
+      - name: Extract the metadata
+        run: |
+          subwasm meta ${{ steps.srtool_build.outputs.wasm }}
+          subwasm --json meta ${{ steps.srtool_build.outputs.wasm }} > ${{ matrix.chain }}-metadata.json
+
+      - name: Archive Subwasm results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.chain }}-runtime-${{ github.sha }}
+          path: |
+            ${{ matrix.chain }}-info.json
+            ${{ matrix.chain }}-info_compressed.json
+            ${{ matrix.chain }}-metadata.json
+            ${{ matrix.chain }}-diff.txt
+
+  build:
+    needs: srtool
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Freeing up more disk space
+        run: |
+          sudo swapoff -a
+          sudo rm -f /mnt/swapfile
+          free -h
+          docker rmi $(docker image ls -aq)
+          sudo rm -rf /usr/local/lib/android # will release about 10 GB if you don't need Android
+          sudo rm -rf /usr/share/dotnet # will release about 20GB if you don't need .NET
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /opt/hostedtoolcache
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get remove -y 'php.*' --fix-missing
+          sudo apt-get remove -y '^mongodb-.*' --fix-missing
+          sudo apt-get remove -y '^mysql-.*' --fix-missing
+          sudo apt-get remove -y azure-cli google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri --fix-missing
+          sudo apt-get remove -y google-cloud-sdk --fix-missing
+          sudo apt-get remove -y google-cloud-cli --fix-missing
+          sudo apt-get autoremove -y
+          sudo apt-get clean
+          df -h
+
+      - name: Install package
+        run: |
+          echo 'APT::Get::Always-Include-Phased-Updates "false";' | sudo tee /etc/apt/apt.conf.d/99-phased-updates
+          sudo apt-get update && sudo apt-get upgrade -y
+          sudo apt-get install -y protobuf-compiler libprotobuf-dev
+
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+        # Steps taken from https://github.com/actions/cache/blob/master/examples.md#rust---cargo
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install toolchain
+        # Call `rustup show` as a hack so that the toolchain defined in rust-toolchain.toml.toml is installed
+        run: rustup install nightly-2022-12-12
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Amplitude
+        if: ${{ needs.srtool.outputs.releaseAmp == 'true' }}
+        run: cargo build -p amplitude-runtime --release
+
+      - name: Install Pendulum
+        if: ${{ needs.srtool.outputs.releasePen == 'true' }}
+        run: cargo build -p pendulum-runtime --release

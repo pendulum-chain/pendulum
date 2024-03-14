@@ -10,7 +10,6 @@ pub const COLLATOR_ADDITIONAL: Balance = 10 * UNIT;
 
 pub const OFF_CHAIN_WORKER_ADDRESS: &str = "6m69vWMouLarYCbJGJisVaDDpfNGETkD5hsDWf2T7osW4Cn1";
 
-
 pub const TOKEN_DECIMALS: u32 = 12;
 
 pub const INITIAL_SUDO_SIGNATORIES: [&str; 5] = [

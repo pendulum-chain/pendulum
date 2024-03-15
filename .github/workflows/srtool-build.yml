@@ -17,16 +17,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        chain: ["amplitude", "pendulum"]
+        chain: ["amplitude", "pendulum", "foucoco"]
         shouldReleaseAmp:
           - ${{ contains(github.event.pull_request.title, 'amplitude') }}
         shouldReleasePen:
           - ${{ contains(github.event.pull_request.title, 'pendulum') }}
+        shouldReleaseFou:
+          - ${{ contains(github.event.pull_request.title, 'foucoco') }}
         exclude:
           - shouldReleaseAmp: false
             chain: "amplitude"
           - shouldReleasePen: false
             chain: "pendulum"
+          - shouldReleaseFou: false
+            chain: "foucoco"
     outputs:
       releaseAmp: ${{ matrix.shouldReleaseAmp }}
       releasePen: ${{ matrix.shouldReleasePen }}
@@ -51,15 +55,17 @@ jobs:
           echo '${{ steps.srtool_build.outputs.json }}' | jq > ${{ matrix.chain }}-srtool-digest.json
           cat ${{ matrix.chain }}-srtool-digest.json
           echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
-
+          echo '${{ steps.srtool_build.outputs.json }}'
+          cp ${{ steps.srtool_build.outputs.wasm }} ${{ matrix.chain }}_runtime.compact.wasm
+          cp ${{ steps.srtool_build.outputs.wasm_compressed }} ${{ matrix.chain }}_runtime.compact.compressed.wasm
       # it takes a while to build the runtime, so let's save the artifact as soon as we have it
       - name: Archive Artifacts for ${{ matrix.chain }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.chain }}-runtime
           path: |
-            ${{ steps.srtool_build.outputs.wasm }}
-            ${{ steps.srtool_build.outputs.wasm_compressed }}
+            ${{ matrix.chain }}_runtime.compact.wasm
+            ${{ matrix.chain }}_runtime.compact.compressed.wasm
             ${{ matrix.chain }}-srtool-digest.json
 
       # We now get extra information thanks to subwasm,
@@ -70,7 +76,6 @@ jobs:
           subwasm --version
       - name: Show Runtime information
         run: |
-          subwasm info ${{ steps.srtool_build.outputs.wasm }}
           subwasm info ${{ steps.srtool_build.outputs.wasm_compressed }}
           subwasm --json info ${{ steps.srtool_build.outputs.wasm }} > ${{ matrix.chain }}-info.json
           subwasm --json info ${{ steps.srtool_build.outputs.wasm_compressed }} > ${{ matrix.chain }}-info_compressed.json
@@ -82,7 +87,7 @@ jobs:
       - name: Archive Subwasm results
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.chain }}-runtime
+          name: ${{ matrix.chain }}-runtime-${{ github.sha }}
           path: |
             ${{ matrix.chain }}-info.json
             ${{ matrix.chain }}-info_compressed.json

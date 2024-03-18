@@ -10,6 +10,7 @@ pub mod xcm_assets {
 	create_xcm_id!(MOONBEAM_BRZ, 4);
 	create_xcm_id!(POLKADEX_PDEX, 5);
 	create_xcm_id!(MOONBEAM_GLMR, 6);
+	create_xcm_id!(ASSETHUB_PINK, 7);
 }
 
 /// Locations for native currency and all natively issued tokens

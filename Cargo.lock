@@ -2427,64 +2427,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "development-runtime"
-version = "0.1.0"
-dependencies = [
- "cumulus-pallet-aura-ext",
- "cumulus-pallet-dmp-queue",
- "cumulus-pallet-parachain-system",
- "cumulus-pallet-session-benchmarking",
- "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-core",
- "cumulus-primitives-timestamp",
- "cumulus-primitives-utility",
- "frame-benchmarking",
- "frame-executive",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
- "frame-system",
- "frame-system-benchmarking",
- "frame-system-rpc-runtime-api",
- "frame-try-runtime",
- "hex-literal 0.3.4",
- "log",
- "pallet-aura",
- "pallet-authorship",
- "pallet-balances",
- "pallet-collator-selection",
- "pallet-session",
- "pallet-sudo",
- "pallet-timestamp",
- "pallet-transaction-payment",
- "pallet-transaction-payment-rpc-runtime-api",
- "pallet-xcm",
- "parachain-info",
- "parity-scale-codec",
- "polkadot-parachain",
- "polkadot-runtime-common",
- "runtime-common",
- "scale-info",
- "serde",
- "smallvec",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
- "sp-block-builder",
- "sp-consensus-aura",
- "sp-core 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
- "sp-io 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
- "sp-offchain",
- "sp-runtime 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
- "sp-session",
- "sp-std 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
- "sp-transaction-pool",
- "sp-version 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
- "substrate-wasm-builder",
- "xcm",
- "xcm-builder",
- "xcm-executor",
-]
-
-[[package]]
 name = "dia-oracle"
 version = "0.1.0"
 source = "git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v0.9.42#9fda7904283d3687581392505d01a9bfd61099bc"
@@ -8018,7 +7960,6 @@ dependencies = [
  "cumulus-relay-chain-interface",
  "cumulus-relay-chain-minimal-node",
  "cumulus-relay-chain-rpc-interface",
- "development-runtime",
  "foucoco-runtime",
  "frame-benchmarking",
  "frame-benchmarking-cli",

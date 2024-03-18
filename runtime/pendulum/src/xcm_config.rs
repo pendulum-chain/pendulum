@@ -87,6 +87,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				xcm_assets::MOONBEAM_BRZ => Some(moonbeam::BRZ_location()),
 				xcm_assets::POLKADEX_PDEX => Some(polkadex::PDEX_location()),
 				xcm_assets::MOONBEAM_GLMR => Some(moonbeam::GLMR_location()),
+				xcm_assets::ASSETHUB_PINK => Some(asset_hub::PINK_location()),
 				_ => None,
 			},
 
@@ -108,6 +109,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			loc if loc == moonbeam::BRZ_location() => Some(xcm_assets::MOONBEAM_BRZ_id()),
 			loc if loc == polkadex::PDEX_location() => Some(xcm_assets::POLKADEX_PDEX_id()),
 			loc if loc == moonbeam::GLMR_location() => Some(xcm_assets::MOONBEAM_GLMR_id()),
+			loc if loc == asset_hub::PINK_location() => Some(xcm_assets::ASSETHUB_PINK_id()),
 
 			// Our native currency location without re-anchoring
 			loc if loc == native_location_external_pov() => Some(CurrencyId::Native),

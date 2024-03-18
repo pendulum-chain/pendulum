@@ -1,0 +1,64 @@
+[package]
+name = "token-chain-extension"
+description = "Chain extensions for tokens pallet"
+authors = ["Pendulum"]
+edition = "2021"
+version = "0.1.0"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+log = { version = "0.4.17", default-features = false }
+chain-extension-common =  { path = "../common" }
+
+# Substrate
+frame-system = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
+frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
+sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
+pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
+
+# Open Runtime Module Library
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.40" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.40" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.40" }
+
+# Custom libraries for Spacewalk
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+
+# Pendulum Pallets
+orml-currencies-allowance-extension = { path = "../../pallets/orml-currencies-allowance-extension", default-features = false }
+
+[features]
+default = [
+    "std",
+]
+std = [
+    "codec/std",
+    "log/std",
+    "frame-support/std",
+     "frame-system/std",
+    "orml-currencies/std",
+    "orml-traits/std",
+    "orml-tokens/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "orml-currencies-allowance-extension/std",
+    "pallet-contracts/std",
+    "frame-system/std",
+    "spacewalk-primitives/std",
+]
+
+runtime-benchmarks = [
+    "frame-system/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+]
+
+try-runtime = [
+    "pallet-contracts/try-runtime",
+    "frame-system/try-runtime",
+]
+

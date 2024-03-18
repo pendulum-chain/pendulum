@@ -1,0 +1,39 @@
+[package]
+name = "chain-extension-common"
+version = "0.1.0"
+authors = ["Pendulum"]
+description = "Chain Extension common definitions"
+edition = "2021"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+log = { version = "0.4.17", default-features = false }
+
+# Substrate
+frame-system = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
+frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
+sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
+pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+
+
+# Custom libraries for Spacewalk
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
+
+[features]
+default = [
+    "std",
+]
+std = [
+    "scale-info/std",
+    "frame-support/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "frame-system/std",
+    "spacewalk-primitives/std",
+]
+

@@ -26,6 +26,7 @@ cfg-if = "1.0.0"
 
 # Local
 runtime-common = { path = "../common", default-features = false }
+token-chain-extension = {path = "../../chain-extensions/token", default-features = false }
 
 # custom libraries from spacewalk
 clients-info = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
@@ -244,6 +245,7 @@ std = [
     "treasury-buyout-extension/std",
     "bifrost-farming/std",
     "bifrost-farming-rpc-runtime-api/std",
+    "token-chain-extension/std",
 ]
 
 runtime-benchmarks = [
@@ -272,7 +274,8 @@ runtime-benchmarks = [
     "runtime-common/runtime-benchmarks",
     "orml-currencies-allowance-extension/runtime-benchmarks",
     "orml-tokens-management-extension/runtime-benchmarks",
-    "treasury-buyout-extension/runtime-benchmarks"
+    "treasury-buyout-extension/runtime-benchmarks",
+    "token-chain-extension/runtime-benchmarks"
 ]
 
 try-runtime = [
@@ -332,4 +335,5 @@ try-runtime = [
     "treasury-buyout-extension/try-runtime",
     "bifrost-farming/try-runtime",
     "zenlink-protocol/try-runtime",
+    "token-chain-extension/try-runtime",
 ]

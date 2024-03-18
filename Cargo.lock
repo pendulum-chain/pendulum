@@ -1078,6 +1078,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "chain-extension-common"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-contracts",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "spacewalk-primitives 1.0.4",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3048,6 +3063,7 @@ dependencies = [
  "staking",
  "stellar-relay",
  "substrate-wasm-builder",
+ "token-chain-extension",
  "treasury-buyout-extension",
  "vault-registry",
  "xcm",
@@ -9198,6 +9214,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "price-chain-extension"
+version = "0.1.0"
+dependencies = [
+ "chain-extension-common",
+ "dia-oracle",
+ "frame-support",
+ "frame-system",
+ "log",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-contracts",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "spacewalk-primitives 1.0.4",
+ "vesting-manager",
+]
+
+[[package]]
 name = "primitive-types"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -13356,6 +13393,25 @@ name = "tinyvec_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
+
+[[package]]
+name = "token-chain-extension"
+version = "0.1.0"
+dependencies = [
+ "chain-extension-common",
+ "frame-support",
+ "frame-system",
+ "log",
+ "orml-currencies",
+ "orml-currencies-allowance-extension",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-contracts",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-runtime",
+ "spacewalk-primitives 1.0.4",
+]
 
 [[package]]
 name = "tokio"

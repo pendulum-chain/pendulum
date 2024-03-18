@@ -17,6 +17,8 @@ members = [
 	"runtime/foucoco",
 	"runtime/pendulum",
 	"runtime/integration-tests",
+	"chain-extensions/token",
+	"chain-extensions/price",
 ]
 
 # need this because of bifrost farming dependency in runtime

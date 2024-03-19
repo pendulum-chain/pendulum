@@ -1,8 +1,12 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+#![allow(non_snake_case)]
+
 use codec::Encode;
 use frame_support::{
 	dispatch::Weight,
 	pallet_prelude::{Get, PhantomData, Decode},
 	sp_tracing::{error, trace},
+	DefaultNoBound,
 };
 use orml_currencies::WeightInfo;
 use orml_currencies_allowance_extension::{
@@ -59,15 +63,8 @@ impl TryFrom<u16> for FuncId {
 		Ok(id)
 	}
 }
-
-//#[derive(Default)]
+#[derive(DefaultNoBound)]
 pub struct TokensChainExtension<T, Tokens, AccountId>(PhantomData<(T,Tokens, AccountId)>);
-
-// impl<T, Tokens, AccountId> Default for TokensChainExtension<T, Tokens, AccountId> {
-//     fn default() -> Self {
-//         TokensChainExtension(PhantomData)
-//     }
-// }
 
 impl<T, Tokens, AccountId> ChainExtension<T> for TokensChainExtension<T, Tokens, AccountId>
 where
@@ -78,7 +75,7 @@ where
 		+ orml_currencies_allowance_extension::Config,
 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
-	AccountId: std::fmt::Debug + Decode,
+	AccountId: sp_std::fmt::Debug + Decode,
 {
 	fn call<E: Ext>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
 	where
@@ -128,7 +125,7 @@ where
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
-	AccountId: std::fmt::Debug,
+	AccountId: sp_std::fmt::Debug,
 {
 	let mut env = env.buf_in_buf_out();
 	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
@@ -167,7 +164,7 @@ where
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
-	AccountId: std::fmt::Debug,
+	AccountId: sp_std::fmt::Debug,
 	(CurrencyId, AccountId): Decode,
 {
 	let mut env = env.buf_in_buf_out();
@@ -207,7 +204,7 @@ where
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
-	AccountId: std::fmt::Debug ,
+	AccountId: sp_std::fmt::Debug ,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 	(CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode
 {
@@ -254,7 +251,7 @@ where
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
-	AccountId: std::fmt::Debug,
+	AccountId: sp_std::fmt::Debug,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 	(CurrencyId, AccountId, AccountId): Decode,
 {
@@ -299,7 +296,7 @@ where
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
-	AccountId: std::fmt::Debug,
+	AccountId: sp_std::fmt::Debug,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 	(CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode
 {
@@ -346,7 +343,7 @@ where
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
-	AccountId: std::fmt::Debug,
+	AccountId: sp_std::fmt::Debug,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 	(AccountId, CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode
 {

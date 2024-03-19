@@ -11,13 +11,14 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4.17", default-features = false }
-chain-extension-common =  { path = "../common" }
+chain-extension-common =  { path = "../common", default-features = false}
 
 # Substrate
 frame-system = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
+sp-std = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40", default-features = false}
 pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 
 # Open Runtime Module Library
@@ -50,6 +51,7 @@ std = [
     "frame-system/std",
     "spacewalk-primitives/std",
     "chain-extension-common/std",
+    "sp-std/std",
 ]
 
 runtime-benchmarks = [

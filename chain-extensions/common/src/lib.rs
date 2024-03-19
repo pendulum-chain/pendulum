@@ -1,3 +1,6 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+#![allow(non_snake_case)]
+
 use scale_info::prelude::vec::Vec;
 use sp_core::{Decode, Encode, MaxEncodedLen};
 use sp_runtime::{codec, ArithmeticError, TokenError, DispatchError};

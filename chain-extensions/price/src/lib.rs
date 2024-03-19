@@ -1,8 +1,13 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+#![allow(non_snake_case)]
+
 use codec::Encode;
 use frame_support::{
 	dispatch::Weight,
 	pallet_prelude::{Get, PhantomData},
 	sp_tracing::{error, trace},
+	inherent::Vec,
+	DefaultNoBound,
 };
 use dia_oracle::{CoinInfo as DiaCoinInfo, DiaOracle};
 use pallet_contracts::chain_extension::{
@@ -35,7 +40,7 @@ impl TryFrom<u16> for FuncId {
 	}
 }
 
-#[derive(Default)]
+#[derive(DefaultNoBound)]
 pub struct PriceChainExtension<T>(PhantomData<T>);
 
 impl<T> ChainExtension<T> for PriceChainExtension<T>

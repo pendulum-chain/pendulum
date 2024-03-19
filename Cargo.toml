@@ -19,6 +19,7 @@ members = [
 	"runtime/integration-tests",
 	"chain-extensions/token",
 	"chain-extensions/price",
+	"chain-extensions/common",
 ]
 
 # need this because of bifrost farming dependency in runtime

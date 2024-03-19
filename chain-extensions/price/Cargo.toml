@@ -9,6 +9,8 @@ version = "0.1.0"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+chain-extension-common =  { path = "../common" }
+
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4.17", default-features = false }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
@@ -20,7 +22,6 @@ sp-core = { git = "https://github.com/paritytech/substrate", default-features = 
 sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.40" }
 spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "bda384bcc6db3da88198c714851a261dcdea1063" }
-chain-extension-common =  { path = "../common" }
 
 # Open Runtime Module Library
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.40" }
@@ -43,7 +44,7 @@ std = [
     "log/std",
     "scale-info/std",
     "frame-support/std",
-     "frame-system/std",
+    "frame-system/std",
     "orml-currencies/std",
     "orml-traits/std",
     "orml-tokens/std",
@@ -52,6 +53,8 @@ std = [
     "vesting-manager/std",
     "dia-oracle/std",
     "pallet-contracts/std",
+    "spacewalk-primitives/std",
+    "chain-extension-common/std",
 ]
 
 runtime-benchmarks = [

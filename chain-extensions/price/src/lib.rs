@@ -1,26 +1,20 @@
 use codec::Encode;
 use frame_support::{
 	dispatch::Weight,
-	pallet_prelude::{Get, PhantomData, Decode},
+	pallet_prelude::{Get, PhantomData},
 	sp_tracing::{error, trace},
 };
-use dia_oracle::{CoinInfo, DiaOracle};
+use dia_oracle::{CoinInfo as DiaCoinInfo, DiaOracle};
 use pallet_contracts::chain_extension::{
 	ChainExtension, Environment, Ext, InitState, RetVal, SysConfig,
 };
 use chain_extension_common::{
-		Blockchain, ChainExtensionOutcome, ChainExtensionTokenError, Symbol, ToTrimmedVec,
+		Blockchain, ChainExtensionOutcome, Symbol, ToTrimmedVec,
 };
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::DispatchError;
-use spacewalk_primitives::CurrencyId;
 
-pub(crate) type BalanceOfForChainExt<T> =
-	<<T as orml_currencies::Config>::MultiCurrency as orml_traits::MultiCurrency<
-		<T as frame_system::Config>::AccountId,
-	>>::Balance;
-
-// Enum that handles all supported function id options
+// Enum that handles all supported function id options for this chain extension module
 #[derive(Debug)]
 enum FuncId {
 	// get_coin_info(blockchain, symbol)
@@ -42,9 +36,9 @@ impl TryFrom<u16> for FuncId {
 }
 
 #[derive(Default)]
-pub struct TokensChainExtension<T>(PhantomData<T>);
+pub struct PriceChainExtension<T>(PhantomData<T>);
 
-impl<T> ChainExtension<T> for TokensChainExtension<T>
+impl<T> ChainExtension<T> for PriceChainExtension<T>
 where
 	T: SysConfig
 		+ pallet_contracts::Config
@@ -118,29 +112,29 @@ where
 }
 
 
-// this was in common, but we don't use it right?
+// this was in common, but we don't use it in amplitude's chain extension, is it needed?
 
-// CoinInfo is almost the same as Dia's CoinInfo, but with Encode, Decode, and TypeInfo which are necessary for contract to chain extension communication. Implements From<dia::CoinInfo> to make conversion.
-// #[derive(Debug, Clone, PartialEq, Eq, codec::Encode, codec::Decode)]
-// #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-// pub struct CoinInfo {
-// 	pub symbol: Vec<u8>,
-// 	pub name: Vec<u8>,
-// 	pub blockchain: Vec<u8>,
-// 	pub supply: u128,
-// 	pub last_update_timestamp: u64,
-// 	pub price: u128,
-// }
+/// CoinInfo is almost the same as Dia's CoinInfo, but with Encode, Decode, and TypeInfo which are necessary for contract to chain extension communication. Implements From<dia::CoinInfo> to make conversion.
+#[derive(Debug, Clone, PartialEq, Eq, codec::Encode, codec::Decode)]
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+pub struct CoinInfo {
+	pub symbol: Vec<u8>,
+	pub name: Vec<u8>,
+	pub blockchain: Vec<u8>,
+	pub supply: u128,
+	pub last_update_timestamp: u64,
+	pub price: u128,
+}
 
-// impl From<dia::CoinInfo> for CoinInfo {
-// 	fn from(coin_info: dia::CoinInfo) -> Self {
-// 		Self {
-// 			symbol: coin_info.symbol,
-// 			name: coin_info.name,
-// 			blockchain: coin_info.blockchain,
-// 			supply: coin_info.supply,
-// 			last_update_timestamp: coin_info.last_update_timestamp,
-// 			price: coin_info.price,
-// 		}
-// 	}
-// }
+impl From<DiaCoinInfo> for CoinInfo {
+	fn from(coin_info: DiaCoinInfo) -> Self {
+		Self {
+			symbol: coin_info.symbol,
+			name: coin_info.name,
+			blockchain: coin_info.blockchain,
+			supply: coin_info.supply,
+			last_update_timestamp: coin_info.last_update_timestamp,
+			price: coin_info.price,
+		}
+	}
+}

@@ -13,7 +13,7 @@ use pallet_contracts::chain_extension::{
 	ChainExtension, Environment, Ext, InitState, RetVal, SysConfig,
 };
 use chain_extension_common::{
-		Blockchain, ChainExtensionOutcome, ChainExtensionTokenError, Symbol, ToTrimmedVec,
+		ChainExtensionOutcome, ChainExtensionTokenError,
 };
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::DispatchError;
@@ -24,7 +24,7 @@ pub(crate) type BalanceOfForChainExt<T> =
 		<T as frame_system::Config>::AccountId,
 	>>::Balance;
 
-// Enum that handles all supported function id options
+// Enum that handles all supported function id options for this chain extension module
 #[derive(Debug)]
 enum FuncId {
 	// totalSupply(currency)
@@ -63,11 +63,11 @@ impl TryFrom<u16> for FuncId {
 //#[derive(Default)]
 pub struct TokensChainExtension<T, Tokens, AccountId>(PhantomData<(T,Tokens, AccountId)>);
 
-impl<T, Tokens, AccountId> Default for TokensChainExtension<T, Tokens, AccountId> {
-    fn default() -> Self {
-        TokensChainExtension(PhantomData)
-    }
-}
+// impl<T, Tokens, AccountId> Default for TokensChainExtension<T, Tokens, AccountId> {
+//     fn default() -> Self {
+//         TokensChainExtension(PhantomData)
+//     }
+// }
 
 impl<T, Tokens, AccountId> ChainExtension<T> for TokensChainExtension<T, Tokens, AccountId>
 where
@@ -197,7 +197,7 @@ where
 }
 
 fn transfer<E: Ext, T, Tokens, AccountId>(
-	mut env: Environment<'_, '_, E, InitState>,
+	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
 where
@@ -289,7 +289,7 @@ where
 }
 
 fn approve<E: Ext, T, Tokens, AccountId>(
-	mut env: Environment<'_, '_, E, InitState>,
+	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
 where
@@ -336,7 +336,7 @@ where
 }
 
 fn transfer_from<E: Ext, T, Tokens, AccountId>(
-	mut env: Environment<'_, '_, E, InitState>,
+	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
 where

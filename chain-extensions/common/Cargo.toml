@@ -29,11 +29,14 @@ default = [
     "std",
 ]
 std = [
+    "codec/std",
+    "log/std",
     "scale-info/std",
     "frame-support/std",
     "sp-core/std",
     "sp-runtime/std",
     "frame-system/std",
+    "pallet-contracts/std",
     "spacewalk-primitives/std",
 ]
 

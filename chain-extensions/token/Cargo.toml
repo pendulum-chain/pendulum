@@ -39,7 +39,7 @@ std = [
     "codec/std",
     "log/std",
     "frame-support/std",
-     "frame-system/std",
+    "frame-system/std",
     "orml-currencies/std",
     "orml-traits/std",
     "orml-tokens/std",
@@ -49,6 +49,7 @@ std = [
     "pallet-contracts/std",
     "frame-system/std",
     "spacewalk-primitives/std",
+    "chain-extension-common/std",
 ]
 
 runtime-benchmarks = [

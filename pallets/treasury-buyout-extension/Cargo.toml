@@ -32,7 +32,7 @@ sp-io = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.
 
 pallet-balances = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42"}
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "d05b0015d15ca39cc780889bcc095335e9862a36"}
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "3c03e759a6f600ea72d636d4f9cc4b05d633201c"}
 
 [features]
 default = ["std"]

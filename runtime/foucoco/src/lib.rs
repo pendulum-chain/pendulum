@@ -1107,6 +1107,19 @@ parameter_types! {
 	};
 }
 
+// Define the global id's of our chain extensions
+use pallet_contracts::chain_extension::RegisteredChainExtension;
+use price_chain_extension::PriceChainExtension;
+use token_chain_extension::TokensChainExtension;
+
+impl RegisteredChainExtension<Runtime> for TokensChainExtension<Runtime, Tokens, AccountId> {
+	const ID: u16 = 01;
+}
+
+impl RegisteredChainExtension<Runtime> for PriceChainExtension<Runtime> {
+    const ID: u16 = 02;
+}
+
 impl pallet_contracts::Config for Runtime {
 	type Time = Timestamp;
 	type Randomness = RandomnessCollectiveFlip;
@@ -1119,7 +1132,7 @@ impl pallet_contracts::Config for Runtime {
 	type CallStack = [pallet_contracts::Frame<Self>; 5];
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-	type ChainExtension = (token_chain_extension::TokensChainExtension<Self, Tokens, AccountId>, price_chain_extension::PriceChainExtension<Self>);
+	type ChainExtension = (TokensChainExtension<Self, Tokens, AccountId>, PriceChainExtension<Self>);
 	type DeletionQueueDepth = DeletionQueueDepth;
 	type DeletionWeightLimit = DeletionWeightLimit;
 	type Schedule = Schedule;

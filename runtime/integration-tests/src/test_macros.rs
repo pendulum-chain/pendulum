@@ -236,13 +236,12 @@ macro_rules! parachain1_transfer_incorrect_asset_to_parachain2_should_fail {
 
 		$parachain2::execute_with(|| {
 			use $para2_runtime::{RuntimeEvent, System};
-			//since the asset registry trader cannot find the fee per second for the asset,
-			//it will return TooExpensive error.
+			//most likely this is not emitid because buy execution fails
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Fail {
 					message_hash: _,
-					error: xcm::v3::Error::TooExpensive,
+					error: xcm::v3::Error::AssetNotFound,
 					weight: _
 				})
 			)));

@@ -10361,7 +10361,6 @@ dependencies = [
  "frame-support",
  "frame-system",
  "kusama-runtime",
- "orml-asset-registry",
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.42)",
  "orml-traits",
  "orml-xcm",

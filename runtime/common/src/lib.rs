@@ -2,7 +2,7 @@
 #![allow(non_snake_case)]
 
 use sp_runtime::{
-	traits::{IdentifyAccount, Verify},
+	traits::{CheckedDiv, IdentifyAccount, Saturating, Verify},
 	DispatchError, MultiSignature,
 };
 
@@ -68,6 +68,29 @@ pub mod opaque {
 	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 	/// Opaque block identifier type.
 	pub type BlockId = generic::BlockId<Block>;
+}
+
+pub struct RelativeValue<Amount> {
+	pub num: Amount,
+	pub denominator: Amount,
+}
+
+impl<Amount: CheckedDiv<Output = Amount> + Saturating + Clone> RelativeValue<Amount> {
+	pub fn divide_by_relative_value(
+		amount: Amount,
+		relative_value: RelativeValue<Amount>,
+	) -> Amount {
+		// Calculate the adjusted amount
+		if let Some(adjusted_amount) = amount
+			.clone()
+			.saturating_mul(relative_value.denominator)
+			.checked_div(&relative_value.num)
+		{
+			return adjusted_amount
+		}
+		// We should never specify a numerator of 0, but just to be safe
+		return amount
+	}
 }
 
 #[macro_use]
@@ -167,8 +190,7 @@ pub mod parachains {
 
 			// The address of the BRZ token on Moonbeam `0x3225edCe8aD30Ae282e62fa32e7418E4b9cf197b` as byte array
 			pub const BRZ_ASSET_ACCOUNT_IN_BYTES: [u8; 20] = [
-				50, 37, 237, 206, 138, 211, 10, 226, 130, 230, 47, 163, 46, 116, 24, 228, 185, 207,
-				25, 123,
+				50, 37, 237, 206, 138, 211, 10, 226, 130, 230, 47, 163, 46, 116, 24, 228, 185, 207, 25, 123
 			];
 
 			parachain_asset_location!(

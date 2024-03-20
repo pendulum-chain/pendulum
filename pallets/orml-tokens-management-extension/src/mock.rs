@@ -128,6 +128,10 @@ impl pallet_balances::Config for Test {
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxFreezes = ();
+	type MaxHolds = ConstU32<1>;
+	type HoldIdentifier = RuntimeHoldReason;
 }
 
 impl orml_currencies::Config for Test {

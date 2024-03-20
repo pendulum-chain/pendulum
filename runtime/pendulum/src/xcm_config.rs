@@ -4,8 +4,10 @@ use cumulus_primitives_utility::{
 	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,
 };
 use frame_support::{
-	log, match_types, parameter_types,
-	traits::{ContainsPair, Everything, Nothing},
+	log, match_types,
+	pallet_prelude::DispatchError,
+	parameter_types,
+	traits::{tokens::fungibles, ContainsPair, Everything, Nothing, ProcessMessageError},
 	weights::{Weight, WeightToFee as WeightToFeeTrait},
 };
 use orml_traits::{
@@ -16,6 +18,7 @@ use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdap
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::Convert;
+
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
@@ -35,6 +38,8 @@ use runtime_common::{
 	RelativeValue,
 };
 
+use sp_runtime::traits::Zero;
+
 use crate::{
 	assets::{
 		self,
@@ -52,6 +57,7 @@ use super::{
 	PendulumTreasuryAccount, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
 	System, Tokens, WeightToFee, XcmpQueue,
 };
+use frame_system::EnsureRoot;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -243,7 +249,7 @@ where
 		instructions: &mut [Instruction<RuntimeCall>],
 		max_weight: XCMWeight,
 		weight_credit: &mut XCMWeight,
-	) -> Result<(), ()> {
+	) -> Result<(), ProcessMessageError> {
 		Deny::should_execute(origin, instructions, max_weight, weight_credit)?;
 		Allow::should_execute(origin, instructions, max_weight, weight_credit)
 	}
@@ -257,7 +263,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 		instructions: &mut [Instruction<RuntimeCall>],
 		_max_weight: XCMWeight,
 		_weight_credit: &mut XCMWeight,
-	) -> Result<(), ()> {
+	) -> Result<(), ProcessMessageError> {
 		if instructions.iter().any(|inst| {
 			matches!(
 				inst,
@@ -271,7 +277,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 					}
 			)
 		}) {
-			return Err(()) // Deny
+			return Err(ProcessMessageError::Unsupported) // Deny
 		}
 
 		// allow reserve transfers to arrive from relay chain
@@ -307,7 +313,7 @@ pub type Barrier = (
 );
 
 pub struct ChargeWeightInFungiblesImplementation;
-impl ChargeWeightInFungibles<AccountId, Tokens> for ChargeWeightInFungiblesImplementation {
+impl ChargeWeightInFungibles<AccountId, ConcreteAssets> for ChargeWeightInFungiblesImplementation {
 	fn charge_weight_in_fungibles(
 		asset_id: CurrencyId,
 		weight: Weight,
@@ -341,12 +347,92 @@ type Transactor = MultiCurrencyAdapter<
 	DepositToAlternative<PendulumTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
+// Workarround for TakeFirstAssetTrader
+use frame_support::traits::tokens::{
+	DepositConsequence, Fortitude, Preservation, Provenance, WithdrawConsequence,
+};
+
+pub struct ConcreteAssets;
+impl fungibles::Mutate<AccountId> for ConcreteAssets {}
+impl fungibles::Balanced<AccountId> for ConcreteAssets {
+	type OnDropCredit = fungibles::DecreaseIssuance<AccountId, Self>;
+	type OnDropDebt = fungibles::IncreaseIssuance<AccountId, Self>;
+}
+
+// We only use minimum_balance of these implementations
+impl fungibles::Inspect<AccountId> for ConcreteAssets {
+	type AssetId = <Tokens as fungibles::Inspect<AccountId>>::AssetId;
+	type Balance = <Tokens as fungibles::Inspect<AccountId>>::Balance;
+
+	fn minimum_balance(id: Self::AssetId) -> Self::Balance {
+		Tokens::minimum_balance(id)
+	}
+
+	fn total_issuance(asset_id: Self::AssetId) -> Self::Balance {
+		Tokens::total_issuance(asset_id)
+	}
+
+	fn balance(asset_id: Self::AssetId, account_id: &AccountId) -> Self::Balance {
+		Tokens::balance(asset_id, account_id)
+	}
+
+	fn total_balance(asset_id: Self::AssetId, account_id: &AccountId) -> Self::Balance {
+		Tokens::balance(asset_id, account_id)
+	}
+
+	fn reducible_balance(
+		_: Self::AssetId,
+		_: &AccountId,
+		_: Preservation,
+		_: Fortitude,
+	) -> Self::Balance {
+		Self::Balance::zero()
+	}
+
+	fn can_deposit(
+		_: Self::AssetId,
+		_: &AccountId,
+		_: Self::Balance,
+		_: Provenance,
+	) -> DepositConsequence {
+		DepositConsequence::UnknownAsset
+	}
+
+	fn can_withdraw(
+		_: Self::AssetId,
+		_: &AccountId,
+		_: Self::Balance,
+	) -> WithdrawConsequence<Self::Balance> {
+		WithdrawConsequence::UnknownAsset
+	}
+
+	fn asset_exists(_: Self::AssetId) -> bool {
+		false
+	}
+}
+
+// Not used
+impl fungibles::Unbalanced<AccountId> for ConcreteAssets {
+	fn handle_dust(_: fungibles::Dust<AccountId, Self>) {
+	}
+	fn write_balance(
+		_: Self::AssetId,
+		_: &AccountId,
+		_: Self::Balance,
+	) -> Result<Option<Self::Balance>, DispatchError> {
+		core::prelude::v1::Err(DispatchError::CannotLookup)
+	}
+
+	fn set_total_issuance(_: Self::AssetId, _: Self::Balance) {
+	}
+}
+
 pub type Traders = (
 	TakeFirstAssetTrader<
 		AccountId,
 		ChargeWeightInFungiblesImplementation,
 		ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
-		Tokens,
+		ConcreteAssets,
 		XcmFeesTo32ByteAccount<Transactor, AccountId, PendulumTreasuryAccount>,
 	>,
 );
@@ -383,7 +469,10 @@ impl AutomationPalletConfig for AutomationPalletConfigPendulum {
 
 	fn callback(_length: u8, _data: [u8; 32], _amount: u128) -> Result<(), XcmError> {
 		// TODO change to call the actual automation pallet, with data and length
-		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0; 32])), [0; 1].to_vec());
+		let _ = System::remark_with_event(
+			RuntimeOrigin::signed(AccountId::from([0; 32])),
+			[0; 1].to_vec(),
+		);
 		Ok(())
 	}
 }
@@ -459,6 +548,7 @@ impl pallet_xcm::Config for Runtime {
 	type WeightInfo = crate::weights::pallet_xcm::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
+	type AdminOrigin = EnsureRoot<AccountId>;
 }
 
 #[cfg(feature = "runtime-benchmarks")]

@@ -48,8 +48,9 @@ use frame_support::{
 	dispatch::DispatchClass,
 	parameter_types,
 	traits::{
-		ConstBool, ConstU32, Contains, Currency as FrameCurrency, EitherOfDiverse,
-		EqualPrivilegeOnly, Imbalance, InstanceFilter, OnUnbalanced, WithdrawReasons,
+		fungible::Credit, ConstBool, ConstU32, Contains, Currency as FrameCurrency,
+		EitherOfDiverse, EqualPrivilegeOnly, Imbalance, InstanceFilter, OnUnbalanced,
+		WithdrawReasons,
 	},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
@@ -108,8 +109,10 @@ use oracle::testing_utils::MockDataFeeder;
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 // XCM Imports
-use crate::chain_ext::Psp22Extension;
 use xcm_executor::XcmExecutor;
+
+// Chain Extension
+use crate::chain_ext::{TokensChainExtension, PriceChainExtension};
 
 pub type VaultId = primitives::VaultId<AccountId, CurrencyId>;
 
@@ -150,6 +153,62 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
 
+use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::GetStorageVersion;
+use frame_support::pallet_prelude::StorageVersion;
+
+parameter_types! {
+	pub const InactiveAccounts: Vec<AccountId> = Vec::new();
+}
+
+// Temporary struct that defines the executions to be done upon upgrade,
+// Should be removed or at least checked on each upgrade to see if it is relevant,
+// given that these are "one-time" executions for particular upgrades
+pub struct CustomOnRuntimeUpgrade;
+impl frame_support::traits::OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		log::info!("Custom on-runtime-upgrade function");
+
+		let mut writes = 0;
+		// WARNING: manually setting the storage version
+		if Contracts::on_chain_storage_version() == 0 {
+			log::info!("Upgrading pallet contract's storage version to 10");
+			StorageVersion::new(10).put::<Contracts>();
+			writes += 1;
+		}
+		if Democracy::on_chain_storage_version() == 0 {
+			log::info!("Upgrading pallet democracy's storage version to 1");
+			StorageVersion::new(1).put::<Democracy>();
+			writes += 1;
+		}
+		if Scheduler::on_chain_storage_version() == 3 {
+			log::info!("Upgrading pallet scheduler's storage version to 4");
+			StorageVersion::new(4).put::<Scheduler>();
+			writes += 1;
+		}
+		if Preimage::on_chain_storage_version() == 0 {
+			log::info!("Upgrading pallet preimage's storage version to 1");
+			StorageVersion::new(1).put::<Preimage>();
+			writes += 1;
+		}
+		if Multisig::on_chain_storage_version() == 0 {
+			log::info!("Upgrading pallet multisig's storage version to 1");
+			StorageVersion::new(1).put::<Multisig>();
+			writes += 1;
+		}
+		if PolkadotXcm::on_chain_storage_version() == 0 {
+			log::info!("Upgrading pallet xcm's storage version to 1");
+			StorageVersion::new(1).put::<PolkadotXcm>();
+			writes += 1;
+		}
+		if AssetRegistry::on_chain_storage_version() == 0 {
+			log::info!("Upgrading pallet asset registry's storage version to 2");
+			StorageVersion::new(2).put::<AssetRegistry>();
+			writes += 1;
+		}
+
+		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(7, writes)
+	}
+}
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
 	Runtime,
@@ -157,6 +216,12 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
+	(
+		CustomOnRuntimeUpgrade,
+		pallet_balances::migration::MigrateManyToTrackInactive<Runtime, InactiveAccounts>,
+		pallet_vesting::migrations::v1::ForceSetVersionToV1<Runtime>,
+		pallet_transaction_payment::migrations::v1::ForceSetVersionToV2<Runtime>,
+	),
 >;
 
 pub struct AmplitudeDiaOracleKeyConverter;
@@ -478,18 +543,42 @@ parameter_types! {
 	pub const MaxReserves: u32 = 50;
 }
 
+pub struct MoveDustToTreasury;
+
+impl
+	OnUnbalanced<
+		Credit<<Runtime as frame_system::Config>::AccountId, pallet_balances::Pallet<Runtime>>,
+	> for MoveDustToTreasury
+{
+	fn on_nonzero_unbalanced(
+		amount: Credit<
+			<Runtime as frame_system::Config>::AccountId,
+			pallet_balances::Pallet<Runtime>,
+		>,
+	) {
+		let _ = <Balances as FrameCurrency<AccountId>>::deposit_creating(
+			&TreasuryPalletId::get().into_account_truncating(),
+			amount.peek(),
+		);
+	}
+}
+
 impl pallet_balances::Config for Runtime {
 	type MaxLocks = MaxLocks;
 	/// The type for recording an account's balance.
 	type Balance = Balance;
 	/// The ubiquitous event type.
 	type RuntimeEvent = RuntimeEvent;
-	type DustRemoval = Treasury;
+	type DustRemoval = MoveDustToTreasury;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = ReserveIdentifier;
+	type FreezeIdentifier = ();
+	type MaxFreezes = ();
+	type MaxHolds = ConstU32<1>;
+	type HoldIdentifier = RuntimeHoldReason;
 }
 
 parameter_types! {
@@ -651,6 +740,7 @@ parameter_types! {
 	pub const CouncilMotionDuration: BlockNumber = 3 * DAYS;
 	pub const CouncilMaxProposals: u32 = 100;
 	pub const CouncilMaxMembers: u32 = 100;
+	pub MaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
 }
 
 type CouncilCollective = pallet_collective::Instance1;
@@ -665,6 +755,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 	type SetMembersOrigin = EnsureRoot<AccountId>;
+	type MaxProposalWeight = MaxProposalWeight;
 }
 
 parameter_types! {
@@ -685,6 +776,7 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 	type SetMembersOrigin = EnsureRoot<AccountId>;
+	type MaxProposalWeight = MaxProposalWeight;
 }
 
 parameter_types! {
@@ -969,12 +1061,7 @@ const fn deposit(items: u32, bytes: u32) -> Balance {
 parameter_types! {
 	pub const DepositPerItem: Balance = deposit(1, 0);
 	pub const DepositPerByte: Balance = deposit(0, 1);
-	pub const DeletionQueueDepth: u32 = 128;
-	pub DeletionWeightLimit: Weight = RuntimeBlockWeights::get()
-		.per_class
-		.get(DispatchClass::Normal)
-		.max_total
-		.unwrap_or(RuntimeBlockWeights::get().max_block);
+	pub const DefaultDepositLimit: Balance = deposit(1024, 1024 * 1024);
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 }
 
@@ -990,15 +1077,14 @@ impl pallet_contracts::Config for Runtime {
 	type CallStack = [pallet_contracts::Frame<Self>; 5];
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-	type ChainExtension = Psp22Extension;
-	type DeletionQueueDepth = DeletionQueueDepth;
-	type DeletionWeightLimit = DeletionWeightLimit;
+	type ChainExtension = (TokensChainExtension<Self, Tokens, AccountId>, PriceChainExtension<Self>);
 	type Schedule = Schedule;
 	type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
 	type MaxCodeLen = ConstU32<{ 123 * 1024 }>;
 	type MaxStorageKeyLen = ConstU32<128>;
 	type UnsafeUnstableInterface = ConstBool<true>;
 	type MaxDebugBufferLen = ConstU32<{ 2 * 1024 * 1024 }>;
+	type DefaultDepositLimit = DefaultDepositLimit;
 }
 
 impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
@@ -1269,7 +1355,9 @@ impl pooled_rewards::Config for Runtime {
 parameter_types! {
 	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"am/fmkpr");
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"am/fmrir");
+	pub const FarmingBoostPalletId: PalletId = PalletId(*b"am/fmbst");
 	pub AmplitudeTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+	pub const WhitelistMaximumLimit: u32 = 10;
 }
 
 impl farming::Config for Runtime {
@@ -1281,6 +1369,10 @@ impl farming::Config for Runtime {
 	type TreasuryAccount = AmplitudeTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
+	type FarmingBoost = FarmingBoostPalletId;
+	type VeMinting = ();
+	type BlockNumberToBalance = ConvertInto;
+	type WhitelistMaximumLimit = WhitelistMaximumLimit;
 }
 
 impl InstanceFilter<RuntimeCall> for ProxyType {
@@ -1561,6 +1653,14 @@ impl_runtime_apis! {
 		fn metadata() -> OpaqueMetadata {
 			OpaqueMetadata::new(Runtime::metadata().into())
 		}
+
+		fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
+			Runtime::metadata_at_version(version)
+		}
+
+		fn metadata_versions() -> sp_std::vec::Vec<u32> {
+			Runtime::metadata_versions()
+		}
 	}
 
 	impl sp_block_builder::BlockBuilder<Block> for Runtime {
@@ -1737,7 +1837,6 @@ impl_runtime_apis! {
 			Farming::get_gauge_rewards(&who, pid).unwrap_or(Vec::new())
 		}
 	}
-
 
 	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {
@@ -1927,7 +2026,7 @@ impl_runtime_apis! {
 				storage_deposit_limit,
 				input_data,
 				CONTRACTS_DEBUG_OUTPUT,
-				pallet_contracts::Determinism::Deterministic,
+				pallet_contracts::Determinism::Enforced,
 			)
 		}
 

@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# It saves into a filename: commits_for_<runtime>_release-release-<number>
+# all the commits relevant to the given runtime, from the last release up to
+# the latest commit of the main branch of Pendulum repo/
+# scripts$ ./get_commits.sh <runtime>
+
+
 chosenRuntime="$1"
 ## forcefully set to lowercase
 chosenRuntime=$( echo "$chosenRuntime" |  tr -s  '[:upper:]'  '[:lower:]')

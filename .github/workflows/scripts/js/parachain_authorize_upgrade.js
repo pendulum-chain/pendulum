@@ -1,3 +1,9 @@
+// This code will submit a transaction to propose an `authorizeUpgrade`
+// steps:
+// 1. npm init -y
+// 2. npm install
+// 3. node parachain_authorize_upgrade.js <chain> <compressed.wasm>
+
 const { ApiPromise, WsProvider, Keyring } = require("@polkadot/api");
 const { blake2AsHex } = require("@polkadot/util-crypto");
 const fs = require('fs');

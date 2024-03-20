@@ -31,7 +31,7 @@ use sp_core::H256;
 use sp_runtime::{
 	impl_opaque_keys,
 	testing::{Header, UintAuthorityId},
-	traits::{BlakeTwo256, ConvertInto, IdentityLookup, OpaqueKeys},
+	traits::{BlakeTwo256, ConstU32, ConvertInto, IdentityLookup, OpaqueKeys},
 	Perbill, Perquintill,
 };
 use sp_std::fmt::Debug;
@@ -111,6 +111,10 @@ impl pallet_balances::Config for Test {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
+	type FreezeIdentifier = ();
+	type MaxFreezes = ();
+	type MaxHolds = ConstU32<1>;
+	type HoldIdentifier = RuntimeHoldReason;
 }
 
 impl pallet_aura::Config for Test {

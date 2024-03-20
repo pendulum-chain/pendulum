@@ -15,21 +15,30 @@ use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 
+#[cfg(feature = "try-runtime")]
+use try_runtime_cli::block_building_info::substrate_info;
+
+#[cfg(feature = "try-runtime")]
+use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
+
 use crate::{
 	chain_spec::{self, ParachainExtensions},
 	cli::{Cli, RelayChainCli, Subcommand},
 	service::{
-		new_partial, AmplitudeRuntimeExecutor, DevelopmentRuntimeExecutor, FoucocoRuntimeExecutor,
-		PendulumRuntimeExecutor,
+		new_partial, AmplitudeRuntimeExecutor, FoucocoRuntimeExecutor, PendulumRuntimeExecutor,
 	},
 };
+
+#[cfg(feature = "try-runtime")]
+/// The time internavel for block production on our chain in milliseconds (12
+/// seconds to millis)
+const BLOCK_TIME_MILLIS: u64 = 12 * 1_000;
 
 #[derive(PartialEq, Eq)]
 enum ChainIdentity {
 	Amplitude,
 	Foucoco,
 	Pendulum,
-	Development,
 }
 
 impl ChainIdentity {
@@ -38,7 +47,6 @@ impl ChainIdentity {
 			"amplitude" => Some(ChainIdentity::Amplitude),
 			"foucoco" => Some(ChainIdentity::Foucoco),
 			"pendulum" => Some(ChainIdentity::Pendulum),
-			"" | "dev" => Some(ChainIdentity::Development),
 			_ => None,
 		}
 	}
@@ -57,7 +65,6 @@ impl ChainIdentity {
 			ChainIdentity::Amplitude => &amplitude_runtime::VERSION,
 			ChainIdentity::Foucoco => &foucoco_runtime::VERSION,
 			ChainIdentity::Pendulum => &pendulum_runtime::VERSION,
-			ChainIdentity::Development => &development_runtime::VERSION,
 		}
 	}
 
@@ -66,7 +73,6 @@ impl ChainIdentity {
 			ChainIdentity::Amplitude => Box::new(chain_spec::amplitude_config()),
 			ChainIdentity::Foucoco => Box::new(chain_spec::foucoco_config()),
 			ChainIdentity::Pendulum => Box::new(chain_spec::pendulum_config()),
-			ChainIdentity::Development => Box::new(chain_spec::development_config()),
 		}
 	}
 
@@ -81,8 +87,6 @@ impl ChainIdentity {
 				Box::new(chain_spec::FoucocoChainSpec::from_json_file(path.into())?),
 			ChainIdentity::Pendulum =>
 				Box::new(chain_spec::PendulumChainSpec::from_json_file(path.into())?),
-			ChainIdentity::Development =>
-				Box::new(chain_spec::DevelopmentChainSpec::from_json_file(path.into())?),
 		})
 	}
 }
@@ -93,7 +97,7 @@ trait IdentifyChain {
 
 impl IdentifyChain for dyn sc_service::ChainSpec {
 	fn identify(&self) -> ChainIdentity {
-		ChainIdentity::identify(self.id()).unwrap_or(ChainIdentity::Development)
+		ChainIdentity::identify(self.id()).unwrap_or(ChainIdentity::Foucoco)
 	}
 }
 
@@ -208,13 +212,6 @@ macro_rules! construct_sync_run {
 					new_partial::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(&$config)?;
 				$code
 			}),
-			ChainIdentity::Development => runner.sync_run(|$config| {
-				let $components = new_partial::<
-					development_runtime::RuntimeApi,
-					DevelopmentRuntimeExecutor,
-				>(&$config)?;
-				$code
-			}),
 		}
 	}};
 }
@@ -241,13 +238,6 @@ macro_rules! construct_generic_async_run {
 					new_partial::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(&$config)?;
 				$code
 			}),
-			ChainIdentity::Development => runner.async_run(|$config| {
-				let $components = new_partial::<
-					development_runtime::RuntimeApi,
-					DevelopmentRuntimeExecutor,
-				>(&$config)?;
-				$code
-			}),
 		}
 	}};
 }
@@ -260,6 +250,8 @@ macro_rules! construct_async_run {
 		})
 	}}
 }
+
+
 
 /// Parse command line arguments into service configuration.
 pub fn run() -> Result<()> {
@@ -341,9 +333,6 @@ pub fn run() -> Result<()> {
 							.sync_run(|config| cmd.run::<Block, FoucocoRuntimeExecutor>(config)),
 						ChainIdentity::Pendulum => runner
 							.sync_run(|config| cmd.run::<Block, PendulumRuntimeExecutor>(config)),
-						ChainIdentity::Development => runner.sync_run(|config| {
-							cmd.run::<Block, DevelopmentRuntimeExecutor>(config)
-						}),
 					}
 				} else {
 					Err("Benchmarking wasn't enabled when building the node. \
@@ -385,21 +374,27 @@ pub fn run() -> Result<()> {
 				// grab the task manager.
 				let registry = &runner.config().prometheus_config.as_ref().map(|cfg| &cfg.registry);
 				let task_manager =
-					TaskManager::new(runner.config().tokio_handle.clone(), *registry)
+					sc_service::TaskManager::new(runner.config().tokio_handle.clone(), *registry)
 						.map_err(|e| format!("Error: {:?}", e))?;
 
 				match runner.config().chain_spec.identify() {
 					ChainIdentity::Amplitude => runner.async_run(|config| {
-						Ok((cmd.run::<Block, AmplitudeRuntimeExecutor>(config), task_manager))
+						Ok((cmd.run::<Block, ExtendedHostFunctions<
+							sp_io::SubstrateHostFunctions,
+							<AmplitudeRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
+						>, _>(Some(substrate_info(BLOCK_TIME_MILLIS))), task_manager))
 					}),
 					ChainIdentity::Foucoco => runner.async_run(|config| {
-						Ok((cmd.run::<Block, FoucocoRuntimeExecutor>(config), task_manager))
+						Ok((cmd.run::<Block, ExtendedHostFunctions<
+							sp_io::SubstrateHostFunctions,
+							<FoucocoRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
+						>, _>(Some(substrate_info(BLOCK_TIME_MILLIS))), task_manager))
 					}),
 					ChainIdentity::Pendulum => runner.async_run(|config| {
-						Ok((cmd.run::<Block, PendulumRuntimeExecutor>(config), task_manager))
-					}),
-					ChainIdentity::Development => runner.async_run(|config| {
-						Ok((cmd.run::<Block, DevelopmentRuntimeExecutor>(config), task_manager))
+						Ok((cmd.run::<Block, ExtendedHostFunctions<
+							sp_io::SubstrateHostFunctions,
+							<PendulumRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
+						>, _>(Some(substrate_info(BLOCK_TIME_MILLIS))), task_manager))
 					}),
 				}
 			} else {
@@ -432,7 +427,7 @@ pub fn run() -> Result<()> {
 				let id = ParaId::from(para_id);
 
 				let parachain_account =
-					AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account_truncating(&id);
+					AccountIdConversion::<polkadot_primitives::v4::AccountId>::into_account_truncating(&id);
 
 				let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
 				let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
@@ -499,17 +494,6 @@ pub fn run() -> Result<()> {
 						.map(|r| r.0)
 						.map_err(Into::into)
 					},
-
-					ChainIdentity::Development => crate::service::start_parachain_node_development(
-						config,
-						polkadot_config,
-						collator_options,
-						id,
-						hwbench,
-					)
-					.await
-					.map(|r| r.0)
-					.map_err(Into::into),
 				}
 			})
 		},

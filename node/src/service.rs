@@ -22,7 +22,9 @@ use cumulus_relay_chain_interface::{RelayChainInterface, RelayChainResult};
 use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node;
 
 // Substrate Imports
-use sc_executor::NativeElseWasmExecutor;
+use sc_executor::{
+	HeapAllocStrategy, NativeElseWasmExecutor, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY,
+};
 use sc_network::NetworkBlock;
 use sc_network_sync::SyncingService;
 
@@ -30,7 +32,7 @@ use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, Ta
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_consensus_aura::{sr25519::AuthorityId, AuraApi};
-use sp_keystore::SyncCryptoStorePtr;
+use sp_keystore::KeystorePtr;
 use sp_runtime::traits::BlakeTwo256;
 use substrate_prometheus_endpoint::Registry;
 
@@ -38,12 +40,10 @@ use polkadot_service::CollatorPair;
 use sc_consensus::ImportQueue;
 
 use crate::rpc::{
-	create_full_amplitude, create_full_development, create_full_foucoco, create_full_pendulum,
-	FullDeps, ResultRpcExtension,
+	create_full_amplitude, create_full_foucoco, create_full_pendulum, FullDeps, ResultRpcExtension,
 };
 
 pub use amplitude_runtime::RuntimeApi as AmplitudeRuntimeApi;
-pub use development_runtime::RuntimeApi as DevelopmentRuntimeApi;
 pub use foucoco_runtime::RuntimeApi as FoucocoRuntimeApi;
 pub use pendulum_runtime::RuntimeApi as PendulumRuntimeApi;
 
@@ -53,8 +53,6 @@ pub type FoucocoClient =
 	TFullClient<Block, FoucocoRuntimeApi, NativeElseWasmExecutor<FoucocoRuntimeExecutor>>;
 pub type PendulumClient =
 	TFullClient<Block, PendulumRuntimeApi, NativeElseWasmExecutor<PendulumRuntimeExecutor>>;
-pub type DevelopmentClient =
-	TFullClient<Block, DevelopmentRuntimeApi, NativeElseWasmExecutor<DevelopmentRuntimeExecutor>>;
 
 type ParachainBlockImport<RuntimeApi, Executor> = TParachainBlockImport<
 	Block,
@@ -92,7 +90,6 @@ pub trait ParachainRuntimeApiImpl:
 impl ParachainRuntimeApiImpl for amplitude_runtime::RuntimeApiImpl<Block, AmplitudeClient> {}
 impl ParachainRuntimeApiImpl for pendulum_runtime::RuntimeApiImpl<Block, PendulumClient> {}
 impl ParachainRuntimeApiImpl for foucoco_runtime::RuntimeApiImpl<Block, FoucocoClient> {}
-impl ParachainRuntimeApiImpl for development_runtime::RuntimeApiImpl<Block, DevelopmentClient> {}
 
 /// Amplitude executor type.
 pub struct AmplitudeRuntimeExecutor;
@@ -139,21 +136,6 @@ impl sc_executor::NativeExecutionDispatch for PendulumRuntimeExecutor {
 	}
 }
 
-/// Development executor instance.
-pub struct DevelopmentRuntimeExecutor;
-
-impl sc_executor::NativeExecutionDispatch for DevelopmentRuntimeExecutor {
-	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
-
-	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		development_runtime::api::dispatch(method, data)
-	}
-
-	fn native_version() -> sc_executor::NativeVersion {
-		development_runtime::native_version()
-	}
-}
-
 /// Starts a `ServiceBuilder` for a full service.
 ///
 /// Use this macro if you don't actually need the full service, but just the builder in order to
@@ -191,12 +173,19 @@ where
 		})
 		.transpose()?;
 
-	let executor = NativeElseWasmExecutor::<Executor>::new(
-		config.wasm_method,
-		config.default_heap_pages,
-		config.max_runtime_instances,
-		config.runtime_cache_size,
-	);
+	let heap_pages = config
+		.default_heap_pages
+		.map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |h| HeapAllocStrategy::Static { extra_pages: h as _ });
+
+	let wasm = WasmExecutor::builder()
+		.with_execution_method(config.wasm_method)
+		.with_onchain_heap_alloc_strategy(heap_pages)
+		.with_offchain_heap_alloc_strategy(heap_pages)
+		.with_max_runtime_instances(config.max_runtime_instances)
+		.with_runtime_cache_size(config.runtime_cache_size)
+		.build();
+
+	let executor = NativeElseWasmExecutor::<Executor>::new_with_wasm_executor(wasm);
 
 	let (client, backend, keystore_container, task_manager) =
 		sc_service::new_full_parts::<Block, RuntimeApi, _>(
@@ -366,7 +355,7 @@ where
 		transaction_pool: transaction_pool.clone(),
 		task_manager: &mut task_manager,
 		config: parachain_config,
-		keystore: params.keystore_container.sync_keystore(),
+		keystore: params.keystore_container.keystore(),
 		backend: backend.clone(),
 		network: network.clone(),
 		system_rpc_tx,
@@ -409,7 +398,7 @@ where
 			relay_chain_interface.clone(),
 			transaction_pool,
 			sync_service.clone(),
-			params.keystore_container.sync_keystore(),
+			params.keystore_container.keystore(),
 			force_authoring,
 			id,
 		)?;
@@ -428,6 +417,7 @@ where
 			collator_key: collator_key.expect("Command line arguments do not allow this. qed"),
 			relay_chain_slot_duration,
 			recovery_handle: Box::new(overseer_handle),
+			sync_service: sync_service.clone(),
 		};
 
 		start_collator(params).await?;
@@ -441,6 +431,7 @@ where
 			relay_chain_slot_duration,
 			import_queue: import_queue_service,
 			recovery_handle: Box::new(overseer_handle),
+			sync_service: sync_service.clone(),
 		};
 
 		start_full_node(params)?;
@@ -507,7 +498,7 @@ fn build_consensus<RuntimeApi, Executor>(
 	relay_chain_interface: Arc<dyn RelayChainInterface>,
 	transaction_pool: Arc<FullPool<RuntimeApi, Executor>>,
 	sync_oracle: Arc<SyncingService<Block>>,
-	keystore: SyncCryptoStorePtr,
+	keystore: KeystorePtr,
 	force_authoring: bool,
 	id: ParaId,
 ) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>
@@ -591,25 +582,6 @@ pub async fn start_parachain_node_pendulum(
 		id,
 		hwbench,
 		create_full_pendulum,
-	)
-	.await
-}
-
-/// Start a parachain node.
-pub async fn start_parachain_node_development(
-	parachain_config: Configuration,
-	polkadot_config: Configuration,
-	collator_options: CollatorOptions,
-	id: ParaId,
-	hwbench: Option<sc_sysinfo::HwBench>,
-) -> sc_service::error::Result<(TaskManager, Arc<DevelopmentClient>)> {
-	start_node_impl(
-		parachain_config,
-		polkadot_config,
-		collator_options,
-		id,
-		hwbench,
-		create_full_development,
 	)
 	.await
 }

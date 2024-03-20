@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 use frame_support::{
 	log, match_types, parameter_types,
-	traits::{ContainsPair, Everything, Nothing},
+	traits::{ContainsPair, Everything, Nothing, ProcessMessageError},
 };
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
@@ -14,6 +14,7 @@ use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdap
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::Convert;
+
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
@@ -28,6 +29,8 @@ use runtime_common::{
 	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
 	asset_registry::FixedConversionRateProvider,
 };
+
+use sp_runtime::traits::Zero;
 
 use crate::{
 	assets::{
@@ -46,6 +49,7 @@ use super::{
 	ParachainSystem, PendulumTreasuryAccount, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent,
 	RuntimeOrigin, System, XcmpQueue,
 };
+use frame_system::EnsureRoot;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -85,6 +89,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				xcm_assets::MOONBEAM_BRZ => Some(moonbeam::BRZ_location()),
 				xcm_assets::POLKADEX_PDEX => Some(polkadex::PDEX_location()),
 				xcm_assets::MOONBEAM_GLMR => Some(moonbeam::GLMR_location()),
+				xcm_assets::ASSETHUB_PINK => Some(asset_hub::PINK_location()),
 				_ => None,
 			},
 
@@ -106,6 +111,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			loc if loc == moonbeam::BRZ_location() => Some(xcm_assets::MOONBEAM_BRZ_id()),
 			loc if loc == polkadex::PDEX_location() => Some(xcm_assets::POLKADEX_PDEX_id()),
 			loc if loc == moonbeam::GLMR_location() => Some(xcm_assets::MOONBEAM_GLMR_id()),
+			loc if loc == asset_hub::PINK_location() => Some(xcm_assets::ASSETHUB_PINK_id()),
 
 			// Our native currency location without re-anchoring
 			loc if loc == native_location_external_pov() => Some(CurrencyId::Native),
@@ -204,7 +210,7 @@ where
 		instructions: &mut [Instruction<RuntimeCall>],
 		max_weight: XCMWeight,
 		weight_credit: &mut XCMWeight,
-	) -> Result<(), ()> {
+	) -> Result<(), ProcessMessageError> {
 		Deny::should_execute(origin, instructions, max_weight, weight_credit)?;
 		Allow::should_execute(origin, instructions, max_weight, weight_credit)
 	}
@@ -218,7 +224,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 		instructions: &mut [Instruction<RuntimeCall>],
 		_max_weight: XCMWeight,
 		_weight_credit: &mut XCMWeight,
-	) -> Result<(), ()> {
+	) -> Result<(), ProcessMessageError> {
 		if instructions.iter().any(|inst| {
 			matches!(
 				inst,
@@ -232,7 +238,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 					}
 			)
 		}) {
-			return Err(()) // Deny
+			return Err(ProcessMessageError::Unsupported) // Deny
 		}
 
 		// allow reserve transfers to arrive from relay chain
@@ -316,7 +322,10 @@ impl AutomationPalletConfig for AutomationPalletConfigPendulum {
 
 	fn callback(_length: u8, _data: [u8; 32], _amount: u128) -> Result<(), XcmError> {
 		// TODO change to call the actual automation pallet, with data and length
-		System::remark_with_event(RuntimeOrigin::signed(AccountId::from([0; 32])), [0; 1].to_vec());
+		let _ = System::remark_with_event(
+			RuntimeOrigin::signed(AccountId::from([0; 32])),
+			[0; 1].to_vec(),
+		);
 		Ok(())
 	}
 }
@@ -392,6 +401,7 @@ impl pallet_xcm::Config for Runtime {
 	type WeightInfo = crate::weights::pallet_xcm::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
+	type AdminOrigin = EnsureRoot<AccountId>;
 }
 
 #[cfg(feature = "runtime-benchmarks")]

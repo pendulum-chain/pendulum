@@ -1,0 +1,30 @@
+{
+  "amplitudeSignatories": {
+    "fixed": [
+      "6nJwMD3gk36fe6pMRL2UpbwAEjDdjjxdngQGShe753pyAvCT",
+      "6n62KZWvmZHgeyEXTvQFmoHRMqjKfFWvQVsApkePekuNfek5",
+      "6kwxQBRKMadrY9Lq3K8gZXkw1UkjacpqYhcqvX3AqmN9DofF",
+      "6kKHwcpCVC18KepwvdMSME8Q7ZTNr1RoRUrFDH9AdAmhL3Pt"
+    ],
+    "genesis": "6i4xDEE1Q2Bv8tnJtgD4jse4YTAzzCwCJVUehRQ93hCqKp8f",
+    "crowdloanReserve": "6jvbGGCA8MwSQdkxJQuooR2FqJhfwNvd35Y5eQ3qpYwQiggf",
+    "ecosystemDevelopment": "6kQzZK6Lsb4ysNQbtjZXFvpWGWCeUvYKwWtYwrnTQebgTJ8Q",
+    "liquidityIncentives": "6iTwTVTy2s55PQmEmMUHFapHkieUFMXafeUbM1drBNRG2RUb",
+    "protocolInitiatives": "6mwUAJj2zxiN8uyTSGKaznjogWCaRo89yfGwvEWngPs3wVny",
+    "marketing": "6iC6fbayHN3E1wwuxWDpxwmtgcu5WjRR2VQiTasFiYt5ss1H"
+  },
+  "foucocoSignatories": {
+    "fixed": [
+      "6mSy3qQKgAez9zpqY1JSnYW7d1njMNX93P4mkkQvsmPXmehB",
+      "6mrdgs7NsHwceSPQRcXCagYzZiB4hoMBGmpMPLA4rS4BGyo7",
+      "6jBUR27UemaZBF2aYrEbMuN3u76aANEpA3uxLrQcWP8jNDtf",
+      "6hcDDb1nV6zrqfiB7dgQ5DbzuLkPmxkvSZ5LSA9kcE3gxNs8"
+    ],
+    "genesis": "6k4NQX2KepBkeexrWVNabnWG9GZxvQTYi4ytHHCNwPhLZMnE",
+    "crowdloanReserve": "6hWu9uZCbWzQDYCYwecvu4TxhUXQzsVxtrPCmUzp4qELTHUS",
+    "ecosystemDevelopment": "6jbFvLwHANbrwohteoZcMfQVQbeWYD7GjXFibje486am6nvu",
+    "liquidityIncentives": "6n17bbDiW4Up1PBVUujcXqMhbeyXtiR6VoNg3M9RrjVtfwTP",
+    "protocolInitiatives": "6jWjXWovuJ1yj29uwntwLdM6Jaf3vDhfjHJ44SUUpqJ1zTF6",
+    "marketing": "6mYPy2m6Br29odXjLHuuzfEaRhoQJtYxGLWjPMfQz1htyF77"
+  }
+}

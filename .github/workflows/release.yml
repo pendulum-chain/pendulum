@@ -1,4 +1,4 @@
-name: Release
+name: Release and Upgrade Preparation
 
 env:
   SUBWASM_VERSION: 0.20.0
@@ -31,9 +31,6 @@ jobs:
             chain: "pendulum"
           - shouldReleaseFou: false
             chain: "foucoco"
-    outputs:
-      releaseAmp: ${{ matrix.shouldReleaseAmp }}
-      releasePen: ${{ matrix.shouldReleasePen }}
     runs-on: ubuntu-latest
 
     steps:
@@ -58,6 +55,7 @@ jobs:
           echo '${{ steps.srtool_build.outputs.json }}'
           cp ${{ steps.srtool_build.outputs.wasm }} ${{ matrix.chain }}_runtime.compact.wasm
           cp ${{ steps.srtool_build.outputs.wasm_compressed }} ${{ matrix.chain }}_runtime.compact.compressed.wasm
+
       # it takes a while to build the runtime, so let's save the artifact as soon as we have it
       - name: Archive Artifacts for ${{ matrix.chain }}
         uses: actions/upload-artifact@v4
@@ -93,3 +91,46 @@ jobs:
             ${{ matrix.chain }}-info_compressed.json
             ${{ matrix.chain }}-metadata.json
             ${{ matrix.chain }}-diff.txt
+
+  upgrade_prep:
+    if: ${{ success() }}
+    needs: srtool
+    name: Perform runtime upgrade on ${{ matrix.chain }} ${{ github.event.inputs.ref }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        chain: ["amplitude", "pendulum"]
+        shouldReleaseAmp:
+          - ${{ contains(github.event.pull_request.title, 'amplitude') }}
+        shouldReleasePen:
+          - ${{ contains(github.event.pull_request.title, 'pendulum') }}
+        exclude:
+          - shouldReleaseAmp: false
+            chain: "amplitude"
+          - shouldReleasePen: false
+            chain: "pendulum"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+          fetch-depth: 0
+
+      - name: download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.chain }}-runtime
+
+      - name: prepare Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '21.x'
+      - name: Install dependencies
+        run: |
+          cd .github/scripts/js
+          npm init -y
+          npm install
+      - name: run script for parachain upgrade
+        run: |
+          node --version
+          node .github/scripts/js/parachain_authorize_upgrade.js ${{ matrix.chain }} ${{ matrix.chain }}_runtime.compact.compressed.wasm

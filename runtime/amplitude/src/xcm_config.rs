@@ -33,6 +33,7 @@ use runtime_common::{parachains::kusama::asset_hub, RelativeValue};
 use cumulus_primitives_utility::{
 	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,
 };
+use sp_runtime::traits::Zero;
 
 use crate::{
 	assets::{
@@ -322,6 +323,7 @@ impl fungibles::Balanced<AccountId> for ConcreteAssets {
 	type OnDropCredit = fungibles::DecreaseIssuance<AccountId, Self>;
 	type OnDropDebt = fungibles::IncreaseIssuance<AccountId, Self>;
 }
+// We only use minimum_balance of these implementations
 impl fungibles::Inspect<AccountId> for ConcreteAssets {
 	type AssetId = <Tokens as fungibles::Inspect<AccountId>>::AssetId;
 	type Balance = <Tokens as fungibles::Inspect<AccountId>>::Balance;
@@ -348,7 +350,7 @@ impl fungibles::Inspect<AccountId> for ConcreteAssets {
 		_: Preservation,
 		_: Fortitude,
 	) -> Self::Balance {
-		todo!()
+		Self::Balance::zero()
 	}
 
 	fn can_deposit(
@@ -357,7 +359,7 @@ impl fungibles::Inspect<AccountId> for ConcreteAssets {
 		_: Self::Balance,
 		_: Provenance,
 	) -> DepositConsequence {
-		todo!()
+		DepositConsequence::UnknownAsset
 	}
 
 	fn can_withdraw(
@@ -365,29 +367,30 @@ impl fungibles::Inspect<AccountId> for ConcreteAssets {
 		_: &AccountId,
 		_: Self::Balance,
 	) -> WithdrawConsequence<Self::Balance> {
-		todo!()
+		WithdrawConsequence::UnknownAsset
 	}
 
 	fn asset_exists(_: Self::AssetId) -> bool {
-		todo!()
+		false
 	}
 }
+
+// Not used
 impl fungibles::Unbalanced<AccountId> for ConcreteAssets {
 	fn handle_dust(_: fungibles::Dust<AccountId, Self>) {
-		todo!()
 	}
 	fn write_balance(
 		_: Self::AssetId,
 		_: &AccountId,
 		_: Self::Balance,
 	) -> Result<Option<Self::Balance>, DispatchError> {
-		todo!()
+		core::prelude::v1::Err(DispatchError::CannotLookup)
 	}
 
 	fn set_total_issuance(_: Self::AssetId, _: Self::Balance) {
-		todo!()
 	}
 }
+
 pub type Traders = (
 	TakeFirstAssetTrader<
 		AccountId,

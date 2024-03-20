@@ -71,30 +71,32 @@ pub struct CurrencyIdConvert;
 
 impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		match id {
-			CurrencyId::XCM(index) => match index {
-				xcm_assets::RELAY_KSM => Some(MultiLocation::parent()),
-				xcm_assets::ASSETHUB_USDT => Some(asset_hub::USDT_location()),
-				_ => None,
-			},
-			CurrencyId::Native => Some(native_location_external_pov()),
-			_ => None,
-		}
+		AssetRegistry::metadata(&id)
+			.filter(|m| m.location.is_some())
+			.and_then(|m| m.location)
+			.and_then(|l| l.try_into().ok())
 	}
 }
 
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
-	fn convert(location: MultiLocation) -> Option<CurrencyId> {
-		match location {
-			loc if loc == MultiLocation::parent() => Some(xcm_assets::RELAY_KSM_id()),
-			loc if loc == asset_hub::USDT_location() => Some(xcm_assets::ASSETHUB_USDT_id()),
-			// Our native currency location without re-anchoring
-			loc if loc == native_location_external_pov() => Some(CurrencyId::Native),
-			// Our native currency location with re-anchoring
-			// The XCM pallet will try to re-anchor the location before it reaches here
-			loc if loc == native_location_local_pov() => Some(CurrencyId::Native),
-			_ => None,
-		}
+	fn convert(location: MultiLocation) -> Option<CurrencyId>  {
+		let para_id = ParachainInfo::parachain_id();
+		let unanchored_location = match location {
+            MultiLocation { parents: 0, interior } => {
+     
+                match interior.pushed_front_with(Parachain(u32::from(para_id))) {
+                    Ok(new_interior) => MultiLocation {
+                        parents: 1,
+                        interior: new_interior,
+                    },
+                    Err(_) => return None, 
+                }
+            },
+  
+            x => x,
+        };
+
+		AssetRegistry::location_to_asset_id(unanchored_location)
 	}
 }
 

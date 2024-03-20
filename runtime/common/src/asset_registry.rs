@@ -9,7 +9,7 @@ use sp_core::Get;
 use sp_runtime::{BoundedVec, DispatchError, traits::PhantomData};
 use sp_std::fmt::Debug;
 use spacewalk_primitives::CurrencyId;
-use xcm::opaque::v3::MultiLocation;
+use xcm::opaque::v3::{Junction,MultiLocation};
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct StringLimit;
@@ -69,7 +69,25 @@ impl<
 	> FixedConversionRateProviderTrait for FixedConversionRateProvider<OrmlAssetRegistry>
 {
 	fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
-		let metadata = OrmlAssetRegistry::metadata_by_location(location)?;
+		log::warn!("getting for location: {:?}", location);
+		
+		// fix
+		let unanchored_location = match location {
+            MultiLocation { parents: 0, interior } => {
+     
+                match interior.pushed_front_with(Junction::Parachain(2094u32)) {
+                    Ok(new_interior) => MultiLocation {
+                        parents: 1,
+                        interior: new_interior,
+                    },
+                    Err(_) => return None, 
+                }
+            },
+  
+            x => *x,
+        };
+		log::warn!("getting for location adjusted: {:?}", unanchored_location);
+		let metadata = OrmlAssetRegistry::metadata_by_location(&unanchored_location)?;
 		Some(metadata.additional.fee_per_second)
 	}
 }

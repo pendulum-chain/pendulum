@@ -10,6 +10,7 @@ mod assets;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
+mod chain_ext;
 
 use crate::zenlink::*;
 use xcm::v3::MultiLocation;
@@ -19,7 +20,6 @@ pub use parachain_staking::InflationInfo;
 
 use bifrost_farming as farming;
 use bifrost_farming_rpc_runtime_api as farming_rpc_runtime_api;
-use orml_traits::MultiCurrency;
 
 use codec::Encode;
 
@@ -63,7 +63,7 @@ use frame_system::{
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	asset_registry, chain_ext, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash,
+	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash,
 	Index, PoolId, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 	ProxyType,
 };
@@ -109,24 +109,16 @@ use spacewalk_primitives::{
 use orml_currencies::WeightInfo;
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
-use orml_currencies_allowance_extension::{
-	default_weights::WeightInfo as AllowanceWeightInfo, Config as AllowanceConfig,
-};
-
 use frame_support::{
-	log::{error, trace},
-	pallet_prelude::*,
 	traits::InstanceFilter,
 };
 use sp_std::vec::Vec;
 
-use pallet_contracts::chain_extension::{
-	ChainExtension, Environment, Ext, InitState, RetVal, SysConfig,
-};
-use sp_core::crypto::UncheckedFrom;
-
 // XCM Imports
 use xcm_executor::XcmExecutor;
+
+// Chain Extension
+use crate::chain_ext::{PriceChainExtension,TokensChainExtension};
 
 pub type VaultId = primitives::VaultId<AccountId, CurrencyId>;
 
@@ -1141,19 +1133,6 @@ parameter_types! {
 	};
 }
 
-// Define the global id's of our chain extensions
-use pallet_contracts::chain_extension::RegisteredChainExtension;
-use price_chain_extension::PriceChainExtension;
-use token_chain_extension::TokensChainExtension;
-
-impl RegisteredChainExtension<Runtime> for TokensChainExtension<Runtime, Tokens, AccountId> {
-	const ID: u16 = 01;
-}
-
-impl RegisteredChainExtension<Runtime> for PriceChainExtension<Runtime> {
-    const ID: u16 = 02;
-}
-
 impl pallet_contracts::Config for Runtime {
 	type Time = Timestamp;
 	type Randomness = RandomnessCollectiveFlip;
@@ -1167,8 +1146,6 @@ impl pallet_contracts::Config for Runtime {
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
 	type ChainExtension = (TokensChainExtension<Self, Tokens, AccountId>, PriceChainExtension<Self>);
-	type DeletionQueueDepth = DeletionQueueDepth;
-	type DeletionWeightLimit = DeletionWeightLimit;
 	type Schedule = Schedule;
 	type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
 	type MaxCodeLen = ConstU32<{ 123 * 1024 }>;

@@ -1,4 +1,4 @@
-name: Release and Upgrade Preparation
+name: Release and Propose an Upgrade
 
 env:
   SUBWASM_VERSION: 0.20.0
@@ -92,7 +92,7 @@ jobs:
             ${{ matrix.chain }}-metadata.json
             ${{ matrix.chain }}-diff.txt
 
-  upgrade_prep:
+  propose_upgrade:
     if: ${{ success() }}
     needs: srtool
     name: Perform runtime upgrade on ${{ matrix.chain }} ${{ github.event.inputs.ref }}

@@ -16,7 +16,7 @@ use frame_support::BoundedVec;
 use runtime_common::asset_registry::{CustomMetadata, DiaKeys, StringLimit};
 
 use xcm::{
-	v3::{Junction::PalletInstance, Junctions::X1, MultiLocation},
+	v3::{MultiLocation},
 	VersionedMultiLocation,
 };
 

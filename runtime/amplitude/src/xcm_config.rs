@@ -22,17 +22,11 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
-use runtime_common::{parachains::kusama::asset_hub, asset_registry::FixedConversionRateProvider};
+use runtime_common::{asset_registry::FixedConversionRateProvider};
 
 use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 
-use crate::{
-	assets::{
-		native_locations::{native_location_external_pov, native_location_local_pov},
-		xcm_assets,
-	},
-	ConstU32,
-};
+use crate::ConstU32;
 
 use super::{
 	AccountId, AmplitudeTreasuryAccount, AssetRegistry, Balance, Balances, Currencies, CurrencyId,

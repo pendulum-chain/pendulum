@@ -26,23 +26,11 @@ use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
 use runtime_common::{
 	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
-	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
+	parachains::polkadot::{moonbeam},
 	asset_registry::FixedConversionRateProvider,
 };
 
-use sp_runtime::traits::Zero;
-
-use crate::{
-	assets::{
-		self,
-		native_locations::{
-			native_location_external_pov, native_location_local_pov, EURC_location_external_pov,
-			EURC_location_local_pov,
-		},
-		xcm_assets,
-	},
-	ConstU32,
-};
+use crate::ConstU32;
 
 use super::{
 	AccountId, AssetRegistry, Balance, Balances, Currencies, CurrencyId, ParachainInfo,

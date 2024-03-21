@@ -9,7 +9,7 @@ use sp_core::Get;
 use sp_runtime::{BoundedVec, DispatchError, traits::{PhantomData, Convert}};
 use sp_std::fmt::Debug;
 use spacewalk_primitives::CurrencyId;
-use xcm::opaque::v3::{Junction,MultiLocation};
+use xcm::opaque::v3::{MultiLocation};
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct StringLimit;
@@ -74,7 +74,6 @@ impl<
 			None => return None,
 		};
 		let metadata = OrmlAssetRegistry::metadata(&asset_id)?;
-		log::warn!("metadata: {:?}", metadata);
 		Some(metadata.additional.fee_per_second)
 	}
 }

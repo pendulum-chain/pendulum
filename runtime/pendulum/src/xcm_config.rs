@@ -413,8 +413,7 @@ impl fungibles::Inspect<AccountId> for ConcreteAssets {
 
 // Not used
 impl fungibles::Unbalanced<AccountId> for ConcreteAssets {
-	fn handle_dust(_: fungibles::Dust<AccountId, Self>) {
-	}
+	fn handle_dust(_: fungibles::Dust<AccountId, Self>) {}
 	fn write_balance(
 		_: Self::AssetId,
 		_: &AccountId,
@@ -423,8 +422,7 @@ impl fungibles::Unbalanced<AccountId> for ConcreteAssets {
 		core::prelude::v1::Err(DispatchError::CannotLookup)
 	}
 
-	fn set_total_issuance(_: Self::AssetId, _: Self::Balance) {
-	}
+	fn set_total_issuance(_: Self::AssetId, _: Self::Balance) {}
 }
 
 pub type Traders = (

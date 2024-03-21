@@ -1,10 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(non_snake_case)]
 
+use chain_extension_common::{ChainExtensionOutcome, ChainExtensionTokenError};
 use codec::Encode;
 use frame_support::{
 	dispatch::Weight,
-	pallet_prelude::{Get, PhantomData, Decode},
+	pallet_prelude::{Decode, Get, PhantomData},
 	sp_tracing::{error, trace},
 	DefaultNoBound,
 };
@@ -15,9 +16,6 @@ use orml_currencies_allowance_extension::{
 use orml_traits::MultiCurrency;
 use pallet_contracts::chain_extension::{
 	ChainExtension, Environment, Ext, InitState, RetVal, SysConfig,
-};
-use chain_extension_common::{
-		ChainExtensionOutcome, ChainExtensionTokenError,
 };
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::DispatchError;
@@ -64,7 +62,7 @@ impl TryFrom<u16> for FuncId {
 	}
 }
 #[derive(DefaultNoBound)]
-pub struct TokensChainExtension<T, Tokens, AccountId>(PhantomData<(T,Tokens, AccountId)>);
+pub struct TokensChainExtension<T, Tokens, AccountId>(PhantomData<(T, Tokens, AccountId)>);
 
 impl<T, Tokens, AccountId> ChainExtension<T> for TokensChainExtension<T, Tokens, AccountId>
 where
@@ -83,9 +81,7 @@ where
 		<E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
 	{
 		let func_id = FuncId::try_from(env.func_id())?;
-
 		trace!("Calling function with ID {:?} from TokensChainExtension", &func_id);
-
 		// debug_message weight is a good approximation of the additional overhead of going
 		// from contract layer to substrate layer.
 		let overhead_weight = Weight::from_parts(
@@ -104,7 +100,6 @@ where
 			FuncId::Approve => approve(env, overhead_weight),
 			FuncId::TransferFrom => transfer_from(env, overhead_weight),
 		};
-
 		result
 	}
 
@@ -171,10 +166,11 @@ where
 	let base_weight = <T as frame_system::Config>::DbWeight::get().reads(1);
 	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
 	let input = env.read(256)?;
-	let (currency_id, account_id): (CurrencyId, T::AccountId) = match chain_extension_common::decode(input) {
-		Ok(value) => value,
-		Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
-	};
+	let (currency_id, account_id): (CurrencyId, T::AccountId) =
+		match chain_extension_common::decode(input) {
+			Ok(value) => value,
+			Err(_) => return Ok(RetVal::Converging(ChainExtensionOutcome::DecodingError.as_u32())),
+		};
 
 	trace!("Calling balanceOf() for currency {:?} and account {:?}", currency_id, account_id);
 
@@ -204,9 +200,9 @@ where
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
-	AccountId: sp_std::fmt::Debug ,
+	AccountId: sp_std::fmt::Debug,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
-	(CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode
+	(CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode,
 {
 	let mut env = env.buf_in_buf_out();
 	// Here we use weights for non native currency as worst case scenario, since we can't know whether it's native or not until we've already read from contract env.
@@ -298,9 +294,8 @@ where
 	E: Ext<T = T>,
 	AccountId: sp_std::fmt::Debug,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
-	(CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode
+	(CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode,
 {
-
 	let mut env = env.buf_in_buf_out();
 	let base_weight = <<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::approve();
 	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
@@ -345,9 +340,8 @@ where
 	E: Ext<T = T>,
 	AccountId: sp_std::fmt::Debug,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
-	(AccountId, CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode
+	(AccountId, CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode,
 {
-
 	let mut env = env.buf_in_buf_out();
 	let base_weight = <<T as AllowanceConfig>::WeightInfo as AllowanceWeightInfo>::transfer_from();
 	env.charge_weight(base_weight.saturating_add(overhead_weight))?;
@@ -384,4 +378,3 @@ where
 	)?;
 	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
-

@@ -1,20 +1,18 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(non_snake_case)]
 
+use chain_extension_common::{Blockchain, ChainExtensionOutcome, Symbol, ToTrimmedVec};
 use codec::Encode;
+use dia_oracle::{CoinInfo as DiaCoinInfo, DiaOracle};
 use frame_support::{
 	dispatch::Weight,
+	inherent::Vec,
 	pallet_prelude::{Get, PhantomData},
 	sp_tracing::{error, trace},
-	inherent::Vec,
 	DefaultNoBound,
 };
-use dia_oracle::{CoinInfo as DiaCoinInfo, DiaOracle};
 use pallet_contracts::chain_extension::{
 	ChainExtension, Environment, Ext, InitState, RetVal, SysConfig,
-};
-use chain_extension_common::{
-		Blockchain, ChainExtensionOutcome, Symbol, ToTrimmedVec,
 };
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::DispatchError;
@@ -45,9 +43,7 @@ pub struct PriceChainExtension<T>(PhantomData<T>);
 
 impl<T> ChainExtension<T> for PriceChainExtension<T>
 where
-	T: SysConfig
-		+ pallet_contracts::Config
-        + dia_oracle::Config,
+	T: SysConfig + pallet_contracts::Config + dia_oracle::Config,
 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 {
 	fn call<E: Ext>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
@@ -56,9 +52,7 @@ where
 		<E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
 	{
 		let func_id = FuncId::try_from(env.func_id())?;
-
-		trace!("Calling function with ID {:?} from TokensChainExtension", &func_id);
-
+		trace!("Calling function with ID {:?} from PriceChainExtension", &func_id);
 		// debug_message weight is a good approximation of the additional overhead of going
 		// from contract layer to substrate layer.
 		let overhead_weight = Weight::from_parts(
@@ -72,7 +66,6 @@ where
 		let result = match func_id {
 			FuncId::GetCoinInfo => get_coin_info(env, overhead_weight),
 		};
-
 		result
 	}
 
@@ -81,16 +74,12 @@ where
 	}
 }
 
-
-
 fn get_coin_info<E: Ext, T>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
 where
-	T: SysConfig
-    + pallet_contracts::Config
-		+ dia_oracle::Config,
+	T: SysConfig + pallet_contracts::Config + dia_oracle::Config,
 	E: Ext<T = T>,
 {
 	let mut env = env.buf_in_buf_out();
@@ -115,7 +104,6 @@ where
 	};
 	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
-
 
 // this was in common, but we don't use it in amplitude's chain extension, is it needed?
 

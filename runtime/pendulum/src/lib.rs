@@ -55,8 +55,9 @@ use frame_support::{
 	dispatch::DispatchClass,
 	parameter_types,
 	traits::{
-		ConstBool, ConstU32, Contains, Currency as FrameCurrency, fungible::Credit, EitherOfDiverse,
-		EqualPrivilegeOnly, Imbalance, InstanceFilter, OnUnbalanced, WithdrawReasons,
+		fungible::Credit, ConstBool, ConstU32, Contains, Currency as FrameCurrency,
+		EitherOfDiverse, EqualPrivilegeOnly, Imbalance, InstanceFilter, OnUnbalanced,
+		WithdrawReasons,
 	},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
@@ -108,7 +109,7 @@ use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use xcm_executor::XcmExecutor;
 
 // Chain Extension
-use crate::chain_ext::{PriceChainExtension,TokensChainExtension};
+use crate::chain_ext::{PriceChainExtension, TokensChainExtension};
 
 /// Spacewalk vault id type
 pub type VaultId = primitives::VaultId<AccountId, CurrencyId>;
@@ -1039,7 +1040,8 @@ impl pallet_contracts::Config for Runtime {
 	type CallStack = [pallet_contracts::Frame<Self>; 5];
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-	type ChainExtension = (TokensChainExtension<Self, Tokens, AccountId>, PriceChainExtension<Self>);
+	type ChainExtension =
+		(TokensChainExtension<Self, Tokens, AccountId>, PriceChainExtension<Self>);
 	type Schedule = Schedule;
 	type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
 	type MaxCodeLen = ConstU32<{ 123 * 1024 }>;

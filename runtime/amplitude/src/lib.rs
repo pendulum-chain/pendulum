@@ -112,7 +112,7 @@ use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use xcm_executor::XcmExecutor;
 
 // Chain Extension
-use crate::chain_ext::{TokensChainExtension, PriceChainExtension};
+use crate::chain_ext::{PriceChainExtension, TokensChainExtension};
 
 pub type VaultId = primitives::VaultId<AccountId, CurrencyId>;
 
@@ -1077,7 +1077,8 @@ impl pallet_contracts::Config for Runtime {
 	type CallStack = [pallet_contracts::Frame<Self>; 5];
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-	type ChainExtension = (TokensChainExtension<Self, Tokens, AccountId>, PriceChainExtension<Self>);
+	type ChainExtension =
+		(TokensChainExtension<Self, Tokens, AccountId>, PriceChainExtension<Self>);
 	type Schedule = Schedule;
 	type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
 	type MaxCodeLen = ConstU32<{ 123 * 1024 }>;

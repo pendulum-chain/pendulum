@@ -7,10 +7,10 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod assets;
+mod chain_ext;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
-mod chain_ext;
 
 use crate::zenlink::*;
 use xcm::v3::MultiLocation;
@@ -63,9 +63,8 @@ use frame_system::{
 pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
 
 use runtime_common::{
-	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash,
-	Index, PoolId, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
-	ProxyType,
+	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
+	ProxyType, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 #[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
@@ -109,16 +108,14 @@ use spacewalk_primitives::{
 use orml_currencies::WeightInfo;
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
-use frame_support::{
-	traits::InstanceFilter,
-};
+use frame_support::traits::InstanceFilter;
 use sp_std::vec::Vec;
 
 // XCM Imports
 use xcm_executor::XcmExecutor;
 
 // Chain Extension
-use crate::chain_ext::{PriceChainExtension,TokensChainExtension};
+use crate::chain_ext::{PriceChainExtension, TokensChainExtension};
 
 pub type VaultId = primitives::VaultId<AccountId, CurrencyId>;
 
@@ -1145,7 +1142,8 @@ impl pallet_contracts::Config for Runtime {
 	type CallStack = [pallet_contracts::Frame<Self>; 5];
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-	type ChainExtension = (TokensChainExtension<Self, Tokens, AccountId>, PriceChainExtension<Self>);
+	type ChainExtension =
+		(TokensChainExtension<Self, Tokens, AccountId>, PriceChainExtension<Self>);
 	type Schedule = Schedule;
 	type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
 	type MaxCodeLen = ConstU32<{ 123 * 1024 }>;

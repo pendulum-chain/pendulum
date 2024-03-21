@@ -3,7 +3,7 @@
 
 use scale_info::prelude::vec::Vec;
 use sp_core::{Decode, Encode, MaxEncodedLen};
-use sp_runtime::{codec, ArithmeticError, TokenError, DispatchError};
+use sp_runtime::{codec, ArithmeticError, DispatchError, TokenError};
 
 pub use spacewalk_primitives::{Asset, CurrencyId};
 
@@ -159,7 +159,6 @@ fn trim_trailing_zeros(slice: &[u8]) -> &[u8] {
 	}
 	&slice[..slice.len() - trim_amount]
 }
-
 
 /// decode gets the slice from a Vec<u8> to decode it into its scale encoded type.
 pub fn decode<T: Decode>(input: Vec<u8>) -> Result<T, codec::Error> {

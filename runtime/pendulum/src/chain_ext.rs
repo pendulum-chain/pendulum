@@ -1,4 +1,4 @@
-use crate::{Runtime, Tokens, AccountId};
+use crate::{AccountId, Runtime, Tokens};
 
 // Define the global id's of our chain extensions
 use pallet_contracts::chain_extension::RegisteredChainExtension;
@@ -10,5 +10,5 @@ impl RegisteredChainExtension<Runtime> for TokensChainExtension<Runtime, Tokens,
 }
 
 impl RegisteredChainExtension<Runtime> for PriceChainExtension<Runtime> {
-    const ID: u16 = 02;
+	const ID: u16 = 02;
 }

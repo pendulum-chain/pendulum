@@ -274,8 +274,8 @@ runtime-benchmarks = [
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
     "runtime-common/runtime-benchmarks",
-	"orml-currencies-allowance-extension/runtime-benchmarks",
-	"treasury-buyout-extension/runtime-benchmarks",
+    "orml-currencies-allowance-extension/runtime-benchmarks",
+    "treasury-buyout-extension/runtime-benchmarks",
     "token-chain-extension/runtime-benchmarks",
     "price-chain-extension/runtime-benchmarks",
 ]

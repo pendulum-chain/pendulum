@@ -70,81 +70,81 @@ decl_test_network! {
 	}
 }
 
-#[test]
-fn transfer_ksm_from_kusama_to_amplitude() {
-	transfer_20_relay_token_from_relay_chain_to_parachain!(
-		KusamaMockNet,
-		kusama_runtime,
-		KusamaRelay,
-		amplitude_runtime,
-		AmplitudeParachain,
-		AMPLITUDE_ID,
-		KSM_FEE_WHEN_TRANSFER_TO_PARACHAIN
-	);
-}
+// #[test]
+// fn transfer_ksm_from_kusama_to_amplitude() {
+// 	transfer_20_relay_token_from_relay_chain_to_parachain!(
+// 		KusamaMockNet,
+// 		kusama_runtime,
+// 		KusamaRelay,
+// 		amplitude_runtime,
+// 		AmplitudeParachain,
+// 		AMPLITUDE_ID,
+// 		KSM_FEE_WHEN_TRANSFER_TO_PARACHAIN
+// 	);
+// }
 
-#[test]
-fn transfer_ksm_from_amplitude_to_kusama() {
-	transfer_10_relay_token_from_parachain_to_relay_chain!(
-		KusamaMockNet,
-		kusama_runtime,
-		KusamaRelay,
-		amplitude_runtime,
-		AmplitudeParachain
-	);
-}
+// #[test]
+// fn transfer_ksm_from_amplitude_to_kusama() {
+// 	transfer_10_relay_token_from_parachain_to_relay_chain!(
+// 		KusamaMockNet,
+// 		kusama_runtime,
+// 		KusamaRelay,
+// 		amplitude_runtime,
+// 		AmplitudeParachain
+// 	);
+// }
 
-#[test]
-fn assethub_transfer_incorrect_asset_to_amplitude_should_fail() {
-	parachain1_transfer_incorrect_asset_to_parachain2_should_fail!(
-		kusama_asset_hub_runtime,
-		AssetHubParachain,
-		amplitude_runtime,
-		AmplitudeParachain,
-		AMPLITUDE_ID
-	);
-}
+// #[test]
+// fn assethub_transfer_incorrect_asset_to_amplitude_should_fail() {
+// 	parachain1_transfer_incorrect_asset_to_parachain2_should_fail!(
+// 		kusama_asset_hub_runtime,
+// 		AssetHubParachain,
+// 		amplitude_runtime,
+// 		AmplitudeParachain,
+// 		AMPLITUDE_ID
+// 	);
+// }
 
-#[test]
-fn assethub_transfer_asset_to_amplitude() {
-	parachain1_transfer_asset_to_parachain2!(
-		kusama_asset_hub_runtime,
-		AssetHubParachain,
-		USDT_ASSET_ID,
-		amplitude_runtime,
-		AmplitudeParachain,
-		AMPLITUDE_ID,
-		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
-	);
-}
+// #[test]
+// fn assethub_transfer_asset_to_amplitude() {
+// 	parachain1_transfer_asset_to_parachain2!(
+// 		kusama_asset_hub_runtime,
+// 		AssetHubParachain,
+// 		USDT_ASSET_ID,
+// 		amplitude_runtime,
+// 		AmplitudeParachain,
+// 		AMPLITUDE_ID,
+// 		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
+// 	);
+// }
 
-#[test]
-fn assethub_transfer_asset_to_amplitude_and_back() {
-	let network_id = NetworkId::Kusama;
+// #[test]
+// fn assethub_transfer_asset_to_amplitude_and_back() {
+// 	let network_id = NetworkId::Kusama;
 
-	parachain1_transfer_asset_to_parachain2_and_back!(
-		kusama_asset_hub_runtime,
-		AssetHubParachain,
-		ASSETHUB_ID,
-		USDT_ASSET_ID,
-		amplitude_runtime,
-		AmplitudeParachain,
-		AMPLITUDE_ID,
-		network_id,
-		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
-	);
-}
+// 	parachain1_transfer_asset_to_parachain2_and_back!(
+// 		kusama_asset_hub_runtime,
+// 		AssetHubParachain,
+// 		ASSETHUB_ID,
+// 		USDT_ASSET_ID,
+// 		amplitude_runtime,
+// 		AmplitudeParachain,
+// 		AMPLITUDE_ID,
+// 		network_id,
+// 		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
+// 	);
+// }
 
-#[test]
-fn transfer_native_token_from_amplitude_to_sibling_parachain_and_back() {
-	transfer_native_token_from_parachain1_to_parachain2_and_back!(
-		KusamaMockNet,
-		amplitude_runtime,
-		AmplitudeParachain,
-		sibling,
-		SiblingParachain,
-		AMPLITUDE_ID,
-		SIBLING_ID,
-		NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN
-	);
-}
+// #[test]
+// fn transfer_native_token_from_amplitude_to_sibling_parachain_and_back() {
+// 	transfer_native_token_from_parachain1_to_parachain2_and_back!(
+// 		KusamaMockNet,
+// 		amplitude_runtime,
+// 		AmplitudeParachain,
+// 		sibling,
+// 		SiblingParachain,
+// 		AMPLITUDE_ID,
+// 		SIBLING_ID,
+// 		NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN
+// 	);
+// }

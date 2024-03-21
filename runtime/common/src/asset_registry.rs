@@ -74,6 +74,7 @@ impl<
 			None => return None,
 		};
 		let metadata = OrmlAssetRegistry::metadata(&asset_id)?;
+		log::warn!("metadata: {:?}", metadata);
 		Some(metadata.additional.fee_per_second)
 	}
 }

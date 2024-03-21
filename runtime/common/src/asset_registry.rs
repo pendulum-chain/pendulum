@@ -6,7 +6,7 @@ use orml_traits::{FixedConversionRateProvider as FixedConversionRateProviderTrai
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::Get;
-use sp_runtime::{BoundedVec, DispatchError, traits::PhantomData};
+use sp_runtime::{BoundedVec, DispatchError, traits::{PhantomData, Convert}};
 use sp_std::fmt::Debug;
 use spacewalk_primitives::CurrencyId;
 use xcm::opaque::v3::{Junction,MultiLocation};
@@ -56,9 +56,7 @@ impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for Cust
 }
 
 pub type AssetAuthority = AsEnsureOriginWithArg<EnsureRoot<AccountId>>;
-
-
-pub struct FixedConversionRateProvider<OrmlAssetRegistry>(PhantomData<OrmlAssetRegistry>);
+pub struct FixedConversionRateProvider<OrmlAssetRegistry, CurrencyIdConvert>(PhantomData<(OrmlAssetRegistry,CurrencyIdConvert)>);
 
 impl<
 		OrmlAssetRegistry: Inspect<
@@ -66,28 +64,16 @@ impl<
 			Balance = Balance,
 			CustomMetadata = asset_registry::CustomMetadata,
 		>,
-	> FixedConversionRateProviderTrait for FixedConversionRateProvider<OrmlAssetRegistry>
+		CurrencyIdConvert: Convert<MultiLocation, Option<CurrencyId>>,
+	> FixedConversionRateProviderTrait for FixedConversionRateProvider<OrmlAssetRegistry, CurrencyIdConvert>
 {
 	fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
-		log::warn!("getting for location: {:?}", location);
-		
-		// fix
-		let unanchored_location = match location {
-            MultiLocation { parents: 0, interior } => {
-     
-                match interior.pushed_front_with(Junction::Parachain(2094u32)) {
-                    Ok(new_interior) => MultiLocation {
-                        parents: 1,
-                        interior: new_interior,
-                    },
-                    Err(_) => return None, 
-                }
-            },
-  
-            x => *x,
-        };
-		log::warn!("getting for location adjusted: {:?}", unanchored_location);
-		let metadata = OrmlAssetRegistry::metadata_by_location(&unanchored_location)?;
+		let asset_id_maybe = CurrencyIdConvert::convert(location.clone());
+		let asset_id = match asset_id_maybe {
+			Some(id) => id,
+			None => return None,
+		};
+		let metadata = OrmlAssetRegistry::metadata(&asset_id)?;
 		Some(metadata.additional.fee_per_second)
 	}
 }

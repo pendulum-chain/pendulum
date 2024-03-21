@@ -333,27 +333,6 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 			.encode(),
 		),
 		(
-			AmplitudeCurrencyId::Native,
-			orml_asset_registry::AssetMetadata {
-				decimals: 12u32,
-				name: "Amplitude".as_bytes().to_vec(),
-				symbol: "AMPE".as_bytes().to_vec(),
-				existential_deposit: 1_000u128,
-				location: Some(VersionedMultiLocation::V3(MultiLocation::new(
-					0,
-					X1(PalletInstance(10)),
-				))),
-				additional: CustomMetadata {
-					dia_keys: DiaKeys::<StringLimit> {
-						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
-						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
-					},
-					fee_per_second: UNIT,
-				},
-			}
-			.encode(),
-		),
-		(
 			AmplitudeCurrencyId::XCM(1),
 			orml_asset_registry::AssetMetadata {
 				decimals: 12u32,

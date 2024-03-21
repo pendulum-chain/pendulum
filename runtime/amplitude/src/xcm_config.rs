@@ -262,7 +262,7 @@ pub type Barrier = (
 );
 
 pub type Traders = AssetRegistryTrader<
-	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry>>,
+	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, CurrencyIdConvert>>,
 	XcmFeesTo32ByteAccount<LocalAssetTransactor, AccountId, AmplitudeTreasuryAccount>,
 >;
 

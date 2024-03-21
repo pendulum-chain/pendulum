@@ -10332,7 +10332,6 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "log",
  "orml-asset-registry",
  "orml-traits",
  "orml-xcm-support",

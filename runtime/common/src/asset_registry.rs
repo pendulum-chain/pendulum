@@ -68,7 +68,7 @@ impl<
 	> FixedConversionRateProviderTrait for FixedConversionRateProvider<OrmlAssetRegistry, CurrencyIdConvert>
 {
 	fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
-		let asset_id_maybe = CurrencyIdConvert::convert(location.clone());
+		let asset_id_maybe = CurrencyIdConvert::convert(*location);
 		let asset_id = match asset_id_maybe {
 			Some(id) => id,
 			None => return None,

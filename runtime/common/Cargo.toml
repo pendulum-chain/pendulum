@@ -14,7 +14,6 @@ targets = ["x86_64-unknown-linux-gnu"]
 paste = "1.0.14"
 parity-scale-codec = { version = "3.1.5", default-features = false, features = ["derive"] }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-log = { version = "0.4.17", default-features = false }
 
 frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false, optional = true }
@@ -42,7 +41,6 @@ default = [
 ]
 
 std = [
-    "log/std",
     "parity-scale-codec/std",
     "scale-info/std",
     "frame-benchmarking?/std",

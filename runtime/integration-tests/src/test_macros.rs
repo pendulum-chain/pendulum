@@ -642,6 +642,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 		use pendulum_runtime::assets::xcm_assets;
 		use orml_traits::MultiCurrency;
 
+		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;
 		use $parachain2_runtime::CurrencyId as Parachain2CurrencyId;
 
 		$mocknet::reset();
@@ -687,14 +688,15 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 		$parachain1::execute_with(|| {
 			use $parachain1_runtime::{RuntimeEvent, System, Treasury};
 			// given the configuration in pendulum's xcm_config, we expect the callback (in this case a Remark)
-			// to be executed
+			// to be executed and the treasury to be rewarded with the expected fee
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::System(frame_system::Event::Remarked { .. })
 			)));
 
+			// For parachain 1 (Pendulum) BRZ token is located at index 6
 			assert_eq!(
-				$parachain1_runtime::Currencies::free_balance(xcm_assets::MOONBEAM_BRZ_id(), &Treasury::account_id()),
+				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::XCM(6), &Treasury::account_id()),
 				$expected_fee
 			);
 

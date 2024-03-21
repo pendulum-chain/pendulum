@@ -102,10 +102,8 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
                     Err(_) => return None, 
                 }
             },
-  
             x => x,
         };
-
 		AssetRegistry::location_to_asset_id(unanchored_location)
 	}
 }

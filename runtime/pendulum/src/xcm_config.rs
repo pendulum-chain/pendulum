@@ -34,7 +34,7 @@ use xcm_executor::{
 
 use runtime_common::{
 	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
-	parachains::polkadot::{asset_hub, equilibrium, moonbeam, polkadex},
+	
 	RelativeValue,
 };
 
@@ -50,6 +50,7 @@ use crate::{
 		xcm_assets,
 	},
 	ConstU32,
+	definitions::{asset_hub, equilibrium, moonbeam, polkadex}
 };
 
 use super::{

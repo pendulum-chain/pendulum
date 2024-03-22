@@ -11,6 +11,7 @@ mod chain_ext;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
+pub mod definitions;
 
 use crate::zenlink::*;
 use bifrost_farming as farming;

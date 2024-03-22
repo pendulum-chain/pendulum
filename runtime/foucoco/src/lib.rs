@@ -10,6 +10,7 @@ mod assets;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
+pub mod definitions;
 
 use crate::zenlink::*;
 use xcm::v3::MultiLocation;

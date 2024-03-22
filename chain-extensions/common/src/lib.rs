@@ -5,8 +5,6 @@ use scale_info::prelude::vec::Vec;
 use sp_core::{Decode, Encode, MaxEncodedLen};
 use sp_runtime::{codec, ArithmeticError, DispatchError, TokenError};
 
-pub use spacewalk_primitives::{Asset, CurrencyId};
-
 /// Address is a type alias for easier readability of address (accountId) communicated between contract and chain extension.
 pub type Address = [u8; 32];
 /// Amount is a type alias for easier readability of amount communicated between contract and chain extension.

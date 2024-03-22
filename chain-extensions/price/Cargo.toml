@@ -56,14 +56,3 @@ std = [
     "spacewalk-primitives/std",
     "chain-extension-common/std",
 ]
-runtime-benchmarks = [
-    "frame-system/runtime-benchmarks",
-    "pallet-contracts/try-runtime",
-    "frame-support/runtime-benchmarks",
-]
-
-try-runtime = [
-    "pallet-contracts/try-runtime",
-    "frame-system/try-runtime",
-]
-

@@ -53,15 +53,3 @@ std = [
     "chain-extension-common/std",
     "sp-std/std",
 ]
-
-runtime-benchmarks = [
-    "frame-system/runtime-benchmarks",
-    "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks",
-]
-
-try-runtime = [
-    "pallet-contracts/try-runtime",
-    "frame-system/try-runtime",
-]
-

@@ -276,8 +276,6 @@ runtime-benchmarks = [
     "runtime-common/runtime-benchmarks",
     "orml-currencies-allowance-extension/runtime-benchmarks",
     "treasury-buyout-extension/runtime-benchmarks",
-    "token-chain-extension/runtime-benchmarks",
-    "price-chain-extension/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -336,6 +334,4 @@ try-runtime = [
     "vesting-manager/try-runtime",
     "bifrost-farming/try-runtime",
     "zenlink-protocol/try-runtime",
-    "token-chain-extension/try-runtime",
-    "price-chain-extension/try-runtime",
 ]

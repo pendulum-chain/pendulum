@@ -105,8 +105,6 @@ where
 	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
-// this was in common, but we don't use it in amplitude's chain extension, is it needed?
-
 /// CoinInfo is almost the same as Dia's CoinInfo, but with Encode, Decode, and TypeInfo which are necessary for contract to chain extension communication. Implements From<dia::CoinInfo> to make conversion.
 #[derive(Debug, Clone, PartialEq, Eq, codec::Encode, codec::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]

@@ -21,9 +21,6 @@ pallet-contracts = { git = "https://github.com/paritytech/substrate", default-fe
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 
 
-# Custom libraries for Spacewalk
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "3c03e759a6f600ea72d636d4f9cc4b05d633201c" }
-
 [features]
 default = [
     "std",
@@ -37,6 +34,5 @@ std = [
     "sp-runtime/std",
     "frame-system/std",
     "pallet-contracts/std",
-    "spacewalk-primitives/std",
 ]
 

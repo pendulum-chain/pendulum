@@ -1,10 +1,11 @@
 
+// We reuse the common constant definition for the asset hub
 pub mod asset_hub {
     pub use runtime_common::parachains::asset_hub::*;
 }
 
 pub mod equilibrium {
-    // TOOD maybe move all common imports to outside each module
+
     use runtime_common::parachain_asset_location;
     pub const PARA_ID: u32 = 2011;
     pub const ASSET_PALLET_INDEX: u8 = 11;
@@ -51,4 +52,54 @@ pub mod polkadex {
     pub const PARA_ID: u32 = 2040;
 
     parachain_asset_location!(PDEX, X1(Parachain(PARA_ID)));
+}
+
+#[cfg(test)]
+mod tests {
+	use super::{polkadex, equilibrium, moonbeam};
+	use xcm::{
+		latest::prelude::{AccountKey20, PalletInstance, Parachain},
+		prelude::GeneralIndex,
+	};
+
+	#[test]
+	fn test_BRZ() {
+		let brz_loc = moonbeam::BRZ_location();
+		let mut junctions = brz_loc.interior().into_iter();
+
+		assert_eq!(junctions.next(), Some(&Parachain(moonbeam::PARA_ID)));
+		assert_eq!(junctions.next(), Some(&PalletInstance(moonbeam::ASSET_PALLET_INDEX)));
+		assert_eq!(
+			junctions.next(),
+			Some(&AccountKey20 { network: None, key: moonbeam::BRZ_ASSET_ACCOUNT_IN_BYTES })
+		);
+		assert_eq!(junctions.next(), None);
+	}
+
+	#[test]
+	fn test_GLMR() {
+		let glmr_loc = moonbeam::GLMR_location();
+		let mut junctions = glmr_loc.interior().into_iter();
+
+		assert_eq!(junctions.next(), Some(&Parachain(moonbeam::PARA_ID)));
+		assert_eq!(junctions.next(), Some(&PalletInstance(moonbeam::BALANCES_PALLET_INDEX)));
+		assert_eq!(junctions.next(), None);
+	}
+
+
+
+	#[test]
+	fn test_constants() {
+		let expected_EQ_value = 25_969;
+		assert_eq!(equilibrium::EQ_ASSET_ID, expected_EQ_value);
+
+		let eq_interior = equilibrium::EQ_location().interior;
+		let mut junctions = eq_interior.into_iter();
+
+		assert_eq!(junctions.next(), Some(Parachain(equilibrium::PARA_ID)));
+		assert_eq!(junctions.next(), Some(PalletInstance(equilibrium::ASSET_PALLET_INDEX)));
+		assert_eq!(junctions.next(), Some(GeneralIndex(equilibrium::EQ_ASSET_ID)));
+		assert_eq!(junctions.next(), None);
+
+	}
 }

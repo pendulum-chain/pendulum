@@ -174,64 +174,29 @@ pub mod parachains {
 	
 }
 
-// #[cfg(test)]
-// mod tests {
-// 	use super::parachains::polkadot::*;
-// 	use xcm::{
-// 		latest::prelude::{AccountKey20, PalletInstance, Parachain},
-// 		prelude::GeneralIndex,
-// 	};
+#[cfg(test)]
+mod tests {
+	use crate::parachains::asset_hub;
+	use xcm::{
+		latest::prelude::{PalletInstance, Parachain},
+		prelude::GeneralIndex,
+	};
 
-// 	#[test]
-// 	fn test_BRZ() {
-// 		let brz_loc = moonbeam::BRZ_location();
-// 		let mut junctions = brz_loc.interior().into_iter();
+	#[test]
+	fn test_PINK() {
+		let pink_loc = asset_hub::PINK_location();
+		let mut junctions = pink_loc.interior().into_iter();
 
-// 		assert_eq!(junctions.next(), Some(&Parachain(moonbeam::PARA_ID)));
-// 		assert_eq!(junctions.next(), Some(&PalletInstance(moonbeam::ASSET_PALLET_INDEX)));
-// 		assert_eq!(
-// 			junctions.next(),
-// 			Some(&AccountKey20 { network: None, key: moonbeam::BRZ_ASSET_ACCOUNT_IN_BYTES })
-// 		);
-// 		assert_eq!(junctions.next(), None);
-// 	}
+		assert_eq!(junctions.next(), Some(&Parachain(asset_hub::PARA_ID)));
+		assert_eq!(junctions.next(), Some(&PalletInstance(asset_hub::ASSET_PALLET_INDEX)));
+		assert_eq!(junctions.next(), Some(&GeneralIndex(asset_hub::PINK_ASSET_ID)));
+		assert_eq!(junctions.next(), None);
 
-// 	#[test]
-// 	fn test_GLMR() {
-// 		let glmr_loc = moonbeam::GLMR_location();
-// 		let mut junctions = glmr_loc.interior().into_iter();
+	}
 
-// 		assert_eq!(junctions.next(), Some(&Parachain(moonbeam::PARA_ID)));
-// 		assert_eq!(junctions.next(), Some(&PalletInstance(moonbeam::BALANCES_PALLET_INDEX)));
-// 		assert_eq!(junctions.next(), None);
-// 	}
-
-// 	#[test]
-// 	fn test_PINK() {
-// 		let pink_loc = asset_hub::PINK_location();
-// 		let mut junctions = pink_loc.interior().into_iter();
-
-// 		assert_eq!(junctions.next(), Some(&Parachain(asset_hub::PARA_ID)));
-// 		assert_eq!(junctions.next(), Some(&PalletInstance(asset_hub::ASSET_PALLET_INDEX)));
-// 		assert_eq!(junctions.next(), Some(&GeneralIndex(asset_hub::PINK_ASSET_ID)));
-// 		assert_eq!(junctions.next(), None);
-
-// 	}
-
-// 	#[test]
-// 	fn test_constants() {
-// 		let expected_EQ_value = 25_969;
-// 		assert_eq!(equilibrium::EQ_ASSET_ID, expected_EQ_value);
-
-// 		let eq_interior = equilibrium::EQ_location().interior;
-// 		let mut junctions = eq_interior.into_iter();
-
-// 		assert_eq!(junctions.next(), Some(Parachain(equilibrium::PARA_ID)));
-// 		assert_eq!(junctions.next(), Some(PalletInstance(equilibrium::ASSET_PALLET_INDEX)));
-// 		assert_eq!(junctions.next(), Some(GeneralIndex(equilibrium::EQ_ASSET_ID)));
-// 		assert_eq!(junctions.next(), None);
-
-// 		let expected_USDT_value = 1984;
-// 		assert_eq!(asset_hub::USDT_ASSET_ID, expected_USDT_value);
-// 	}
-// }
+	#[test]
+	fn test_constants() {
+		let expected_USDT_value = 1984;
+		assert_eq!(asset_hub::USDT_ASSET_ID, expected_USDT_value);
+	}
+}

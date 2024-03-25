@@ -190,7 +190,8 @@ pub mod parachains {
 
 			// The address of the BRZ token on Moonbeam `0x3225edCe8aD30Ae282e62fa32e7418E4b9cf197b` as byte array
 			pub const BRZ_ASSET_ACCOUNT_IN_BYTES: [u8; 20] = [
-				50, 37, 237, 206, 138, 211, 10, 226, 130, 230, 47, 163, 46, 116, 24, 228, 185, 207, 25, 123
+				50, 37, 237, 206, 138, 211, 10, 226, 130, 230, 47, 163, 46, 116, 24, 228, 185, 207,
+				25, 123,
 			];
 
 			parachain_asset_location!(
@@ -283,7 +284,6 @@ mod tests {
 		assert_eq!(junctions.next(), Some(&PalletInstance(asset_hub::ASSET_PALLET_INDEX)));
 		assert_eq!(junctions.next(), Some(&GeneralIndex(asset_hub::PINK_ASSET_ID)));
 		assert_eq!(junctions.next(), None);
-
 	}
 
 	#[test]

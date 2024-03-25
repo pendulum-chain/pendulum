@@ -10,7 +10,7 @@ use sp_std::fmt::Debug;
 use spacewalk_primitives::CurrencyId;
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
-pub struct StringLimit; 
+pub struct StringLimit;
 impl Get<u32> for StringLimit {
 	fn get() -> u32 {
 		50

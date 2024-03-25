@@ -109,8 +109,10 @@ use oracle::testing_utils::MockDataFeeder;
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 // XCM Imports
-use crate::chain_ext::Psp22Extension;
 use xcm_executor::XcmExecutor;
+
+// Chain Extension
+use crate::chain_ext::{PriceChainExtension, TokensChainExtension};
 
 pub type VaultId = primitives::VaultId<AccountId, CurrencyId>;
 
@@ -1075,7 +1077,8 @@ impl pallet_contracts::Config for Runtime {
 	type CallStack = [pallet_contracts::Frame<Self>; 5];
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-	type ChainExtension = Psp22Extension;
+	type ChainExtension =
+		(TokensChainExtension<Self, Tokens, AccountId>, PriceChainExtension<Self>);
 	type Schedule = Schedule;
 	type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
 	type MaxCodeLen = ConstU32<{ 123 * 1024 }>;

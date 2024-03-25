@@ -1,0 +1,58 @@
+[package]
+name = "price-chain-extension"
+description = "Chain extensions for price info"
+authors = ["Pendulum"]
+edition = "2021"
+version = "0.1.0"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+chain-extension-common =  { path = "../common", default-features = false }
+
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+log = { version = "0.4.17", default-features = false }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+
+# Substrate
+frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
+frame-system = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
+sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
+pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "3c03e759a6f600ea72d636d4f9cc4b05d633201c" }
+
+# Open Runtime Module Library
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.42" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.42" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.42" }
+
+# Pendulum Pallets
+vesting-manager = { path = "../../pallets/vesting-manager", default-features = false }
+
+# DIA
+dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.42" }
+
+
+[features]
+default = [
+    "std",
+]
+std = [
+    "codec/std",
+    "log/std",
+    "scale-info/std",
+    "frame-support/std",
+    "frame-system/std",
+    "orml-currencies/std",
+    "orml-traits/std",
+    "orml-tokens/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "vesting-manager/std",
+    "dia-oracle/std",
+    "pallet-contracts/std",
+    "spacewalk-primitives/std",
+    "chain-extension-common/std",
+]

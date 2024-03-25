@@ -4,7 +4,7 @@ use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ConstU32, ContainsPair, Everything, Nothing, ProcessMessageError},
 };
-use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
+use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader, AssetMetadata};
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
@@ -12,7 +12,6 @@ use orml_traits::{
 use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
-use polkadot_runtime_common::impls::ToAuthor;
 use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
@@ -23,16 +22,16 @@ use xcm_builder::{
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 
-use runtime_common::{parachains::moonbase_alpha_relay::moonbase_alpha, asset_registry::FixedConversionRateProvider};
+use runtime_common::{asset_registry::FixedConversionRateProvider, CurrencyIdConvert, AssetRegistryInspect,
+					asset_registry::CustomMetadata};
 
 use crate::assets::{
 	native_locations::{native_location_external_pov, native_location_local_pov},
-	xcm_assets,
 };
 
 use super::{
 	AccountId, AssetRegistry, Balance, Balances, Currencies, CurrencyId, FoucocoTreasuryAccount, ParachainInfo,
-	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, WeightToFee,
+	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
 	XcmpQueue,
 };
 use frame_system::EnsureRoot;
@@ -58,61 +57,19 @@ pub type LocationToAccountId = (
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
 
-/// CurrencyIdConvert
-/// This type implements conversions from our `CurrencyId` type into `MultiLocation` and vice-versa.
-/// A currency locally is identified with a `CurrencyId` variant but in the network it is identified
-/// in the form of a `MultiLocation`, in this case a pCfg (Para-Id, Currency-Id).
-pub struct CurrencyIdConvert;
-
-impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
-	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		AssetRegistry::metadata(&id)
-			.filter(|m| m.location.is_some())
-			.and_then(|m| m.location)
-			.and_then(|l| l.try_into().ok())
+/// Implement a wrapper trait arround AssetRegistry that allows us to fetch the metadata.
+/// Needed for generic CurrencyIdConvert implementation.
+pub struct AssetRegistryInspector;
+impl AssetRegistryInspect for AssetRegistryInspector {
+	fn metadata(id: &CurrencyId) -> Option<AssetMetadata<Balance, CustomMetadata>>{
+		AssetRegistry::metadata(id)
+	}
+	fn location_to_asset_id(multilocation: MultiLocation) ->  Option<CurrencyId>{
+		AssetRegistry::location_to_asset_id(multilocation)
 	}
 }
 
-impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
-	fn convert(location: MultiLocation) -> Option<CurrencyId>  {
-		let para_id = ParachainInfo::parachain_id();
 
-		let unanchored_location = match location {
-            MultiLocation { parents: 0, interior } => {
-     
-                match interior.pushed_front_with(Parachain(u32::from(para_id))) {
-                    Ok(new_interior) => MultiLocation {
-                        parents: 1,
-                        interior: new_interior,
-                    },
-                    Err(_) => return None, 
-                }
-            },
-            x => x,
-        };
-		AssetRegistry::location_to_asset_id(unanchored_location)
-	}
-}
-
-impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
-	fn convert(a: MultiAsset) -> Option<CurrencyId> {
-		if let MultiAsset { id: AssetId::Concrete(id), fun: _ } = a {
-			Self::convert(id)
-		} else {
-			None
-		}
-	}
-}
-
-/// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
-/// Here we need to know the canonical representation of all the tokens we handle in order to
-/// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
-impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
-	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
-			.ok_or(location)
-	}
-}
 
 /// A `FilterAssetLocation` implementation. Filters multi native assets whose
 /// reserve is same with `origin`.
@@ -136,11 +93,11 @@ pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	// Use this fungibles implementation
 	Currencies,
 	(), // We don't handle unknown assets.
-	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
+	IsNativeConcrete<CurrencyId, CurrencyIdConvert<ParachainInfo, AssetRegistryInspector>>,
 	AccountId,
 	LocationToAccountId,
 	CurrencyId,
-	CurrencyIdConvert,
+	CurrencyIdConvert<ParachainInfo, AssetRegistryInspector>,
 	DepositToAlternative<FoucocoTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
@@ -256,7 +213,7 @@ pub type Barrier = (
 );
 
 pub type Traders = AssetRegistryTrader<
-	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, CurrencyIdConvert>>,
+	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, CurrencyIdConvert<ParachainInfo, AssetRegistryInspector>>>,
 	XcmFeesTo32ByteAccount<LocalAssetTransactor, AccountId, FoucocoTreasuryAccount>,
 >;
 
@@ -347,7 +304,7 @@ impl orml_xtokens::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = CurrencyIdConvert;
+	type CurrencyIdConvert = CurrencyIdConvert<ParachainInfo, AssetRegistryInspector>;
 	type AccountIdToMultiLocation = AccountIdToMultiLocation;
 	type SelfLocation = SelfLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;

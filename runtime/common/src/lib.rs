@@ -2,9 +2,15 @@
 #![allow(non_snake_case)]
 
 use sp_runtime::{
-	traits::{IdentifyAccount, Verify},
+	traits::{IdentifyAccount, Verify,Convert},
 	DispatchError, MultiSignature,
 };
+use frame_support::pallet_prelude::Get;
+use cumulus_primitives_core::ParaId;
+use spacewalk_primitives::CurrencyId;
+use xcm::v3::{MultiAsset, AssetId, Junction::Parachain, MultiLocation};
+use orml_asset_registry::AssetMetadata;
+use asset_registry::CustomMetadata;
 
 pub mod asset_registry;
 pub mod chain_ext;
@@ -52,6 +58,8 @@ pub type Index = u32;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
+
+
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -218,6 +226,67 @@ pub mod parachains {
 			);
 		}
 	}
+}
+
+/// CurrencyIdConvert
+/// This type implements conversions from our `CurrencyId` type into `MultiLocation` and vice-versa.
+/// A currency locally is identified with a `CurrencyId` variant but in the network it is identified
+/// in the form of a `MultiLocation`, in this case a pCfg (Para-Id, Currency-Id).
+pub struct CurrencyIdConvert<ParachainId, AssetRegistry>(sp_std::marker::PhantomData<(ParachainId, AssetRegistry)>);
+
+impl<ParachainId: Get<ParaId>, AssetRegistryInspector: AssetRegistryInspect> Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert<ParachainId, AssetRegistryInspector> {
+	fn convert(id: CurrencyId) -> Option<MultiLocation> {
+		AssetRegistryInspector::metadata(&id)
+			.filter(|m| m.location.is_some())
+			.and_then(|m| m.location)
+			.and_then(|l| l.try_into().ok())
+	}
+}
+
+impl<ParachainId: Get<ParaId>, AssetRegistryInspector: AssetRegistryInspect> Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert<ParachainId, AssetRegistryInspector> {
+	fn convert(location: MultiLocation) -> Option<CurrencyId>  {
+		let para_id = ParachainId::get();
+
+		let unanchored_location = match location {
+            MultiLocation { parents: 0, interior } => {
+     
+                match interior.pushed_front_with(Parachain(u32::from(para_id))) {
+                    Ok(new_interior) => MultiLocation {
+                        parents: 1,
+                        interior: new_interior,
+                    },
+                    Err(_) => return None, 
+                }
+            },
+            x => x,
+        };
+		AssetRegistryInspector::location_to_asset_id(unanchored_location)
+	}
+}
+
+impl<ParachainId: Get<ParaId>, AssetRegistryInspector: AssetRegistryInspect> Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert<ParachainId, AssetRegistryInspector> {
+	fn convert(a: MultiAsset) -> Option<CurrencyId> {
+		if let MultiAsset { id: AssetId::Concrete(id), fun: _ } = a {
+			<Self as Convert<MultiLocation, Option<CurrencyId>>>::convert(id)
+		} else {
+			None
+		}
+	}
+}
+
+/// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
+/// Here we need to know the canonical representation of all the tokens we handle in order to
+/// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
+impl<ParachainId: Get<ParaId>, AssetRegistryInspector: AssetRegistryInspect> xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert<ParachainId, AssetRegistryInspector> {
+	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
+		<CurrencyIdConvert<ParachainId, AssetRegistryInspector> as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
+			.ok_or(location)
+	}
+}
+
+pub trait AssetRegistryInspect {
+    fn location_to_asset_id(multilocation: MultiLocation) ->  Option<CurrencyId>;
+	fn metadata(id: &CurrencyId) -> Option<AssetMetadata<Balance, CustomMetadata>>;
 }
 
 #[cfg(test)]

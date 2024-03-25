@@ -10328,6 +10328,7 @@ dependencies = [
 name = "runtime-common"
 version = "0.1.0"
 dependencies = [
+ "cumulus-primitives-core",
  "dia-oracle",
  "frame-benchmarking",
  "frame-support",

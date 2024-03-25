@@ -261,6 +261,7 @@ dependencies = [
  "polkadot-parachain",
  "polkadot-runtime-common",
  "pooled-rewards",
+ "price-chain-extension",
  "redeem",
  "replace",
  "reward-distribution",
@@ -285,6 +286,7 @@ dependencies = [
  "staking",
  "stellar-relay",
  "substrate-wasm-builder",
+ "token-chain-extension",
  "treasury-buyout-extension",
  "vault-registry",
  "vesting-manager",
@@ -1120,6 +1122,20 @@ dependencies = [
  "cipher 0.3.0",
  "poly1305",
  "zeroize",
+]
+
+[[package]]
+name = "chain-extension-common"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-contracts",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -3171,6 +3187,7 @@ dependencies = [
  "polkadot-parachain",
  "polkadot-runtime-common",
  "pooled-rewards",
+ "price-chain-extension",
  "redeem",
  "replace",
  "reward-distribution",
@@ -3195,6 +3212,7 @@ dependencies = [
  "staking",
  "stellar-relay",
  "substrate-wasm-builder",
+ "token-chain-extension",
  "treasury-buyout-extension",
  "vault-registry",
  "xcm",
@@ -8013,6 +8031,7 @@ dependencies = [
  "polkadot-parachain",
  "polkadot-runtime-common",
  "pooled-rewards",
+ "price-chain-extension",
  "redeem",
  "replace",
  "reward-distribution",
@@ -8037,6 +8056,7 @@ dependencies = [
  "staking",
  "stellar-relay",
  "substrate-wasm-builder",
+ "token-chain-extension",
  "vault-registry",
  "vesting-manager",
  "xcm",
@@ -9473,6 +9493,27 @@ checksum = "6c8646e95016a7a6c4adea95bafa8a16baab64b583356217f2c85db4a39d9a86"
 dependencies = [
  "proc-macro2",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "price-chain-extension"
+version = "0.1.0"
+dependencies = [
+ "chain-extension-common",
+ "dia-oracle",
+ "frame-support",
+ "frame-system",
+ "log",
+ "orml-currencies",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.42)",
+ "orml-traits",
+ "pallet-contracts",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "spacewalk-primitives",
+ "vesting-manager",
 ]
 
 [[package]]
@@ -13689,6 +13730,26 @@ name = "tinyvec_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
+
+[[package]]
+name = "token-chain-extension"
+version = "0.1.0"
+dependencies = [
+ "chain-extension-common",
+ "frame-support",
+ "frame-system",
+ "log",
+ "orml-currencies",
+ "orml-currencies-allowance-extension",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.42)",
+ "orml-traits",
+ "pallet-contracts",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "spacewalk-primitives",
+]
 
 [[package]]
 name = "tokio"

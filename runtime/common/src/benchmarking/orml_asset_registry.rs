@@ -43,7 +43,7 @@ pub mod benchmarks {
 					symbol: BoundedVec::truncate_from(longest_vec()),
 				},
 				fee_per_second: 123,
-			}
+			},
 		}
 	}
 

@@ -27,10 +27,11 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
+		Zero, One,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchError, FixedPointNumber, MultiAddress, Perbill, Permill,
-	Perquintill, SaturatedConversion,
+	Perquintill, SaturatedConversion, FixedU128, 
 };
 
 use bifrost_farming as farming;
@@ -42,16 +43,11 @@ use spacewalk_primitives::{
 	UnsignedInner,
 };
 
-use oracle::{
-	dia,
-	dia::{DiaOracleAdapter, NativeCurrencyKey, XCMCurrencyConversion},
-	OracleKey,
-};
 
 #[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
 use oracle::testing_utils::MockDataFeeder;
 
-use sp_std::{marker::PhantomData, prelude::*};
+use sp_std::{marker::PhantomData, prelude::*, fmt::Debug};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -89,6 +85,7 @@ pub use nomination::Event as NominationEvent;
 use oracle::{
 	dia,
 	dia::{DiaOracleAdapter, NativeCurrencyKey, XCMCurrencyConversion},
+	OracleKey,
 };
 pub use redeem::{Event as RedeemEvent, RedeemRequest};
 pub use replace::{Event as ReplaceEvent, ReplaceRequest};
@@ -426,7 +423,8 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::PooledVaultRewards(_) |
 			RuntimeCall::RewardDistribution(_) |
 			RuntimeCall::Farming(_) |
-			RuntimeCall::Proxy(_) => true,
+			RuntimeCall::Proxy(_) |
+			RuntimeCall::TreasuryBuyoutExtension(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -1157,7 +1155,7 @@ where
 			frame_system::CheckNonce::<Runtime>::from(index),
 			frame_system::CheckWeight::<Runtime>::new(),
 			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
-			treasury_buyout_extension::CheckBuyout<Runtime>,
+			treasury_buyout_extension::CheckBuyout::<Runtime>::new(),
 		);
 
 		let raw_payload = SignedPayload::new(call, extra).ok()?;
@@ -1553,6 +1551,7 @@ construct_runtime!(
 		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,
 
 		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
+		TreasuryBuyoutExtension: treasury_buyout_extension::{Pallet, Storage, Call, Event<T>} = 82,
 
 		//Farming
 		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,

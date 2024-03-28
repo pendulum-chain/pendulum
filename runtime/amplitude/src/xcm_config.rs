@@ -28,7 +28,7 @@ use xcm_executor::{
 	XcmExecutor,
 };
 
-use runtime_common::{parachains::kusama::asset_hub, RelativeValue};
+use runtime_common::{parachains::asset_hub, RelativeValue};
 
 use cumulus_primitives_utility::{
 	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,

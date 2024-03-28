@@ -15,7 +15,7 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::MAXIMUM_BLOCK_WEIGHT;
-use runtime_common::parachains::polkadot::asset_hub;
+use runtime_common::parachains::asset_hub;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
@@ -45,7 +45,7 @@ use xcm_builder::{
 
 use crate::{AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
 
-use runtime_common::parachains::polkadot::moonbeam::BRZ_location;
+use pendulum_runtime::definitions::moonbeam::BRZ_location;
 
 const XCM_ASSET_RELAY_DOT: u8 = 0;
 const XCM_ASSET_ASSETHUB_USDT: u8 = 1;

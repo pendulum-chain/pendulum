@@ -10,7 +10,7 @@ use sp_io::TestExternalities;
 use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::Weight;
 
-use runtime_common::parachains::polkadot::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
+use pendulum_runtime::definitions::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
 use statemine_runtime as kusama_asset_hub_runtime;
 use statemint_runtime as polkadot_asset_hub_runtime;
 

@@ -13,7 +13,7 @@ use crate::{
 };
 
 use frame_support::assert_ok;
-use runtime_common::parachains::polkadot::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
+use pendulum_runtime::definitions::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
 use statemint_runtime as polkadot_asset_hub_runtime;
 use xcm::latest::NetworkId;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};

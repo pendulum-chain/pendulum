@@ -21,11 +21,12 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
-use runtime_common::parachains::moonbase_alpha_relay::moonbase_alpha;
-
-use crate::assets::{
+use crate::{
+	definitions::moonbase_alpha_relay::moonbase_alpha,
+	assets::{
 	native_locations::{native_location_external_pov, native_location_local_pov},
 	xcm_assets,
+	},
 };
 
 use super::{

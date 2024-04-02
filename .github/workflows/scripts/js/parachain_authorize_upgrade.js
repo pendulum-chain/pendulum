@@ -1,3 +1,9 @@
+// This code will submit a transaction to propose an `authorizeUpgrade`
+// steps:
+// 1. npm init -y
+// 2. npm install
+// 3. node parachain_authorize_upgrade.js <chain> <compressed.wasm>
+
 const { ApiPromise, WsProvider, Keyring } = require("@polkadot/api");
 const { blake2AsHex } = require("@polkadot/util-crypto");
 const readline = require("node:readline/promises");
@@ -10,70 +16,47 @@ const rl = readline.createInterface({ input: stdin, output: stdout });
 async function submitExtrinsic(transaction, keypair) {
     console.log("Submit transaction: ", transaction);
 
-    // await new Promise((resolve, reject) => {
-    //     transaction.signAndSend(keypair, ({ status, dispatchError }) => {
-    //         // status would still be set, but in the case of error we can shortcut
-    //         // to just check it (so an error would indicate InBlock or Finalized)
-    //         if (dispatchError) {
-    //             if (dispatchError.isModule) {
-    //                 // for module errors, we have the section indexed, lookup
-    //                 const decoded = api.registry.findMetaError(dispatchError.asModule);
-    //                 const { docs, name, section } = decoded;
-    //
-    //                 console.log(`${section}.${name}: ${docs.join(" ")}`);
-    //             } else {
-    //                 // Other, CannotLookup, BadOrigin, no extra info
-    //                 console.log(dispatchError.toString());
-    //             }
-    //             reject();
-    //         }
-    //
-    //         if (status.isInBlock) {
-    //             console.log("Success: transaction in block");
-    //             resolve();
-    //         }
-    //
-    //         if (status.isFinalized) {
-    //             console.log("Transaction finalized");
-    //         }
-    //     });
-    // });
-}
+    await new Promise((resolve, reject) => {
+        transaction.signAndSend(keypair, ({ status, dispatchError }) => {
+            // status would still be set, but in the case of error we can shortcut
+            // to just check it (so an error would indicate InBlock or Finalized)
+            if (dispatchError) {
+                if (dispatchError.isModule) {
+                    // for module errors, we have the section indexed, lookup
+                    const decoded = api.registry.findMetaError(dispatchError.asModule);
+                    const { docs, name, section } = decoded;
 
-async function democracyProposal(call, { api, submitterKeypair }) {
-    console.log("Preimage data", call.inner.toHex());
-    console.log("Preimage hash", `0x${Buffer.from(call.inner.hash).toString("hex")}`);
+                    console.log(`${section}.${name}: ${docs.join(" ")}`);
+                } else {
+                    // Other, CannotLookup, BadOrigin, no extra info
+                    console.log(dispatchError.toString());
+                }
+                reject();
+            }
 
-    const submitPreimageTransaction = api.tx.preimage.notePreimage(call.inner.toHex());
-    await submitExtrinsic(submitPreimageTransaction, submitterKeypair);
+            if (status.isInBlock) {
+                console.log("Success: transaction in block");
+                resolve();
+            }
 
-    const callLength = (call.inner.toHex().length - 2) / 2;
-    const externalProposeTransaction = api.tx.democracy.externalProposeMajority({
-        Lookup: { hash: call.inner.hash, len: callLength },
+            if (status.isFinalized) {
+                console.log("Transaction finalized");
+            }
+        });
     });
-    const threshold = 3;
-
-    const councilTransaction = api.tx.council.propose(
-        threshold,
-        externalProposeTransaction,
-        (externalProposeTransaction.toHex().length - 2) / 2
-    );
-    await submitExtrinsic(councilTransaction, submitterKeypair);
 }
 
 async function submitTransaction(call, api) {
     const keyring = new Keyring({ type: "sr25519" });
-
     // todo: need an account
-    let secretQuery = "Enter the secret mnemonic seed of the council member: ";
+    let submitterKeypair =  keyring.addFromUri("//Alice");
 
-    const submitterSecret = await rl.question(secretQuery);
-    let submitterKeypair =  keyring.addFromUri(submitterSecret.trim());
+    console.log("Preimage data", call.inner.toHex());
+    console.log("Preimage hash", `0x${Buffer.from(call.inner.hash).toString("hex")}`);
 
-    await democracyProposal(call, {
-        api,
-        submitterKeypair
-    });
+    const submitPreimageTransaction = api.tx.preimage.notePreimage(call.inner.toHex());
+    // todo: uncomment if ready
+    // await submitExtrinsic(submitPreimageTransaction, submitterKeypair);
 };
 
 function getUrl (network) {

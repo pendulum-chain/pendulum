@@ -15,7 +15,7 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::MAXIMUM_BLOCK_WEIGHT;
-use runtime_common::parachains::asset_hub;
+use amplitude_runtime::definitions::asset_hub;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;

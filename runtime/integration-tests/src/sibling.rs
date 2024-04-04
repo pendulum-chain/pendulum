@@ -151,15 +151,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			} => Some(CurrencyId::Pendulum),
 			MultiLocation {
 				parents: 1,
-				interior: X1(Parachain(PENDULUM_ID)),
-			} => Some(CurrencyId::Pendulum),
-			MultiLocation {
-				parents: 1,
 				interior: X2(Parachain(AMPLITUDE_ID), PalletInstance(10)),
-			} => Some(CurrencyId::Amplitude),
-			MultiLocation {
-				parents: 1,
-				interior: X1(Parachain(AMPLITUDE_ID)),
 			} => Some(CurrencyId::Amplitude),
 			MultiLocation { parents: 0, interior: X1(PalletInstance(10)) } =>
 				Some(CurrencyId::Native),

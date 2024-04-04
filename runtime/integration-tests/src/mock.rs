@@ -231,7 +231,12 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 				name: "Pendulum".as_bytes().to_vec(),
 				symbol: "PEN".as_bytes().to_vec(),
 				existential_deposit: 1_000u128,
-				location: Some(VersionedMultiLocation::V3(MultiLocation::here())),
+				location: Some(VersionedMultiLocation::V3(MultiLocation::new(
+					0u8,
+					xcm::latest::Junctions::X1(
+						xcm::latest::Junction::PalletInstance(10),
+					),
+				))),
 				additional: CustomMetadata {
 					dia_keys: DiaKeys::<StringLimit> {
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
@@ -309,7 +314,12 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 				name: "Amplitude".as_bytes().to_vec(),
 				symbol: "AMPE".as_bytes().to_vec(),
 				existential_deposit: 1_000u128,
-				location: Some(VersionedMultiLocation::V3(MultiLocation::here())),
+				location: Some(VersionedMultiLocation::V3(MultiLocation::new(
+					0u8,
+					xcm::latest::Junctions::X1(
+						xcm::latest::Junction::PalletInstance(10),
+					),
+				))),
 				additional: CustomMetadata {
 					dia_keys: DiaKeys::<StringLimit> {
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),

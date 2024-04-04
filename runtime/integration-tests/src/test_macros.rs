@@ -485,7 +485,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		use frame_support::traits::fungibles::Inspect;
 		use polkadot_core_primitives::Balance;
 		use xcm::latest::{
-			Junction, Junction::AccountId32, Junctions::X2, MultiLocation, WeightLimit,
+			Junction, Junction::AccountId32, Junctions::{X2, X1}, MultiLocation, WeightLimit,
 		};
 		use orml_traits::MultiCurrency;
 		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;
@@ -494,7 +494,10 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		$mocknet::reset();
 
 		let transfer_amount: Balance = UNIT;
-		let asset_location_local_pov = MultiLocation::here();
+		let asset_location_local_pov =  MultiLocation::new(
+			0,
+			X1(Junction::PalletInstance(10)),
+		);
 		let asset_location = MultiLocation::new(
 			1,
 			X2(Junction::Parachain($parachain1_id), Junction::PalletInstance(10)),

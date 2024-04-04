@@ -252,12 +252,6 @@ impl<ParachainId: Get<ParaId>, AssetRegistry: Inspect<AssetId = CurrencyId,Balan
 		let mut location_reanchored_maybe = location.clone();
 		location_reanchored_maybe.reanchor(&target, context);
 
-		// Conditions to handle multiple representations of our Native, local perspective,
-		// that we are not able to handle in the `AssetRegistry` pallet.
-		if location_reanchored_maybe == MultiLocation::new(0,X1(PalletInstance(10))){
-			return Some(CurrencyId::Native);
-		}
-
 		<AssetRegistry as Inspect>::asset_id(&location_reanchored_maybe)
 	}
 }

@@ -1,4 +1,12 @@
 // This code will submit a transaction to propose an `authorizeUpgrade`
+// for Pendulum:
+//  * save to env var PENDULUM_SEED the account seed of Pendulum
+//  * save to env var PENDULUM_WASM_FILE the compressed wasm file of Pendulum
+//
+// for Amplitude:
+//  * save to env var AMPLITUDE_SEED the account seed of Amplitude
+//  * save to env var AMPLITUDE_WASM_FILE the compressed wasm file of Amplitude
+//
 // steps:
 // 1. npm init -y
 // 2. npm install
@@ -6,11 +14,19 @@
 
 const { ApiPromise, WsProvider, Keyring } = require("@polkadot/api");
 const { blake2AsHex } = require("@polkadot/util-crypto");
-const readline = require("node:readline/promises");
-const { stdin, stdout } = require("node:process");
 const fs = require('fs');
 
-const rl = readline.createInterface({ input: stdin, output: stdout });
+const amplitudeDefinition = {
+    websocketUrl: "wss://rpc-amplitude.pendulumchain.tech",
+    accountSeed: process.env.AMPLITUDE_SEED,
+    wasmFile: process.env.AMPLITUDE_WASM_FILE
+}
+
+const pendulumDefinition = {
+    websocketUrl: "wss://rpc-pendulum.prd.pendulumchain.tech",
+    accountSeed: process.env.PENDULUM_SEED,
+    wasmFile: process.env.PENDULUM_WASM_FILE
+}
 
 // if keypair is undefined, then dryRun must be true
 async function submitExtrinsic(transaction, keypair) {
@@ -46,54 +62,57 @@ async function submitExtrinsic(transaction, keypair) {
     });
 }
 
-async function submitTransaction(call, api) {
-    const keyring = new Keyring({ type: "sr25519" });
-    // todo: need an account
-    let submitterKeypair =  keyring.addFromUri("//Alice");
-
+async function democracyProposal(call, { api, submitterKeypair }) {
     console.log("Preimage data", call.inner.toHex());
     console.log("Preimage hash", `0x${Buffer.from(call.inner.hash).toString("hex")}`);
 
     const submitPreimageTransaction = api.tx.preimage.notePreimage(call.inner.toHex());
-    // todo: uncomment if ready
+    // uncomment if ready
     // await submitExtrinsic(submitPreimageTransaction, submitterKeypair);
+}
+
+async function submitTransaction(accountSeed, call, api) {
+    const keyring = new Keyring({ type: "sr25519" });
+    let submitterKeypair =  keyring.addFromUri(accountSeed);
+    console.log("account: ", submitterKeypair.address);
+
+    await democracyProposal(call, {
+        api,
+        submitterKeypair
+    });
 };
 
-function getUrl (network) {
+function getDefinitions (network) {
     switch (network) {
         case "amplitude":
-            return "wss://rpc-amplitude.pendulumchain.tech";
-
+            return amplitudeDefinition;
         case "pendulum":
-            return "wss://rpc-pendulum.prd.pendulumchain.tech";
+            return pendulumDefinition;
     }
 };
-
 
 async function main() {
     const args = process.argv;
 
-    if (args.length < 4 ) {
-        console.error('Expecting two arguments!');
+    if (args.length < 3 ) {
+        console.error('Please provide the chain to upgrade');
         process.exit(1);
     }
 
-    console.log("the argument: ", args[2]);
-    const websocketUrl = getUrl(args[2]);
-
+    let { accountSeed, websocketUrl, wasmFile } = getDefinitions(args[2]);
     console.log("the url: ", websocketUrl);
 
     const wsProvider = new WsProvider(websocketUrl);
 
     const api = await ApiPromise.create({ provider: wsProvider });
 
-    const wasmFileBytes = fs.readFileSync(args[3]);
+    const wasmFileBytes = fs.readFileSync(wasmFile);
     const wasmFileHash = blake2AsHex(wasmFileBytes, 256);
     console.log('wasmfile: ', wasmFileHash);
 
     const authorizeUpgrade = api.tx.parachainSystem.authorizeUpgrade(wasmFileHash, true);
 
-    await submitTransaction(authorizeUpgrade, api);
+    await submitTransaction(accountSeed,authorizeUpgrade, api);
 
     process.exit();
 }

@@ -22,7 +22,7 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
-use runtime_common::{asset_registry::{CustomMetadata,FixedConversionRateProvider}, CurrencyIdConvert, AssetRegistryInspect};
+use runtime_common::{asset_registry::{CustomMetadata,FixedConversionRateProvider}, CurrencyIdConvert};
 
 use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 
@@ -57,17 +57,6 @@ pub type LocationToAccountId = (
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
 
-/// Implement a wrapper trait arround AssetRegistry that allows us to fetch the metadata.
-/// Needed for generic CurrencyIdConvert implementation.
-pub struct AssetRegistryInspector;
-impl AssetRegistryInspect for AssetRegistryInspector {
-	fn metadata(id: &CurrencyId) -> Option<AssetMetadata<Balance, CustomMetadata>>{
-		AssetRegistry::metadata(id)
-	}
-	fn location_to_asset_id(multilocation: MultiLocation) ->  Option<CurrencyId>{
-		AssetRegistry::location_to_asset_id(multilocation)
-	}
-}
 
 /// A `FilterAssetLocation` implementation. Filters multi native assets whose
 /// reserve is same with `origin`.
@@ -91,11 +80,11 @@ pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	// Use this fungibles implementation
 	Currencies,
 	(), // We don't handle unknown assets.
-	IsNativeConcrete<CurrencyId, CurrencyIdConvert<ParachainInfo, AssetRegistryInspector>>,
+	IsNativeConcrete<CurrencyId, CurrencyIdConvert<ParachainInfo, AssetRegistry>>,
 	AccountId,
 	LocationToAccountId,
 	CurrencyId,
-	CurrencyIdConvert<ParachainInfo, AssetRegistryInspector>,
+	CurrencyIdConvert<ParachainInfo, AssetRegistry>,
 	DepositToAlternative<AmplitudeTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
@@ -211,7 +200,7 @@ pub type Barrier = (
 );
 
 pub type Traders = AssetRegistryTrader<
-	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, CurrencyIdConvert<ParachainInfo, AssetRegistryInspector>>>,
+	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, CurrencyIdConvert<ParachainInfo, AssetRegistry>>>,
 	XcmFeesTo32ByteAccount<LocalAssetTransactor, AccountId, AmplitudeTreasuryAccount>,
 >;
 
@@ -301,7 +290,7 @@ impl orml_xtokens::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = CurrencyIdConvert<ParachainInfo, AssetRegistryInspector>;
+	type CurrencyIdConvert = CurrencyIdConvert<ParachainInfo, AssetRegistry>;
 	type AccountIdToMultiLocation = AccountIdToMultiLocation;
 	type SelfLocation = SelfLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;

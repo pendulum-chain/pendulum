@@ -28,7 +28,7 @@ use runtime_common::{
 	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
 	parachains::polkadot::{moonbeam},
 	asset_registry::{CustomMetadata, FixedConversionRateProvider},
-	CurrencyIdConvert, AssetRegistryInspect,
+	CurrencyIdConvert,
 };
 
 use crate::ConstU32;
@@ -61,17 +61,6 @@ pub type LocationToAccountId = (
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
 
-/// Implement a wrapper trait arround AssetRegistry that allows us to fetch the metadata.
-/// Needed for generic CurrencyIdConvert implementation.
-pub struct AssetRegistryInspector;
-impl AssetRegistryInspect for AssetRegistryInspector {
-	fn metadata(id: &CurrencyId) -> Option<AssetMetadata<Balance, CustomMetadata>>{
-		AssetRegistry::metadata(id)
-	}
-	fn location_to_asset_id(multilocation: MultiLocation) ->  Option<CurrencyId>{
-		AssetRegistry::location_to_asset_id(multilocation)
-	}
-}
 /// A `FilterAssetLocation` implementation. Filters multi native assets whose
 /// reserve is same with `origin`.
 pub struct MultiNativeAsset<ReserveProvider>(PhantomData<ReserveProvider>);
@@ -201,7 +190,7 @@ pub type Barrier = (
 );
 
 pub type Traders = AssetRegistryTrader<
-	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, CurrencyIdConvert<ParachainInfo, AssetRegistryInspector>>>,
+	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, CurrencyIdConvert<ParachainInfo, AssetRegistry>>>,
 	XcmFeesTo32ByteAccount<Transactor, AccountId, PendulumTreasuryAccount>,
 >;
 
@@ -209,11 +198,11 @@ pub type Traders = AssetRegistryTrader<
 type Transactor = MultiCurrencyAdapter<
 	Currencies,
 	(), // We don't handle unknown assets.
-	IsNativeConcrete<CurrencyId, CurrencyIdConvert<ParachainInfo, AssetRegistryInspector>>,
+	IsNativeConcrete<CurrencyId, CurrencyIdConvert<ParachainInfo, AssetRegistry>>,
 	AccountId,
 	LocationToAccountId,
 	CurrencyId,
-	CurrencyIdConvert<ParachainInfo, AssetRegistryInspector>,
+	CurrencyIdConvert<ParachainInfo, AssetRegistry>,
 	DepositToAlternative<PendulumTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
@@ -346,7 +335,7 @@ impl orml_xtokens::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = CurrencyIdConvert<ParachainInfo, AssetRegistryInspector>;
+	type CurrencyIdConvert = CurrencyIdConvert<ParachainInfo, AssetRegistry>;
 	type AccountIdToMultiLocation = AccountIdToMultiLocation;
 	type SelfLocation = SelfLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;

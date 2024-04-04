@@ -9,7 +9,8 @@ use frame_support::pallet_prelude::Get;
 use cumulus_primitives_core::ParaId;
 use spacewalk_primitives::CurrencyId;
 use xcm::v3::{MultiAsset, AssetId, Junction::Parachain, MultiLocation};
-use orml_asset_registry::AssetMetadata;
+use orml_asset_registry::{AssetMetadata};
+use orml_traits::asset_registry::Inspect;
 use asset_registry::CustomMetadata;
 
 pub mod asset_registry;
@@ -234,16 +235,16 @@ pub mod parachains {
 /// in the form of a `MultiLocation`, in this case a pCfg (Para-Id, Currency-Id).
 pub struct CurrencyIdConvert<ParachainId, AssetRegistry>(sp_std::marker::PhantomData<(ParachainId, AssetRegistry)>);
 
-impl<ParachainId: Get<ParaId>, AssetRegistryInspector: AssetRegistryInspect> Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert<ParachainId, AssetRegistryInspector> {
+impl<ParachainId: Get<ParaId>, AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert<ParachainId, AssetRegistry> {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		AssetRegistryInspector::metadata(&id)
+		<AssetRegistry as Inspect>::metadata(&id)
 			.filter(|m| m.location.is_some())
 			.and_then(|m| m.location)
 			.and_then(|l| l.try_into().ok())
 	}
 }
 
-impl<ParachainId: Get<ParaId>, AssetRegistryInspector: AssetRegistryInspect> Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert<ParachainId, AssetRegistryInspector> {
+impl<ParachainId: Get<ParaId>, AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert<ParachainId, AssetRegistry> {
 	fn convert(location: MultiLocation) -> Option<CurrencyId>  {
 		let para_id = ParachainId::get();
 
@@ -260,11 +261,11 @@ impl<ParachainId: Get<ParaId>, AssetRegistryInspector: AssetRegistryInspect> Con
             },
             x => x,
         };
-		AssetRegistryInspector::location_to_asset_id(unanchored_location)
+		<AssetRegistry as Inspect>::asset_id(&unanchored_location)
 	}
 }
 
-impl<ParachainId: Get<ParaId>, AssetRegistryInspector: AssetRegistryInspect> Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert<ParachainId, AssetRegistryInspector> {
+impl<ParachainId: Get<ParaId>, AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert<ParachainId, AssetRegistry> {
 	fn convert(a: MultiAsset) -> Option<CurrencyId> {
 		if let MultiAsset { id: AssetId::Concrete(id), fun: _ } = a {
 			<Self as Convert<MultiLocation, Option<CurrencyId>>>::convert(id)
@@ -277,17 +278,13 @@ impl<ParachainId: Get<ParaId>, AssetRegistryInspector: AssetRegistryInspect> Con
 /// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
 /// Here we need to know the canonical representation of all the tokens we handle in order to
 /// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
-impl<ParachainId: Get<ParaId>, AssetRegistryInspector: AssetRegistryInspect> xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert<ParachainId, AssetRegistryInspector> {
+impl<ParachainId: Get<ParaId>, AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert<ParachainId, AssetRegistry> {
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		<CurrencyIdConvert<ParachainId, AssetRegistryInspector> as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
+		<CurrencyIdConvert<ParachainId, AssetRegistry> as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
 			.ok_or(location)
 	}
 }
 
-pub trait AssetRegistryInspect {
-    fn location_to_asset_id(multilocation: MultiLocation) ->  Option<CurrencyId>;
-	fn metadata(id: &CurrencyId) -> Option<AssetMetadata<Balance, CustomMetadata>>;
-}
 
 #[cfg(test)]
 mod tests {

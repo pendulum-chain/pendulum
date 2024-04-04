@@ -494,6 +494,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		$mocknet::reset();
 
 		let transfer_amount: Balance = UNIT;
+		let asset_location_local_pov = MultiLocation::here();
 		let asset_location = MultiLocation::new(
 			1,
 			X2(Junction::Parachain($parachain1_id), Junction::PalletInstance(10)),
@@ -525,7 +526,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 			// Transfer using multilocation
 			assert_ok!(XTokens::transfer_multiasset(
 				$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
-				Box::new((asset_location.clone(), transfer_amount).into()),
+				Box::new((asset_location_local_pov.clone(), transfer_amount).into()),
 				Box::new(
 					MultiLocation {
 						parents: 1,
@@ -538,6 +539,24 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 				),
 				WeightLimit::Unlimited
 			));
+
+			// Alternatively, we should be able to use 
+			// assert_ok!(XTokens::transfer(
+			// 	$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
+			// 	Parachain1CurrencyId::Native,
+			// 	transfer_amount,
+			// 	Box::new(
+			// 		MultiLocation {
+			// 			parents: 1,
+			// 			interior: X2(
+			// 				Junction::Parachain($parachain2_id),
+			// 				AccountId32 { network: None, id: BOB }
+			// 			)
+			// 		}
+			// 		.into()
+			// 	),
+			// 	WeightLimit::Unlimited
+			// ));
 
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,

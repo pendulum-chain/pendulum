@@ -5,7 +5,7 @@ use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ContainsPair, Everything, Nothing, ProcessMessageError},
 };
-use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader, AssetMetadata};
+use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
@@ -27,7 +27,7 @@ use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 use runtime_common::{
 	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
 	parachains::polkadot::{moonbeam},
-	asset_registry::{CustomMetadata, FixedConversionRateProvider},
+	asset_registry::{ FixedConversionRateProvider},
 	CurrencyIdConvert,
 };
 
@@ -103,7 +103,7 @@ parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
 	pub UnitWeightCost: XCMWeight = XCMWeight::from_parts(1_000_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
-	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
+	pub SelfLocation: MultiLocation = MultiLocation::here();
 	pub const BaseXcmWeight: XCMWeight = XCMWeight::from_parts(150_000_000, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }

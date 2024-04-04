@@ -4,7 +4,7 @@ use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ContainsPair, Everything, Nothing, ProcessMessageError},
 };
-use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader, AssetMetadata};
+use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
@@ -22,7 +22,7 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
-use runtime_common::{asset_registry::{CustomMetadata,FixedConversionRateProvider}, CurrencyIdConvert};
+use runtime_common::{asset_registry::{FixedConversionRateProvider}, CurrencyIdConvert};
 
 use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 
@@ -113,7 +113,7 @@ parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
 	pub UnitWeightCost: XCMWeight = XCMWeight::from_parts(1_000_000_000,0);
 	pub const MaxInstructions: u32 = 100;
-	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
+	pub SelfLocation: MultiLocation = MultiLocation::here();
 	pub const BaseXcmWeight: XCMWeight = XCMWeight::from_parts(150_000_000,0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }

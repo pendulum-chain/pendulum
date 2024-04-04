@@ -8,8 +8,7 @@ use sp_runtime::{
 use frame_support::pallet_prelude::Get;
 use cumulus_primitives_core::ParaId;
 use spacewalk_primitives::CurrencyId;
-use xcm::v3::{MultiAsset, AssetId, Junction::Parachain, MultiLocation};
-use orml_asset_registry::{AssetMetadata};
+use xcm::v3::{Parent,MultiAsset, AssetId, Junction::{Parachain, PalletInstance}, Junctions::X1, MultiLocation};
 use orml_traits::asset_registry::Inspect;
 use asset_registry::CustomMetadata;
 
@@ -246,22 +245,20 @@ impl<ParachainId: Get<ParaId>, AssetRegistry: Inspect<AssetId = CurrencyId,Balan
 
 impl<ParachainId: Get<ParaId>, AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert<ParachainId, AssetRegistry> {
 	fn convert(location: MultiLocation) -> Option<CurrencyId>  {
-		let para_id = ParachainId::get();
 
-		let unanchored_location = match location {
-            MultiLocation { parents: 0, interior } => {
-     
-                match interior.pushed_front_with(Parachain(u32::from(para_id))) {
-                    Ok(new_interior) => MultiLocation {
-                        parents: 1,
-                        interior: new_interior,
-                    },
-                    Err(_) => return None, 
-                }
-            },
-            x => x,
-        };
-		<AssetRegistry as Inspect>::asset_id(&unanchored_location)
+		let para_id = ParachainId::get();
+		let context = Parachain(para_id.into()).into();
+		let target = (Parent, Parachain(para_id.into())).into();
+		let mut location_reanchored_maybe = location.clone();
+		location_reanchored_maybe.reanchor(&target, context);
+
+		// Conditions to handle multiple representations of our Native, local perspective,
+		// that we are not able to handle in the `AssetRegistry` pallet.
+		if location_reanchored_maybe == MultiLocation::new(0,X1(PalletInstance(10))){
+			return Some(CurrencyId::Native);
+		}
+
+		<AssetRegistry as Inspect>::asset_id(&location_reanchored_maybe)
 	}
 }
 

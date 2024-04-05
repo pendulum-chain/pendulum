@@ -6,7 +6,7 @@ use orml_traits::{FixedConversionRateProvider as FixedConversionRateProviderTrai
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::Get;
-use sp_runtime::{BoundedVec, DispatchError, traits::{PhantomData, Convert}};
+use sp_runtime::{BoundedVec, DispatchError, traits::PhantomData};
 use sp_std::fmt::Debug;
 use spacewalk_primitives::CurrencyId;
 use xcm::opaque::v3::{MultiLocation};
@@ -56,7 +56,7 @@ impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for Cust
 }
 
 pub type AssetAuthority = AsEnsureOriginWithArg<EnsureRoot<AccountId>>;
-pub struct FixedConversionRateProvider<OrmlAssetRegistry, CurrencyIdConvert>(PhantomData<(OrmlAssetRegistry,CurrencyIdConvert)>);
+pub struct FixedConversionRateProvider<OrmlAssetRegistry>(PhantomData<OrmlAssetRegistry>);
 
 impl<
 		OrmlAssetRegistry: Inspect<
@@ -64,16 +64,10 @@ impl<
 			Balance = Balance,
 			CustomMetadata = asset_registry::CustomMetadata,
 		>,
-		CurrencyIdConvert: Convert<MultiLocation, Option<CurrencyId>>,
-	> FixedConversionRateProviderTrait for FixedConversionRateProvider<OrmlAssetRegistry, CurrencyIdConvert>
+	> FixedConversionRateProviderTrait for FixedConversionRateProvider<OrmlAssetRegistry>
 {
 	fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
-		let asset_id_maybe = CurrencyIdConvert::convert(*location);
-		let asset_id = match asset_id_maybe {
-			Some(id) => id,
-			None => return None,
-		};
-		let metadata = OrmlAssetRegistry::metadata(&asset_id)?;
+		let metadata = OrmlAssetRegistry::metadata_by_location(&location)?;
 		Some(metadata.additional.fee_per_second)
 	}
 }

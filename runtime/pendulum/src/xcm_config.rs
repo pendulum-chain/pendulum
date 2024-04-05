@@ -190,7 +190,7 @@ pub type Barrier = (
 );
 
 pub type Traders = AssetRegistryTrader<
-	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry, CurrencyIdConvert<ParachainInfo, AssetRegistry>>>,
+	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry>>,
 	XcmFeesTo32ByteAccount<Transactor, AccountId, PendulumTreasuryAccount>,
 >;
 
@@ -198,11 +198,11 @@ pub type Traders = AssetRegistryTrader<
 type Transactor = MultiCurrencyAdapter<
 	Currencies,
 	(), // We don't handle unknown assets.
-	IsNativeConcrete<CurrencyId, CurrencyIdConvert<ParachainInfo, AssetRegistry>>,
+	IsNativeConcrete<CurrencyId, CurrencyIdConvert<AssetRegistry>>,
 	AccountId,
 	LocationToAccountId,
 	CurrencyId,
-	CurrencyIdConvert<ParachainInfo, AssetRegistry>,
+	CurrencyIdConvert<AssetRegistry>,
 	DepositToAlternative<PendulumTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
@@ -335,7 +335,7 @@ impl orml_xtokens::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = CurrencyIdConvert<ParachainInfo, AssetRegistry>;
+	type CurrencyIdConvert = CurrencyIdConvert<AssetRegistry>;
 	type AccountIdToMultiLocation = AccountIdToMultiLocation;
 	type SelfLocation = SelfLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;

@@ -5,10 +5,8 @@ use sp_runtime::{
 	traits::{IdentifyAccount, Verify,Convert},
 	DispatchError, MultiSignature,
 };
-use frame_support::pallet_prelude::Get;
-use cumulus_primitives_core::ParaId;
 use spacewalk_primitives::CurrencyId;
-use xcm::v3::{Parent,MultiAsset, AssetId, Junction::{Parachain, PalletInstance}, Junctions::X1, MultiLocation};
+use xcm::v3::{MultiAsset, AssetId, MultiLocation};
 use orml_traits::asset_registry::Inspect;
 use asset_registry::CustomMetadata;
 
@@ -232,9 +230,9 @@ pub mod parachains {
 /// This type implements conversions from our `CurrencyId` type into `MultiLocation` and vice-versa.
 /// A currency locally is identified with a `CurrencyId` variant but in the network it is identified
 /// in the form of a `MultiLocation`, in this case a pCfg (Para-Id, Currency-Id).
-pub struct CurrencyIdConvert<ParachainId, AssetRegistry>(sp_std::marker::PhantomData<(ParachainId, AssetRegistry)>);
+pub struct CurrencyIdConvert<AssetRegistry>(sp_std::marker::PhantomData<AssetRegistry>);
 
-impl<ParachainId: Get<ParaId>, AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert<ParachainId, AssetRegistry> {
+impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert<AssetRegistry> {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		<AssetRegistry as Inspect>::metadata(&id)
 			.filter(|m| m.location.is_some())
@@ -243,20 +241,13 @@ impl<ParachainId: Get<ParaId>, AssetRegistry: Inspect<AssetId = CurrencyId,Balan
 	}
 }
 
-impl<ParachainId: Get<ParaId>, AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert<ParachainId, AssetRegistry> {
+impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert<AssetRegistry> {
 	fn convert(location: MultiLocation) -> Option<CurrencyId>  {
-
-		let para_id = ParachainId::get();
-		let context = Parachain(para_id.into()).into();
-		let target = (Parent, Parachain(para_id.into())).into();
-		let mut location_reanchored_maybe = location.clone();
-		location_reanchored_maybe.reanchor(&target, context);
-
-		<AssetRegistry as Inspect>::asset_id(&location_reanchored_maybe)
+		<AssetRegistry as Inspect>::asset_id(&location)
 	}
 }
 
-impl<ParachainId: Get<ParaId>, AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert<ParachainId, AssetRegistry> {
+impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert<AssetRegistry> {
 	fn convert(a: MultiAsset) -> Option<CurrencyId> {
 		if let MultiAsset { id: AssetId::Concrete(id), fun: _ } = a {
 			<Self as Convert<MultiLocation, Option<CurrencyId>>>::convert(id)
@@ -269,9 +260,9 @@ impl<ParachainId: Get<ParaId>, AssetRegistry: Inspect<AssetId = CurrencyId,Balan
 /// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
 /// Here we need to know the canonical representation of all the tokens we handle in order to
 /// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
-impl<ParachainId: Get<ParaId>, AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert<ParachainId, AssetRegistry> {
+impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert<AssetRegistry> {
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		<CurrencyIdConvert<ParachainId, AssetRegistry> as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
+		<CurrencyIdConvert<AssetRegistry> as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
 			.ok_or(location)
 	}
 }

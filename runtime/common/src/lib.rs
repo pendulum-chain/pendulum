@@ -309,7 +309,6 @@ mod tests {
 		assert_eq!(junctions.next(), Some(&PalletInstance(asset_hub::ASSET_PALLET_INDEX)));
 		assert_eq!(junctions.next(), Some(&GeneralIndex(asset_hub::PINK_ASSET_ID)));
 		assert_eq!(junctions.next(), None);
-
 	}
 
 	#[test]

@@ -25,6 +25,9 @@ smallvec = "1.9.0"
 
 # Local
 runtime-common = { path = "../common", default-features = false }
+token-chain-extension = {path = "../../chain-extensions/token", default-features = false }
+price-chain-extension = {path = "../../chain-extensions/price", default-features = false }
+treasury-buyout-extension = {path = "../../pallets/treasury-buyout-extension", default-features = false}
 
 # Custom libraries for Spacewalk
 clients-info = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "3c03e759a6f600ea72d636d4f9cc4b05d633201c" }
@@ -241,6 +244,9 @@ std = [
     "orml-currencies-allowance-extension/std",
     "parachain-staking/std",
     "vesting-manager/std",
+    "price-chain-extension/std",
+    "token-chain-extension/std",
+    "treasury-buyout-extension/std",
 ]
 
 runtime-benchmarks = [
@@ -266,7 +272,8 @@ runtime-benchmarks = [
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
     "runtime-common/runtime-benchmarks",
-    "orml-currencies-allowance-extension/runtime-benchmarks"
+    "orml-currencies-allowance-extension/runtime-benchmarks",
+    "treasury-buyout-extension/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -324,4 +331,5 @@ try-runtime = [
     "vesting-manager/try-runtime",
     "bifrost-farming/try-runtime",
     "zenlink-protocol/try-runtime",
+    "treasury-buyout-extension/try-runtime",
 ]

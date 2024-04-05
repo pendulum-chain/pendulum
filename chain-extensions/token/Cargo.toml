@@ -1,0 +1,55 @@
+[package]
+name = "token-chain-extension"
+description = "Chain extensions for tokens pallet"
+authors = ["Pendulum"]
+edition = "2021"
+version = "0.1.0"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+log = { version = "0.4.17", default-features = false }
+chain-extension-common =  { path = "../common", default-features = false}
+
+# Substrate
+frame-system = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
+frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
+sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
+sp-std = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false}
+pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
+
+# Open Runtime Module Library
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.42" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.42" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.42" }
+
+# Custom libraries for Spacewalk
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "3c03e759a6f600ea72d636d4f9cc4b05d633201c" }
+
+# Pendulum Pallets
+orml-currencies-allowance-extension = { path = "../../pallets/orml-currencies-allowance-extension", default-features = false }
+
+[features]
+default = [
+    "std",
+]
+std = [
+    "codec/std",
+    "log/std",
+    "frame-support/std",
+    "frame-system/std",
+    "orml-currencies/std",
+    "orml-traits/std",
+    "orml-tokens/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "orml-currencies-allowance-extension/std",
+    "pallet-contracts/std",
+    "frame-system/std",
+    "spacewalk-primitives/std",
+    "chain-extension-common/std",
+    "sp-std/std",
+]

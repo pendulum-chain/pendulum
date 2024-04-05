@@ -109,8 +109,10 @@ use oracle::testing_utils::MockDataFeeder;
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 // XCM Imports
-use crate::chain_ext::Psp22Extension;
 use xcm_executor::XcmExecutor;
+
+// Chain Extension
+use crate::chain_ext::{PriceChainExtension, TokensChainExtension};
 
 pub type VaultId = primitives::VaultId<AccountId, CurrencyId>;
 
@@ -331,7 +333,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 14,
+	spec_version: 15,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 13,
@@ -1075,7 +1077,8 @@ impl pallet_contracts::Config for Runtime {
 	type CallStack = [pallet_contracts::Frame<Self>; 5];
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-	type ChainExtension = Psp22Extension;
+	type ChainExtension =
+		(TokensChainExtension<Self, Tokens, AccountId>, PriceChainExtension<Self>);
 	type Schedule = Schedule;
 	type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
 	type MaxCodeLen = ConstU32<{ 123 * 1024 }>;
@@ -1482,7 +1485,7 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 
 parameter_types! {
 	pub const SellFee: Permill = Permill::from_percent(5);
-	pub const MinAmountToBuyout: Balance = 10 * MILLIUNIT; // 0.01 AMPE or 10_000_000_000
+	pub const MinAmountToBuyout: Balance = 100 * MILLIUNIT; // 0.1 AMPE or 100_000_000_000
 	// 24 hours in blocks (where average block time is 12 seconds)
 	pub const BuyoutPeriod: u32 = 7200;
 	// Maximum number of allowed currencies for buyout

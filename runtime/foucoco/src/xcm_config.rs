@@ -113,7 +113,7 @@ parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
 	pub UnitWeightCost: XCMWeight = XCMWeight::from_parts(1_000_000_000,0);
 	pub const MaxInstructions: u32 = 100;
-	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
+	pub SelfLocation: MultiLocation = MultiLocation::here();
 	pub const BaseXcmWeight: XCMWeight = XCMWeight::from_parts(150_000_000, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }

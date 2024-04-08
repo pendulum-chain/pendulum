@@ -2,9 +2,13 @@
 #![allow(non_snake_case)]
 
 use sp_runtime::{
-	traits::{CheckedDiv, IdentifyAccount, Saturating, Verify},
+	traits::{IdentifyAccount, Verify,Convert},
 	DispatchError, MultiSignature,
 };
+use spacewalk_primitives::CurrencyId;
+use xcm::v3::{MultiAsset, AssetId, MultiLocation};
+use orml_traits::asset_registry::Inspect;
+use asset_registry::CustomMetadata;
 
 pub mod asset_registry;
 pub mod chain_ext;
@@ -53,6 +57,8 @@ pub type Index = u32;
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
 
+
+
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -68,29 +74,6 @@ pub mod opaque {
 	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 	/// Opaque block identifier type.
 	pub type BlockId = generic::BlockId<Block>;
-}
-
-pub struct RelativeValue<Amount> {
-	pub num: Amount,
-	pub denominator: Amount,
-}
-
-impl<Amount: CheckedDiv<Output = Amount> + Saturating + Clone> RelativeValue<Amount> {
-	pub fn divide_by_relative_value(
-		amount: Amount,
-		relative_value: RelativeValue<Amount>,
-	) -> Amount {
-		// Calculate the adjusted amount
-		if let Some(adjusted_amount) = amount
-			.clone()
-			.saturating_mul(relative_value.denominator)
-			.checked_div(&relative_value.num)
-		{
-			return adjusted_amount
-		}
-		// We should never specify a numerator of 0, but just to be safe
-		return amount
-	}
 }
 
 #[macro_use]
@@ -242,6 +225,48 @@ pub mod parachains {
 		}
 	}
 }
+
+/// CurrencyIdConvert
+/// This type implements conversions from our `CurrencyId` type into `MultiLocation` and vice-versa.
+/// A currency locally is identified with a `CurrencyId` variant but in the network it is identified
+/// in the form of a `MultiLocation`, in this case a pCfg (Para-Id, Currency-Id).
+pub struct CurrencyIdConvert<AssetRegistry>(sp_std::marker::PhantomData<AssetRegistry>);
+
+impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert<AssetRegistry> {
+	fn convert(id: CurrencyId) -> Option<MultiLocation> {
+		<AssetRegistry as Inspect>::metadata(&id)
+			.filter(|m| m.location.is_some())
+			.and_then(|m| m.location)
+			.and_then(|l| l.try_into().ok())
+	}
+}
+
+impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert<AssetRegistry> {
+	fn convert(location: MultiLocation) -> Option<CurrencyId>  {
+		<AssetRegistry as Inspect>::asset_id(&location)
+	}
+}
+
+impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert<AssetRegistry> {
+	fn convert(a: MultiAsset) -> Option<CurrencyId> {
+		if let MultiAsset { id: AssetId::Concrete(id), fun: _ } = a {
+			<Self as Convert<MultiLocation, Option<CurrencyId>>>::convert(id)
+		} else {
+			None
+		}
+	}
+}
+
+/// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
+/// Here we need to know the canonical representation of all the tokens we handle in order to
+/// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
+impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert<AssetRegistry> {
+	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
+		<CurrencyIdConvert<AssetRegistry> as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
+			.ok_or(location)
+	}
+}
+
 
 #[cfg(test)]
 mod tests {

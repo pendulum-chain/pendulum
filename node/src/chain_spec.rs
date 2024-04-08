@@ -539,6 +539,7 @@ fn foucoco_genesis(
 		.iter()
 		.flat_map(|k| vec![(k.0.clone(), XCM(0), u128::pow(10, 18))])
 		.collect();
+	
 
 	let stakers: Vec<_> = invulnerables
 		.iter()

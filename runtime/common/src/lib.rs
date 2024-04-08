@@ -11,7 +11,6 @@ use orml_traits::asset_registry::Inspect;
 use asset_registry::CustomMetadata;
 
 pub mod asset_registry;
-pub mod chain_ext;
 pub mod custom_transactor;
 mod proxy_type;
 pub mod stellar;

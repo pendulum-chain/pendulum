@@ -236,12 +236,13 @@ macro_rules! parachain1_transfer_incorrect_asset_to_parachain2_should_fail {
 
 		$parachain2::execute_with(|| {
 			use $para2_runtime::{RuntimeEvent, System};
-			//most likely this is not emitid because buy execution fails
+			//since the asset registry trader cannot find the fee per second for the asset,
+			//it will return TooExpensive error.
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Fail {
 					message_hash: _,
-					error: xcm::v3::Error::AssetNotFound,
+					error: xcm::v3::Error::TooExpensive,
 					weight: _
 				})
 			)));
@@ -484,7 +485,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		use frame_support::traits::fungibles::Inspect;
 		use polkadot_core_primitives::Balance;
 		use xcm::latest::{
-			Junction, Junction::AccountId32, Junctions::X2, MultiLocation, WeightLimit,
+			Junction, Junction::AccountId32, Junctions::{X2, X1}, MultiLocation, WeightLimit,
 		};
 		use orml_traits::MultiCurrency;
 		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;
@@ -493,6 +494,10 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		$mocknet::reset();
 
 		let transfer_amount: Balance = UNIT;
+		let asset_location_local_pov =  MultiLocation::new(
+			0,
+			X1(Junction::PalletInstance(10)),
+		);
 		let asset_location = MultiLocation::new(
 			1,
 			X2(Junction::Parachain($parachain1_id), Junction::PalletInstance(10)),
@@ -524,7 +529,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 			// Transfer using multilocation
 			assert_ok!(XTokens::transfer_multiasset(
 				$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
-				Box::new((asset_location.clone(), transfer_amount).into()),
+				Box::new((asset_location_local_pov.clone(), transfer_amount).into()),
 				Box::new(
 					MultiLocation {
 						parents: 1,
@@ -537,6 +542,24 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 				),
 				WeightLimit::Unlimited
 			));
+
+			// Alternatively, we should be able to use 
+			// assert_ok!(XTokens::transfer(
+			// 	$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
+			// 	Parachain1CurrencyId::Native,
+			// 	transfer_amount,
+			// 	Box::new(
+			// 		MultiLocation {
+			// 			parents: 1,
+			// 			interior: X2(
+			// 				Junction::Parachain($parachain2_id),
+			// 				AccountId32 { network: None, id: BOB }
+			// 			)
+			// 		}
+			// 		.into()
+			// 	),
+			// 	WeightLimit::Unlimited
+			// ));
 
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
@@ -641,6 +664,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 		use pendulum_runtime::assets::xcm_assets;
 		use orml_traits::MultiCurrency;
 
+		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;
 		use $parachain2_runtime::CurrencyId as Parachain2CurrencyId;
 
 		$mocknet::reset();
@@ -686,14 +710,15 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 		$parachain1::execute_with(|| {
 			use $parachain1_runtime::{RuntimeEvent, System, Treasury};
 			// given the configuration in pendulum's xcm_config, we expect the callback (in this case a Remark)
-			// to be executed
+			// to be executed and the treasury to be rewarded with the expected fee
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::System(frame_system::Event::Remarked { .. })
 			)));
 
+			// For parachain 1 (Pendulum) BRZ token is located at index 6
 			assert_eq!(
-				$parachain1_runtime::Currencies::free_balance(xcm_assets::MOONBEAM_BRZ_id(), &Treasury::account_id()),
+				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::XCM(6), &Treasury::account_id()),
 				$expected_fee
 			);
 

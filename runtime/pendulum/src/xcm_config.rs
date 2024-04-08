@@ -1,15 +1,11 @@
 use core::marker::PhantomData;
 
-use cumulus_primitives_utility::{
-	ChargeWeightInFungibles, TakeFirstAssetTrader, XcmFeesTo32ByteAccount,
-};
+use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 use frame_support::{
-	log, match_types,
-	pallet_prelude::DispatchError,
-	parameter_types,
-	traits::{tokens::fungibles, ContainsPair, Everything, Nothing, ProcessMessageError},
-	weights::{Weight, WeightToFee as WeightToFeeTrait},
+	log, match_types, parameter_types,
+	traits::{ContainsPair, Everything, Nothing, ProcessMessageError},
 };
+use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
@@ -22,41 +18,26 @@ use sp_runtime::traits::Convert;
 use xcm::latest::{prelude::*, Weight as XCMWeight};
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
-	FixedWeightBounds, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeWeightCredit,
+	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds,
+	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
-use xcm_executor::{
-	traits::{JustTry, ShouldExecute},
-	XcmExecutor,
-};
+use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
 use runtime_common::{
 	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
-	
-	RelativeValue,
+	asset_registry::{ FixedConversionRateProvider},
+	CurrencyIdConvert,
 };
 
-use sp_runtime::traits::Zero;
+use crate::definitions::moonbeam;
 
-use crate::{
-	assets::{
-		self,
-		native_locations::{
-			native_location_external_pov, native_location_local_pov, EURC_location_external_pov,
-			EURC_location_local_pov,
-		},
-		xcm_assets,
-	},
-	ConstU32,
-	definitions::{asset_hub, equilibrium, moonbeam, polkadex}
-};
+use crate::ConstU32;
 
 use super::{
-	AccountId, Balance, Balances, Currencies, CurrencyId, ParachainInfo, ParachainSystem,
-	PendulumTreasuryAccount, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
-	System, Tokens, WeightToFee, XcmpQueue,
+	AccountId, AssetRegistry, Balance, Balances, Currencies, CurrencyId, ParachainInfo,
+	ParachainSystem, PendulumTreasuryAccount, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent,
+	RuntimeOrigin, System, XcmpQueue,
 };
 use frame_system::EnsureRoot;
 
@@ -80,103 +61,6 @@ pub type LocationToAccountId = (
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
-
-/// CurrencyIdConvert
-/// This type implements conversions from our `CurrencyId` type into `MultiLocation` and vice-versa.
-/// A currency locally is identified with a `CurrencyId` variant but in the network it is identified
-/// in the form of a `MultiLocation`, in this case a pCfg (Para-Id, Currency-Id).
-pub struct CurrencyIdConvert;
-
-impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
-	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		match id {
-			CurrencyId::XCM(f) => match f {
-				xcm_assets::RELAY_DOT => Some(MultiLocation::parent()),
-				xcm_assets::ASSETHUB_USDT => Some(asset_hub::USDT_location()),
-				xcm_assets::ASSETHUB_USDC => Some(asset_hub::USDC_location()),
-				xcm_assets::EQUILIBRIUM_EQD => Some(equilibrium::EQD_location()),
-				xcm_assets::MOONBEAM_BRZ => Some(moonbeam::BRZ_location()),
-				xcm_assets::POLKADEX_PDEX => Some(polkadex::PDEX_location()),
-				xcm_assets::MOONBEAM_GLMR => Some(moonbeam::GLMR_location()),
-				xcm_assets::ASSETHUB_PINK => Some(asset_hub::PINK_location()),
-				_ => None,
-			},
-
-			CurrencyId::Native => Some(native_location_external_pov()),
-			assets::tokens::EURC_ID => Some(EURC_location_external_pov()),
-			_ => None,
-		}
-	}
-}
-
-type RelativeValueOf = RelativeValue<Balance>;
-
-pub struct RelayRelativeValue;
-impl RelayRelativeValue {
-	fn get_relative_value(id: CurrencyId) -> Option<RelativeValueOf> {
-		match id {
-			CurrencyId::XCM(f) => match f {
-				xcm_assets::RELAY_DOT => Some(RelativeValueOf { num: 98, denominator: 1 }),
-				xcm_assets::ASSETHUB_USDT => Some(RelativeValueOf { num: 12, denominator: 1 }),
-				xcm_assets::ASSETHUB_USDC => Some(RelativeValueOf { num: 12, denominator: 1 }),
-				xcm_assets::EQUILIBRIUM_EQD => Some(RelativeValueOf { num: 12, denominator: 1 }),
-				xcm_assets::MOONBEAM_BRZ => Some(RelativeValueOf { num: 23, denominator: 10 }),
-				xcm_assets::POLKADEX_PDEX => Some(RelativeValueOf { num: 14, denominator: 1 }),
-				xcm_assets::MOONBEAM_GLMR => Some(RelativeValueOf { num: 55, denominator: 10 }),
-				_ => None,
-			},
-
-			CurrencyId::Native => Some(RelativeValueOf { num: 1, denominator: 1 }),
-			assets::tokens::EURC_ID => Some(RelativeValueOf { num: 13, denominator: 1 }),
-			_ => Some(RelativeValueOf { num: 10, denominator: 1 }),
-		}
-	}
-}
-
-impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
-	fn convert(location: MultiLocation) -> Option<CurrencyId> {
-		match location {
-			loc if loc == MultiLocation::parent() => Some(xcm_assets::RELAY_DOT_id()),
-
-			loc if loc == asset_hub::USDT_location() => Some(xcm_assets::ASSETHUB_USDT_id()),
-			loc if loc == asset_hub::USDC_location() => Some(xcm_assets::ASSETHUB_USDC_id()),
-			loc if loc == equilibrium::EQD_location() => Some(xcm_assets::EQUILIBRIUM_EQD_id()),
-			loc if loc == moonbeam::BRZ_location() => Some(xcm_assets::MOONBEAM_BRZ_id()),
-			loc if loc == polkadex::PDEX_location() => Some(xcm_assets::POLKADEX_PDEX_id()),
-			loc if loc == moonbeam::GLMR_location() => Some(xcm_assets::MOONBEAM_GLMR_id()),
-			loc if loc == asset_hub::PINK_location() => Some(xcm_assets::ASSETHUB_PINK_id()),
-
-			// Our native currency location without re-anchoring
-			loc if loc == native_location_external_pov() => Some(CurrencyId::Native),
-			// Our native currency location with re-anchoring
-			// The XCM pallet will try to re-anchor the location before it reaches here
-			loc if loc == native_location_local_pov() => Some(CurrencyId::Native),
-			loc if loc == EURC_location_external_pov() => Some(assets::tokens::EURC_ID),
-			loc if loc == EURC_location_local_pov() => Some(assets::tokens::EURC_ID),
-			_ => None,
-		}
-	}
-}
-
-impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
-	fn convert(a: MultiAsset) -> Option<CurrencyId> {
-		if let MultiAsset { id: AssetId::Concrete(id), fun: _ } = a {
-			Self::convert(id)
-		} else {
-			None
-		}
-	}
-}
-
-/// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
-/// Here we need to know the canonical representation of all the tokens we handle in order to
-/// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
-impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
-	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
-			.ok_or(location)
-	}
-}
 
 /// A `FilterAssetLocation` implementation. Filters multi native assets whose
 /// reserve is same with `origin`.
@@ -220,16 +104,9 @@ parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
 	pub UnitWeightCost: XCMWeight = XCMWeight::from_parts(1_000_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
-	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
+	pub SelfLocation: MultiLocation = MultiLocation::here();
 	pub const BaseXcmWeight: XCMWeight = XCMWeight::from_parts(150_000_000, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
-}
-
-match_types! {
-	pub type ParentOrParentsExecutivePlurality: impl Contains<MultiLocation> = {
-		MultiLocation { parents: 1, interior: Here } |
-		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }
-	};
 }
 
 //TODO: move DenyThenTry to polkadot's xcm module.
@@ -313,128 +190,22 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 );
 
-pub struct ChargeWeightInFungiblesImplementation;
-impl ChargeWeightInFungibles<AccountId, ConcreteAssets> for ChargeWeightInFungiblesImplementation {
-	fn charge_weight_in_fungibles(
-		asset_id: CurrencyId,
-		weight: Weight,
-	) -> Result<Balance, XcmError> {
-		let amount = <WeightToFee as WeightToFeeTrait>::weight_to_fee(&weight);
-
-		// since this is calibrated (in theory) for the native of the relay
-		// we should just have a multiplier for relative "value" of that token
-		// and adjust the amount inversily proportional to the value
-		if let Some(relative_value) = RelayRelativeValue::get_relative_value(asset_id) {
-			let adjusted_amount =
-				RelativeValue::<Balance>::divide_by_relative_value(amount, relative_value);
-			log::info!("amount to be charged: {:?} in asset: {:?}", adjusted_amount, asset_id);
-			return Ok(adjusted_amount)
-		} else {
-			log::info!("amount to be charged: {:?} in asset: {:?}", amount, asset_id);
-			return Ok(amount)
-		}
-	}
-}
+pub type Traders = AssetRegistryTrader<
+	FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry>>,
+	XcmFeesTo32ByteAccount<Transactor, AccountId, PendulumTreasuryAccount>,
+>;
 
 /// Means for transacting the currencies of this parachain
 type Transactor = MultiCurrencyAdapter<
 	Currencies,
 	(), // We don't handle unknown assets.
-	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
+	IsNativeConcrete<CurrencyId, CurrencyIdConvert<AssetRegistry>>,
 	AccountId,
 	LocationToAccountId,
 	CurrencyId,
-	CurrencyIdConvert,
+	CurrencyIdConvert<AssetRegistry>,
 	DepositToAlternative<PendulumTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
-
-// Workarround for TakeFirstAssetTrader
-use frame_support::traits::tokens::{
-	DepositConsequence, Fortitude, Preservation, Provenance, WithdrawConsequence,
-};
-
-pub struct ConcreteAssets;
-impl fungibles::Mutate<AccountId> for ConcreteAssets {}
-impl fungibles::Balanced<AccountId> for ConcreteAssets {
-	type OnDropCredit = fungibles::DecreaseIssuance<AccountId, Self>;
-	type OnDropDebt = fungibles::IncreaseIssuance<AccountId, Self>;
-}
-
-// We only use minimum_balance of these implementations
-impl fungibles::Inspect<AccountId> for ConcreteAssets {
-	type AssetId = <Tokens as fungibles::Inspect<AccountId>>::AssetId;
-	type Balance = <Tokens as fungibles::Inspect<AccountId>>::Balance;
-
-	fn minimum_balance(id: Self::AssetId) -> Self::Balance {
-		Tokens::minimum_balance(id)
-	}
-
-	fn total_issuance(asset_id: Self::AssetId) -> Self::Balance {
-		Tokens::total_issuance(asset_id)
-	}
-
-	fn balance(asset_id: Self::AssetId, account_id: &AccountId) -> Self::Balance {
-		Tokens::balance(asset_id, account_id)
-	}
-
-	fn total_balance(asset_id: Self::AssetId, account_id: &AccountId) -> Self::Balance {
-		Tokens::balance(asset_id, account_id)
-	}
-
-	fn reducible_balance(
-		_: Self::AssetId,
-		_: &AccountId,
-		_: Preservation,
-		_: Fortitude,
-	) -> Self::Balance {
-		Self::Balance::zero()
-	}
-
-	fn can_deposit(
-		_: Self::AssetId,
-		_: &AccountId,
-		_: Self::Balance,
-		_: Provenance,
-	) -> DepositConsequence {
-		DepositConsequence::UnknownAsset
-	}
-
-	fn can_withdraw(
-		_: Self::AssetId,
-		_: &AccountId,
-		_: Self::Balance,
-	) -> WithdrawConsequence<Self::Balance> {
-		WithdrawConsequence::UnknownAsset
-	}
-
-	fn asset_exists(_: Self::AssetId) -> bool {
-		false
-	}
-}
-
-// Not used
-impl fungibles::Unbalanced<AccountId> for ConcreteAssets {
-	fn handle_dust(_: fungibles::Dust<AccountId, Self>) {}
-	fn write_balance(
-		_: Self::AssetId,
-		_: &AccountId,
-		_: Self::Balance,
-	) -> Result<Option<Self::Balance>, DispatchError> {
-		core::prelude::v1::Err(DispatchError::CannotLookup)
-	}
-
-	fn set_total_issuance(_: Self::AssetId, _: Self::Balance) {}
-}
-
-pub type Traders = (
-	TakeFirstAssetTrader<
-		AccountId,
-		ChargeWeightInFungiblesImplementation,
-		ConvertedConcreteId<CurrencyId, Balance, CurrencyIdConvert, JustTry>,
-		ConcreteAssets,
-		XcmFeesTo32ByteAccount<Transactor, AccountId, PendulumTreasuryAccount>,
-	>,
-);
 
 // We will allow for BRZ location from moonbeam
 pub struct AutomationPalletConfigPendulum;
@@ -565,7 +336,7 @@ impl orml_xtokens::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = CurrencyIdConvert;
+	type CurrencyIdConvert = CurrencyIdConvert<AssetRegistry>;
 	type AccountIdToMultiLocation = AccountIdToMultiLocation;
 	type SelfLocation = SelfLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;

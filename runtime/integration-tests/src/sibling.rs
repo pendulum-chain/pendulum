@@ -142,6 +142,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 }
 
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
+
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
 			MultiLocation {

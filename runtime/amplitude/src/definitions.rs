@@ -19,7 +19,7 @@ mod tests {
 	};
 
 	#[test]
-	fn test_PINK() {
+	fn test_pink() {
 		let pink_loc = asset_hub::PINK_location();
 		let mut junctions = pink_loc.interior().into_iter();
 
@@ -31,7 +31,7 @@ mod tests {
 
 	#[test]
 	fn test_constants() {
-		let expected_USDT_value = 1984;
-		assert_eq!(asset_hub::USDT_ASSET_ID, expected_USDT_value);
+		let expected_usdt_value = 1984;
+		assert_eq!(asset_hub::USDT_ASSET_ID, expected_usdt_value);
 	}
 }

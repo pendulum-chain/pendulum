@@ -22,6 +22,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", default-features
 sp-std = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
 sp-consensus-aura = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
 sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus.git", default-features = false, branch = "polkadot-v0.9.42" }
 
 xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42" }
@@ -58,6 +59,7 @@ std = [
     "orml-xcm-support/std",
     "zenlink-protocol/std",
     "spacewalk-primitives/std",
+    "cumulus-primitives-core/std",
 ]
 
 runtime-benchmarks = [

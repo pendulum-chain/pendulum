@@ -70,7 +70,7 @@ mod tests {
 	};
 
 	#[test]
-	fn test_BRZ() {
+	fn test_brz() {
 		let brz_loc = moonbeam::BRZ_location();
 		let mut junctions = brz_loc.interior().into_iter();
 
@@ -84,7 +84,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_GLMR() {
+	fn test_glmr() {
 		let glmr_loc = moonbeam::GLMR_location();
 		let mut junctions = glmr_loc.interior().into_iter();
 
@@ -97,8 +97,8 @@ mod tests {
 
 	#[test]
 	fn test_constants() {
-		let expected_EQ_value = 25_969;
-		assert_eq!(equilibrium::EQ_ASSET_ID, expected_EQ_value);
+		let expected_eq_value = 25_969;
+		assert_eq!(equilibrium::EQ_ASSET_ID, expected_eq_value);
 
 		let eq_interior = equilibrium::EQ_location().interior;
 		let mut junctions = eq_interior.into_iter();

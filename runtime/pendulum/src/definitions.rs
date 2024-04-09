@@ -5,8 +5,9 @@ pub mod asset_hub {
     pub const PARA_ID: u32 = 1000;
     pub const ASSET_PALLET_INDEX: u8 = 50;
 
-}
+    parachain_asset_location!(USDT, 1984);
 
+}
 
 
 pub mod moonbeam {
@@ -45,7 +46,6 @@ mod tests {
 	use super::{moonbeam};
 	use xcm::{
 		latest::prelude::{AccountKey20, PalletInstance, Parachain},
-		prelude::GeneralIndex,
 	};
 
 	#[test]

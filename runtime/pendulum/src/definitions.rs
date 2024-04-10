@@ -1,4 +1,9 @@
 
+pub mod xcm_assets {
+	use runtime_common::create_xcm_id;
+	create_xcm_id!(MOONBEAM_BRZ, 4);
+}
+
 pub mod asset_hub {
     use runtime_common::parachain_asset_location;
     
@@ -8,13 +13,11 @@ pub mod asset_hub {
     parachain_asset_location!(USDT, 1984);
 
 }
-
-
 pub mod moonbeam {
-    use runtime_common::parachain_asset_location;
+    use runtime_common::{parachain_asset_location};
     use xcm::latest::{
         Junction::{AccountKey20, PalletInstance, Parachain},
-        Junctions::{X2, X3},
+        Junctions::{X3},
     };
 
     pub const PARA_ID: u32 = 2004;
@@ -35,10 +38,6 @@ pub mod moonbeam {
         )
     );
 
-    parachain_asset_location!(
-        GLMR,
-        X2(Parachain(PARA_ID), PalletInstance(BALANCES_PALLET_INDEX))
-    );
 }
 
 #[cfg(test)]

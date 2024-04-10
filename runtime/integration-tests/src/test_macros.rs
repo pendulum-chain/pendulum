@@ -661,7 +661,7 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 		use xcm::latest::{
 			Junction, Junction::{ GeneralKey, PalletInstance}, Junctions::{X3}, MultiLocation, WeightLimit,
 		};
-		use pendulum_runtime::assets::xcm_assets;
+		use pendulum_runtime::definitions::xcm_assets;
 		use orml_traits::MultiCurrency;
 
 		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;

@@ -1,4 +1,5 @@
-use crate::{sibling, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID};
+use crate::{sibling, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID,
+			definitions::asset_hub};
 use amplitude_runtime::CurrencyId as AmplitudeCurrencyId;
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::CurrencyId as PendulumCurrencyId;
@@ -20,7 +21,7 @@ use xcm::{
 	VersionedMultiLocation,
 };
 
-use pendulum_runtime::definitions::{moonbeam::PARA_ID as MOONBEAM_PARA_ID, moonbeam, asset_hub};
+use pendulum_runtime::definitions::{moonbeam::PARA_ID as MOONBEAM_PARA_ID, moonbeam};
 use statemine_runtime as kusama_asset_hub_runtime;
 use statemint_runtime as polkadot_asset_hub_runtime;
 

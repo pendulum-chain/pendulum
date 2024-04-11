@@ -15,7 +15,6 @@ use orml_traits::{
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::MAXIMUM_BLOCK_WEIGHT;
-use pendulum_runtime::definitions::asset_hub;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
@@ -43,7 +42,7 @@ use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation,
 };
 
-use crate::{AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
+use crate::{AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, definitions::asset_hub};
 
 use pendulum_runtime::definitions::moonbeam::BRZ_location;
 

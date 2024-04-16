@@ -19,10 +19,19 @@
 
 pub mod block_weights;
 pub mod extrinsic_weights;
-pub mod orml_asset_registry;
 pub mod pallet_xcm;
 pub mod paritydb_weights;
 pub mod rocksdb_weights;
+pub mod orml_asset_registry;
+pub mod orml_currencies_allowance_extension;
+pub mod treasury_buyout_extension;
+pub mod fee;
+pub mod nomination;
+pub mod oracle;
+pub mod redeem;
+pub mod replace;
+pub mod stellar_relay;
+pub mod vault_registry;
 
 pub use block_weights::constants::BlockExecutionWeight;
 pub use extrinsic_weights::constants::ExtrinsicBaseWeight;

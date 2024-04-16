@@ -40,7 +40,7 @@ use bifrost_farming_rpc_runtime_api as farming_rpc_runtime_api;
 pub use spacewalk_primitives::CurrencyId;
 use spacewalk_primitives::{
 	self as primitives, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner, UnsignedFixedPoint,
-	UnsignedInner,
+	UnsignedInner, Asset
 };
 
 
@@ -1178,6 +1178,14 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 }
 parameter_types! {
 	pub const RelayChainCurrencyId: CurrencyId = XCM(0); // 0 is the index of the relay chain in our XCM mapping
+	#[cfg(feature = "runtime-benchmarks")]
+	pub const GetWrappedCurrencyId: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
+		code: *b"USDC",
+		issuer: [
+			59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
+			190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
+		],
+	});
 }
 impl currency::Config for Runtime {
 	type UnsignedFixedPoint = UnsignedFixedPoint;
@@ -1185,6 +1193,8 @@ impl currency::Config for Runtime {
 	type SignedFixedPoint = SignedFixedPoint;
 	type Balance = Balance;
 	type GetRelayChainCurrencyId = RelayChainCurrencyId;
+	#[cfg(feature = "runtime-benchmarks")]
+	type GetWrappedCurrencyId = GetWrappedCurrencyId;
 	type AssetConversion = primitives::AssetConversion;
 	type BalanceConversion = primitives::BalanceConversion;
 	type CurrencyConversion = CurrencyConvert;
@@ -1228,7 +1238,7 @@ impl<K, V, A> orml_traits::DataProvider<K, V> for DataFeederBenchmark<K, V, A> {
 
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = oracle::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::oracle::SubstrateWeight<Runtime>;
 	type DecimalsLookup = spacewalk_primitives::PendulumDecimalsLookup;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -1247,7 +1257,7 @@ impl stellar_relay::Config for Runtime {
 	type OrganizationLimit = OrganizationLimit;
 	type ValidatorLimit = ValidatorLimit;
 	type IsPublicNetwork = IsPublicNetwork;
-	type WeightInfo = stellar_relay::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::stellar_relay::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1258,7 +1268,7 @@ parameter_types! {
 }
 impl fee::Config for Runtime {
 	type FeePalletId = FeePalletId;
-	type WeightInfo = fee::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::fee::SubstrateWeight<Runtime>;
 	type SignedFixedPoint = SignedFixedPoint;
 	type SignedInner = SignedInner;
 	type UnsignedFixedPoint = UnsignedFixedPoint;
@@ -1394,7 +1404,7 @@ impl pallet_proxy::Config for Runtime {
 impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo =
-		orml_currencies_allowance_extension::default_weights::SubstrateWeight<Runtime>;
+		weights::orml_currencies_allowance_extension::SubstrateWeight<Runtime>;
 	type MaxAllowedCurrencies = ConstU32<256>;
 }
 
@@ -1469,7 +1479,7 @@ impl treasury_buyout_extension::Config for Runtime {
 	type PriceGetter = OraclePriceGetter;
 	type MinAmountToBuyout = MinAmountToBuyout;
 	type MaxAllowedBuyoutCurrencies = MaxAllowedBuyoutCurrencies;
-	type WeightInfo = treasury_buyout_extension::default_weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::treasury_buyout_extension::SubstrateWeight<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type RelayChainCurrencyId = RelayChainCurrencyId;
 }
@@ -1576,10 +1586,21 @@ mod benches {
 		[pallet_timestamp, Timestamp]
 		[cumulus_pallet_xcmp_queue, XcmpQueue]
 
+		[fee, Fee]
+		[issue, Issue]
+		[nomination, Nomination]
+		[oracle, Oracle]
+		[redeem, Redeem]
+		[replace, Replace]
+		[stellar_relay, StellarRelay]
+		[vault_registry, VaultRegistry]
+
 		// Other
 		[orml_asset_registry, runtime_common::benchmarking::orml_asset_registry::Pallet::<Runtime>]
 		[pallet_xcm, PolkadotXcm]
+
 		[orml_currencies_allowance_extension, TokenAllowance]
+		[treasury_buyout_extension, TreasuryBuyoutExtension]
 	);
 }
 

@@ -11,7 +11,7 @@ scale-info = { version = "2.1.2", features = ["derive"] }
 serde = { version = "1.0.144", features = ["derive"] }
 
 # Spacewalk libraries
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "3c03e759a6f600ea72d636d4f9cc4b05d633201c" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "b1dc81f9de7bca3408b490587280a10732f7b9dd" }
 
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }

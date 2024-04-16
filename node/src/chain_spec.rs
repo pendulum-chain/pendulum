@@ -416,7 +416,7 @@ fn amplitude_genesis(
 		},
 		issue: amplitude_runtime::IssueConfig {
 			issue_period: amplitude_runtime::DAYS,
-			issue_minimum_transfer_amount: 1000,
+			issue_minimum_transfer_amount: 1_000_000_000,
 			limit_volume_amount: None,
 			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
@@ -425,7 +425,7 @@ fn amplitude_genesis(
 		},
 		redeem: amplitude_runtime::RedeemConfig {
 			redeem_period: foucoco_runtime::DAYS,
-			redeem_minimum_transfer_amount: 1000,
+			redeem_minimum_transfer_amount: 1_000_000_000,
 			limit_volume_amount: None,
 			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
@@ -434,7 +434,7 @@ fn amplitude_genesis(
 		},
 		replace: amplitude_runtime::ReplaceConfig {
 			replace_period: foucoco_runtime::DAYS,
-			replace_minimum_transfer_amount: 1000,
+			replace_minimum_transfer_amount: 1_000_000_000,
 		},
 		security: amplitude_runtime::SecurityConfig {
 			initial_status: if start_shutdown {
@@ -645,7 +645,7 @@ fn foucoco_genesis(
 			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
-			minimum_collateral_vault: vec![(XCM(0), 3_000_000_000_000)],
+			minimum_collateral_vault: vec![(XCM(0), 0)],
 			punishment_delay: foucoco_runtime::DAYS * 2,
 			secure_collateral_threshold: vec![
 				(
@@ -826,7 +826,7 @@ fn pendulum_genesis(
 		vesting: pendulum_runtime::VestingConfig { vesting: vesting_schedules },
 		issue: pendulum_runtime::IssueConfig {
 			issue_period: amplitude_runtime::DAYS,
-			issue_minimum_transfer_amount: 1000,
+			issue_minimum_transfer_amount: 1_000_000_000,
 			limit_volume_amount: None,
 			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
@@ -835,7 +835,7 @@ fn pendulum_genesis(
 		},
 		redeem: pendulum_runtime::RedeemConfig {
 			redeem_period: pendulum_runtime::DAYS,
-			redeem_minimum_transfer_amount: 1000,
+			redeem_minimum_transfer_amount: 1_000_000_000,
 			limit_volume_amount: None,
 			limit_volume_currency_id: XCM(0),
 			current_volume_amount: 0u32.into(),
@@ -844,7 +844,7 @@ fn pendulum_genesis(
 		},
 		replace: pendulum_runtime::ReplaceConfig {
 			replace_period: pendulum_runtime::DAYS,
-			replace_minimum_transfer_amount: 1000,
+			replace_minimum_transfer_amount: 1_000_000_000,
 		},
 		security: pendulum_runtime::SecurityConfig {
 			initial_status: if start_shutdown {

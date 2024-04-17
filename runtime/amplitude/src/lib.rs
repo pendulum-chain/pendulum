@@ -1187,7 +1187,7 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 }
 parameter_types! {
 	pub const RelayChainCurrencyId: CurrencyId = XCM(0); // 0 is the index of the relay chain in our XCM mapping
-	#[cfg(feature = "runtime-benchmarks")]
+	//#[cfg(feature = "runtime-benchmarks")]
 	pub const GetWrappedCurrencyId: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
 		code: *b"USDC",
 		issuer: [

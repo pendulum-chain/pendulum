@@ -10415,6 +10415,7 @@ dependencies = [
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
+ "paste",
  "pendulum-runtime",
  "polkadot-core-primitives",
  "polkadot-parachain",

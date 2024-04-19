@@ -656,12 +656,13 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
         $parachain2_id:ident,
 		$expected_fee:ident
     ) => {{
-		use crate::mock::{units, ALICE};
+		use crate::{mock::{units, ALICE}, definitions::xcm_assets};
+
 		use polkadot_core_primitives::Balance;
 		use xcm::latest::{
 			Junction, Junction::{ GeneralKey, PalletInstance}, Junctions::{X3}, MultiLocation, WeightLimit,
 		};
-		use pendulum_runtime::assets::xcm_assets;
+
 		use orml_traits::MultiCurrency;
 
 		use $parachain1_runtime::CurrencyId as Parachain1CurrencyId;

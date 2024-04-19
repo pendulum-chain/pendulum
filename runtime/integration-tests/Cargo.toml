@@ -9,6 +9,7 @@ version = "0.1.0"
 codec = { package = "parity-scale-codec", version = "3.0.0" }
 scale-info = { version = "2.1.2", features = ["derive"] }
 serde = { version = "1.0.144", features = ["derive"] }
+paste = "1.0.14"
 
 # Spacewalk libraries
 spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "3c03e759a6f600ea72d636d4f9cc4b05d633201c" }

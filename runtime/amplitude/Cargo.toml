@@ -276,8 +276,8 @@ runtime-benchmarks = [
     "pallet-collective/runtime-benchmarks",
     "runtime-common/runtime-benchmarks",
     "parachain-staking/runtime-benchmarks",
-	"orml-currencies-allowance-extension/runtime-benchmarks",
-	"treasury-buyout-extension/runtime-benchmarks"
+    "orml-currencies-allowance-extension/runtime-benchmarks",
+    "treasury-buyout-extension/runtime-benchmarks"
 ]
 
 try-runtime = [

@@ -235,14 +235,31 @@ impl XCMCurrencyConversion for PendulumDiaOracleKeyConverter {
 	}
 }
 
-type DataProviderImpl = DiaOracleAdapter<
-	DiaOracleModule,
-	UnsignedFixedPoint,
-	Moment,
-	dia::DiaOracleKeyConvertor<PendulumDiaOracleKeyConverter>,
-	ConvertPrice,
-	ConvertMoment,
->;
+
+cfg_if::cfg_if! {
+	if #[cfg(feature = "runtime-benchmarks")] {
+		use oracle::testing_utils::{
+			MockConvertMoment, MockConvertPrice, MockDiaOracle, MockOracleKeyConvertor,
+		};
+		type DataProviderImpl = DiaOracleAdapter<
+			MockDiaOracle,
+			UnsignedFixedPoint,
+			Moment,
+			MockOracleKeyConvertor,
+			MockConvertPrice,
+			MockConvertMoment<Moment>,
+		>;
+	} else {
+		type DataProviderImpl = DiaOracleAdapter<
+			DiaOracleModule,
+			UnsignedFixedPoint,
+			Moment,
+			dia::DiaOracleKeyConvertor<PendulumDiaOracleKeyConverter>,
+			ConvertPrice,
+			ConvertMoment,
+		>;
+	}
+}
 
 pub struct ConvertPrice;
 
@@ -1178,6 +1195,7 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 }
 parameter_types! {
 	pub const RelayChainCurrencyId: CurrencyId = XCM(0); // 0 is the index of the relay chain in our XCM mapping
+	// This specific asset is used for benchmarking Spacewalk pallets as it's already used as the wrapped currency in the genesis config
 	pub const GetWrappedCurrencyId: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
 		code: *b"USDC",
 		issuer: [
@@ -1283,7 +1301,7 @@ impl vault_registry::Config for Runtime {
 	type PalletId = VaultRegistryPalletId;
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
-	type WeightInfo = vault_registry::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::vault_registry::SubstrateWeight<Runtime>;
 	type GetGriefingCollateralCurrencyId = NativeCurrencyId;
 }
 
@@ -1308,12 +1326,12 @@ impl issue::Config for Runtime {
 
 impl nomination::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = nomination::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::nomination::SubstrateWeight<Runtime>;
 }
 
 impl replace::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = replace::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::replace::SubstrateWeight<Runtime>;
 }
 
 impl clients_info::Config for Runtime {

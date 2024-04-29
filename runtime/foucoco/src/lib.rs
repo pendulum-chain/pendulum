@@ -1252,6 +1252,7 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 
 parameter_types! {
 	pub const RelayChainCurrencyId: CurrencyId = XCM(0);
+	// This specific asset is used for benchmarking Spacewalk pallets as it's already used as the wrapped currency in the genesis config
 	pub const GetWrappedCurrencyId: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
 		code: *b"USDC",
 		issuer: [

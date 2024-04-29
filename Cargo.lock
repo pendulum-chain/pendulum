@@ -7962,6 +7962,7 @@ version = "0.1.0"
 dependencies = [
  "bifrost-farming",
  "bifrost-farming-rpc-runtime-api",
+ "cfg-if",
  "clients-info",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",

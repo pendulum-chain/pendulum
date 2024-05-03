@@ -85,18 +85,16 @@ impl<AccountId: Ord, Balance: PartialEq + Ord> Ord for Stake<AccountId, Balance>
 
 /// The activity status of the collator.
 #[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(Default)]
 pub enum CandidateStatus {
 	/// Committed to be online and producing valid blocks (not equivocating)
-	Active,
+	#[default]
+ Active,
 	/// Staked until the inner round
 	Leaving(SessionIndex),
 }
 
-impl Default for CandidateStatus {
-	fn default() -> CandidateStatus {
-		CandidateStatus::Active
-	}
-}
+
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(MaxDelegatorsPerCandidate))]

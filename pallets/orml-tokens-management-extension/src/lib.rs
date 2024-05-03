@@ -131,7 +131,7 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::InsufficientBalance)?;
 
 			CurrencyData::<T>::insert(
-				currency_id.clone(),
+				currency_id,
 				CurrencyDetails {
 					owner: creator.clone(),
 					issuer: creator.clone(),
@@ -231,7 +231,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
 
-			CurrencyData::<T>::try_mutate(currency_id.clone(), |maybe_details| {
+			CurrencyData::<T>::try_mutate(currency_id, |maybe_details| {
 				let details = maybe_details.as_mut().ok_or(Error::<T>::NotCreated)?;
 				ensure!(origin == details.owner, Error::<T>::NoPermission);
 
@@ -271,7 +271,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			CurrencyData::<T>::try_mutate(currency_id.clone(), |maybe_details| {
+			CurrencyData::<T>::try_mutate(currency_id, |maybe_details| {
 				let details = maybe_details.as_mut().ok_or(Error::<T>::NotCreated)?;
 
 				if details.owner == new_owner {
@@ -311,7 +311,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
 
-			CurrencyData::<T>::try_mutate(currency_id.clone(), |maybe_details| {
+			CurrencyData::<T>::try_mutate(currency_id, |maybe_details| {
 				let details = maybe_details.as_mut().ok_or(Error::<T>::NotCreated)?;
 
 				ensure!(origin == details.owner, Error::<T>::NoPermission);

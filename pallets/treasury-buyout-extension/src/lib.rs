@@ -290,7 +290,7 @@ impl<T: Config> Pallet<T> {
 				<frame_system::Pallet<T>>::block_number().saturated_into::<u32>();
 			let current_period_start_number = current_block_number
 				.checked_div(buyout_period)
-				.and_then(|n| Some(n.saturating_mul(buyout_period)))
+				.map(|n| n.saturating_mul(buyout_period))
 				.unwrap_or_default();
 			let (mut buyouts, last_buyout) = Buyouts::<T>::get(account_id);
 
@@ -348,8 +348,7 @@ impl<T: Config> Pallet<T> {
 			basic_asset_price_with_fee.into_inner(),
 			exchange_asset_price.into_inner(),
 		)
-		.map(|n| n.try_into().ok())
-		.flatten()
+		.and_then(|n| n.try_into().ok())
 		.ok_or(ArithmeticError::Overflow.into());
 
 		exchange_amount
@@ -377,8 +376,7 @@ impl<T: Config> Pallet<T> {
 			exchange_asset_price.into_inner(),
 			basic_asset_price_with_fee.into_inner(),
 		)
-		.map(|b| b.try_into().ok())
-		.flatten()
+		.and_then(|b| b.try_into().ok())
 		.ok_or(ArithmeticError::Overflow.into());
 
 		buyout_amount
@@ -470,11 +468,9 @@ impl<T: Config> Pallet<T> {
 		assets: (&CurrencyIdOf<T>, &CurrencyIdOf<T>),
 	) -> Result<(FixedU128, FixedU128), DispatchError> {
 		let basic_asset_price: FixedU128 = T::PriceGetter::get_price::<FixedU128>(*assets.0)
-			.map_err(|_| Error::<T>::NoPrice)?
-			.into();
+			.map_err(|_| Error::<T>::NoPrice)?;
 		let exchange_asset_price: FixedU128 = T::PriceGetter::get_price::<FixedU128>(*assets.1)
-			.map_err(|_| Error::<T>::NoPrice)?
-			.into();
+			.map_err(|_| Error::<T>::NoPrice)?;
 		Ok((basic_asset_price, exchange_asset_price))
 	}
 }

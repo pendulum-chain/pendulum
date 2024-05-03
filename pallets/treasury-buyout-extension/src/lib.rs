@@ -265,7 +265,7 @@ pub mod pallet {
 			// Update `AllowedCurrencies` storage with provided `assets`
 			for asset in assets.clone() {
 				// Check for duplicates
-				if !AllowedCurrencies::<T>::contains_key(&asset) {
+				if !AllowedCurrencies::<T>::contains_key(asset) {
 					AllowedCurrencies::<T>::insert(asset, ());
 					allowed_assets.push(asset);
 				}
@@ -343,15 +343,14 @@ impl<T: Config> Pallet<T> {
 			.ok_or::<DispatchError>(ArithmeticError::Overflow.into())?;
 		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
-		let exchange_amount = Self::multiply_by_rational(
+		Self::multiply_by_rational(
 			buyout_amount.saturated_into::<u128>(),
 			basic_asset_price_with_fee.into_inner(),
 			exchange_asset_price.into_inner(),
 		)
 		.and_then(|n| n.try_into().ok())
-		.ok_or(ArithmeticError::Overflow.into());
+		.ok_or(ArithmeticError::Overflow.into())
 
-		exchange_amount
 	}
 
 	/// Used for calculating buyout amount of basic asset user will get for exchange_amount of exchange asset
@@ -371,15 +370,13 @@ impl<T: Config> Pallet<T> {
 			.ok_or::<DispatchError>(ArithmeticError::Overflow.into())?;
 		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
-		let buyout_amount = Self::multiply_by_rational(
+		Self::multiply_by_rational(
 			exchange_amount.saturated_into::<u128>(),
 			exchange_asset_price.into_inner(),
 			basic_asset_price_with_fee.into_inner(),
 		)
 		.and_then(|b| b.try_into().ok())
-		.ok_or(ArithmeticError::Overflow.into());
-
-		buyout_amount
+		.ok_or(ArithmeticError::Overflow.into())
 	}
 
 	/// Used for splitting calculations of amount based on the input given
@@ -584,8 +581,7 @@ where
 		_info: &DispatchInfoOf<Self::Call>,
 		_len: usize,
 	) -> TransactionValidity {
-		if let Some(local_call) = call.is_sub_type() {
-			if let Call::buyout { asset, amount } = local_call {
+		if let Some(Call::buyout { asset, amount }) = call.is_sub_type() {
 				Pallet::<T>::ensure_asset_allowed_for_buyout(asset).map_err(|_| {
 					InvalidTransaction::Custom(ValidityError::WrongAssetToBuyout.into())
 				})?;
@@ -609,9 +605,11 @@ where
 				Pallet::<T>::ensure_buyout_limit_not_exceeded(who, buyout_amount).map_err(
 					|_| InvalidTransaction::Custom(ValidityError::BuyoutLimitExceeded.into()),
 				)?;
-			}
+			
 		}
 
 		Ok(ValidTransaction::default())
 	}
+
+		
 }

@@ -161,7 +161,7 @@ fn root_update_buyout_amount_limit_succeeds() {
 		let buyout_amount_limit = 200 * UNIT;
 		assert_ok!(crate::Pallet::<Test>::update_buyout_limit(
 			RuntimeOrigin::root(),
-			Some(buyout_amount_limit.into()),
+			Some(buyout_amount_limit),
 		));
 
 		assert_eq!(BuyoutLimit::<Test>::get(), buyout_amount_limit.into());
@@ -185,7 +185,7 @@ fn user_update_buyout_amount_limit_fails() {
 		assert_noop!(
 			crate::Pallet::<Test>::update_buyout_limit(
 				RuntimeOrigin::signed(user),
-				Some(buyout_amount_limit.into()),
+				Some(buyout_amount_limit),
 			),
 			BadOrigin
 		);
@@ -596,7 +596,7 @@ mod signed_extension {
 			// With buyout limit
 			BuyoutLimit::<Test>::put(100 * UNIT);
 			// Previous buyout at current_block
-			Buyouts::<Test>::insert(&user, (80 * UNIT, current_block));
+			Buyouts::<Test>::insert(user, (80 * UNIT, current_block));
 
 			let check = CheckBuyout::<Test>::new();
 			let info = info_from_weight(Weight::zero());

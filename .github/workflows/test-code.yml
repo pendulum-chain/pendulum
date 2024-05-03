@@ -58,10 +58,6 @@ jobs:
         # Call `rustup show` as a hack so that the toolchain defined in rust-toolchain.toml is installed
         run: rustup show
 
-      # Enable this for clippy linting.
-      # - name: Check and Lint Code
-      #   run: cargo +nightly-2021-12-01 clippy -- -D warnings
-
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
         with:
@@ -72,3 +68,10 @@ jobs:
 
       - name: Test Code
         run: cargo test
+
+      - name: Clippy -- Main
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-features -- -W clippy::all -A clippy::style -A clippy::forget_copy -A clippy::forget_ref
+

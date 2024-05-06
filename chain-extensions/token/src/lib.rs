@@ -73,7 +73,7 @@ where
 		+ orml_currencies_allowance_extension::Config,
 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
-	AccountId: sp_std::fmt::Debug + Decode + core::clone::Clone,
+	AccountId: sp_std::fmt::Debug + Decode,
 {
 	fn call<E: Ext>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
 	where
@@ -199,7 +199,7 @@ where
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
-	AccountId: sp_std::fmt::Debug + core::clone::Clone,
+	AccountId: sp_std::fmt::Debug,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 	(CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode,
 {
@@ -218,7 +218,7 @@ where
 		"Calling transfer() sending {:?} {:?}, from {:?} to {:?}",
 		amount,
 		currency_id,
-		&(*env.ext().caller()).clone(),
+		env.ext().caller().clone(),
 		recipient
 	);
 
@@ -291,7 +291,7 @@ where
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
-	AccountId: sp_std::fmt::Debug + core::clone::Clone,
+	AccountId: sp_std::fmt::Debug,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 	(CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode,
 {
@@ -310,7 +310,7 @@ where
 		spender,
 		amount,
 		currency_id,
-		&(*env.ext().caller()).clone(),
+		env.ext().caller().clone(),
 	);
 
 	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
@@ -337,7 +337,7 @@ where
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
-	AccountId: sp_std::fmt::Debug + core::clone::Clone,
+	AccountId: sp_std::fmt::Debug,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 	(AccountId, CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode,
 {
@@ -357,7 +357,7 @@ where
 
 	trace!(
 		"Calling transfer_from() for caller {:?}, sending {:?} {:?}, from {:?} to {:?}",
-		&(*env.ext().caller()).clone(),
+		env.ext().caller().clone(),
 		amount,
 		currency_id,
 		owner,
@@ -371,7 +371,7 @@ where
 	orml_currencies_allowance_extension::Pallet::<T>::do_transfer_approved(
 		currency_id,
 		&owner,
-		&(*env.ext().caller()).clone(),
+		&env.ext().caller().clone(),
 		&recipient,
 		amount,
 	)?;

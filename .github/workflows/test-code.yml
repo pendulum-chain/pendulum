@@ -88,4 +88,4 @@ jobs:
           command: clippy
           # We are a bit more forgiving when it comes to the code in tests and only check for correctness
           args: --package runtime-integration-tests --all-features --all-targets -- -A clippy::all -W clippy::correctness -A clippy::forget_copy -A clippy::forget_ref
-
+      

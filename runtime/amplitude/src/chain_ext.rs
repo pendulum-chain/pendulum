@@ -6,9 +6,9 @@ pub use price_chain_extension::PriceChainExtension;
 pub use token_chain_extension::TokensChainExtension;
 
 impl RegisteredChainExtension<Runtime> for TokensChainExtension<Runtime, Tokens, AccountId> {
-	const ID: u16 = 01;
+	const ID: u16 = 1;
 }
 
 impl RegisteredChainExtension<Runtime> for PriceChainExtension<Runtime> {
-	const ID: u16 = 02;
+	const ID: u16 = 2;
 }

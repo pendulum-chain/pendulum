@@ -86,7 +86,6 @@ pub use dia_oracle::dia::AssetId;
 pub use issue::{Event as IssueEvent, IssueRequest};
 pub use nomination::Event as NominationEvent;
 use oracle::{
-	dia,
 	dia::{DiaOracleAdapter, NativeCurrencyKey, XCMCurrencyConversion},
 	OracleKey,
 };
@@ -1472,7 +1471,7 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 				let rate = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
 				// Account used for feeding values
 				let account = AccountId::from([0u8; 32]);
-				Oracle::feed_values(account, vec![(key.clone(), rate)])?;
+				Oracle::feed_values(account, vec![(key, rate)])?;
 
 				// If feeding was successful, just use the feeded price to spare a read
 				let converted_asset_price = FixedNumber::try_from(rate)

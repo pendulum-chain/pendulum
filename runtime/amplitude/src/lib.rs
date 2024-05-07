@@ -89,6 +89,9 @@ use oracle::{
 	dia::{DiaOracleAdapter, NativeCurrencyKey, XCMCurrencyConversion},
 	OracleKey,
 };
+#[allow(unused_imports)]
+use oracle::dia;
+
 pub use redeem::{Event as RedeemEvent, RedeemRequest};
 pub use replace::{Event as ReplaceEvent, ReplaceRequest};
 pub use security::StatusCode;

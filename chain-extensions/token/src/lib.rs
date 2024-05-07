@@ -228,7 +228,7 @@ where
 
 	<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 		currency_id,
-		&&(*env.ext().caller()).clone(),
+		&(*env.ext().caller()).clone(),
 		&recipient,
 		amount,
 	)?;
@@ -319,7 +319,7 @@ where
 
 	orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
 		currency_id,
-		&&(*env.ext().caller()).clone(),
+		&(*env.ext().caller()).clone(),
 		&spender,
 		amount,
 	)?;

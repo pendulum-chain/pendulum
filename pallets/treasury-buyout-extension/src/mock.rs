@@ -1,13 +1,22 @@
+use core::marker::PhantomData;
+
 use crate::{
 	self as treasury_buyout_extension, default_weights::SubstrateWeight, Config, PriceGetter,
 };
+use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
 	pallet_prelude::GenesisBuild,
 	parameter_types,
-	traits::{ConstU32, Everything},
+	traits::{AsEnsureOriginWithArg, ConstU32, Everything},
 };
+use frame_system::EnsureRoot;
+use orml_asset_registry::AssetMetadata;
 use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::parameter_type_with_key;
+use orml_traits::{
+	asset_registry::{AssetProcessor, Inspect},
+	parameter_type_with_key, FixedConversionRateProvider as FixedConversionRateProviderTrait,
+};
+use scale_info::TypeInfo;
 use sp_arithmetic::{FixedPointNumber, FixedU128, Permill};
 use sp_core::H256;
 use sp_runtime::{
@@ -16,6 +25,8 @@ use sp_runtime::{
 	DispatchError,
 };
 use sp_std::fmt::Debug;
+use spacewalk_primitives::DecimalsLookup;
+use xcm::opaque::v3::MultiLocation;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -33,6 +44,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call},
+		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Config<T>, Event<T>},
 		TreasuryBuyoutExtension: treasury_buyout_extension::{Pallet, Storage, Call, Event<T>},
 	}
 );
@@ -48,6 +60,9 @@ parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const SS58Prefix: u8 = 42;
 }
+
+pub type TestEvent = RuntimeEvent;
+
 impl frame_system::Config for Test {
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
@@ -74,8 +89,6 @@ impl frame_system::Config for Test {
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
-
-pub type TestEvent = RuntimeEvent;
 
 parameter_types! {
 	pub const MaxLocks: u32 = 50;
@@ -152,6 +165,64 @@ impl orml_currencies::Config for Test {
 	type WeightInfo = ();
 }
 
+impl orml_asset_registry::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type CustomMetadata = runtime_common::asset_registry::CustomMetadata;
+	type AssetId = CurrencyId;
+	type AuthorityOrigin = AssetAuthority;
+	type AssetProcessor = CustomAssetProcessor;
+	type Balance = Balance;
+	type WeightInfo = ();
+}
+
+#[derive(
+	Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen,
+)]
+pub struct CustomAssetProcessor;
+impl
+	AssetProcessor<
+		CurrencyId,
+		AssetMetadata<Balance, runtime_common::asset_registry::CustomMetadata>,
+	> for CustomAssetProcessor
+{
+	fn pre_register(
+		id: Option<CurrencyId>,
+		metadata: AssetMetadata<Balance, runtime_common::asset_registry::CustomMetadata>,
+	) -> Result<
+		(CurrencyId, AssetMetadata<Balance, runtime_common::asset_registry::CustomMetadata>),
+		DispatchError,
+	> {
+		match id {
+			Some(id) => Ok((id, metadata)),
+			None => Err(DispatchError::Other("asset-registry: AssetId is required")),
+		}
+	}
+
+	fn post_register(
+		_id: CurrencyId,
+		_asset_metadata: AssetMetadata<Balance, runtime_common::asset_registry::CustomMetadata>,
+	) -> Result<(), DispatchError> {
+		Ok(())
+	}
+}
+
+pub type AssetAuthority = AsEnsureOriginWithArg<EnsureRoot<AccountId>>;
+pub struct FixedConversionRateProvider<OrmlAssetRegistry>(PhantomData<OrmlAssetRegistry>);
+
+impl<
+		OrmlAssetRegistry: Inspect<
+			AssetId = CurrencyId,
+			Balance = Balance,
+			CustomMetadata = runtime_common::asset_registry::CustomMetadata,
+		>,
+	> FixedConversionRateProviderTrait for FixedConversionRateProvider<OrmlAssetRegistry>
+{
+	fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
+		let metadata = OrmlAssetRegistry::metadata_by_location(&location)?;
+		Some(metadata.additional.fee_per_second)
+	}
+}
+
 pub struct OracleMock;
 impl PriceGetter<CurrencyId> for OracleMock {
 	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
@@ -170,6 +241,22 @@ impl PriceGetter<CurrencyId> for OracleMock {
 	}
 }
 
+pub struct DecimalsLookupImpl;
+impl DecimalsLookup for DecimalsLookupImpl {
+	type CurrencyId = CurrencyId;
+
+	fn decimals(currency_id: Self::CurrencyId) -> u32 {
+		match currency_id {
+			0 => 10,
+			1 => 6,
+			2 => 18,
+			6 => 18,
+			x if x == GetNativeCurrencyId::get() => 12,
+			_ => 12,
+		}
+	}
+}
+
 impl Config for Test {
 	/// The overarching event type.
 	type RuntimeEvent = RuntimeEvent;
@@ -183,6 +270,8 @@ impl Config for Test {
 	type SellFee = SellFee;
 	/// Used for fetching prices of currencies from oracle
 	type PriceGetter = OracleMock;
+	/// Used for fetching decimals of assets
+	type DecimalsLookup = DecimalsLookupImpl;
 	/// Min amount of native token to buyout
 	type MinAmountToBuyout = MinAmountToBuyout;
 	/// Maximum number of storage updates for allowed currencies in one extrinsic call

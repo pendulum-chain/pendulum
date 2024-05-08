@@ -24,15 +24,20 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.42", default-features = false }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.42", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.42", default-features = false }
+orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.42", default-features = false }
+
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch ="522-modify-decimalslookup-trait-to-use-its-own-currencyid-type"}
 
 [dev-dependencies]
 mocktopus = "0.8.0"
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-io = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false}
+xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42" }
 
 pallet-balances = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42"}
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "3c03e759a6f600ea72d636d4f9cc4b05d633201c"}
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch ="522-modify-decimalslookup-trait-to-use-its-own-currencyid-type"}
+runtime-common = { path = "../../runtime/common", default-features = false }
 
 [features]
 default = ["std"]

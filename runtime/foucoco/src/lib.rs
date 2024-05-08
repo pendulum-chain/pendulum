@@ -1090,6 +1090,16 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 	}
 }
 
+pub struct DecimalsLookupImpl;
+impl spacewalk_primitives::DecimalsLookup for DecimalsLookupImpl {
+	type CurrencyId = CurrencyId;
+
+	fn decimals(currency_id: Self::CurrencyId) -> u32 {
+		// Returning 0 in case no decimals are found
+		AssetRegistry::metadata(currency_id).unwrap_or_else(0).decimals
+	}
+}
+
 parameter_types! {
 	pub const SellFee: Permill = Permill::from_percent(1);
 	pub const MinAmountToBuyout: Balance = NANOUNIT;
@@ -1106,6 +1116,7 @@ impl treasury_buyout_extension::Config for Runtime {
 	type BuyoutPeriod = BuyoutPeriod;
 	type SellFee = SellFee;
 	type PriceGetter = OraclePriceGetter;
+	type DecimalsLookup = DecimalsLookupImpl;
 	type MinAmountToBuyout = MinAmountToBuyout;
 	type MaxAllowedBuyoutCurrencies = MaxAllowedBuyoutCurrencies;
 	type WeightInfo = treasury_buyout_extension::default_weights::SubstrateWeight<Runtime>;

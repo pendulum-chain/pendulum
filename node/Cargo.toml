@@ -21,7 +21,7 @@ module-redeem-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev =
 module-replace-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "3c03e759a6f600ea72d636d4f9cc4b05d633201c"}
 module-vault-registry-rpc = { git = "https://github.com/pendulum-chain/spacewalk", rev = "3c03e759a6f600ea72d636d4f9cc4b05d633201c"}
 module-pallet-staking-rpc = { path = "../pallets/parachain-staking/rpc" }
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", rev = "3c03e759a6f600ea72d636d4f9cc4b05d633201c"}
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, branch ="522-modify-decimalslookup-trait-to-use-its-own-currencyid-type"}
 
 # Local
 amplitude-runtime = { path = "../runtime/amplitude" }

@@ -346,7 +346,7 @@ impl<T: Config> Pallet<T> {
 			.ok_or::<DispatchError>(ArithmeticError::Overflow.into())?;
 		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
-		// Calculate buyout amount taking into consideration assets' prices and decimals
+		// Calculate exchange amount taking into consideration assets' prices and decimals
 		let exchange_amount = Self::convert_amount(
 			buyout_amount,
 			basic_asset_price_with_fee,

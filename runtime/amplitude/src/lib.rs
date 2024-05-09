@@ -1489,7 +1489,10 @@ impl spacewalk_primitives::DecimalsLookup for DecimalsLookupImpl {
 
 	fn decimals(currency_id: Self::CurrencyId) -> u32 {
 		// Returning 0 in case no decimals are found
-		AssetRegistry::metadata(currency_id).unwrap_or_else(0).decimals
+		match AssetRegistry::metadata(currency_id) {
+			Some(metadata) => metadata.decimals,
+			None => 0,
+		}
 	}
 }
 

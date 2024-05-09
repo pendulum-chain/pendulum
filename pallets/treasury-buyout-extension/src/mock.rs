@@ -249,9 +249,7 @@ impl DecimalsLookup for DecimalsLookupImpl {
 		match currency_id {
 			0 => 10,
 			1 => 6,
-			2 => 18,
-			6 => 18,
-			x if x == GetNativeCurrencyId::get() => 12,
+			2 | 6 => 18,
 			_ => 12,
 		}
 	}

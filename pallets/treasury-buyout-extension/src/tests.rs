@@ -35,10 +35,11 @@ fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 		let initial_treasury_native_balance =
 			get_free_balance(native_currency_id, &TreasuryAccount::get());
 
-		assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
+		assert_eq!(initial_user_native_balance, USERS_INITIAL_NATIVE_BALANCE);
 		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
-
-		let exchange_amount = 100 * UNIT;
+		
+		// 100 DOT
+		let exchange_amount = 1 * UNIT;
 		assert_ok!(crate::Pallet::<Test>::buyout(
 			RuntimeOrigin::signed(user),
 			dot_currency_id,
@@ -105,7 +106,7 @@ fn buyout_using_dot_given_buyout_amount_in_native_succeeds() {
 		let initial_treasury_native_balance =
 			get_free_balance(native_currency_id, &TreasuryAccount::get());
 
-		assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
+		assert_eq!(initial_user_native_balance, USERS_INITIAL_NATIVE_BALANCE);
 		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
 
 		let buyout_amount = 100 * UNIT;
@@ -213,7 +214,8 @@ fn root_update_allowed_currencies_succeeds() {
 		// Test user buyout after allowed currencies update
 		// It should fail because dot is not allowed for buyout
 		let user = USER;
-		let exchange_amount = 100 * UNIT;
+		// 100 DOT
+		let exchange_amount = 1 * UNIT;
 
 		assert_noop!(
 			crate::Pallet::<Test>::buyout(
@@ -320,7 +322,7 @@ fn attempt_buyout_with_wrong_currency_fails() {
 		let initial_treasury_native_balance =
 			get_free_balance(native_currency_id, &TreasuryAccount::get());
 
-		assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
+		assert_eq!(initial_user_native_balance, USERS_INITIAL_NATIVE_BALANCE);
 		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
 
 		let buyout_amount = 100 * UNIT;
@@ -333,10 +335,10 @@ fn attempt_buyout_with_wrong_currency_fails() {
 			Error::<Test>::WrongAssetToBuyout
 		);
 
-		assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
+		assert_eq!(initial_user_native_balance, USERS_INITIAL_NATIVE_BALANCE);
 		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
 
-		let exchange_amount = 100 * UNIT;
+		let exchange_amount = 1 * UNIT;
 		assert_noop!(
 			crate::Pallet::<Test>::buyout(
 				RuntimeOrigin::signed(user),
@@ -346,7 +348,7 @@ fn attempt_buyout_with_wrong_currency_fails() {
 			Error::<Test>::WrongAssetToBuyout
 		);
 
-		assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
+		assert_eq!(initial_user_native_balance, USERS_INITIAL_NATIVE_BALANCE);
 		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
 	});
 }
@@ -356,7 +358,8 @@ fn buyout_with_previous_existing_buyouts_succeeds() {
 	run_test(|| {
 		let user = USER;
 		let dot_currency_id = RelayChainCurrencyId::get();
-		let exchange_amount = 100 * UNIT;
+		// 100 DOT
+		let exchange_amount = 1 * UNIT;
 
 		// With buyout limit and buyouts of previous periods
 		BuyoutLimit::<Test>::put(200 * UNIT);
@@ -375,7 +378,7 @@ fn attempt_buyout_after_buyout_limit_exceeded_fails() {
 	run_test(|| {
 		let user = USER;
 		let dot_currency_id = RelayChainCurrencyId::get();
-		let exchange_amount = 100 * UNIT;
+		let exchange_amount = 1 * UNIT;
 
 		let current_block = frame_system::Pallet::<Test>::block_number().saturated_into::<u32>();
 

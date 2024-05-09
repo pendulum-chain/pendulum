@@ -287,8 +287,11 @@ impl Config for Test {
 
 pub const USER: u64 = 0;
 pub const TREASURY_ACCOUNT: u64 = TreasuryAccount::get();
-
-pub const USERS_INITIAL_BALANCE: u128 = 200 * UNIT;
+// Initial balance of 200 native token
+pub const USERS_INITIAL_NATIVE_BALANCE: u128 = 200 * UNIT;
+// Initial balance of 200 DOT
+pub const USERS_INITIAL_DOT_BALANCE: u128 = 2 * UNIT;
+// Initial balance of 1000 native token
 pub const TREASURY_INITIAL_BALANCE: u128 = 1000 * UNIT;
 
 pub struct ExtBuilder;
@@ -300,14 +303,14 @@ impl ExtBuilder {
 		let dot_currency_id = RelayChainCurrencyId::get();
 
 		orml_tokens::GenesisConfig::<Test> {
-			balances: vec![(USER, dot_currency_id, USERS_INITIAL_BALANCE)],
+			balances: vec![(USER, dot_currency_id, USERS_INITIAL_DOT_BALANCE)],
 		}
 		.assimilate_storage(&mut storage)
 		.unwrap();
 
 		pallet_balances::GenesisConfig::<Test> {
 			balances: vec![
-				(USER, USERS_INITIAL_BALANCE),
+				(USER, USERS_INITIAL_NATIVE_BALANCE),
 				(TREASURY_ACCOUNT, TREASURY_INITIAL_BALANCE),
 			],
 		}

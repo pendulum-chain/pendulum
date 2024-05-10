@@ -8,10 +8,9 @@ use log::{info, trace};
 use runtime_common::opaque::Block;
 use sc_chain_spec::GenericChainSpec;
 use sc_cli::{
-	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
-	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
+	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams, NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli
 };
-use sc_service::config::{BasePath, PrometheusConfig};
+use sc_service::{Configuration, config::{BasePath, PrometheusConfig}};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 
@@ -194,22 +193,24 @@ macro_rules! construct_sync_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $code:expr ) => {{
 		let runner = $cli.create_runner($cmd)?;
 
+		// none of these are using instant seal
+		let is_standalone = false;
 		match runner.config().chain_spec.identify() {
 			ChainIdentity::Amplitude => runner.sync_run(|$config| {
 				let $components = new_partial::<
 					amplitude_runtime::RuntimeApi,
 					AmplitudeRuntimeExecutor,
-				>(&$config)?;
+				>(&$config, is_standalone)?;
 				$code
 			}),
 			ChainIdentity::Foucoco => runner.sync_run(|$config| {
 				let $components =
-					new_partial::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(&$config)?;
+					new_partial::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(&$config, is_standalone)?;
 				$code
 			}),
 			ChainIdentity::Pendulum => runner.sync_run(|$config| {
 				let $components =
-					new_partial::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(&$config)?;
+					new_partial::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(&$config, is_standalone)?;
 				$code
 			}),
 		}
@@ -220,22 +221,24 @@ macro_rules! construct_generic_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $code:expr ) => {{
 		let runner = $cli.create_runner($cmd)?;
 
+		// none of these are using instant seal
+		let is_standalone = false;
 		match runner.config().chain_spec.identify() {
 			ChainIdentity::Amplitude => runner.async_run(|$config| {
 				let $components = new_partial::<
 					amplitude_runtime::RuntimeApi,
 					AmplitudeRuntimeExecutor,
-				>(&$config)?;
+				>(&$config, is_standalone)?;
 				$code
 			}),
 			ChainIdentity::Foucoco => runner.async_run(|$config| {
 				let $components =
-					new_partial::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(&$config)?;
+					new_partial::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(&$config, is_standalone)?;
 				$code
 			}),
 			ChainIdentity::Pendulum => runner.async_run(|$config| {
 				let $components =
-					new_partial::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(&$config)?;
+					new_partial::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(&$config, is_standalone)?;
 				$code
 			}),
 		}
@@ -399,101 +402,120 @@ pub fn run() -> Result<()> {
 				Err("Try-runtime must be enabled by `--features try-runtime`.".into())
 			}
 		},
+
 		None => {
-			let runner = cli.create_runner(&cli.run.normalize())?;
-			let collator_options = cli.run.collator_options();
+            let runner = cli.create_runner(&cli.run.normalize())?;
+            runner
+                .run_node_until_exit(|config| async move {
+                    if cli.instant_seal {
+                        start_instant(cli, config).await
+                    } else {
+                        start_node(cli, config).await
+                    }
+                })
+                .map_err(Into::into)
+        }
+	}
+}
 
-			runner.run_node_until_exit(|config| async move {
-				let hwbench = if !cli.no_hardware_benchmarks {
-					config.database.path().map(|database_path| {
-						let _ = std::fs::create_dir_all(database_path);
-						sc_sysinfo::gather_hwbench(Some(database_path))
-					})
-				} else {
-					None
-				};
+async fn start_instant(cli: Cli, config: Configuration) -> sc_service::error::Result<sc_service::TaskManager> {
+    crate::service::start_parachain_node_spacewalk_foucoco_standalone(config)
+		.await
+		.map(|r| r.0)
+		.map_err(Into::into)
+}
 
-				let para_id = chain_spec::ParachainExtensions::try_get(&*config.chain_spec)
-					.map(|e| e.para_id)
-					.ok_or("Could not find parachain ID in chain-spec.")?;
+async fn start_node(cli: Cli, config: Configuration) -> sc_service::error::Result<sc_service::TaskManager> {
 
-				let polkadot_cli = RelayChainCli::new(
-					&config,
-					[RelayChainCli::executable_name()].iter().chain(cli.relay_chain_args.iter()),
-				);
+	let collator_options = cli.run.collator_options();
 
-				let id = ParaId::from(para_id);
+    let hwbench = if !cli.no_hardware_benchmarks {
+		config.database.path().map(|database_path| {
+			let _ = std::fs::create_dir_all(database_path);
+			sc_sysinfo::gather_hwbench(Some(database_path))
+		})
+	} else {
+		None
+	};
 
-				let parachain_account =
-					AccountIdConversion::<polkadot_primitives::v4::AccountId>::into_account_truncating(&id);
+	let para_id = chain_spec::ParachainExtensions::try_get(&*config.chain_spec)
+		.map(|e| e.para_id)
+		.ok_or("Could not find parachain ID in chain-spec.")?;
 
-				let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
-				let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
-					.map_err(|e| format!("{e:?}"))?;
-				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
+	let polkadot_cli = RelayChainCli::new(
+		&config,
+		[RelayChainCli::executable_name()].iter().chain(cli.relay_chain_args.iter()),
+	);
 
-				let tokio_handle = config.tokio_handle.clone();
-				let polkadot_config =
-					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, tokio_handle)
-						.map_err(|err| format!("Relay chain argument error: {err}"))?;
+	let id = ParaId::from(para_id);
 
-				info!("Parachain id: {:?}", id);
-				info!("Parachain Account: {}", parachain_account);
-				info!("Parachain genesis state: {}", genesis_state);
-				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
+	let parachain_account =
+		AccountIdConversion::<polkadot_primitives::v4::AccountId>::into_account_truncating(&id);
 
-				if !collator_options.relay_chain_rpc_urls.is_empty() && cli.relay_chain_args.is_empty() {
-					trace!("Detected relay chain node arguments together with --relay-chain-rpc-url. This command starts a minimal Polkadot node that only uses a network-related subset of all relay chain CLI options.");
-				}
+	let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
+	let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
+		.map_err(|e| format!("{e:?}"))?;
+	let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
-				match config.chain_spec.identify() {
-					ChainIdentity::Amplitude => {
-						sp_core::crypto::set_default_ss58_version(
-							amplitude_runtime::SS58Prefix::get().into(),
-						);
-						crate::service::start_parachain_node_spacewalk_amplitude(
-							config,
-							polkadot_config,
-							collator_options,
-							id,
-							hwbench,
-						)
-						.await
-						.map(|r| r.0)
-						.map_err(Into::into)
-					},
-					ChainIdentity::Foucoco => {
-						sp_core::crypto::set_default_ss58_version(
-							foucoco_runtime::SS58Prefix::get().into(),
-						);
-						crate::service::start_parachain_node_spacewalk_foucoco(
-							config,
-							polkadot_config,
-							collator_options,
-							id,
-							hwbench,
-						)
-						.await
-						.map(|r| r.0)
-						.map_err(Into::into)
-					},
-					ChainIdentity::Pendulum => {
-						sp_core::crypto::set_default_ss58_version(
-							pendulum_runtime::SS58Prefix::get().into(),
-						);
-						crate::service::start_parachain_node_pendulum(
-							config,
-							polkadot_config,
-							collator_options,
-							id,
-							hwbench,
-						)
-						.await
-						.map(|r| r.0)
-						.map_err(Into::into)
-					},
-				}
-			})
+	let tokio_handle = config.tokio_handle.clone();
+	let polkadot_config =
+		SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, tokio_handle)
+			.map_err(|err| format!("Relay chain argument error: {err}"))?;
+
+	info!("Parachain id: {:?}", id);
+	info!("Parachain Account: {}", parachain_account);
+	info!("Parachain genesis state: {}", genesis_state);
+	info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
+
+	if !collator_options.relay_chain_rpc_urls.is_empty() && cli.relay_chain_args.is_empty() {
+		trace!("Detected relay chain node arguments together with --relay-chain-rpc-url. This command starts a minimal Polkadot node that only uses a network-related subset of all relay chain CLI options.");
+	}
+
+	match config.chain_spec.identify() {
+		ChainIdentity::Amplitude => {
+			sp_core::crypto::set_default_ss58_version(
+				amplitude_runtime::SS58Prefix::get().into(),
+			);
+			crate::service::start_parachain_node_spacewalk_amplitude(
+				config,
+				polkadot_config,
+				collator_options,
+				id,
+				hwbench,
+			)
+			.await
+			.map(|r| r.0)
+			.map_err(Into::into)
+		},
+		ChainIdentity::Foucoco => {
+			sp_core::crypto::set_default_ss58_version(
+				foucoco_runtime::SS58Prefix::get().into(),
+			);
+			crate::service::start_parachain_node_spacewalk_foucoco(
+				config,
+				polkadot_config,
+				collator_options,
+				id,
+				hwbench,
+			)
+			.await
+			.map(|r| r.0)
+			.map_err(Into::into)
+		},
+		ChainIdentity::Pendulum => {
+			sp_core::crypto::set_default_ss58_version(
+				pendulum_runtime::SS58Prefix::get().into(),
+			);
+			crate::service::start_parachain_node_pendulum(
+				config,
+				polkadot_config,
+				collator_options,
+				id,
+				hwbench,
+			)
+			.await
+			.map(|r| r.0)
+			.map_err(Into::into)
 		},
 	}
 }

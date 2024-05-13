@@ -1095,10 +1095,10 @@ impl spacewalk_primitives::DecimalsLookup for DecimalsLookupImpl {
 	type CurrencyId = CurrencyId;
 
 	fn decimals(currency_id: Self::CurrencyId) -> u32 {
-		// Returning 0 in case no decimals are found
+		// Fallback to hard-coded implementation in case no decimals are found in asset registry
 		match AssetRegistry::metadata(currency_id) {
 			Some(metadata) => metadata.decimals,
-			None => 0,
+			None => spacewalk_primitives::AmplitudeDecimalsLookup::decimals(currency_id),
 		}
 	}
 }
@@ -1323,7 +1323,7 @@ impl staking::Config for Runtime {
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
-	type DecimalsLookup = spacewalk_primitives::AmplitudeDecimalsLookup;
+	type DecimalsLookup = DecimalsLookupImpl;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
 	type DataFeeder = MockDataFeeder<Self::AccountId, Moment>;

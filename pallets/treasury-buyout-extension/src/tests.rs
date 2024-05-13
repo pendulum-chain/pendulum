@@ -38,8 +38,8 @@ fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 		assert_eq!(initial_user_native_balance, USERS_INITIAL_NATIVE_BALANCE);
 		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
 		
-		// 100 DOT
-		let exchange_amount = 1 * UNIT;
+		// DOT has 10 decimals
+		let exchange_amount = 100_0000000000;
 		assert_ok!(crate::Pallet::<Test>::buyout(
 			RuntimeOrigin::signed(user),
 			dot_currency_id,
@@ -214,8 +214,8 @@ fn root_update_allowed_currencies_succeeds() {
 		// Test user buyout after allowed currencies update
 		// It should fail because dot is not allowed for buyout
 		let user = USER;
-		// 100 DOT
-		let exchange_amount = 1 * UNIT;
+		// DOT has 10 decimals
+		let exchange_amount = 100_0000000000;
 
 		assert_noop!(
 			crate::Pallet::<Test>::buyout(
@@ -338,7 +338,8 @@ fn attempt_buyout_with_wrong_currency_fails() {
 		assert_eq!(initial_user_native_balance, USERS_INITIAL_NATIVE_BALANCE);
 		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
 
-		let exchange_amount = 1 * UNIT;
+		// DOT has 10 decimals
+		let exchange_amount = 100_0000000000;
 		assert_noop!(
 			crate::Pallet::<Test>::buyout(
 				RuntimeOrigin::signed(user),
@@ -358,8 +359,8 @@ fn buyout_with_previous_existing_buyouts_succeeds() {
 	run_test(|| {
 		let user = USER;
 		let dot_currency_id = RelayChainCurrencyId::get();
-		// 100 DOT
-		let exchange_amount = 1 * UNIT;
+		// DOT has 10 decimals
+		let exchange_amount = 100_0000000000;
 
 		// With buyout limit and buyouts of previous periods
 		BuyoutLimit::<Test>::put(200 * UNIT);
@@ -378,7 +379,8 @@ fn attempt_buyout_after_buyout_limit_exceeded_fails() {
 	run_test(|| {
 		let user = USER;
 		let dot_currency_id = RelayChainCurrencyId::get();
-		let exchange_amount = 1 * UNIT;
+		// DOT has 10 decimals
+		let exchange_amount = 100_0000000000;
 
 		let current_block = frame_system::Pallet::<Test>::block_number().saturated_into::<u32>();
 

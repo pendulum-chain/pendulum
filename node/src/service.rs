@@ -25,24 +25,26 @@ use cumulus_primitives_parachain_inherent::{MockValidationDataInherentDataProvid
 use sc_executor::{
 	HeapAllocStrategy, NativeElseWasmExecutor, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY,
 };
-use sc_network::NetworkBlock;
+use sc_network::{NetworkBlock, NetworkService};
 use sc_network_sync::SyncingService;
 
-use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
+use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager, NetworkStarter};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_consensus_aura::{sr25519::AuthorityId, AuraApi};
 use sc_client_api::HeaderBackend;
 use sp_keystore::KeystorePtr;
-use sp_runtime::traits::BlakeTwo256;
+use sp_runtime::{OpaqueExtrinsic, generic::Header, traits::BlakeTwo256};
 use substrate_prometheus_endpoint::Registry;
 
 use polkadot_service::CollatorPair;
-use sc_consensus::ImportQueue;
+use sc_consensus::{block_import, ImportQueue, import_queue::ImportQueueService};
 
 use crate::rpc::{
 	create_full_amplitude, create_full_foucoco, create_full_pendulum, FullDeps, ResultRpcExtension,
 };
+use sp_api::BlockT;
+use sc_utils::mpsc::TracingUnboundedSender;
 
 pub use amplitude_runtime::RuntimeApi as AmplitudeRuntimeApi;
 pub use foucoco_runtime::RuntimeApi as FoucocoRuntimeApi;
@@ -137,6 +139,15 @@ impl sc_executor::NativeExecutionDispatch for PendulumRuntimeExecutor {
 	}
 }
 
+type ResultNewPartial<RuntimeApi, Executor> = PartialComponents<
+TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+TFullBackend<Block>,
+(),
+DefaultImportQueue<RuntimeApi, Executor>,
+FullPool<RuntimeApi, Executor>,
+OtherComponents<RuntimeApi, Executor>,
+>;
+
 /// Starts a `ServiceBuilder` for a full service.
 ///
 /// Use this macro if you don't actually need the full service, but just the builder in order to
@@ -145,17 +156,7 @@ impl sc_executor::NativeExecutionDispatch for PendulumRuntimeExecutor {
 pub fn new_partial<RuntimeApi, Executor>(
 	config: &Configuration,
 	instant_seal: bool,
-) -> Result<
-	PartialComponents<
-		TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
-		TFullBackend<Block>,
-		(),
-		DefaultImportQueue<RuntimeApi, Executor>,
-		FullPool<RuntimeApi, Executor>,
-		OtherComponents<RuntimeApi, Executor>,
-	>,
-	sc_service::Error,
->
+) -> Result<ResultNewPartial<RuntimeApi, Executor>, sc_service::Error>
 where
 	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>
 		+ Send
@@ -288,6 +289,91 @@ type FullDepsOf<RuntimeApi, Executor> = FullDeps<
 	>,
 >;
 
+// Define and start the services shared across the standalone implementation of the node and
+// the full parachain implementation.
+async fn setup_common_services<RuntimeApi, Executor>(
+	parachain_config: Configuration,
+    params: ResultNewPartial<RuntimeApi, Executor>,
+    create_full_rpc: fn(deps: FullDepsOf<RuntimeApi, Executor>) -> ResultRpcExtension,
+	block_announce_validator: Option<BlockAnnounceValidator<Block, Arc<dyn RelayChainInterface>>>,
+) -> Result<(
+    Arc<NetworkService<Block, <Block as BlockT>::Hash>>,
+    NetworkStarter,
+    Arc<SyncingService<Block>>,
+	Option<Telemetry>,
+	TaskManager,
+	ParachainBlockImport<RuntimeApi, Executor>,
+	Box<dyn ImportQueueService<Block>>,
+), sc_service::Error>
+where
+    RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>
+        + Send
+        + Sync
+        + 'static,
+    RuntimeApi::RuntimeApi: ParachainRuntimeApiImpl,
+    Executor: sc_executor::NativeExecutionDispatch + 'static,
+{
+    let client = params.client.clone();
+    let backend = params.backend.clone();
+    let mut task_manager = params.task_manager;
+    let (block_import, mut telemetry, _telemetry_worker_handle) = params.other;
+	let import_queue_service = params.import_queue.service();
+
+    let (network, system_rpc_tx, tx_handler_controller, start_network, sync_service) =
+        sc_service::build_network(sc_service::BuildNetworkParams {
+            config: &parachain_config,
+            client: client.clone(),
+            transaction_pool: params.transaction_pool.clone(),
+            spawn_handle: task_manager.spawn_handle(),
+            import_queue: params.import_queue,
+            block_announce_validator_builder: { match block_announce_validator {
+				Some(block_announce_validator_value) => Some(Box::new(|_| {Box::new(block_announce_validator_value)})),
+				None => None
+				}},
+            warp_sync_params: None,
+        })?;
+	
+    let rpc_builder = {
+        let transaction_pool = params.transaction_pool.clone();
+		let client = Arc::clone(&client);
+        Box::new(move |deny_unsafe, _| {
+            let deps = FullDeps {
+                client: client.clone(),
+                pool: transaction_pool.clone(),
+                deny_unsafe
+            };
+            create_full_rpc(deps).map_err(Into::into)
+        })
+    };
+
+	if parachain_config.offchain_worker.enabled {
+		sc_service::build_offchain_workers(
+			&parachain_config,
+			task_manager.spawn_handle(),
+			client.clone(),
+			network.clone(),
+		);
+	}
+
+    sc_service::spawn_tasks(sc_service::SpawnTasksParams {
+        rpc_builder,
+		client: client.clone(),
+		transaction_pool: params.transaction_pool.clone(),
+		task_manager: &mut task_manager,
+		config: parachain_config,
+		keystore: params.keystore_container.keystore(),
+		backend: backend.clone(),
+		network: network.clone(),
+		system_rpc_tx,
+		tx_handler_controller,
+		sync_service: sync_service.clone(),
+		telemetry: telemetry.as_mut(),
+    })?;
+
+    Ok((network, start_network, sync_service, telemetry, task_manager, block_import, import_queue_service ))
+}
+
+
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
 async fn start_node_impl<RuntimeApi, Executor>(
 	parachain_config: Configuration,
@@ -309,83 +395,44 @@ where
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
-	let parachain_config = prepare_node_config(parachain_config);
 
 	let is_standalone = false;
-	let params = new_partial(&parachain_config, is_standalone)?;
-	let (block_import, mut telemetry, telemetry_worker_handle) = params.other;
+	let mut parachain_config = prepare_node_config(parachain_config);
+    let mut params = new_partial(&mut parachain_config, is_standalone)?;
 
 	let client = params.client.clone();
 	let backend = params.backend.clone();
-	let mut task_manager = params.task_manager;
 
+	//just clone the last element of the "other" tuple
+	let telemetry_worker_handle_clone = params.other.2.clone();
+	
 	let (relay_chain_interface, collator_key) = build_relay_chain_interface(
 		polkadot_config,
 		&parachain_config,
-		telemetry_worker_handle,
-		&mut task_manager,
+		telemetry_worker_handle_clone,
+		&mut params.task_manager,
 		collator_options.clone(),
 		hwbench.clone(),
 	)
 	.await
 	.map_err(|e| sc_service::Error::Application(Box::new(e)))?;
-
 	let block_announce_validator = BlockAnnounceValidator::new(relay_chain_interface.clone(), id);
 
 	let force_authoring = parachain_config.force_authoring;
 	let validator = parachain_config.role.is_authority();
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
 	let transaction_pool = params.transaction_pool.clone();
-	let import_queue_service = params.import_queue.service();
+	let keystore_ptr = params.keystore_container.keystore().clone();
+	
 
-	let (network, system_rpc_tx, tx_handler_controller, start_network, sync_service) =
-		sc_service::build_network(sc_service::BuildNetworkParams {
-			config: &parachain_config,
-			client: client.clone(),
-			transaction_pool: transaction_pool.clone(),
-			spawn_handle: task_manager.spawn_handle(),
-			import_queue: params.import_queue,
-			block_announce_validator_builder: Some(Box::new(|_| {
-				Box::new(block_announce_validator)
-			})),
-			warp_sync_params: None,
-		})?;
-
-	if parachain_config.offchain_worker.enabled {
-		sc_service::build_offchain_workers(
-			&parachain_config,
-			task_manager.spawn_handle(),
-			client.clone(),
-			network.clone(),
-		);
-	}
-
-	let rpc_builder = {
-		let client = client.clone();
-		let transaction_pool = transaction_pool.clone();
-
-		Box::new(move |deny_unsafe, _| {
-			let deps =
-				FullDeps { client: client.clone(), pool: transaction_pool.clone(), deny_unsafe };
-
-			create_full_rpc(deps).map_err(Into::into)
-		})
-	};
-
-	sc_service::spawn_tasks(sc_service::SpawnTasksParams {
-		rpc_builder,
-		client: client.clone(),
-		transaction_pool: transaction_pool.clone(),
-		task_manager: &mut task_manager,
-		config: parachain_config,
-		keystore: params.keystore_container.keystore(),
-		backend: backend.clone(),
-		network: network.clone(),
-		system_rpc_tx,
-		tx_handler_controller,
-		sync_service: sync_service.clone(),
-		telemetry: telemetry.as_mut(),
-	})?;
+	let client_clone = client.clone();
+	let (network, start_network, sync_service, mut telemetry, mut task_manager, block_import, import_queue_service) =
+		setup_common_services(
+			parachain_config,
+			params,
+			create_full_rpc,
+			Some(block_announce_validator)
+		).await?;
 
 	if let Some(hwbench) = hwbench {
 		sc_sysinfo::print_hwbench(&hwbench);
@@ -406,6 +453,7 @@ where
 	};
 
 	let relay_chain_slot_duration = Duration::from_secs(6);
+	
 
 	let overseer_handle = relay_chain_interface
 		.overseer_handle()
@@ -413,7 +461,7 @@ where
 
 	if validator {
 		let parachain_consensus = build_consensus(
-			client.clone(),
+			client_clone.clone(),
 			block_import,
 			prometheus_registry.as_ref(),
 			telemetry.as_ref().map(|t| t.handle()),
@@ -421,7 +469,7 @@ where
 			relay_chain_interface.clone(),
 			transaction_pool,
 			sync_service.clone(),
-			params.keystore_container.keystore(),
+			keystore_ptr,
 			force_authoring,
 			id,
 		)?;
@@ -429,9 +477,9 @@ where
 		let spawner = task_manager.spawn_handle();
 		let params = StartCollatorParams {
 			para_id: id,
-			block_status: client.clone(),
+			block_status: client_clone.clone(),
 			announce_block,
-			client: client.clone(),
+			client: client_clone.clone(),
 			task_manager: &mut task_manager,
 			relay_chain_interface,
 			spawner,
@@ -446,7 +494,7 @@ where
 		start_collator(params).await?;
 	} else {
 		let params = StartFullNodeParams {
-			client: client.clone(),
+			client: client_clone.clone(),
 			announce_block,
 			task_manager: &mut task_manager,
 			para_id: id,
@@ -462,7 +510,7 @@ where
 
 	start_network.start_network();
 
-	Ok((task_manager, client))
+	Ok((task_manager, client_clone))
 }
 
 /// Build the import queue for the parachain runtime.
@@ -532,79 +580,36 @@ where
 
 	let is_standalone = true;
 	let params = new_partial(&parachain_config, is_standalone)?;
-	let (_block_import, mut telemetry, telemetry_worker_handle) = params.other;
 
 	let client = params.client.clone();
 	let backend = params.backend.clone();
-	let mut task_manager = params.task_manager;
 
 	let force_authoring = parachain_config.force_authoring;
 	let validator = parachain_config.role.is_authority();
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
 	let transaction_pool = params.transaction_pool.clone();
-	let import_queue_service = params.import_queue.service();
 
-	let (network, system_rpc_tx, tx_handler_controller, start_network, sync_service) =
-		sc_service::build_network(sc_service::BuildNetworkParams {
-			config: &parachain_config,
-			client: client.clone(),
-			transaction_pool: transaction_pool.clone(),
-			spawn_handle: task_manager.spawn_handle(),
-			import_queue: params.import_queue,
-			block_announce_validator_builder: None,
-			warp_sync_params: None,
-		})?;
-
-	if parachain_config.offchain_worker.enabled {
-		sc_service::build_offchain_workers(
-			&parachain_config,
-			task_manager.spawn_handle(),
-			client.clone(),
-			network.clone(),
-		);
-	}
-
-	let rpc_builder = {
-		let client = client.clone();
-		let transaction_pool = transaction_pool.clone();
-
-		Box::new(move |deny_unsafe, _| {
-			let deps =
-				FullDeps { client: client.clone(), pool: transaction_pool.clone(), deny_unsafe };
-
-			create_full_rpc(deps).map_err(Into::into)
-		})
-	};
-
-	let relay_chain_slot_duration = Duration::from_secs(6);
-
-	let _rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
-		network,
-		client: client.clone(),
-		keystore: params.keystore_container.keystore(),
-		task_manager: &mut task_manager,
-		transaction_pool: transaction_pool.clone(),
-		rpc_builder,
-		backend: backend.clone(),
-		system_rpc_tx,
-		tx_handler_controller,
-		sync_service,
-		config: parachain_config,
-		telemetry: telemetry.as_mut(),
-	})?;
+	let client_clone = client.clone();
+	let (network, start_network, sync_service, telemetry, task_manager, _block_import, import_queue_service) =
+        setup_common_services(
+			parachain_config,
+            params,
+			create_full_rpc,
+			None
+        ).await?;
 
 	let proposer_factory = sc_basic_authorship::ProposerFactory::new(
 		task_manager.spawn_handle(),
-		client.clone(),
+		client_clone.clone(),
 		transaction_pool.clone(),
 		prometheus_registry.as_ref(),
 		telemetry.as_ref().map(|x| x.handle()),
 	);
 
 	let select_chain = sc_consensus::LongestChain::new(backend.clone());
-	let client2 = client.clone();
+	let client_clone_move = client_clone.clone();
 
-	let params = sc_consensus_manual_seal::InstantSealParams {
+	let instant_seal_params = sc_consensus_manual_seal::InstantSealParams {
 		block_import: client.clone(),
 		env: proposer_factory,
 		client: client.clone(),
@@ -613,11 +618,11 @@ where
 		consensus_data_provider: None,
 		create_inherent_data_providers: move |block, _| {
 			
-			let current_para_block = (*client2)
+			let current_para_block = (*client_clone_move)
 				.number(block)
 				.expect("Header lookup should succeed")
 				.expect("Header passed in as parent should be present in backend.");
-			let client_for_xcm = client2.clone();
+			let client_for_xcm = client_clone_move.clone();
 			async move {
 				let mocked_parachain = MockValidationDataInherentDataProvider {
 					current_para_block,
@@ -634,7 +639,7 @@ where
 		},
 	};
 
-	let authorship_future = sc_consensus_manual_seal::run_instant_seal(params);
+	let authorship_future = sc_consensus_manual_seal::run_instant_seal(instant_seal_params);
 
 	task_manager
 		.spawn_essential_handle()
@@ -642,7 +647,7 @@ where
 
 	start_network.start_network();
 
-	Ok((task_manager, client))
+	Ok((task_manager, client_clone))
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -30,27 +30,27 @@ token-chain-extension = {path = "../../chain-extensions/token", default-features
 price-chain-extension = {path = "../../chain-extensions/price", default-features = false }
 
 # Custom libraries for Spacewalk
-clients-info = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-security = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-staking = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-oracle = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-stellar-relay = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-fee = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-vault-registry = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-redeem = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-issue = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-nomination = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-replace = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-module-issue-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
+clients-info = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+security = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+staking = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+oracle = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+stellar-relay = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+fee = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+vault-registry = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+redeem = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+issue = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+nomination = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+replace = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+module-issue-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
 module-pallet-staking-rpc-runtime-api = { path = "../../pallets/parachain-staking/rpc/runtime-api", default-features = false }
-pooled-rewards = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-reward-distribution = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
+pooled-rewards = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
+reward-distribution = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
 
 
 # Substrate

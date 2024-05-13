@@ -27,7 +27,7 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v0.9.42" }
 
 # Custom libraries for Spacewalk
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "e7a672ba1e21c98a70df30a6ee458317951dd597" }
 
 # Pendulum Pallets
 orml-currencies-allowance-extension = { path = "../../pallets/orml-currencies-allowance-extension", default-features = false }

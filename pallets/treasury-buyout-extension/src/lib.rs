@@ -40,8 +40,6 @@ use sp_runtime::{
 use sp_std::{fmt::Debug, marker::PhantomData, vec::Vec};
 use spacewalk_primitives::DecimalsLookup;
 
-pub use pallet::*;
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;

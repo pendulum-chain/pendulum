@@ -16,6 +16,7 @@ use sp_runtime::{
 	DispatchError,
 };
 use sp_std::fmt::Debug;
+use spacewalk_primitives::DecimalsLookup;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -48,6 +49,9 @@ parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const SS58Prefix: u8 = 42;
 }
+
+pub type TestEvent = RuntimeEvent;
+
 impl frame_system::Config for Test {
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
@@ -74,8 +78,6 @@ impl frame_system::Config for Test {
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
-
-pub type TestEvent = RuntimeEvent;
 
 parameter_types! {
 	pub const MaxLocks: u32 = 50;
@@ -170,6 +172,20 @@ impl PriceGetter<CurrencyId> for OracleMock {
 	}
 }
 
+pub struct DecimalsLookupImpl;
+impl DecimalsLookup for DecimalsLookupImpl {
+	type CurrencyId = CurrencyId;
+
+	fn decimals(currency_id: Self::CurrencyId) -> u32 {
+		match currency_id {
+			0 => 10,
+			1 => 6,
+			2 | 6 => 18,
+			_ => 12,
+		}
+	}
+}
+
 impl Config for Test {
 	/// The overarching event type.
 	type RuntimeEvent = RuntimeEvent;
@@ -183,6 +199,8 @@ impl Config for Test {
 	type SellFee = SellFee;
 	/// Used for fetching prices of currencies from oracle
 	type PriceGetter = OracleMock;
+	/// Used for fetching decimals of assets
+	type DecimalsLookup = DecimalsLookupImpl;
 	/// Min amount of native token to buyout
 	type MinAmountToBuyout = MinAmountToBuyout;
 	/// Maximum number of storage updates for allowed currencies in one extrinsic call
@@ -198,8 +216,11 @@ impl Config for Test {
 
 pub const USER: u64 = 0;
 pub const TREASURY_ACCOUNT: u64 = TreasuryAccount::get();
-
-pub const USERS_INITIAL_BALANCE: u128 = 200 * UNIT;
+// Initial balance of 200 native token
+pub const USERS_INITIAL_NATIVE_BALANCE: u128 = 200 * UNIT;
+// Initial balance of 200 DOT (DOT has 10 decimals)
+pub const USERS_INITIAL_DOT_BALANCE: u128 = 200_0000000000;
+// Initial balance of 1000 native token
 pub const TREASURY_INITIAL_BALANCE: u128 = 1000 * UNIT;
 
 pub struct ExtBuilder;
@@ -211,14 +232,14 @@ impl ExtBuilder {
 		let dot_currency_id = RelayChainCurrencyId::get();
 
 		orml_tokens::GenesisConfig::<Test> {
-			balances: vec![(USER, dot_currency_id, USERS_INITIAL_BALANCE)],
+			balances: vec![(USER, dot_currency_id, USERS_INITIAL_DOT_BALANCE)],
 		}
 		.assimilate_storage(&mut storage)
 		.unwrap();
 
 		pallet_balances::GenesisConfig::<Test> {
 			balances: vec![
-				(USER, USERS_INITIAL_BALANCE),
+				(USER, USERS_INITIAL_NATIVE_BALANCE),
 				(TREASURY_ACCOUNT, TREASURY_INITIAL_BALANCE),
 			],
 		}

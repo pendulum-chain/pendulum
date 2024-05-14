@@ -42,7 +42,7 @@ jobs:
       - name: Remove rust-toolchain.toml
         # To make sure that the nightly version will be used all throughout
         run: |
-          rm /home/runner/work/pendulum/pendulum/rust-toolchain
+          rm /home/runner/work/pendulum/pendulum/rust-toolchain.toml
 
       - name: Setup nightly Rust toolchain
         uses:  dtolnay/rust-toolchain@nightly

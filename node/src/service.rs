@@ -25,7 +25,7 @@ use cumulus_primitives_parachain_inherent::{MockValidationDataInherentDataProvid
 use sc_executor::{
 	HeapAllocStrategy, NativeElseWasmExecutor, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY,
 };
-use sc_network::{NetworkBlock, NetworkService};
+use sc_network::NetworkBlock;
 use sc_network_sync::SyncingService;
 
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager, NetworkStarter};
@@ -34,17 +34,15 @@ use sp_api::ConstructRuntimeApi;
 use sp_consensus_aura::{sr25519::AuthorityId, AuraApi};
 use sc_client_api::HeaderBackend;
 use sp_keystore::KeystorePtr;
-use sp_runtime::{OpaqueExtrinsic, generic::Header, traits::BlakeTwo256};
+use sp_runtime::traits::BlakeTwo256;
 use substrate_prometheus_endpoint::Registry;
 
 use polkadot_service::CollatorPair;
-use sc_consensus::{block_import, ImportQueue, import_queue::ImportQueueService};
+use sc_consensus::{ImportQueue, import_queue::ImportQueueService};
 
 use crate::rpc::{
 	create_full_amplitude, create_full_foucoco, create_full_pendulum, FullDeps, ResultRpcExtension,
 };
-use sp_api::BlockT;
-use sc_utils::mpsc::TracingUnboundedSender;
 
 pub use amplitude_runtime::RuntimeApi as AmplitudeRuntimeApi;
 pub use foucoco_runtime::RuntimeApi as FoucocoRuntimeApi;
@@ -297,7 +295,6 @@ async fn setup_common_services<RuntimeApi, Executor>(
     create_full_rpc: fn(deps: FullDepsOf<RuntimeApi, Executor>) -> ResultRpcExtension,
 	block_announce_validator: Option<BlockAnnounceValidator<Block, Arc<dyn RelayChainInterface>>>,
 ) -> Result<(
-    Arc<NetworkService<Block, <Block as BlockT>::Hash>>,
     NetworkStarter,
     Arc<SyncingService<Block>>,
 	Option<Telemetry>,
@@ -370,7 +367,7 @@ where
 		telemetry: telemetry.as_mut(),
     })?;
 
-    Ok((network, start_network, sync_service, telemetry, task_manager, block_import, import_queue_service ))
+    Ok((start_network, sync_service, telemetry, task_manager, block_import, import_queue_service ))
 }
 
 
@@ -401,7 +398,6 @@ where
     let mut params = new_partial(&mut parachain_config, is_standalone)?;
 
 	let client = params.client.clone();
-	let backend = params.backend.clone();
 
 	//just clone the last element of the "other" tuple
 	let telemetry_worker_handle_clone = params.other.2.clone();
@@ -426,7 +422,7 @@ where
 	
 
 	let client_clone = client.clone();
-	let (network, start_network, sync_service, mut telemetry, mut task_manager, block_import, import_queue_service) =
+	let (start_network, sync_service, mut telemetry, mut task_manager, block_import, import_queue_service) =
 		setup_common_services(
 			parachain_config,
 			params,
@@ -584,13 +580,11 @@ where
 	let client = params.client.clone();
 	let backend = params.backend.clone();
 
-	let force_authoring = parachain_config.force_authoring;
-	let validator = parachain_config.role.is_authority();
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
 	let transaction_pool = params.transaction_pool.clone();
 
 	let client_clone = client.clone();
-	let (network, start_network, sync_service, telemetry, task_manager, _block_import, import_queue_service) =
+	let (start_network, _sync_service, telemetry, task_manager, _block_import, _import_queue_service) =
         setup_common_services(
 			parachain_config,
             params,

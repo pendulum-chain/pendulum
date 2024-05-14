@@ -5,7 +5,7 @@ use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::{info, trace};
-use runtime_common::{Signature, opaque::Block};
+use runtime_common::{opaque::Block};
 use sc_chain_spec::GenericChainSpec;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams, NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli
@@ -422,7 +422,7 @@ pub fn run() -> Result<()> {
             runner
                 .run_node_until_exit(|config| async move {
                     if cli.instant_seal {
-                        start_instant(cli, config).await
+                        start_instant(config).await
                     } else {
                         start_node(cli, config).await
                     }
@@ -432,7 +432,7 @@ pub fn run() -> Result<()> {
 	}
 }
 
-async fn start_instant(cli: Cli, config: Configuration) -> sc_service::error::Result<sc_service::TaskManager> {
+async fn start_instant(config: Configuration) -> sc_service::error::Result<sc_service::TaskManager> {
     crate::service::start_parachain_node_spacewalk_foucoco_standalone(config)
 		.await
 		.map(|r| r.0)

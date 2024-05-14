@@ -242,7 +242,6 @@ std = [
     "module-vault-registry-rpc-runtime-api/std",
     "module-pallet-staking-rpc-runtime-api/std",
     "spacewalk-primitives/std",
-    "orml-currencies-allowance-extension/std",
     "treasury-buyout-extension/std",
     "bifrost-farming/std",
     "bifrost-farming-rpc-runtime-api/std",

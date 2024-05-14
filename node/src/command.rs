@@ -5,7 +5,7 @@ use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::{info, trace};
-use runtime_common::opaque::Block;
+use runtime_common::{Signature, opaque::Block};
 use sc_chain_spec::GenericChainSpec;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams, NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli
@@ -38,6 +38,7 @@ enum ChainIdentity {
 	Amplitude,
 	Foucoco,
 	Pendulum,
+	FoucocoStandalone
 }
 
 impl ChainIdentity {
@@ -46,6 +47,7 @@ impl ChainIdentity {
 			"amplitude" => Some(ChainIdentity::Amplitude),
 			"foucoco" => Some(ChainIdentity::Foucoco),
 			"pendulum" => Some(ChainIdentity::Pendulum),
+			"foucoco-standalone" => Some(ChainIdentity::FoucocoStandalone),
 			_ => None,
 		}
 	}
@@ -63,6 +65,7 @@ impl ChainIdentity {
 		match self {
 			ChainIdentity::Amplitude => &amplitude_runtime::VERSION,
 			ChainIdentity::Foucoco => &foucoco_runtime::VERSION,
+			ChainIdentity::FoucocoStandalone => &foucoco_runtime::VERSION,
 			ChainIdentity::Pendulum => &pendulum_runtime::VERSION,
 		}
 	}
@@ -72,6 +75,7 @@ impl ChainIdentity {
 			ChainIdentity::Amplitude => Box::new(chain_spec::amplitude_config()),
 			ChainIdentity::Foucoco => Box::new(chain_spec::foucoco_config()),
 			ChainIdentity::Pendulum => Box::new(chain_spec::pendulum_config()),
+			ChainIdentity::FoucocoStandalone => Box::new(chain_spec::foucoco_standalone_config()),
 		}
 	}
 
@@ -83,6 +87,8 @@ impl ChainIdentity {
 			ChainIdentity::Amplitude =>
 				Box::new(chain_spec::AmplitudeChainSpec::from_json_file(path.into())?),
 			ChainIdentity::Foucoco =>
+				Box::new(chain_spec::FoucocoChainSpec::from_json_file(path.into())?),
+			ChainIdentity::FoucocoStandalone =>
 				Box::new(chain_spec::FoucocoChainSpec::from_json_file(path.into())?),
 			ChainIdentity::Pendulum =>
 				Box::new(chain_spec::PendulumChainSpec::from_json_file(path.into())?),
@@ -213,6 +219,9 @@ macro_rules! construct_sync_run {
 					new_partial::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(&$config, is_standalone)?;
 				$code
 			}),
+			// Foucoco standalone is only supported
+			// with the instant seal flag.
+			ChainIdentity::FoucocoStandalone => todo!(),
 		}
 	}};
 }
@@ -241,6 +250,9 @@ macro_rules! construct_generic_async_run {
 					new_partial::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(&$config, is_standalone)?;
 				$code
 			}),
+			// Foucoco standalone is only supported
+			// with the instant seal flag.
+			ChainIdentity::FoucocoStandalone => todo!(),
 		}
 	}};
 }
@@ -334,6 +346,7 @@ pub fn run() -> Result<()> {
 							.sync_run(|config| cmd.run::<Block, FoucocoRuntimeExecutor>(config)),
 						ChainIdentity::Pendulum => runner
 							.sync_run(|config| cmd.run::<Block, PendulumRuntimeExecutor>(config)),
+						ChainIdentity::FoucocoStandalone => todo!(),
 					}
 				} else {
 					Err("Benchmarking wasn't enabled when building the node. \
@@ -397,6 +410,7 @@ pub fn run() -> Result<()> {
 							<PendulumRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
 						>, _>(Some(substrate_info(BLOCK_TIME_MILLIS))), task_manager))
 					}),
+					ChainIdentity::FoucocoStandalone => todo!(),
 				}
 			} else {
 				Err("Try-runtime must be enabled by `--features try-runtime`.".into())
@@ -516,6 +530,11 @@ async fn start_node(cli: Cli, config: Configuration) -> sc_service::error::Resul
 			.await
 			.map(|r| r.0)
 			.map_err(Into::into)
+		},
+		ChainIdentity::FoucocoStandalone => {
+			// Throw error. Foucoco standalone is only supported
+			// with the instant seal flag.
+			Err("Foucoco standalone is only supported with the instant seal flag".into())
 		},
 	}
 }

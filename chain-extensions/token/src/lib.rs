@@ -218,7 +218,7 @@ where
 		"Calling transfer() sending {:?} {:?}, from {:?} to {:?}",
 		amount,
 		currency_id,
-		&(*env.ext().caller()).clone(),
+		env.ext().caller(),
 		recipient
 	);
 
@@ -228,7 +228,7 @@ where
 
 	<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 		currency_id,
-		&(*env.ext().caller()).clone(),
+		env.ext().caller(),
 		&recipient,
 		amount,
 	)?;
@@ -310,7 +310,7 @@ where
 		spender,
 		amount,
 		currency_id,
-		&(*env.ext().caller()).clone(),
+		env.ext().caller(),
 	);
 
 	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
@@ -319,7 +319,7 @@ where
 
 	orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
 		currency_id,
-		&(*env.ext().caller()).clone(),
+		env.ext().caller(),
 		&spender,
 		amount,
 	)?;
@@ -357,7 +357,7 @@ where
 
 	trace!(
 		"Calling transfer_from() for caller {:?}, sending {:?} {:?}, from {:?} to {:?}",
-		&(*env.ext().caller()).clone(),
+		env.ext().caller(),
 		amount,
 		currency_id,
 		owner,
@@ -371,7 +371,7 @@ where
 	orml_currencies_allowance_extension::Pallet::<T>::do_transfer_approved(
 		currency_id,
 		&owner,
-		&env.ext().caller().clone(),
+		env.ext().caller(),
 		&recipient,
 		amount,
 	)?;

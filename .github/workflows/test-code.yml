@@ -44,10 +44,6 @@ jobs:
         run: |
           rm /home/runner/work/pendulum/pendulum/rust-toolchain.toml
 
-      - name: Print out of if the toml file was properly deleted.
-        run: | 
-          ls /home/runner/work/pendulum/pendulum
-
       - name: Setup nightly Rust toolchain
         uses:  dtolnay/rust-toolchain@nightly
         with:

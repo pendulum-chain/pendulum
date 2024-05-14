@@ -1,5 +1,4 @@
-use crate::{sibling, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID,
-			definitions::asset_hub};
+use crate::{definitions::asset_hub, sibling, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID};
 use amplitude_runtime::CurrencyId as AmplitudeCurrencyId;
 use frame_support::traits::GenesisBuild;
 use pendulum_runtime::CurrencyId as PendulumCurrencyId;
@@ -16,12 +15,9 @@ use codec::Encode;
 use frame_support::BoundedVec;
 use runtime_common::asset_registry::{CustomMetadata, DiaKeys, StringLimit};
 
-use xcm::{
-	v3::{MultiLocation},
-	VersionedMultiLocation,
-};
+use xcm::{v3::MultiLocation, VersionedMultiLocation};
 
-use pendulum_runtime::definitions::{moonbeam::PARA_ID as MOONBEAM_PARA_ID, moonbeam};
+use pendulum_runtime::definitions::{moonbeam, moonbeam::PARA_ID as MOONBEAM_PARA_ID};
 use statemine_runtime as kusama_asset_hub_runtime;
 use statemint_runtime as polkadot_asset_hub_runtime;
 
@@ -232,9 +228,7 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(MultiLocation::new(
 					0u8,
-					xcm::latest::Junctions::X1(
-						xcm::latest::Junction::PalletInstance(10),
-					),
+					xcm::latest::Junctions::X1(xcm::latest::Junction::PalletInstance(10)),
 				))),
 				additional: CustomMetadata {
 					dia_keys: DiaKeys::<StringLimit> {
@@ -246,7 +240,6 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 			}
 			.encode(),
 		),
-		
 		(
 			PendulumCurrencyId::XCM(1),
 			orml_asset_registry::AssetMetadata {
@@ -260,7 +253,7 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
 					},
-					fee_per_second: UNIT/2,
+					fee_per_second: UNIT / 2,
 				},
 			}
 			.encode(),
@@ -278,7 +271,7 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
 					},
-					fee_per_second: UNIT/4,
+					fee_per_second: UNIT / 4,
 				},
 			}
 			.encode(),
@@ -296,7 +289,7 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
 					},
-					fee_per_second: 2*UNIT,
+					fee_per_second: 2 * UNIT,
 				},
 			}
 			.encode(),
@@ -315,9 +308,7 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(MultiLocation::new(
 					0u8,
-					xcm::latest::Junctions::X1(
-						xcm::latest::Junction::PalletInstance(10),
-					),
+					xcm::latest::Junctions::X1(xcm::latest::Junction::PalletInstance(10)),
 				))),
 				additional: CustomMetadata {
 					dia_keys: DiaKeys::<StringLimit> {
@@ -342,7 +333,7 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
 					},
-					fee_per_second: UNIT/10,
+					fee_per_second: UNIT / 10,
 				},
 			}
 			.encode(),
@@ -360,7 +351,7 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 						blockchain: BoundedVec::truncate_from(vec![1, 2, 3]),
 						symbol: BoundedVec::truncate_from(vec![1, 2, 3]),
 					},
-					fee_per_second: UNIT/20,
+					fee_per_second: UNIT / 20,
 				},
 			}
 			.encode(),

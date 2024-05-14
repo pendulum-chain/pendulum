@@ -543,7 +543,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 				WeightLimit::Unlimited
 			));
 
-			// Alternatively, we should be able to use 
+			// Alternatively, we should be able to use
 			// assert_ok!(XTokens::transfer(
 			// 	$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
 			// 	Parachain1CurrencyId::Native,

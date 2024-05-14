@@ -350,7 +350,6 @@ impl<T: Config> Pallet<T> {
 		)
 		.and_then(|n| n.try_into().ok())
 		.ok_or(ArithmeticError::Overflow.into())
-
 	}
 
 	/// Used for calculating buyout amount of basic asset user will get for exchange_amount of exchange asset
@@ -464,10 +463,10 @@ impl<T: Config> Pallet<T> {
 	fn fetch_prices(
 		assets: (&CurrencyIdOf<T>, &CurrencyIdOf<T>),
 	) -> Result<(FixedU128, FixedU128), DispatchError> {
-		let basic_asset_price: FixedU128 = T::PriceGetter::get_price::<FixedU128>(*assets.0)
-			.map_err(|_| Error::<T>::NoPrice)?;
-		let exchange_asset_price: FixedU128 = T::PriceGetter::get_price::<FixedU128>(*assets.1)
-			.map_err(|_| Error::<T>::NoPrice)?;
+		let basic_asset_price: FixedU128 =
+			T::PriceGetter::get_price::<FixedU128>(*assets.0).map_err(|_| Error::<T>::NoPrice)?;
+		let exchange_asset_price: FixedU128 =
+			T::PriceGetter::get_price::<FixedU128>(*assets.1).map_err(|_| Error::<T>::NoPrice)?;
 		Ok((basic_asset_price, exchange_asset_price))
 	}
 }
@@ -582,34 +581,31 @@ where
 		_len: usize,
 	) -> TransactionValidity {
 		if let Some(Call::buyout { asset, amount }) = call.is_sub_type() {
-				Pallet::<T>::ensure_asset_allowed_for_buyout(asset).map_err(|_| {
-					InvalidTransaction::Custom(ValidityError::WrongAssetToBuyout.into())
-				})?;
+			Pallet::<T>::ensure_asset_allowed_for_buyout(asset).map_err(|_| {
+				InvalidTransaction::Custom(ValidityError::WrongAssetToBuyout.into())
+			})?;
 
-				let (buyout_amount, exchange_amount) =
-					Pallet::<T>::split_to_buyout_and_exchange(*asset, *amount)
-						.map_err(|_| InvalidTransaction::Custom(ValidityError::Math.into()))?;
+			let (buyout_amount, exchange_amount) =
+				Pallet::<T>::split_to_buyout_and_exchange(*asset, *amount)
+					.map_err(|_| InvalidTransaction::Custom(ValidityError::Math.into()))?;
 
-				ensure!(
-					buyout_amount >= T::MinAmountToBuyout::get(),
-					InvalidTransaction::Custom(ValidityError::LessThanMinBuyoutAmount.into())
-				);
+			ensure!(
+				buyout_amount >= T::MinAmountToBuyout::get(),
+				InvalidTransaction::Custom(ValidityError::LessThanMinBuyoutAmount.into())
+			);
 
-				let free_balance = T::Currency::free_balance(*asset, who);
+			let free_balance = T::Currency::free_balance(*asset, who);
 
-				ensure!(
-					free_balance >= exchange_amount,
-					InvalidTransaction::Custom(ValidityError::NotEnoughToBuyout.into())
-				);
+			ensure!(
+				free_balance >= exchange_amount,
+				InvalidTransaction::Custom(ValidityError::NotEnoughToBuyout.into())
+			);
 
-				Pallet::<T>::ensure_buyout_limit_not_exceeded(who, buyout_amount).map_err(
-					|_| InvalidTransaction::Custom(ValidityError::BuyoutLimitExceeded.into()),
-				)?;
-			
+			Pallet::<T>::ensure_buyout_limit_not_exceeded(who, buyout_amount).map_err(|_| {
+				InvalidTransaction::Custom(ValidityError::BuyoutLimitExceeded.into())
+			})?;
 		}
 
 		Ok(ValidTransaction::default())
 	}
-
-		
 }

@@ -1,14 +1,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(non_snake_case)]
 
+use asset_registry::CustomMetadata;
+use orml_traits::asset_registry::Inspect;
 use sp_runtime::{
-	traits::{IdentifyAccount, Verify,Convert},
+	traits::{Convert, IdentifyAccount, Verify},
 	MultiSignature,
 };
 use spacewalk_primitives::CurrencyId;
-use xcm::v3::{MultiAsset, AssetId, MultiLocation};
-use orml_traits::asset_registry::Inspect;
-use asset_registry::CustomMetadata;
+use xcm::v3::{AssetId, MultiAsset, MultiLocation};
 
 pub mod asset_registry;
 pub mod custom_transactor;
@@ -55,8 +55,6 @@ pub type Index = u32;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
-
-
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -150,7 +148,10 @@ pub mod parachains {
 /// in the form of a `MultiLocation`, in this case a pCfg (Para-Id, Currency-Id).
 pub struct CurrencyIdConvert<AssetRegistry>(sp_std::marker::PhantomData<AssetRegistry>);
 
-impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert<AssetRegistry> {
+impl<
+		AssetRegistry: Inspect<AssetId = CurrencyId, Balance = Balance, CustomMetadata = CustomMetadata>,
+	> Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert<AssetRegistry>
+{
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		<AssetRegistry as Inspect>::metadata(&id)
 			.filter(|m| m.location.is_some())
@@ -159,13 +160,19 @@ impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetada
 	}
 }
 
-impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert<AssetRegistry> {
-	fn convert(location: MultiLocation) -> Option<CurrencyId>  {
+impl<
+		AssetRegistry: Inspect<AssetId = CurrencyId, Balance = Balance, CustomMetadata = CustomMetadata>,
+	> Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert<AssetRegistry>
+{
+	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		<AssetRegistry as Inspect>::asset_id(&location)
 	}
 }
 
-impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert<AssetRegistry> {
+impl<
+		AssetRegistry: Inspect<AssetId = CurrencyId, Balance = Balance, CustomMetadata = CustomMetadata>,
+	> Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert<AssetRegistry>
+{
 	fn convert(a: MultiAsset) -> Option<CurrencyId> {
 		if let MultiAsset { id: AssetId::Concrete(id), fun: _ } = a {
 			<Self as Convert<MultiLocation, Option<CurrencyId>>>::convert(id)
@@ -178,9 +185,14 @@ impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetada
 /// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
 /// Here we need to know the canonical representation of all the tokens we handle in order to
 /// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
-impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert<AssetRegistry> {
+impl<
+		AssetRegistry: Inspect<AssetId = CurrencyId, Balance = Balance, CustomMetadata = CustomMetadata>,
+	> xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert<AssetRegistry>
+{
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		<CurrencyIdConvert<AssetRegistry> as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
-			.ok_or(location)
+		<CurrencyIdConvert<AssetRegistry> as Convert<MultiLocation, Option<CurrencyId>>>::convert(
+			location,
+		)
+		.ok_or(location)
 	}
 }

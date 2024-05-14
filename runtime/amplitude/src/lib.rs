@@ -7,10 +7,10 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod chain_ext;
+pub mod definitions;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
-pub mod definitions;
 
 use crate::zenlink::*;
 use bifrost_farming as farming;
@@ -85,12 +85,12 @@ pub use sp_runtime::BuildStorage;
 pub use dia_oracle::dia::AssetId;
 pub use issue::{Event as IssueEvent, IssueRequest};
 pub use nomination::Event as NominationEvent;
+#[allow(unused_imports)]
+use oracle::dia;
 use oracle::{
 	dia::{DiaOracleAdapter, NativeCurrencyKey, XCMCurrencyConversion},
 	OracleKey,
 };
-#[allow(unused_imports)]
-use oracle::dia;
 
 pub use redeem::{Event as RedeemEvent, RedeemRequest};
 pub use replace::{Event as ReplaceEvent, ReplaceRequest};

@@ -7,10 +7,10 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod chain_ext;
+pub mod definitions;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
-pub mod definitions;
 
 use crate::zenlink::*;
 use xcm::v3::MultiLocation;
@@ -27,11 +27,11 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
-		Zero, One,
+		One, Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, FixedPointNumber, MultiAddress, Perbill, Permill,
-	Perquintill, SaturatedConversion, FixedU128, 
+	ApplyExtrinsicResult, DispatchError, FixedPointNumber, FixedU128, MultiAddress, Perbill,
+	Permill, Perquintill, SaturatedConversion,
 };
 
 use bifrost_farming as farming;
@@ -43,11 +43,10 @@ use spacewalk_primitives::{
 	UnsignedInner,
 };
 
-
 #[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
 use oracle::testing_utils::MockDataFeeder;
 
-use sp_std::{marker::PhantomData, prelude::*, fmt::Debug};
+use sp_std::{fmt::Debug, marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;

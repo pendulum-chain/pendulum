@@ -1228,7 +1228,7 @@ impl<K, V, A> orml_traits::DataProvider<K, V> for DataFeederBenchmark<K, V, A> {
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = oracle::SubstrateWeight<Runtime>;
-	type DecimalsLookup = spacewalk_primitives::PendulumDecimalsLookup;
+	type DecimalsLookup = DecimalsLookupImpl;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
 	type DataFeeder = MockDataFeeder<Self::AccountId, Moment>;
@@ -1450,6 +1450,19 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 	}
 }
 
+pub struct DecimalsLookupImpl;
+impl spacewalk_primitives::DecimalsLookup for DecimalsLookupImpl {
+	type CurrencyId = CurrencyId;
+
+	fn decimals(currency_id: Self::CurrencyId) -> u32 {
+		// Fallback to hard-coded implementation in case no decimals are found in asset registry
+		match AssetRegistry::metadata(currency_id) {
+			Some(metadata) => metadata.decimals,
+			None => spacewalk_primitives::PendulumDecimalsLookup::decimals(currency_id),
+		}
+	}
+}
+
 parameter_types! {
 	pub const SellFee: Permill = Permill::from_percent(5);
 	pub const MinAmountToBuyout: Balance = 100 * MILLIUNIT; // 0.1 PEN or 100_000_000_000
@@ -1466,6 +1479,7 @@ impl treasury_buyout_extension::Config for Runtime {
 	type BuyoutPeriod = BuyoutPeriod;
 	type SellFee = SellFee;
 	type PriceGetter = OraclePriceGetter;
+	type DecimalsLookup = DecimalsLookupImpl;
 	type MinAmountToBuyout = MinAmountToBuyout;
 	type MaxAllowedBuyoutCurrencies = MaxAllowedBuyoutCurrencies;
 	type WeightInfo = treasury_buyout_extension::default_weights::SubstrateWeight<Runtime>;

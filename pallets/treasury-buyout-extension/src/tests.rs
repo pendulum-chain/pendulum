@@ -2,7 +2,7 @@
 use crate::{
 	mock::*,
 	types::{Amount, CurrencyIdOf},
-	BuyoutLimit, Buyouts, Config, Error, PriceGetter, ValidityError,
+	BuyoutLimit, Buyouts, Config, Error, PriceGetter, ValidityError, DecimalsLookup,
 };
 use frame_support::{assert_err, assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
@@ -26,18 +26,20 @@ fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 	run_test(|| {
 		let user = USER;
 		let dot_currency_id = RelayChainCurrencyId::get();
+		let native_currency_id = GetNativeCurrencyId::get();
 		let initial_user_dot_balance = get_free_balance(dot_currency_id, &user);
 		let initial_treasury_dot_balance =
 			get_free_balance(dot_currency_id, &TreasuryAccount::get());
 
-		let initial_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
+		let initial_user_native_balance = get_free_balance(native_currency_id, &user);
 		let initial_treasury_native_balance =
-			get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
+			get_free_balance(native_currency_id, &TreasuryAccount::get());
 
-		assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
+		assert_eq!(initial_user_native_balance, USERS_INITIAL_NATIVE_BALANCE);
 		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
-
-		let exchange_amount = 100 * UNIT;
+		
+		// DOT has 10 decimals
+		let exchange_amount = 100_0000000000;
 		assert_ok!(crate::Pallet::<Test>::buyout(
 			RuntimeOrigin::signed(user),
 			dot_currency_id,
@@ -59,19 +61,21 @@ fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 			basic_asset_price * (FixedU128::from(SellFee::get()) + FixedU128::one());
 
 		// Calculate Native buyout amount
-		let buyout_amount = crate::Pallet::<Test>::multiply_by_rational(
+		let buyout_amount = crate::Pallet::<Test>::convert_amount(
 			exchange_amount,
-			exchange_asset_price.into_inner(),
-			basic_asset_price_with_fee.into_inner(),
+			exchange_asset_price,
+			basic_asset_price_with_fee,
+			<DecimalsLookupImpl as DecimalsLookup>::decimals(dot_currency_id),
+			<DecimalsLookupImpl as DecimalsLookup>::decimals(native_currency_id),
 		)
 		.expect("This is mocked so it should not fail");
 
 		let final_user_dot_balance = get_free_balance(dot_currency_id, &user);
-		let final_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
+		let final_user_native_balance = get_free_balance(native_currency_id, &user);
 
 		let final_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
 		let final_treasury_native_balance =
-			get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
+			get_free_balance(native_currency_id, &TreasuryAccount::get());
 
 		assert_eq!(final_user_dot_balance, initial_user_dot_balance - exchange_amount);
 		assert_eq!(final_treasury_dot_balance, initial_treasury_dot_balance + exchange_amount);
@@ -93,15 +97,16 @@ fn buyout_using_dot_given_buyout_amount_in_native_succeeds() {
 	run_test(|| {
 		let user = USER;
 		let dot_currency_id = RelayChainCurrencyId::get();
+		let native_currency_id = GetNativeCurrencyId::get();
 		let initial_user_dot_balance = get_free_balance(dot_currency_id, &user);
 		let initial_treasury_dot_balance =
 			get_free_balance(dot_currency_id, &TreasuryAccount::get());
 
-		let initial_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
+		let initial_user_native_balance = get_free_balance(native_currency_id, &user);
 		let initial_treasury_native_balance =
-			get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
+			get_free_balance(native_currency_id, &TreasuryAccount::get());
 
-		assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
+		assert_eq!(initial_user_native_balance, USERS_INITIAL_NATIVE_BALANCE);
 		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
 
 		let buyout_amount = 100 * UNIT;
@@ -114,7 +119,7 @@ fn buyout_using_dot_given_buyout_amount_in_native_succeeds() {
 		// Fetch prices from Oracle mock
 		let basic_asset_price = <OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<
 			FixedU128,
-		>(GetNativeCurrencyId::get())
+		>(native_currency_id)
 		.expect("This is mocked so it should not fail");
 		let exchange_asset_price = <OracleMock as PriceGetter<CurrencyIdOf<Test>>>::get_price::<
 			FixedU128,
@@ -126,19 +131,20 @@ fn buyout_using_dot_given_buyout_amount_in_native_succeeds() {
 			basic_asset_price * (FixedU128::from(SellFee::get()) + FixedU128::one());
 
 		// Calculate DOT exchange amount
-		let exchange_amount = crate::Pallet::<Test>::multiply_by_rational(
+		let exchange_amount = crate::Pallet::<Test>::convert_amount(
 			buyout_amount,
-			basic_asset_price_with_fee.into_inner(),
-			exchange_asset_price.into_inner(),
-		)
-		.expect("This is mocked so it should not fail");
+			basic_asset_price_with_fee,
+			exchange_asset_price,
+			<DecimalsLookupImpl as DecimalsLookup>::decimals(native_currency_id),
+			<DecimalsLookupImpl as DecimalsLookup>::decimals(dot_currency_id),
+		).expect("This is mocked so it should not fail");
 
 		let final_user_dot_balance = get_free_balance(dot_currency_id, &user);
-		let final_user_native_balance = get_free_balance(GetNativeCurrencyId::get(), &user);
+		let final_user_native_balance = get_free_balance(native_currency_id, &user);
 
 		let final_treasury_dot_balance = get_free_balance(dot_currency_id, &TreasuryAccount::get());
 		let final_treasury_native_balance =
-			get_free_balance(GetNativeCurrencyId::get(), &TreasuryAccount::get());
+			get_free_balance(native_currency_id, &TreasuryAccount::get());
 
 		assert_eq!(final_user_dot_balance, initial_user_dot_balance - exchange_amount);
 		assert_eq!(final_treasury_dot_balance, initial_treasury_dot_balance + exchange_amount);
@@ -208,7 +214,8 @@ fn root_update_allowed_currencies_succeeds() {
 		// Test user buyout after allowed currencies update
 		// It should fail because dot is not allowed for buyout
 		let user = USER;
-		let exchange_amount = 100 * UNIT;
+		// DOT has 10 decimals
+		let exchange_amount = 100_0000000000;
 
 		assert_noop!(
 			crate::Pallet::<Test>::buyout(
@@ -315,7 +322,7 @@ fn attempt_buyout_with_wrong_currency_fails() {
 		let initial_treasury_native_balance =
 			get_free_balance(native_currency_id, &TreasuryAccount::get());
 
-		assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
+		assert_eq!(initial_user_native_balance, USERS_INITIAL_NATIVE_BALANCE);
 		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
 
 		let buyout_amount = 100 * UNIT;
@@ -328,10 +335,11 @@ fn attempt_buyout_with_wrong_currency_fails() {
 			Error::<Test>::WrongAssetToBuyout
 		);
 
-		assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
+		assert_eq!(initial_user_native_balance, USERS_INITIAL_NATIVE_BALANCE);
 		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
 
-		let exchange_amount = 100 * UNIT;
+		// DOT has 10 decimals
+		let exchange_amount = 100_0000000000;
 		assert_noop!(
 			crate::Pallet::<Test>::buyout(
 				RuntimeOrigin::signed(user),
@@ -341,7 +349,7 @@ fn attempt_buyout_with_wrong_currency_fails() {
 			Error::<Test>::WrongAssetToBuyout
 		);
 
-		assert_eq!(initial_user_native_balance, USERS_INITIAL_BALANCE);
+		assert_eq!(initial_user_native_balance, USERS_INITIAL_NATIVE_BALANCE);
 		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
 	});
 }
@@ -351,7 +359,8 @@ fn buyout_with_previous_existing_buyouts_succeeds() {
 	run_test(|| {
 		let user = USER;
 		let dot_currency_id = RelayChainCurrencyId::get();
-		let exchange_amount = 100 * UNIT;
+		// DOT has 10 decimals
+		let exchange_amount = 100_0000000000;
 
 		// With buyout limit and buyouts of previous periods
 		BuyoutLimit::<Test>::put(200 * UNIT);
@@ -370,7 +379,8 @@ fn attempt_buyout_after_buyout_limit_exceeded_fails() {
 	run_test(|| {
 		let user = USER;
 		let dot_currency_id = RelayChainCurrencyId::get();
-		let exchange_amount = 100 * UNIT;
+		// DOT has 10 decimals
+		let exchange_amount = 100_0000000000;
 
 		let current_block = frame_system::Pallet::<Test>::block_number().saturated_into::<u32>();
 

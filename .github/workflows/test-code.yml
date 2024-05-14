@@ -37,7 +37,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: ./.github/actions/my-shared-steps
+      - uses: ./.github/actions/shared
 
       - name: Remove rust-toolchain.toml
         # To make sure that the nightly version will be used all throughout

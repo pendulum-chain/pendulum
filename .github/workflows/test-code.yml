@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v3
       - uses: ./.github/actions/shared
 
       - name: Install toolchain
@@ -30,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v3
       - uses: ./.github/actions/my-shared-steps
 
       - name: Remove rust-toolchain.toml

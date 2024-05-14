@@ -3,7 +3,7 @@ runs:
   using: "composite"
   steps:
     - name: Freeing up more disk space
-    - run: |
+      run: |
         sudo swapoff -a
         sudo rm -f /mnt/swapfile
         free -h
@@ -41,8 +41,3 @@ runs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Install Protoc
-      uses: arduino/setup-protoc@v1
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}

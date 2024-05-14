@@ -51,12 +51,12 @@ jobs:
       - name: Setup nightly Rust toolchain
         uses:  dtolnay/rust-toolchain@nightly
         with:
-          toolchain: nightly-2023-12-28
+          toolchain: nightly-2024-04-18
           components: rustfmt, clippy
           target: wasm32-unknown-unknown
 
       - name: Setup nightly Rust as default
-        run: rustup default nightly-2023-12-28
+        run: rustup default nightly-2024-04-18
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
@@ -66,5 +66,5 @@ jobs:
       - name: Test
         uses: actions-rs/cargo@v1
         with:
-          toolchain: nightly-2023-12-28
+          toolchain: nightly-2024-04-18
           command: test

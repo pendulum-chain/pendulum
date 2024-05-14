@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: ./.github/actions/my-shared-steps
+      - uses: ./.github/actions/shared
 
       - name: Install toolchain
         # Call `rustup show` as a hack so that the toolchain defined in rust-toolchain.toml is installed

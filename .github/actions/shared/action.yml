@@ -1,5 +1,5 @@
-name: Shared action
-runs: composite
+name: "Shared action"
+runs: "composite"
 steps:
   - name: Freeing up more disk space
   - run: |

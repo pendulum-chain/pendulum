@@ -26,10 +26,11 @@ use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
 use runtime_common::{
 	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
-	parachains::polkadot::{moonbeam},
 	asset_registry::{ FixedConversionRateProvider},
 	CurrencyIdConvert,
 };
+
+use crate::definitions::moonbeam;
 
 use crate::ConstU32;
 

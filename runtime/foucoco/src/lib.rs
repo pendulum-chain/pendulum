@@ -6,11 +6,11 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-mod assets;
 mod chain_ext;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
+pub mod definitions;
 
 use crate::zenlink::*;
 use xcm::v3::MultiLocation;
@@ -306,7 +306,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("foucoco"),
 	impl_name: create_runtime_str!("foucoco"),
 	authoring_version: 1,
-	spec_version: 14,
+	spec_version: 15,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 8,
@@ -1090,6 +1090,19 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 	}
 }
 
+pub struct DecimalsLookupImpl;
+impl spacewalk_primitives::DecimalsLookup for DecimalsLookupImpl {
+	type CurrencyId = CurrencyId;
+
+	fn decimals(currency_id: Self::CurrencyId) -> u32 {
+		// Fallback to hard-coded implementation in case no decimals are found in asset registry
+		match AssetRegistry::metadata(currency_id) {
+			Some(metadata) => metadata.decimals,
+			None => spacewalk_primitives::AmplitudeDecimalsLookup::decimals(currency_id),
+		}
+	}
+}
+
 parameter_types! {
 	pub const SellFee: Permill = Permill::from_percent(1);
 	pub const MinAmountToBuyout: Balance = NANOUNIT;
@@ -1106,6 +1119,7 @@ impl treasury_buyout_extension::Config for Runtime {
 	type BuyoutPeriod = BuyoutPeriod;
 	type SellFee = SellFee;
 	type PriceGetter = OraclePriceGetter;
+	type DecimalsLookup = DecimalsLookupImpl;
 	type MinAmountToBuyout = MinAmountToBuyout;
 	type MaxAllowedBuyoutCurrencies = MaxAllowedBuyoutCurrencies;
 	type WeightInfo = weights::treasury_buyout_extension::SubstrateWeight<Runtime>;
@@ -1319,7 +1333,7 @@ impl staking::Config for Runtime {
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = weights::oracle::SubstrateWeight<Runtime>;
-	type DecimalsLookup = spacewalk_primitives::AmplitudeDecimalsLookup;
+	type DecimalsLookup = DecimalsLookupImpl;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
 	type DataFeeder = MockDataFeeder<Self::AccountId, Moment>;

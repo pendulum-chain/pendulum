@@ -4,7 +4,7 @@ use frame_support::{
 	log, match_types, parameter_types,
 	traits::{ConstU32, ContainsPair, Everything, Nothing, ProcessMessageError},
 };
-use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader, AssetMetadata};
+use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
 	parameter_type_with_key,
@@ -21,13 +21,7 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
-
-use runtime_common::{asset_registry::FixedConversionRateProvider, CurrencyIdConvert,
-					asset_registry::CustomMetadata};
-
-use crate::assets::{
-	native_locations::{native_location_external_pov, native_location_local_pov},
-};
+use runtime_common::{CurrencyIdConvert, asset_registry::{ FixedConversionRateProvider}};
 
 use super::{
 	AccountId, AssetRegistry, Balance, Balances, Currencies, CurrencyId, FoucocoTreasuryAccount, ParachainInfo,

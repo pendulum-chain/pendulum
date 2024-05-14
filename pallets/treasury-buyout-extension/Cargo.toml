@@ -24,15 +24,20 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.42", default-features = false }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.42", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.42", default-features = false }
+orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.42", default-features = false }
+
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
 
 [dev-dependencies]
 mocktopus = "0.8.0"
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-io = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false}
+xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42" }
 
 pallet-balances = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42"}
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "b1dc81f9de7bca3408b490587280a10732f7b9dd"}
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
+runtime-common = { path = "../../runtime/common", default-features = false }
 
 [features]
 default = ["std"]
@@ -49,16 +54,20 @@ std = [
   "orml-currencies/std",
   "orml-tokens/std",
   "orml-traits/std",
+  "orml-asset-registry/std",
   "frame-benchmarking/std",
   "pallet-balances/std",
-  "spacewalk-primitives/std"
+  "spacewalk-primitives/std",
+  "xcm/std",
+  "runtime-common/std"
 ]
 
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
-    "pallet-balances/runtime-benchmarks"
+    "pallet-balances/runtime-benchmarks",
+    "runtime-common/runtime-benchmarks"
 ]
 
 try-runtime = [
@@ -66,5 +75,6 @@ try-runtime = [
     "frame-system/try-runtime",
     "orml-currencies/try-runtime",
     "orml-tokens/try-runtime",
+    "orml-asset-registry/try-runtime",
     "pallet-balances/try-runtime"
 ]

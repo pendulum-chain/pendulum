@@ -9,9 +9,10 @@ version = "0.1.0"
 codec = { package = "parity-scale-codec", version = "3.0.0" }
 scale-info = { version = "2.1.2", features = ["derive"] }
 serde = { version = "1.0.144", features = ["derive"] }
+paste = "1.0.14"
 
 # Spacewalk libraries
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "b1dc81f9de7bca3408b490587280a10732f7b9dd" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
 
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }

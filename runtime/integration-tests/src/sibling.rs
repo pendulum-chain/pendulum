@@ -42,7 +42,7 @@ use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation,
 };
 
-use crate::{AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, definitions::asset_hub};
+use crate::{definitions::asset_hub, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
 
 use pendulum_runtime::definitions::moonbeam::BRZ_location;
 
@@ -141,7 +141,6 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 }
 
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
-
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
 			MultiLocation {

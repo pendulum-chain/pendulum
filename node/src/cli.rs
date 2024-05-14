@@ -70,7 +70,7 @@ pub struct Cli {
 
 	/// Instant block sealing
 	#[clap(long = "instant-seal")]
-    pub instant_seal: bool,
+	pub instant_seal: bool,
 }
 
 #[derive(Debug)]

@@ -25,8 +25,8 @@ use xcm_builder::{
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
 use runtime_common::{
+	asset_registry::FixedConversionRateProvider,
 	custom_transactor::{AssetData, AutomationPalletConfig, CustomTransactorInterceptor},
-	asset_registry::{ FixedConversionRateProvider},
 	CurrencyIdConvert,
 };
 

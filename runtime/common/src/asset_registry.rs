@@ -1,15 +1,17 @@
 use crate::*;
 use frame_support::traits::AsEnsureOriginWithArg;
 use frame_system::EnsureRoot;
-use orml_traits::{FixedConversionRateProvider as FixedConversionRateProviderTrait,
-	asset_registry::{AssetMetadata, AssetProcessor, Inspect}};
+use orml_traits::{
+	asset_registry::{AssetMetadata, AssetProcessor, Inspect},
+	FixedConversionRateProvider as FixedConversionRateProviderTrait,
+};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::Get;
-use sp_runtime::{BoundedVec, DispatchError, traits::PhantomData};
+use sp_runtime::{traits::PhantomData, BoundedVec, DispatchError};
 use sp_std::fmt::Debug;
 use spacewalk_primitives::CurrencyId;
-use xcm::opaque::v3::{MultiLocation};
+use xcm::opaque::v3::MultiLocation;
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct StringLimit;

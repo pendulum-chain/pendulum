@@ -105,7 +105,6 @@ use spacewalk_primitives::{
 	UnsignedFixedPoint, UnsignedInner,
 };
 
-use orml_currencies::WeightInfo;
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 use frame_support::traits::InstanceFilter;

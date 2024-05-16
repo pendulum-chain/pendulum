@@ -34,13 +34,13 @@ jobs:
             chain: "pendulum"
     runs-on: ubuntu-latest
 
-#    steps:
-#      - name: trigger GitLab Ci Job
-#        uses: appleboy/gitlab-ci-action@master
-#        with:
-#          host: "https://gitlab.com"
-#          token: ${{ secrets.GITLABAPI }}
-#          project_id: 51267165
-#          debug: true
-#          ref: development
+    steps:
+      - name: trigger GitLab Ci Job
+        uses: appleboy/gitlab-ci-action@master
+        with:
+          host: "https://gitlab.com"
+          token: ${{ secrets.GITLABAPI }}
+          project_id: 56492543
+          debug: true
+          ref: main
 

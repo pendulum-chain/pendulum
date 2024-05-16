@@ -1398,7 +1398,7 @@ impl orml_currencies_allowance_extension::Config for Runtime {
 	type MaxAllowedCurrencies = ConstU32<256>;
 }
 
-pub struct OraclePriceGetter(Oracle);
+pub struct OraclePriceGetter(DiaOracleModule);
 
 impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 	#[cfg(not(feature = "runtime-benchmarks"))]
@@ -1406,14 +1406,17 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 	where
 		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
 	{
-		let key = OracleKey::ExchangeRate(currency_id);
-		let asset_price = Oracle::get_price(key.clone())?;
+		let asset_metadata = AssetRegistry::metadata(currency_id)
+        .ok_or(DispatchError::Other("Asset not found"))?;
 
-		let converted_asset_price = FixedNumber::try_from(asset_price);
+		let blockchain = asset_metadata.additional.dia_keys.blockchain.into_inner();
+		let symbol = asset_metadata.additional.dia_keys.symbol.into_inner();
 
-		match converted_asset_price {
-			Ok(price) => Ok(price),
-			Err(_) => Err(DispatchError::Other("Failed to convert price")),
+		if let Ok(asset_info) = DiaOracleModule::get_coin_info(blockchain, symbol) {
+			let price = FixedNumber::try_from(FixedU128::from_inner(asset_info.price)).map_err(|_| DispatchError::Other("Failed to convert price"))?;
+			return Ok(price);
+		} else {
+			return Err(DispatchError::Other("Failed to get coin info"));
 		}
 	}
 
@@ -1425,28 +1428,19 @@ impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
 		// Forcefully set chain status to running when benchmarking so that the oracle doesn't fail
 		Security::set_status(StatusCode::Running);
 
-		let key = OracleKey::ExchangeRate(currency_id);
+		let asset_metadata = AssetRegistry::metadata(currency_id)
+        .ok_or(DispatchError::Other("Asset not found"))?;
 
-		// Attempt to get the price once and use the result to decide if feeding a value is necessary
-		match Oracle::get_price(key.clone()) {
-			Ok(asset_price) => {
-				// If the price is successfully retrieved, use it directly
-				let converted_asset_price = FixedNumber::try_from(asset_price)
-					.map_err(|_| DispatchError::Other("Failed to convert price"))?;
-				Ok(converted_asset_price)
-			},
-			Err(_) => {
-				// Price not found, feed the default value
-				let rate = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
-				// Account used for feeding values
-				let account = AccountId::from([0u8; 32]);
-				Oracle::feed_values(account, vec![(key.clone(), rate)])?;
+		let blockchain = asset_metadata.additional.dia_keys.blockchain.into_inner();
+		let symbol = asset_metadata.additional.dia_keys.symbol.into_inner();
 
-				// If feeding was successful, just use the feeded price to spare a read
-				let converted_asset_price = FixedNumber::try_from(rate)
-					.map_err(|_| DispatchError::Other("Failed to convert price"))?;
-				Ok(converted_asset_price)
-			},
+		if let Ok(asset_info) = DiaOracleModule::get_coin_info(blockchain, symbol) {
+			let price = FixedNumber::try_from(FixedU128::from_inner(asset_info.price)).map_err(|_| DispatchError::Other("Failed to convert price"))?;
+			Ok(price)
+		} else {
+			// Returning a default value in case fetching a real price from the oracle fails
+			let price = FixedNumber::checked_from_rational(100, 1).expect("This is a valid ratio");
+			Ok(price)
 		}
 	}
 }

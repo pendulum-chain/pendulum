@@ -1,7 +1,9 @@
+# This action triggers a GitLab CI job that performs the following:
+# * Srtool Check
+# * Subwasm info of the compressed wasm file
+# * Generate Release Notes
+# * Propose a Parachain Upgrade
 name: Release and Propose an Upgrade
-
-env:
-  SUBWASM_VERSION: 0.20.0
 
 on:
   pull_request:
@@ -11,93 +13,14 @@ on:
       - 'main'
 
 jobs:
-  srtool:
+  release_check:
+#    This job will only run if:
+#     * the pull request is closed and merged to main branch;
+#     * the pull request has the "release:" in its title
     if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.title, 'release:') }}
-    name: SrTool check on ${{ matrix.chain }} ${{ github.event.inputs.ref }}
+    name: Is ${{ matrix.chain }} need new release ${{ github.event.inputs.ref }}
     strategy:
-      fail-fast: false
-      matrix:
-        chain: ["amplitude", "pendulum", "foucoco"]
-        shouldReleaseAmp:
-          - ${{ contains(github.event.pull_request.title, 'amplitude') }}
-        shouldReleasePen:
-          - ${{ contains(github.event.pull_request.title, 'pendulum') }}
-        shouldReleaseFou:
-          - ${{ contains(github.event.pull_request.title, 'foucoco') }}
-        exclude:
-          - shouldReleaseAmp: false
-            chain: "amplitude"
-          - shouldReleasePen: false
-            chain: "pendulum"
-          - shouldReleaseFou: false
-            chain: "foucoco"
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.ref }}
-          fetch-depth: 0
-
-      - name: Srtool build
-        id: srtool_build
-        uses: chevdor/srtool-actions@v0.9.2
-        with:
-          chain: ${{ matrix.chain }}
-          runtime_dir: runtime/${{ matrix.chain }}
-          # this is important to avoid build fail. See https://github.com/paritytech/srtool/issues/62
-          tag: 1.66.1
-      - name: Summary
-        run: |
-          echo '${{ steps.srtool_build.outputs.json }}' | jq > ${{ matrix.chain }}-srtool-digest.json
-          cat ${{ matrix.chain }}-srtool-digest.json
-          echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
-          echo '${{ steps.srtool_build.outputs.json }}'
-          cp ${{ steps.srtool_build.outputs.wasm }} ${{ matrix.chain }}_runtime.compact.wasm
-          cp ${{ steps.srtool_build.outputs.wasm_compressed }} ${{ matrix.chain }}_runtime.compact.compressed.wasm
-
-      # it takes a while to build the runtime, so let's save the artifact as soon as we have it
-      - name: Archive Artifacts for ${{ matrix.chain }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.chain }}-runtime
-          path: |
-            ${{ matrix.chain }}_runtime.compact.wasm
-            ${{ matrix.chain }}_runtime.compact.compressed.wasm
-            ${{ matrix.chain }}-srtool-digest.json
-
-      # We now get extra information thanks to subwasm,
-      - name: Install subwasm ${{ env.SUBWASM_VERSION }}
-        run: |
-          wget https://github.com/chevdor/subwasm/releases/download/v${{ env.SUBWASM_VERSION }}/subwasm_linux_amd64_v${{ env.SUBWASM_VERSION }}.deb
-          sudo dpkg -i subwasm_linux_amd64_v${{ env.SUBWASM_VERSION }}.deb
-          subwasm --version
-      - name: Show Runtime information
-        run: |
-          subwasm info ${{ steps.srtool_build.outputs.wasm_compressed }}
-          subwasm --json info ${{ steps.srtool_build.outputs.wasm }} > ${{ matrix.chain }}-info.json
-          subwasm --json info ${{ steps.srtool_build.outputs.wasm_compressed }} > ${{ matrix.chain }}-info_compressed.json
-      - name: Extract the metadata
-        run: |
-          subwasm meta ${{ steps.srtool_build.outputs.wasm }}
-          subwasm --json meta ${{ steps.srtool_build.outputs.wasm }} > ${{ matrix.chain }}-metadata.json
-
-      - name: Archive Subwasm results
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.chain }}-runtime-${{ github.sha }}
-          path: |
-            ${{ matrix.chain }}-info.json
-            ${{ matrix.chain }}-info_compressed.json
-            ${{ matrix.chain }}-metadata.json
-            ${{ matrix.chain }}-diff.txt
-
-  propose_upgrade:
-    if: ${{ success() }}
-    needs: srtool
-    name: Perform runtime upgrade on ${{ matrix.chain }} ${{ github.event.inputs.ref }}
-    runs-on: ubuntu-latest
-    strategy:
+      fail-fast: true
       matrix:
         chain: ["amplitude", "pendulum"]
         shouldReleaseAmp:
@@ -109,28 +32,15 @@ jobs:
             chain: "amplitude"
           - shouldReleasePen: false
             chain: "pendulum"
+    runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.ref }}
-          fetch-depth: 0
+#    steps:
+#      - name: trigger GitLab Ci Job
+#        uses: appleboy/gitlab-ci-action@master
+#        with:
+#          host: "https://gitlab.com"
+#          token: ${{ secrets.GITLABAPI }}
+#          project_id: 51267165
+#          debug: true
+#          ref: development
 
-      - name: download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ matrix.chain }}-runtime
-
-      - name: prepare Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '21.x'
-      - name: Install dependencies
-        run: |
-          cd .github/scripts/js
-          npm init -y
-          npm install
-      - name: run script for parachain upgrade
-        run: |
-          node --version
-          node .github/scripts/js/parachain_authorize_upgrade.js ${{ matrix.chain }} ${{ matrix.chain }}_runtime.compact.compressed.wasm

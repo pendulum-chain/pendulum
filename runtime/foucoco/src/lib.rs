@@ -223,8 +223,11 @@ impl Convert<(Vec<u8>, Vec<u8>), Option<Key>> for AssetRegistryToDiaOracleKeyCon
 	fn convert(dia_oracle_key: (Vec<u8>, Vec<u8>)) -> Option<Key> {
 		// Try to find the currency id in the asset registry metadata for which the dia keys are
 		// matching the ones provided
-		AssetRegistry::Metadata::iter().find_map(|(currency_id, metadata)| {
-			if metadata.additional.dia_keys == dia_oracle_key {
+		let blockchain = dia_oracle_key.0;
+		let symbol = dia_oracle_key.1;
+		orml_asset_registry::Metadata::<Runtime>::iter().find_map(|(currency_id, metadata)| {
+			let dia_keys = metadata.additional.dia_keys;
+			if dia_keys.blockchain == blockchain && dia_keys.symbol == symbol {
 				return Some(Key::ExchangeRate(currency_id));
 			}
 			None

@@ -1,11 +1,18 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(non_snake_case)]
 
+use core::{fmt::Debug, marker::PhantomData};
+use parity_scale_codec::EncodeLike;
 use sp_runtime::{
-	traits::{IdentifyAccount, Verify,Convert},
+	traits::{IdentifyAccount, Verify, Convert, One, Zero},
 	MultiSignature,
+	DispatchError, 
+	FixedPointNumber,
+	FixedU128,
 };
 use spacewalk_primitives::CurrencyId;
+use treasury_buyout_extension::PriceGetter;
+use dia_oracle::DiaOracle;
 use xcm::v3::{MultiAsset, AssetId, MultiLocation};
 use orml_traits::asset_registry::Inspect;
 use asset_registry::CustomMetadata;
@@ -182,5 +189,52 @@ impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetada
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
 		<CurrencyIdConvert<AssetRegistry> as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
 			.ok_or(location)
+	}
+}
+
+
+pub struct OraclePriceGetter<Runtime>(PhantomData<Runtime>);
+impl < Runtime: treasury_buyout_extension::Config + dia_oracle::Config + orml_asset_registry::Config<AssetId = CurrencyId, CustomMetadata = CustomMetadata> > PriceGetter<CurrencyId> for OraclePriceGetter<Runtime> 
+{
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
+	where
+		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
+	{
+		let asset_metadata = orml_asset_registry::Pallet::<Runtime>::metadata(currency_id)
+        .ok_or(DispatchError::Other("Asset not found"))?;
+
+		let blockchain = asset_metadata.additional.dia_keys.blockchain.into_inner();
+		let symbol = asset_metadata.additional.dia_keys.symbol.into_inner();
+
+		if let Ok(asset_info) = <dia_oracle::Pallet<Runtime> as DiaOracle>::get_coin_info(blockchain, symbol) {
+			let price = FixedNumber::try_from(FixedU128::from_inner(asset_info.price)).map_err(|_| DispatchError::Other("Failed to convert price"))?;
+			return Ok(price);
+		} else {
+			return Err(DispatchError::Other("Failed to get coin info"));
+		}
+	}
+	#[cfg(feature = "runtime-benchmarks")]
+	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
+	where
+		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
+	{
+		// Forcefully set chain status to running when benchmarking so that the oracle doesn't fail
+		Security::set_status(StatusCode::Running);
+
+		let asset_metadata = orml_asset_registry::Pallet::<Runtime>::metadata(currency_id)
+        .ok_or(DispatchError::Other("Asset not found"))?;
+
+		let blockchain = asset_metadata.additional.dia_keys.blockchain.into_inner();
+		let symbol = asset_metadata.additional.dia_keys.symbol.into_inner();
+
+		if let Ok(asset_info) = <dia_oracle::Pallet<Runtime> as DiaOracle>::get_coin_info(blockchain, symbol) {
+			let price = FixedNumber::try_from(FixedU128::from_inner(asset_info.price)).map_err(|_| DispatchError::Other("Failed to convert price"))?;
+			Ok(price)
+		} else {
+			// Returning a default value in case fetching a real price from the oracle fails
+			let price = FixedNumber::checked_from_rational(100, 1).expect("This is a valid ratio");
+			Ok(price)
+		}
 	}
 }

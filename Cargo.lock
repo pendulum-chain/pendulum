@@ -10584,6 +10584,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "spacewalk-primitives",
+ "treasury-buyout-extension",
  "xcm",
  "xcm-executor",
  "zenlink-protocol",

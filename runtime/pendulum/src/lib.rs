@@ -1398,53 +1398,6 @@ impl orml_currencies_allowance_extension::Config for Runtime {
 	type MaxAllowedCurrencies = ConstU32<256>;
 }
 
-pub struct OraclePriceGetter(DiaOracleModule);
-
-impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
-	#[cfg(not(feature = "runtime-benchmarks"))]
-	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
-	where
-		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
-	{
-		let asset_metadata = AssetRegistry::metadata(currency_id)
-        .ok_or(DispatchError::Other("Asset not found"))?;
-
-		let blockchain = asset_metadata.additional.dia_keys.blockchain.into_inner();
-		let symbol = asset_metadata.additional.dia_keys.symbol.into_inner();
-
-		if let Ok(asset_info) = DiaOracleModule::get_coin_info(blockchain, symbol) {
-			let price = FixedNumber::try_from(FixedU128::from_inner(asset_info.price)).map_err(|_| DispatchError::Other("Failed to convert price"))?;
-			return Ok(price);
-		} else {
-			return Err(DispatchError::Other("Failed to get coin info"));
-		}
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
-	where
-		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
-	{
-		// Forcefully set chain status to running when benchmarking so that the oracle doesn't fail
-		Security::set_status(StatusCode::Running);
-
-		let asset_metadata = AssetRegistry::metadata(currency_id)
-        .ok_or(DispatchError::Other("Asset not found"))?;
-
-		let blockchain = asset_metadata.additional.dia_keys.blockchain.into_inner();
-		let symbol = asset_metadata.additional.dia_keys.symbol.into_inner();
-
-		if let Ok(asset_info) = DiaOracleModule::get_coin_info(blockchain, symbol) {
-			let price = FixedNumber::try_from(FixedU128::from_inner(asset_info.price)).map_err(|_| DispatchError::Other("Failed to convert price"))?;
-			Ok(price)
-		} else {
-			// Returning a default value in case fetching a real price from the oracle fails
-			let price = FixedNumber::checked_from_rational(100, 1).expect("This is a valid ratio");
-			Ok(price)
-		}
-	}
-}
-
 pub struct DecimalsLookupImpl;
 impl spacewalk_primitives::DecimalsLookup for DecimalsLookupImpl {
 	type CurrencyId = CurrencyId;
@@ -1473,7 +1426,7 @@ impl treasury_buyout_extension::Config for Runtime {
 	type TreasuryAccount = PendulumTreasuryAccount;
 	type BuyoutPeriod = BuyoutPeriod;
 	type SellFee = SellFee;
-	type PriceGetter = OraclePriceGetter;
+	type PriceGetter = runtime_common::OraclePriceGetter<Runtime>;
 	type DecimalsLookup = DecimalsLookupImpl;
 	type MinAmountToBuyout = MinAmountToBuyout;
 	type MaxAllowedBuyoutCurrencies = MaxAllowedBuyoutCurrencies;

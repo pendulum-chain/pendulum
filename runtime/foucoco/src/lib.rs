@@ -95,7 +95,7 @@ pub use stellar_relay::traits::{FieldLength, Organization, Validator};
 const CONTRACTS_DEBUG_OUTPUT: bool = true;
 
 use module_oracle_rpc_runtime_api::BalanceWrapper;
-use oracle::dia::{DiaOracleAdapter, XCMCurrencyConversion};
+use oracle::dia::DiaOracleAdapter;
 
 // Polkadot imports
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
@@ -157,7 +157,6 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
 use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::GetStorageVersion;
 use frame_support::pallet_prelude::StorageVersion;
-use spacewalk_primitives::oracle::Key;
 
 // Temporary struct that defines the executions to be done upon upgrade,
 // Should be removed or at least checked on each upgrade to see if it is relevant,
@@ -197,72 +196,6 @@ pub type Executive = frame_executive::Executive<
 	),
 >;
 
-pub struct AssetRegistryToDiaOracleKeyConvertor;
-
-impl Convert<Key, Option<(Vec<u8>, Vec<u8>)>> for AssetRegistryToDiaOracleKeyConvertor {
-	fn convert(spacewalk_oracle_key: Key) -> Option<(Vec<u8>, Vec<u8>)> {
-		let currency_id = match spacewalk_oracle_key {
-			Key::ExchangeRate(currency_id) => currency_id,
-		};
-
-		// Try to find the dia keys in the asset registry metadata
-		AssetRegistry::metadata(currency_id).and_then(|metadata| {
-			let dia_keys = metadata.additional.dia_keys;
-			if dia_keys.blockchain.is_empty() || dia_keys.symbol.is_empty() {
-				return None;
-			}
-			return Some((dia_keys.blockchain, dia_keys.symbol));
-		});
-
-		// We didn't find the dia keys in the asset registry metadata
-		None
-	}
-}
-
-impl Convert<(Vec<u8>, Vec<u8>), Option<Key>> for AssetRegistryToDiaOracleKeyConvertor {
-	fn convert(dia_oracle_key: (Vec<u8>, Vec<u8>)) -> Option<Key> {
-		// Try to find the currency id in the asset registry metadata for which the dia keys are
-		// matching the ones provided
-		let blockchain = dia_oracle_key.0;
-		let symbol = dia_oracle_key.1;
-		orml_asset_registry::Metadata::<Runtime>::iter().find_map(|(currency_id, metadata)| {
-			let dia_keys = metadata.additional.dia_keys;
-			if dia_keys.blockchain == blockchain && dia_keys.symbol == symbol {
-				return Some(Key::ExchangeRate(currency_id));
-			}
-			None
-		})
-	}
-}
-
-pub struct SpacewalkNativeCurrency;
-
-impl oracle::dia::NativeCurrencyKey for SpacewalkNativeCurrency {
-	fn native_symbol() -> Vec<u8> {
-		"AMPE".as_bytes().to_vec()
-	}
-
-	fn native_chain() -> Vec<u8> {
-		"Amplitude".as_bytes().to_vec()
-	}
-}
-
-impl XCMCurrencyConversion for SpacewalkNativeCurrency {
-	fn convert_to_dia_currency_id(token_symbol: u8) -> Option<(Vec<u8>, Vec<u8>)> {
-		match token_symbol {
-			0 => Some((b"Kusama".to_vec(), b"KSM".to_vec())),
-			_ => None,
-		}
-	}
-
-	fn convert_from_dia_currency_id(blockchain: Vec<u8>, symbol: Vec<u8>) -> Option<u8> {
-		match (blockchain.as_slice(), symbol.as_slice()) {
-			(b"Kusama", b"KSM") => Some(0),
-			_ => None,
-		}
-	}
-}
-
 cfg_if::cfg_if! {
 	if #[cfg(feature = "runtime-benchmarks")] {
 		use oracle::testing_utils::{
@@ -281,7 +214,7 @@ cfg_if::cfg_if! {
 			DiaOracleModule,
 			UnsignedFixedPoint,
 			Moment,
-			oracle::dia::DiaOracleKeyConvertor<SpacewalkNativeCurrency>,
+			asset_registry::AssetRegistryToDiaOracleKeyConvertor<Runtime>,
 			ConvertPrice,
 			ConvertMoment,
 		>;

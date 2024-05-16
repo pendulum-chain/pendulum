@@ -1237,8 +1237,6 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 
 parameter_types! {
 	pub const RelayChainCurrencyId: CurrencyId = XCM(0);
-	// We just use an arbitrary currency here. Only relevant for benchmarks
-	pub const WrappedCurrencyId: CurrencyId = CurrencyId::StellarNative;
 }
 impl currency::Config for Runtime {
 	type UnsignedFixedPoint = UnsignedFixedPoint;
@@ -1246,8 +1244,6 @@ impl currency::Config for Runtime {
 	type SignedFixedPoint = SignedFixedPoint;
 	type Balance = Balance;
 	type GetRelayChainCurrencyId = RelayChainCurrencyId;
-	#[cfg(feature = "runtime-benchmarks")]
-	type GetWrappedCurrencyId = WrappedCurrencyId;
 	type AssetConversion = primitives::AssetConversion;
 	type BalanceConversion = primitives::BalanceConversion;
 	type CurrencyConversion = CurrencyConvert;

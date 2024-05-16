@@ -7,10 +7,10 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod chain_ext;
+pub mod definitions;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
-pub mod definitions;
 
 use crate::zenlink::*;
 use xcm::v3::MultiLocation;
@@ -157,6 +157,7 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
 use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::GetStorageVersion;
 use frame_support::pallet_prelude::StorageVersion;
+use spacewalk_primitives::oracle::Key;
 
 // Temporary struct that defines the executions to be done upon upgrade,
 // Should be removed or at least checked on each upgrade to see if it is relevant,
@@ -195,6 +196,41 @@ pub type Executive = frame_executive::Executive<
 		pallet_transaction_payment::migrations::v1::ForceSetVersionToV2<Runtime>,
 	),
 >;
+
+pub struct AssetRegistryToDiaOracleKeyConvertor;
+
+impl Convert<Key, Option<(Vec<u8>, Vec<u8>)>> for AssetRegistryToDiaOracleKeyConvertor {
+	fn convert(spacewalk_oracle_key: Key) -> Option<(Vec<u8>, Vec<u8>)> {
+		let currency_id = match spacewalk_oracle_key {
+			Key::ExchangeRate(currency_id) => currency_id,
+		};
+
+		// Try to find the dia keys in the asset registry metadata
+		AssetRegistry::metadata(currency_id).and_then(|metadata| {
+			let dia_keys = metadata.additional.dia_keys;
+			if dia_keys.blockchain.is_empty() || dia_keys.symbol.is_empty() {
+				return None;
+			}
+			return Some((dia_keys.blockchain, dia_keys.symbol));
+		});
+
+		// We didn't find the dia keys in the asset registry metadata
+		None
+	}
+}
+
+impl Convert<(Vec<u8>, Vec<u8>), Option<Key>> for AssetRegistryToDiaOracleKeyConvertor {
+	fn convert(dia_oracle_key: (Vec<u8>, Vec<u8>)) -> Option<Key> {
+		// Try to find the currency id in the asset registry metadata for which the dia keys are
+		// matching the ones provided
+		AssetRegistry::Metadata::iter().find_map(|(currency_id, metadata)| {
+			if metadata.additional.dia_keys == dia_oracle_key {
+				return Some(Key::ExchangeRate(currency_id));
+			}
+			None
+		})
+	}
+}
 
 pub struct SpacewalkNativeCurrency;
 
@@ -385,53 +421,53 @@ impl Contains<RuntimeCall> for BaseFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		match call {
 			// These modules are all allowed to be called by transactions:
-			RuntimeCall::Bounties(_) |
-			RuntimeCall::ChildBounties(_) |
-			RuntimeCall::ClientsInfo(_) |
-			RuntimeCall::Treasury(_) |
-			RuntimeCall::Tokens(_) |
-			RuntimeCall::Currencies(_) |
-			RuntimeCall::ParachainStaking(_) |
-			RuntimeCall::Democracy(_) |
-			RuntimeCall::Council(_) |
-			RuntimeCall::TechnicalCommittee(_) |
-			RuntimeCall::System(_) |
-			RuntimeCall::Scheduler(_) |
-			RuntimeCall::Preimage(_) |
-			RuntimeCall::Timestamp(_) |
-			RuntimeCall::Balances(_) |
-			RuntimeCall::Session(_) |
-			RuntimeCall::ParachainSystem(_) |
-			RuntimeCall::Sudo(_) |
-			RuntimeCall::XcmpQueue(_) |
-			RuntimeCall::PolkadotXcm(_) |
-			RuntimeCall::DmpQueue(_) |
-			RuntimeCall::Utility(_) |
-			RuntimeCall::Vesting(_) |
-			RuntimeCall::XTokens(_) |
-			RuntimeCall::Multisig(_) |
-			RuntimeCall::Identity(_) |
-			RuntimeCall::Contracts(_) |
-			RuntimeCall::ZenlinkProtocol(_) |
-			RuntimeCall::DiaOracleModule(_) |
-			RuntimeCall::Fee(_) |
-			RuntimeCall::Issue(_) |
-			RuntimeCall::Nomination(_) |
-			RuntimeCall::Oracle(_) |
-			RuntimeCall::Redeem(_) |
-			RuntimeCall::Replace(_) |
-			RuntimeCall::Security(_) |
-			RuntimeCall::StellarRelay(_) |
-			RuntimeCall::VaultRegistry(_) |
-			RuntimeCall::PooledVaultRewards(_) |
-			RuntimeCall::Farming(_) |
-			RuntimeCall::TokenAllowance(_) |
-			RuntimeCall::AssetRegistry(_) |
-			RuntimeCall::Proxy(_) |
-			RuntimeCall::OrmlExtension(_) |
-			RuntimeCall::TreasuryBuyoutExtension(_) |
-			RuntimeCall::RewardDistribution(_) => true, // All pallets are allowed, but exhaustive match is defensive
-			                                            // in the case of adding new pallets.
+			RuntimeCall::Bounties(_)
+			| RuntimeCall::ChildBounties(_)
+			| RuntimeCall::ClientsInfo(_)
+			| RuntimeCall::Treasury(_)
+			| RuntimeCall::Tokens(_)
+			| RuntimeCall::Currencies(_)
+			| RuntimeCall::ParachainStaking(_)
+			| RuntimeCall::Democracy(_)
+			| RuntimeCall::Council(_)
+			| RuntimeCall::TechnicalCommittee(_)
+			| RuntimeCall::System(_)
+			| RuntimeCall::Scheduler(_)
+			| RuntimeCall::Preimage(_)
+			| RuntimeCall::Timestamp(_)
+			| RuntimeCall::Balances(_)
+			| RuntimeCall::Session(_)
+			| RuntimeCall::ParachainSystem(_)
+			| RuntimeCall::Sudo(_)
+			| RuntimeCall::XcmpQueue(_)
+			| RuntimeCall::PolkadotXcm(_)
+			| RuntimeCall::DmpQueue(_)
+			| RuntimeCall::Utility(_)
+			| RuntimeCall::Vesting(_)
+			| RuntimeCall::XTokens(_)
+			| RuntimeCall::Multisig(_)
+			| RuntimeCall::Identity(_)
+			| RuntimeCall::Contracts(_)
+			| RuntimeCall::ZenlinkProtocol(_)
+			| RuntimeCall::DiaOracleModule(_)
+			| RuntimeCall::Fee(_)
+			| RuntimeCall::Issue(_)
+			| RuntimeCall::Nomination(_)
+			| RuntimeCall::Oracle(_)
+			| RuntimeCall::Redeem(_)
+			| RuntimeCall::Replace(_)
+			| RuntimeCall::Security(_)
+			| RuntimeCall::StellarRelay(_)
+			| RuntimeCall::VaultRegistry(_)
+			| RuntimeCall::PooledVaultRewards(_)
+			| RuntimeCall::Farming(_)
+			| RuntimeCall::TokenAllowance(_)
+			| RuntimeCall::AssetRegistry(_)
+			| RuntimeCall::Proxy(_)
+			| RuntimeCall::OrmlExtension(_)
+			| RuntimeCall::TreasuryBuyoutExtension(_)
+			| RuntimeCall::RewardDistribution(_) => true, // All pallets are allowed, but exhaustive match is defensive
+			                                              // in the case of adding new pallets.
 		}
 	}
 }
@@ -1265,6 +1301,8 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 
 parameter_types! {
 	pub const RelayChainCurrencyId: CurrencyId = XCM(0);
+	// We just use an arbitrary currency here. Only relevant for benchmarks
+	pub const WrappedCurrencyId: CurrencyId = CurrencyId::StellarNative;
 }
 impl currency::Config for Runtime {
 	type UnsignedFixedPoint = UnsignedFixedPoint;
@@ -1272,6 +1310,8 @@ impl currency::Config for Runtime {
 	type SignedFixedPoint = SignedFixedPoint;
 	type Balance = Balance;
 	type GetRelayChainCurrencyId = RelayChainCurrencyId;
+	#[cfg(feature = "runtime-benchmarks")]
+	type GetWrappedCurrencyId = WrappedCurrencyId;
 	type AssetConversion = primitives::AssetConversion;
 	type BalanceConversion = primitives::BalanceConversion;
 	type CurrencyConversion = CurrencyConvert;

@@ -108,6 +108,10 @@ impl<
 	> Convert<(Vec<u8>, Vec<u8>), Option<Key>> for AssetRegistryToDiaOracleKeyConvertor<Runtime>
 {
 	fn convert(dia_oracle_key: (Vec<u8>, Vec<u8>)) -> Option<Key> {
+		if dia_oracle_key.0.is_empty() || dia_oracle_key.1.is_empty() {
+			return None;
+		}
+
 		// Try to find the currency id in the asset registry metadata for which the dia keys are
 		// matching the ones provided
 		let blockchain = dia_oracle_key.0;

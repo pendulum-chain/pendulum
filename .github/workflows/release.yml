@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-         chain: ["AMPLITUDE"]
+         chain: ["PENDULUM"]
 #        chain: ["AMPLITUDE", "PENDULUM"]
 #        shouldReleaseAmp:
 #          - ${{ contains(github.event.pull_request.title, 'amplitude') }}

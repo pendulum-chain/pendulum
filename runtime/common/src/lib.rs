@@ -234,37 +234,39 @@ impl<
 	where
 		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
 	{
-		let default_price = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
+		let default_price =
+			FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
 
-		let (blockchain, symbol) = match orml_asset_registry::Pallet::<Runtime>::metadata(currency_id) {
-			Some(asset_metadata) => {
-				let blockchain = asset_metadata.additional.dia_keys.blockchain.into_inner();
-				let symbol = asset_metadata.additional.dia_keys.symbol.into_inner();
-				(blockchain, symbol)
-			} ,
-			None => {
-				// If there's no metadata in asset registry, then there's no way to fetch the price
-				// We have to set the price manually in the oracle using the default values for blockchain and symbol
-				let blockchain = b"blockchain".to_vec();
-				let symbol = b"symbol".to_vec();
-				let coin_infos = vec![(
-					(blockchain.clone(), symbol.clone()),
-					CoinInfo {
-						blockchain: blockchain.clone(),
-						symbol: symbol.clone(),
-						price: default_price.into_inner(),
-						..Default::default()
-					},
-				)];
-				// If this fails, we still want to return a default price so we don't throw an error here
-				let _ = dia_oracle::Pallet::<Runtime>::set_updated_coin_infos(
-					frame_system::RawOrigin::Root.into(),
-					coin_infos,
-				);
+		let (blockchain, symbol) =
+			match orml_asset_registry::Pallet::<Runtime>::metadata(currency_id) {
+				Some(asset_metadata) => {
+					let blockchain = asset_metadata.additional.dia_keys.blockchain.into_inner();
+					let symbol = asset_metadata.additional.dia_keys.symbol.into_inner();
+					(blockchain, symbol)
+				},
+				None => {
+					// If there's no metadata in asset registry, then there's no way to fetch the price
+					// We have to set the price manually in the oracle using the default values for blockchain and symbol
+					let blockchain = b"blockchain".to_vec();
+					let symbol = b"symbol".to_vec();
+					let coin_infos = vec![(
+						(blockchain.clone(), symbol.clone()),
+						CoinInfo {
+							blockchain: blockchain.clone(),
+							symbol: symbol.clone(),
+							price: default_price.into_inner(),
+							..Default::default()
+						},
+					)];
+					// If this fails, we still want to return a default price so we don't throw an error here
+					let _ = dia_oracle::Pallet::<Runtime>::set_updated_coin_infos(
+						frame_system::RawOrigin::Root.into(),
+						coin_infos,
+					);
 
-				(blockchain, symbol)
-			}
-		};
+					(blockchain, symbol)
+				},
+			};
 
 		if let Ok(asset_info) =
 			<dia_oracle::Pallet<Runtime> as DiaOracle>::get_coin_info(blockchain, symbol)

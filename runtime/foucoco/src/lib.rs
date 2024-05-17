@@ -274,7 +274,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("foucoco"),
 	impl_name: create_runtime_str!("foucoco"),
 	authoring_version: 1,
-	spec_version: 16,
+	spec_version: 17,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 8,
@@ -1021,7 +1021,7 @@ impl spacewalk_primitives::DecimalsLookup for DecimalsLookupImpl {
 
 parameter_types! {
 	pub const SellFee: Permill = Permill::from_percent(1);
-	pub const MinAmountToBuyout: Balance = NANOUNIT;
+	pub const MinAmountToBuyout: Balance = 100 * MILLIUNIT;
 	// 24 hours in blocks (where average block time is 12 seconds)
 	pub const BuyoutPeriod: u32 = 7200;
 	// Maximum number of allowed currencies for buyout

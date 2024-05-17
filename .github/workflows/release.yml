@@ -1,20 +1,16 @@
 # This action triggers a GitLab CI job that performs the following:
 # * Srtool Check
 # * Subwasm info of the compressed wasm file
-# * Generate Release Notes
 # * Propose a Parachain Upgrade
+# * Generate Release Notes
 name: Release and Propose an Upgrade
 
-#on:
-#  pull_request:
-#    types:
-#      - closed
-#    branches:
-#      - 'main'
 on:
   pull_request:
+    types:
+      - closed
     branches:
-      - main
+      - 'main'
 
 jobs:
   release_check:
@@ -26,17 +22,18 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-         chain: ["PENDULUM"]
-#        chain: ["AMPLITUDE", "PENDULUM"]
-#        shouldReleaseAmp:
-#          - ${{ contains(github.event.pull_request.title, 'amplitude') }}
-#        shouldReleasePen:
-#          - ${{ contains(github.event.pull_request.title, 'pendulum') }}
-#        exclude:
-#          - shouldReleaseAmp: false
-#            chain: "AMPLITUDE"
-#          - shouldReleasePen: false
-#            chain: "PENDULUM"
+        chain: ["AMPLITUDE", "PENDULUM"]
+#       The job will run for Amplitude IF the pull request has the "amplitude" in its title
+        shouldReleaseAmp:
+          - ${{ contains(github.event.pull_request.title, 'amplitude') }}
+#       The job will run for Pendulum IF the pull request has the "pendulum" in its title
+        shouldReleasePen:
+          - ${{ contains(github.event.pull_request.title, 'pendulum') }}
+        exclude:
+          - shouldReleaseAmp: false
+            chain: "AMPLITUDE"
+          - shouldReleasePen: false
+            chain: "PENDULUM"
     runs-on: ubuntu-latest
 
     steps:

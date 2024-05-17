@@ -40,15 +40,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Set environment variable
-        id: set-env
-        run: |
-          echo "${{ matrix.chain }}=Y" >> $GITHUB_ENV
-
-      - name: Print environment variable
-        run: |
-          echo "${{ format('${0}', ${{ matrix.chain }} ) }}"
-
       - name: trigger gitlab
         uses: eic/trigger-gitlab-ci@v1
         with:
@@ -57,4 +48,4 @@ jobs:
           token: ${{ secrets.GITLABAPI }}
           ref_name: main
           variables: |
-            ${{ matrix.chain }}: ${{ format('${0}', steps.string.outputs.uppercase ) }}
+            ${{ matrix.chain }}:Y

@@ -80,10 +80,7 @@ use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use dia_oracle::DiaOracle;
 pub use issue::{Event as IssueEvent, IssueRequest};
 pub use nomination::Event as NominationEvent;
-use oracle::{
-	dia,
-	dia::{DiaOracleAdapter, NativeCurrencyKey, XCMCurrencyConversion},
-};
+use oracle::dia::DiaOracleAdapter;
 pub use redeem::{Event as RedeemEvent, RedeemRequest};
 pub use replace::{Event as ReplaceEvent, ReplaceRequest};
 pub use security::StatusCode;
@@ -204,39 +201,11 @@ pub type Executive = frame_executive::Executive<
 	),
 >;
 
-pub struct PendulumDiaOracleKeyConverter;
-
-impl NativeCurrencyKey for PendulumDiaOracleKeyConverter {
-	fn native_symbol() -> Vec<u8> {
-		b"PEN".to_vec()
-	}
-
-	fn native_chain() -> Vec<u8> {
-		b"Pendulum".to_vec()
-	}
-}
-
-impl XCMCurrencyConversion for PendulumDiaOracleKeyConverter {
-	fn convert_to_dia_currency_id(token_symbol: u8) -> Option<(Vec<u8>, Vec<u8>)> {
-		match token_symbol {
-			0 => Some((b"Polkadot".to_vec(), b"DOT".to_vec())),
-			_ => None,
-		}
-	}
-
-	fn convert_from_dia_currency_id(blockchain: Vec<u8>, symbol: Vec<u8>) -> Option<u8> {
-		match (blockchain.as_slice(), symbol.as_slice()) {
-			(b"Polkadot", b"DOT") => Some(0),
-			_ => None,
-		}
-	}
-}
-
 type DataProviderImpl = DiaOracleAdapter<
 	DiaOracleModule,
 	UnsignedFixedPoint,
 	Moment,
-	dia::DiaOracleKeyConvertor<PendulumDiaOracleKeyConverter>,
+	asset_registry::AssetRegistryToDiaOracleKeyConvertor<Runtime>,
 	ConvertPrice,
 	ConvertMoment,
 >;

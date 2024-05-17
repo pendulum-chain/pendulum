@@ -1,21 +1,18 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(non_snake_case)]
 
+use asset_registry::CustomMetadata;
 use core::{fmt::Debug, marker::PhantomData};
+use dia_oracle::DiaOracle;
+use orml_traits::asset_registry::Inspect;
 use parity_scale_codec::EncodeLike;
 use sp_runtime::{
-	traits::{IdentifyAccount, Verify, Convert, One, Zero},
-	MultiSignature,
-	DispatchError, 
-	FixedPointNumber,
-	FixedU128,
+	traits::{Convert, IdentifyAccount, One, Verify, Zero},
+	DispatchError, FixedPointNumber, FixedU128, MultiSignature,
 };
 use spacewalk_primitives::CurrencyId;
 use treasury_buyout_extension::PriceGetter;
-use dia_oracle::DiaOracle;
-use xcm::v3::{MultiAsset, AssetId, MultiLocation};
-use orml_traits::asset_registry::Inspect;
-use asset_registry::CustomMetadata;
+use xcm::v3::{AssetId, MultiAsset, MultiLocation};
 
 pub mod asset_registry;
 pub mod custom_transactor;
@@ -62,8 +59,6 @@ pub type Index = u32;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
-
-
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -157,7 +152,10 @@ pub mod parachains {
 /// in the form of a `MultiLocation`, in this case a pCfg (Para-Id, Currency-Id).
 pub struct CurrencyIdConvert<AssetRegistry>(sp_std::marker::PhantomData<AssetRegistry>);
 
-impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert<AssetRegistry> {
+impl<
+		AssetRegistry: Inspect<AssetId = CurrencyId, Balance = Balance, CustomMetadata = CustomMetadata>,
+	> Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert<AssetRegistry>
+{
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		<AssetRegistry as Inspect>::metadata(&id)
 			.filter(|m| m.location.is_some())
@@ -166,13 +164,19 @@ impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetada
 	}
 }
 
-impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert<AssetRegistry> {
-	fn convert(location: MultiLocation) -> Option<CurrencyId>  {
+impl<
+		AssetRegistry: Inspect<AssetId = CurrencyId, Balance = Balance, CustomMetadata = CustomMetadata>,
+	> Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert<AssetRegistry>
+{
+	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		<AssetRegistry as Inspect>::asset_id(&location)
 	}
 }
 
-impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert<AssetRegistry> {
+impl<
+		AssetRegistry: Inspect<AssetId = CurrencyId, Balance = Balance, CustomMetadata = CustomMetadata>,
+	> Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert<AssetRegistry>
+{
 	fn convert(a: MultiAsset) -> Option<CurrencyId> {
 		if let MultiAsset { id: AssetId::Concrete(id), fun: _ } = a {
 			<Self as Convert<MultiLocation, Option<CurrencyId>>>::convert(id)
@@ -185,16 +189,24 @@ impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetada
 /// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
 /// Here we need to know the canonical representation of all the tokens we handle in order to
 /// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
-impl<AssetRegistry: Inspect<AssetId = CurrencyId,Balance = Balance, CustomMetadata = CustomMetadata>> xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert<AssetRegistry> {
+impl<
+		AssetRegistry: Inspect<AssetId = CurrencyId, Balance = Balance, CustomMetadata = CustomMetadata>,
+	> xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert<AssetRegistry>
+{
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		<CurrencyIdConvert<AssetRegistry> as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
-			.ok_or(location)
+		<CurrencyIdConvert<AssetRegistry> as Convert<MultiLocation, Option<CurrencyId>>>::convert(
+			location,
+		)
+		.ok_or(location)
 	}
 }
 
-
 pub struct OraclePriceGetter<Runtime>(PhantomData<Runtime>);
-impl < Runtime: treasury_buyout_extension::Config + dia_oracle::Config + orml_asset_registry::Config<AssetId = CurrencyId, CustomMetadata = CustomMetadata> > PriceGetter<CurrencyId> for OraclePriceGetter<Runtime> 
+impl<
+		Runtime: treasury_buyout_extension::Config
+			+ dia_oracle::Config
+			+ orml_asset_registry::Config<AssetId = CurrencyId, CustomMetadata = CustomMetadata>,
+	> PriceGetter<CurrencyId> for OraclePriceGetter<Runtime>
 {
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
@@ -202,13 +214,16 @@ impl < Runtime: treasury_buyout_extension::Config + dia_oracle::Config + orml_as
 		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
 	{
 		let asset_metadata = orml_asset_registry::Pallet::<Runtime>::metadata(currency_id)
-        .ok_or(DispatchError::Other("Asset not found"))?;
+			.ok_or(DispatchError::Other("Asset not found"))?;
 
 		let blockchain = asset_metadata.additional.dia_keys.blockchain.into_inner();
 		let symbol = asset_metadata.additional.dia_keys.symbol.into_inner();
 
-		if let Ok(asset_info) = <dia_oracle::Pallet<Runtime> as DiaOracle>::get_coin_info(blockchain, symbol) {
-			let price = FixedNumber::try_from(FixedU128::from_inner(asset_info.price)).map_err(|_| DispatchError::Other("Failed to convert price"))?;
+		if let Ok(asset_info) =
+			<dia_oracle::Pallet<Runtime> as DiaOracle>::get_coin_info(blockchain, symbol)
+		{
+			let price = FixedNumber::try_from(FixedU128::from_inner(asset_info.price))
+				.map_err(|_| DispatchError::Other("Failed to convert price"))?;
 			return Ok(price);
 		} else {
 			return Err(DispatchError::Other("Failed to get coin info"));
@@ -223,13 +238,16 @@ impl < Runtime: treasury_buyout_extension::Config + dia_oracle::Config + orml_as
 		Security::set_status(StatusCode::Running);
 
 		let asset_metadata = orml_asset_registry::Pallet::<Runtime>::metadata(currency_id)
-        .ok_or(DispatchError::Other("Asset not found"))?;
+			.ok_or(DispatchError::Other("Asset not found"))?;
 
 		let blockchain = asset_metadata.additional.dia_keys.blockchain.into_inner();
 		let symbol = asset_metadata.additional.dia_keys.symbol.into_inner();
 
-		if let Ok(asset_info) = <dia_oracle::Pallet<Runtime> as DiaOracle>::get_coin_info(blockchain, symbol) {
-			let price = FixedNumber::try_from(FixedU128::from_inner(asset_info.price)).map_err(|_| DispatchError::Other("Failed to convert price"))?;
+		if let Ok(asset_info) =
+			<dia_oracle::Pallet<Runtime> as DiaOracle>::get_coin_info(blockchain, symbol)
+		{
+			let price = FixedNumber::try_from(FixedU128::from_inner(asset_info.price))
+				.map_err(|_| DispatchError::Other("Failed to convert price"))?;
 			Ok(price)
 		} else {
 			// Returning a default value in case fetching a real price from the oracle fails

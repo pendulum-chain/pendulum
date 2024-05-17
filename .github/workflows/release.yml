@@ -40,32 +40,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.ref }}
-          fetch-depth: 0
-
-      - id: string
-        uses: ASzc/change-string-case-action@v6
-        with:
-          string: ${{ matrix.chain }}
-
       - name: Set environment variable
         id: set-env
         run: |
-          echo "${{ steps.string.outputs.uppercase }}=Y" >> $GITHUB_ENV
+          echo "${{ matrix.chain }}=Y" >> $GITHUB_ENV
 
       - name: Print environment variable
         run: |
-          echo "${{ format('${0}', steps.string.outputs.uppercase ) }}"
+          echo "${{ format('${0}', steps.s ) }}"
 
-      - name: trigger gitlab
-        uses: eic/trigger-gitlab-ci@v1
+      - name: trigger GitLab Ci Job
+        uses: appleboy/gitlab-ci-action@master
         with:
-          url: https://gitlab.com
-          project_id: 56492543
+          host: "https://gitlab.com"
           token: ${{ secrets.GITLABAPI }}
-          ref_name: main
-          variables: |
-            AMPLITUDE: Y
+          project_id: 56492543
+          debug: true
+          ref: main
 

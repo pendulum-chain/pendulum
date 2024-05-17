@@ -48,4 +48,4 @@ jobs:
           token: ${{ secrets.GITLABAPI }}
           ref_name: main
           variables: |
-            ${{ matrix.chain }}:"Y"
+            ${{ matrix.chain }}=Y

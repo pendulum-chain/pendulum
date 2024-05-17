@@ -27,11 +27,10 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
-		Zero, One,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchError, FixedPointNumber, MultiAddress, Perbill, Permill,
-	Perquintill, SaturatedConversion, FixedU128, 
+	Perquintill, SaturatedConversion, 
 };
 
 use bifrost_farming as farming;
@@ -85,7 +84,6 @@ pub use nomination::Event as NominationEvent;
 use oracle::{
 	dia,
 	dia::{DiaOracleAdapter, NativeCurrencyKey, XCMCurrencyConversion},
-	OracleKey,
 };
 pub use redeem::{Event as RedeemEvent, RedeemRequest};
 pub use replace::{Event as ReplaceEvent, ReplaceRequest};

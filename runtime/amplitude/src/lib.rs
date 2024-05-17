@@ -29,10 +29,9 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
-		One, Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, FixedPointNumber, FixedU128, SaturatedConversion,
+	ApplyExtrinsicResult, DispatchError, FixedPointNumber, SaturatedConversion,
 };
 
 const CONTRACTS_DEBUG_OUTPUT: bool = true;
@@ -85,11 +84,7 @@ pub use sp_runtime::BuildStorage;
 pub use dia_oracle::dia::AssetId;
 pub use issue::{Event as IssueEvent, IssueRequest};
 pub use nomination::Event as NominationEvent;
-use oracle::{
-	dia,
-	dia::{DiaOracleAdapter, NativeCurrencyKey, XCMCurrencyConversion},
-	OracleKey,
-};
+use oracle::dia::{DiaOracleAdapter, NativeCurrencyKey, XCMCurrencyConversion};
 pub use redeem::{Event as RedeemEvent, RedeemRequest};
 pub use replace::{Event as ReplaceEvent, ReplaceRequest};
 pub use security::StatusCode;

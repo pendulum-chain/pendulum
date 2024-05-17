@@ -25,15 +25,14 @@ use codec::Encode;
 
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
-use sp_core::{crypto::KeyTypeId, Get, OpaqueMetadata, H256};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H256};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
-		One, Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, FixedPointNumber, FixedU128, SaturatedConversion,
+	ApplyExtrinsicResult, DispatchError, FixedPointNumber, SaturatedConversion,
 };
 use sp_std::fmt::Debug;
 
@@ -69,8 +68,6 @@ use runtime_common::{
 
 #[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
 use oracle::testing_utils::MockDataFeeder;
-
-use oracle::OracleKey;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 

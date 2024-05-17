@@ -43,7 +43,7 @@ jobs:
       - name: trigger gitlab
         uses: mb-wali/gitlab-cd-trigger@main
         with:
-          URL: https://gitlab.com
+          URL: 'https://gitlab.com'
           GITLB_TRIGGER_TOKEN:  ${{ secrets.GITLABAPI }}
           PROJECT_ID: '56492543'
           REF_NAME: 'main'

@@ -7,10 +7,10 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod chain_ext;
+pub mod definitions;
 mod weights;
 pub mod xcm_config;
 pub mod zenlink;
-pub mod definitions;
 
 use crate::zenlink::*;
 use bifrost_farming as farming;
@@ -29,10 +29,9 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
-		One, Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, FixedPointNumber, FixedU128, SaturatedConversion,
+	ApplyExtrinsicResult, DispatchError, FixedPointNumber, SaturatedConversion,
 };
 
 const CONTRACTS_DEBUG_OUTPUT: bool = true;
@@ -85,11 +84,7 @@ pub use sp_runtime::BuildStorage;
 pub use dia_oracle::dia::AssetId;
 pub use issue::{Event as IssueEvent, IssueRequest};
 pub use nomination::Event as NominationEvent;
-use oracle::{
-	dia,
-	dia::{DiaOracleAdapter, NativeCurrencyKey, XCMCurrencyConversion},
-	OracleKey,
-};
+use oracle::dia::DiaOracleAdapter;
 pub use redeem::{Event as RedeemEvent, RedeemRequest};
 pub use replace::{Event as ReplaceEvent, ReplaceRequest};
 pub use security::StatusCode;
@@ -224,34 +219,6 @@ pub type Executive = frame_executive::Executive<
 	),
 >;
 
-pub struct AmplitudeDiaOracleKeyConverter;
-
-impl NativeCurrencyKey for AmplitudeDiaOracleKeyConverter {
-	fn native_symbol() -> Vec<u8> {
-		b"AMPE".to_vec()
-	}
-
-	fn native_chain() -> Vec<u8> {
-		b"Amplitude".to_vec()
-	}
-}
-
-impl XCMCurrencyConversion for AmplitudeDiaOracleKeyConverter {
-	fn convert_to_dia_currency_id(token_symbol: u8) -> Option<(Vec<u8>, Vec<u8>)> {
-		match token_symbol {
-			0 => Some((b"Kusama".to_vec(), b"KSM".to_vec())),
-			_ => None,
-		}
-	}
-
-	fn convert_from_dia_currency_id(blockchain: Vec<u8>, symbol: Vec<u8>) -> Option<u8> {
-		match (blockchain.as_slice(), symbol.as_slice()) {
-			(b"Kusama", b"KSM") => Some(0),
-			_ => None,
-		}
-	}
-}
-
 cfg_if::cfg_if! {
 	if #[cfg(feature = "runtime-benchmarks")] {
 		use oracle::testing_utils::{
@@ -270,7 +237,7 @@ cfg_if::cfg_if! {
 			DiaOracleModule,
 			UnsignedFixedPoint,
 			Moment,
-			dia::DiaOracleKeyConvertor<AmplitudeDiaOracleKeyConverter>,
+			asset_registry::AssetRegistryToDiaOracleKeyConvertor<Runtime>,
 			ConvertPrice,
 			ConvertMoment,
 		>;
@@ -413,51 +380,51 @@ impl Contains<RuntimeCall> for BaseFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		match call {
 			// These modules are all allowed to be called by transactions:
-			RuntimeCall::Bounties(_) |
-			RuntimeCall::ChildBounties(_) |
-			RuntimeCall::ClientsInfo(_) |
-			RuntimeCall::Treasury(_) |
-			RuntimeCall::Tokens(_) |
-			RuntimeCall::Currencies(_) |
-			RuntimeCall::ParachainStaking(_) |
-			RuntimeCall::Democracy(_) |
-			RuntimeCall::Council(_) |
-			RuntimeCall::TechnicalCommittee(_) |
-			RuntimeCall::System(_) |
-			RuntimeCall::Scheduler(_) |
-			RuntimeCall::Preimage(_) |
-			RuntimeCall::Timestamp(_) |
-			RuntimeCall::Balances(_) |
-			RuntimeCall::Session(_) |
-			RuntimeCall::ParachainSystem(_) |
-			RuntimeCall::XcmpQueue(_) |
-			RuntimeCall::PolkadotXcm(_) |
-			RuntimeCall::DmpQueue(_) |
-			RuntimeCall::Utility(_) |
-			RuntimeCall::Vesting(_) |
-			RuntimeCall::XTokens(_) |
-			RuntimeCall::Multisig(_) |
-			RuntimeCall::Identity(_) |
-			RuntimeCall::Contracts(_) |
-			RuntimeCall::ZenlinkProtocol(_) |
-			RuntimeCall::VestingManager(_) |
-			RuntimeCall::DiaOracleModule(_) |
-			RuntimeCall::Fee(_) |
-			RuntimeCall::Issue(_) |
-			RuntimeCall::Nomination(_) |
-			RuntimeCall::Oracle(_) |
-			RuntimeCall::Redeem(_) |
-			RuntimeCall::Replace(_) |
-			RuntimeCall::Security(_) |
-			RuntimeCall::StellarRelay(_) |
-			RuntimeCall::VaultRegistry(_) |
-			RuntimeCall::PooledVaultRewards(_) |
-			RuntimeCall::Farming(_) |
-			RuntimeCall::TokenAllowance(_) |
-			RuntimeCall::AssetRegistry(_) |
-			RuntimeCall::Proxy(_) |
-			RuntimeCall::TreasuryBuyoutExtension(_) |
-			RuntimeCall::RewardDistribution(_) => true,
+			RuntimeCall::Bounties(_)
+			| RuntimeCall::ChildBounties(_)
+			| RuntimeCall::ClientsInfo(_)
+			| RuntimeCall::Treasury(_)
+			| RuntimeCall::Tokens(_)
+			| RuntimeCall::Currencies(_)
+			| RuntimeCall::ParachainStaking(_)
+			| RuntimeCall::Democracy(_)
+			| RuntimeCall::Council(_)
+			| RuntimeCall::TechnicalCommittee(_)
+			| RuntimeCall::System(_)
+			| RuntimeCall::Scheduler(_)
+			| RuntimeCall::Preimage(_)
+			| RuntimeCall::Timestamp(_)
+			| RuntimeCall::Balances(_)
+			| RuntimeCall::Session(_)
+			| RuntimeCall::ParachainSystem(_)
+			| RuntimeCall::XcmpQueue(_)
+			| RuntimeCall::PolkadotXcm(_)
+			| RuntimeCall::DmpQueue(_)
+			| RuntimeCall::Utility(_)
+			| RuntimeCall::Vesting(_)
+			| RuntimeCall::XTokens(_)
+			| RuntimeCall::Multisig(_)
+			| RuntimeCall::Identity(_)
+			| RuntimeCall::Contracts(_)
+			| RuntimeCall::ZenlinkProtocol(_)
+			| RuntimeCall::VestingManager(_)
+			| RuntimeCall::DiaOracleModule(_)
+			| RuntimeCall::Fee(_)
+			| RuntimeCall::Issue(_)
+			| RuntimeCall::Nomination(_)
+			| RuntimeCall::Oracle(_)
+			| RuntimeCall::Redeem(_)
+			| RuntimeCall::Replace(_)
+			| RuntimeCall::Security(_)
+			| RuntimeCall::StellarRelay(_)
+			| RuntimeCall::VaultRegistry(_)
+			| RuntimeCall::PooledVaultRewards(_)
+			| RuntimeCall::Farming(_)
+			| RuntimeCall::TokenAllowance(_)
+			| RuntimeCall::AssetRegistry(_)
+			| RuntimeCall::Proxy(_)
+			| RuntimeCall::TreasuryBuyoutExtension(_)
+			| RuntimeCall::RewardDistribution(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -1430,59 +1397,6 @@ impl orml_currencies_allowance_extension::Config for Runtime {
 	type MaxAllowedCurrencies = ConstU32<256>;
 }
 
-pub struct OraclePriceGetter(Oracle);
-
-impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
-	#[cfg(not(feature = "runtime-benchmarks"))]
-	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
-	where
-		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
-	{
-		let key = OracleKey::ExchangeRate(currency_id);
-		let asset_price = Oracle::get_price(key.clone())?;
-
-		let converted_asset_price = FixedNumber::try_from(asset_price);
-
-		match converted_asset_price {
-			Ok(price) => Ok(price),
-			Err(_) => Err(DispatchError::Other("Failed to convert price")),
-		}
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
-	where
-		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
-	{
-		// Forcefully set chain status to running when benchmarking so that the oracle doesn't fail
-		Security::set_status(StatusCode::Running);
-
-		let key = OracleKey::ExchangeRate(currency_id);
-
-		// Attempt to get the price once and use the result to decide if feeding a value is necessary
-		match Oracle::get_price(key.clone()) {
-			Ok(asset_price) => {
-				// If the price is successfully retrieved, use it directly
-				let converted_asset_price = FixedNumber::try_from(asset_price)
-					.map_err(|_| DispatchError::Other("Failed to convert price"))?;
-				Ok(converted_asset_price)
-			},
-			Err(_) => {
-				// Price not found, feed the default value
-				let rate = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
-				// Account used for feeding values
-				let account = AccountId::from([0u8; 32]);
-				Oracle::feed_values(account, vec![(key.clone(), rate)])?;
-
-				// If feeding was successful, just use the feeded price to spare a read
-				let converted_asset_price = FixedNumber::try_from(rate)
-					.map_err(|_| DispatchError::Other("Failed to convert price"))?;
-				Ok(converted_asset_price)
-			},
-		}
-	}
-}
-
 pub struct DecimalsLookupImpl;
 impl spacewalk_primitives::DecimalsLookup for DecimalsLookupImpl {
 	type CurrencyId = CurrencyId;
@@ -1511,7 +1425,7 @@ impl treasury_buyout_extension::Config for Runtime {
 	type TreasuryAccount = AmplitudeTreasuryAccount;
 	type BuyoutPeriod = BuyoutPeriod;
 	type SellFee = SellFee;
-	type PriceGetter = OraclePriceGetter;
+	type PriceGetter = runtime_common::OraclePriceGetter<Runtime>;
 	type DecimalsLookup = DecimalsLookupImpl;
 	type MinAmountToBuyout = MinAmountToBuyout;
 	type MaxAllowedBuyoutCurrencies = MaxAllowedBuyoutCurrencies;

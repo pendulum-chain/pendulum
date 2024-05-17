@@ -5,42 +5,61 @@
 # * Propose a Parachain Upgrade
 name: Release and Propose an Upgrade
 
+#on:
+#  pull_request:
+#    types:
+#      - closed
+#    branches:
+#      - 'main'
 on:
   pull_request:
-    types:
-      - closed
     branches:
-      - 'main'
+      - main
 
 jobs:
   release_check:
 #    This job will only run if:
 #     * the pull request is closed and merged to main branch;
 #     * the pull request has the "release:" in its title
-    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.title, 'release:') }}
-    name: Is ${{ matrix.chain }} need new release ${{ github.event.inputs.ref }}
+#    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.title, 'release:') }}
+    name: ${{ matrix.chain }} need new release
     strategy:
       fail-fast: true
       matrix:
-        chain: ["amplitude", "pendulum"]
+        chain: ["AMPLITUDE", "PENDULUM"]
         shouldReleaseAmp:
           - ${{ contains(github.event.pull_request.title, 'amplitude') }}
         shouldReleasePen:
           - ${{ contains(github.event.pull_request.title, 'pendulum') }}
         exclude:
           - shouldReleaseAmp: false
-            chain: "amplitude"
+            chain: "AMPLITUDE"
           - shouldReleasePen: false
-            chain: "pendulum"
+            chain: "PENDULUM"
     runs-on: ubuntu-latest
 
     steps:
-      - name: trigger GitLab Ci Job
-        uses: appleboy/gitlab-ci-action@master
+      - id: string
+        uses: ASzc/change-string-case-action@v6
         with:
-          host: "https://gitlab.com"
-          token: ${{ secrets.GITLABAPI }}
+          string: ${{ matrix.chain }}
+
+      - name: Set environment variable
+        id: set-env
+        run: |
+          echo "${{ steps.string.outputs.uppercase }}=Y" >> $GITHUB_ENV
+
+      - name: Print environment variable
+        run: |
+          echo "${{ format('${0}', steps.string.outputs.uppercase ) }}"
+
+      - name: trigger gitlab
+        uses: eic/trigger-gitlab-ci@v1
+        with:
+          url: https://gitlab.com
           project_id: 56492543
-          debug: true
-          ref: main
+          token: ${{ secrets.GITLABAPI }}
+          ref_name: main
+          variables: |
+            AMPLITUDE: Y
 

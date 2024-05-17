@@ -256,7 +256,7 @@ impl<
 					..Default::default()
 				},
 			)];
-			// If this fails, we still want to return a default price so we don't throw an error here
+			// If this fails, we still want to return a default price so we don't handle the result here
 			let _ = dia_oracle::Pallet::<Runtime>::set_updated_coin_infos(
 				frame_system::RawOrigin::Root.into(),
 				coin_infos,

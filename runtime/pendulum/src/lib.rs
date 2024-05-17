@@ -27,11 +27,10 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
-		One, Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, FixedPointNumber, FixedU128, MultiAddress, Perbill,
-	Permill, Perquintill, SaturatedConversion,
+	ApplyExtrinsicResult, DispatchError, FixedPointNumber, MultiAddress, Perbill, Permill,
+	Perquintill, SaturatedConversion,
 };
 
 use bifrost_farming as farming;
@@ -81,7 +80,7 @@ use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use dia_oracle::DiaOracle;
 pub use issue::{Event as IssueEvent, IssueRequest};
 pub use nomination::Event as NominationEvent;
-use oracle::{dia::DiaOracleAdapter, OracleKey};
+use oracle::dia::DiaOracleAdapter;
 pub use redeem::{Event as RedeemEvent, RedeemRequest};
 pub use replace::{Event as ReplaceEvent, ReplaceRequest};
 pub use security::StatusCode;
@@ -1365,59 +1364,6 @@ impl orml_currencies_allowance_extension::Config for Runtime {
 	type MaxAllowedCurrencies = ConstU32<256>;
 }
 
-pub struct OraclePriceGetter(Oracle);
-
-impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
-	#[cfg(not(feature = "runtime-benchmarks"))]
-	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
-	where
-		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
-	{
-		let key = OracleKey::ExchangeRate(currency_id);
-		let asset_price = Oracle::get_price(key.clone())?;
-
-		let converted_asset_price = FixedNumber::try_from(asset_price);
-
-		match converted_asset_price {
-			Ok(price) => Ok(price),
-			Err(_) => Err(DispatchError::Other("Failed to convert price")),
-		}
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
-	where
-		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
-	{
-		// Forcefully set chain status to running when benchmarking so that the oracle doesn't fail
-		Security::set_status(StatusCode::Running);
-
-		let key = OracleKey::ExchangeRate(currency_id);
-
-		// Attempt to get the price once and use the result to decide if feeding a value is necessary
-		match Oracle::get_price(key.clone()) {
-			Ok(asset_price) => {
-				// If the price is successfully retrieved, use it directly
-				let converted_asset_price = FixedNumber::try_from(asset_price)
-					.map_err(|_| DispatchError::Other("Failed to convert price"))?;
-				Ok(converted_asset_price)
-			},
-			Err(_) => {
-				// Price not found, feed the default value
-				let rate = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
-				// Account used for feeding values
-				let account = AccountId::from([0u8; 32]);
-				Oracle::feed_values(account, vec![(key.clone(), rate)])?;
-
-				// If feeding was successful, just use the feeded price to spare a read
-				let converted_asset_price = FixedNumber::try_from(rate)
-					.map_err(|_| DispatchError::Other("Failed to convert price"))?;
-				Ok(converted_asset_price)
-			},
-		}
-	}
-}
-
 pub struct DecimalsLookupImpl;
 impl spacewalk_primitives::DecimalsLookup for DecimalsLookupImpl {
 	type CurrencyId = CurrencyId;
@@ -1446,7 +1392,7 @@ impl treasury_buyout_extension::Config for Runtime {
 	type TreasuryAccount = PendulumTreasuryAccount;
 	type BuyoutPeriod = BuyoutPeriod;
 	type SellFee = SellFee;
-	type PriceGetter = OraclePriceGetter;
+	type PriceGetter = runtime_common::OraclePriceGetter<Runtime>;
 	type DecimalsLookup = DecimalsLookupImpl;
 	type MinAmountToBuyout = MinAmountToBuyout;
 	type MaxAllowedBuyoutCurrencies = MaxAllowedBuyoutCurrencies;

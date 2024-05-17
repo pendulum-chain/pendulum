@@ -47,14 +47,14 @@ jobs:
 
       - name: Print environment variable
         run: |
-          echo "${{ format('${0}', steps.s ) }}"
+          echo "${{ format('${0}', ${{ matrix.chain }} ) }}"
 
-      - name: trigger GitLab Ci Job
-        uses: appleboy/gitlab-ci-action@master
+      - name: trigger gitlab
+        uses: eic/trigger-gitlab-ci@v1
         with:
-          host: "https://gitlab.com"
-          token: ${{ secrets.GITLABAPI }}
+          url: https://gitlab.com
           project_id: 56492543
-          debug: true
-          ref: main
-
+          token: ${{ secrets.GITLABAPI }}
+          ref_name: main
+          variables: |
+            ${{ matrix.chain }}: ${{ format('${0}', steps.string.outputs.uppercase ) }}

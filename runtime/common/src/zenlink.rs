@@ -1,4 +1,4 @@
-use crate::stellar::{BRL_ISSUER, TZS_ISSUER, USDC_ISSUER};
+use crate::stellar::{BRL_ISSUER, TZS_ISSUER, USDC_ISSUER, EURC_ISSUER};
 use spacewalk_primitives::{Asset, CurrencyId};
 use zenlink_protocol::{LOCAL, NATIVE};
 pub type ZenlinkAssetId = zenlink_protocol::AssetId;
@@ -48,6 +48,8 @@ pub fn zenlink_id_to_currency_id(
 				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"TZS\0", issuer: TZS_ISSUER })),
 			3 =>
 				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"BRL\0", issuer: BRL_ISSUER })),
+			4 =>
+				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"EURC", issuer: EURC_ISSUER })),
 			_ => None,
 		},
 		(3, LOCAL) => {
@@ -83,6 +85,7 @@ pub fn currency_id_to_zenlink_id(
 					(b"USDC", &USDC_ISSUER) => 1u64,
 					(b"TZS\0", &TZS_ISSUER) => 2u64,
 					(b"BRL\0", &BRL_ISSUER) => 3u64,
+					(b"EURC", &EURC_ISSUER) => 4u64,
 					_ => return None,
 				},
 				_ => return None,

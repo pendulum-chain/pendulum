@@ -26,19 +26,25 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        chain: ["AMPLITUDE", "PENDULUM"]
-        shouldReleaseAmp:
-          - ${{ contains(github.event.pull_request.title, 'amplitude') }}
-        shouldReleasePen:
-          - ${{ contains(github.event.pull_request.title, 'pendulum') }}
-        exclude:
-          - shouldReleaseAmp: false
-            chain: "AMPLITUDE"
-          - shouldReleasePen: false
-            chain: "PENDULUM"
+         chain: ["AMPLITUDE"]
+#        chain: ["AMPLITUDE", "PENDULUM"]
+#        shouldReleaseAmp:
+#          - ${{ contains(github.event.pull_request.title, 'amplitude') }}
+#        shouldReleasePen:
+#          - ${{ contains(github.event.pull_request.title, 'pendulum') }}
+#        exclude:
+#          - shouldReleaseAmp: false
+#            chain: "AMPLITUDE"
+#          - shouldReleasePen: false
+#            chain: "PENDULUM"
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+          fetch-depth: 0
+
       - id: string
         uses: ASzc/change-string-case-action@v6
         with:

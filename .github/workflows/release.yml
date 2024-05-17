@@ -41,11 +41,11 @@ jobs:
 
     steps:
       - name: trigger gitlab
-        uses: mb-wali/gitlab-cd-trigger@main
+        uses: eic/trigger-gitlab-ci@v1
         with:
-          URL: "https://gitlab.com"
-          GITLB_TRIGGER_TOKEN:  ${{ secrets.GITLABAPI }}
-          PROJECT_ID: "56492543"
-          REF_NAME: "main"
-          PIPELINE_VARIABLES: '{"${{ matrix.chain }}":"Y"}'
-
+          url: https://gitlab.com
+          project_id: 56492543
+          token: ${{ secrets.GITLABAPI }}
+          ref_name: main
+          variables: |
+            ${{ matrix.chain }}:"Y"

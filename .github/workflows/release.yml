@@ -47,5 +47,5 @@ jobs:
           GITLB_TRIGGER_TOKEN:  ${{ secrets.GITLABAPI }}
           PROJECT_ID: '56492543'
           REF_NAME: 'main'
-          PIPELINE_VARIABLES: '{"${{ matrix.chain }}":Y}'
+          PIPELINE_VARIABLES: '{"${{ matrix.chain }}":"Y"}'
 

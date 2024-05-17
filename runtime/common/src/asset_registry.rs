@@ -95,11 +95,8 @@ impl<
 			if dia_keys.blockchain.is_empty() || dia_keys.symbol.is_empty() {
 				return None;
 			}
-			return Some((dia_keys.blockchain, dia_keys.symbol));
-		});
-
-		// We didn't find the dia keys in the asset registry metadata
-		None
+			return Some((dia_keys.blockchain.to_vec(), dia_keys.symbol.to_vec()));
+		})
 	}
 }
 
@@ -118,7 +115,7 @@ impl<
 		let symbol = dia_oracle_key.1;
 		orml_asset_registry::Metadata::<Runtime>::iter().find_map(|(currency_id, metadata)| {
 			let dia_keys = metadata.additional.dia_keys;
-			if dia_keys.blockchain == blockchain && dia_keys.symbol == symbol {
+			if dia_keys.blockchain.to_vec() == blockchain && dia_keys.symbol.to_vec() == symbol {
 				return Some(Key::ExchangeRate(currency_id));
 			}
 			None

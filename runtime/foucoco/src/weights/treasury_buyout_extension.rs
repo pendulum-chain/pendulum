@@ -38,7 +38,7 @@ use core::marker::PhantomData;
 
 /// Weights for treasury_buyout_extension using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
-impl<T: frame_system::Config> treasury_buyout_extension::WeightInfo for SubstrateWeight<T> {
+impl<T: frame_system::Config> treasury_buyout_extension::default_weights::WeightInfo for SubstrateWeight<T> {
 	/// Storage: TreasuryBuyoutExtension AllowedCurrencies (r:1 w:0)
 	/// Proof: TreasuryBuyoutExtension AllowedCurrencies (max_values: None, max_size: Some(62), added: 2537, mode: MaxEncodedLen)
 	/// Storage: AssetRegistry Metadata (r:2 w:0)

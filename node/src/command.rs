@@ -5,12 +5,16 @@ use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::{info, trace};
-use runtime_common::{opaque::Block};
+use runtime_common::opaque::Block;
 use sc_chain_spec::GenericChainSpec;
 use sc_cli::{
-	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams, NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli
+	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
+	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
 };
-use sc_service::{Configuration, config::{BasePath, PrometheusConfig}};
+use sc_service::{
+	config::{BasePath, PrometheusConfig},
+	Configuration,
+};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 
@@ -38,7 +42,7 @@ enum ChainIdentity {
 	Amplitude,
 	Foucoco,
 	Pendulum,
-	FoucocoStandalone
+	FoucocoStandalone,
 }
 
 impl ChainIdentity {
@@ -210,18 +214,22 @@ macro_rules! construct_sync_run {
 				$code
 			}),
 			ChainIdentity::Foucoco => runner.sync_run(|$config| {
-				let $components =
-					new_partial::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(&$config, is_standalone)?;
+				let $components = new_partial::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(
+					&$config,
+					is_standalone,
+				)?;
 				$code
 			}),
 			ChainIdentity::Pendulum => runner.sync_run(|$config| {
-				let $components =
-					new_partial::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(&$config, is_standalone)?;
+				let $components = new_partial::<
+					pendulum_runtime::RuntimeApi,
+					PendulumRuntimeExecutor,
+				>(&$config, is_standalone)?;
 				$code
 			}),
 			// Foucoco standalone is only supported
 			// with the instant seal flag.
-			ChainIdentity::FoucocoStandalone => todo!(),
+			ChainIdentity::FoucocoStandalone => unimplemented!(),
 		}
 	}};
 }
@@ -241,18 +249,22 @@ macro_rules! construct_generic_async_run {
 				$code
 			}),
 			ChainIdentity::Foucoco => runner.async_run(|$config| {
-				let $components =
-					new_partial::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(&$config, is_standalone)?;
+				let $components = new_partial::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(
+					&$config,
+					is_standalone,
+				)?;
 				$code
 			}),
 			ChainIdentity::Pendulum => runner.async_run(|$config| {
-				let $components =
-					new_partial::<pendulum_runtime::RuntimeApi, PendulumRuntimeExecutor>(&$config, is_standalone)?;
+				let $components = new_partial::<
+					pendulum_runtime::RuntimeApi,
+					PendulumRuntimeExecutor,
+				>(&$config, is_standalone)?;
 				$code
 			}),
 			// Foucoco standalone is only supported
 			// with the instant seal flag.
-			ChainIdentity::FoucocoStandalone => todo!(),
+			ChainIdentity::FoucocoStandalone => unimplemented!(),
 		}
 	}};
 }
@@ -346,7 +358,7 @@ pub fn run() -> Result<()> {
 							.sync_run(|config| cmd.run::<Block, FoucocoRuntimeExecutor>(config)),
 						ChainIdentity::Pendulum => runner
 							.sync_run(|config| cmd.run::<Block, PendulumRuntimeExecutor>(config)),
-						ChainIdentity::FoucocoStandalone => todo!(),
+						ChainIdentity::FoucocoStandalone => unimplemented!(),
 					}
 				} else {
 					Err("Benchmarking wasn't enabled when building the node. \
@@ -410,7 +422,7 @@ pub fn run() -> Result<()> {
 							<PendulumRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
 						>, _>(Some(substrate_info(BLOCK_TIME_MILLIS))), task_manager))
 					}),
-					ChainIdentity::FoucocoStandalone => todo!(),
+					ChainIdentity::FoucocoStandalone => unimplemented!(),
 				}
 			} else {
 				Err("Try-runtime must be enabled by `--features try-runtime`.".into())
@@ -418,32 +430,36 @@ pub fn run() -> Result<()> {
 		},
 
 		None => {
-            let runner = cli.create_runner(&cli.run.normalize())?;
-            runner
-                .run_node_until_exit(|config| async move {
-                    if cli.instant_seal {
-                        start_instant(config).await
-                    } else {
-                        start_node(cli, config).await
-                    }
-                })
-                .map_err(Into::into)
-        }
+			let runner = cli.create_runner(&cli.run.normalize())?;
+			runner
+				.run_node_until_exit(|config| async move {
+					if cli.instant_seal {
+						start_instant(config).await
+					} else {
+						start_node(cli, config).await
+					}
+				})
+				.map_err(Into::into)
+		},
 	}
 }
 
-async fn start_instant(config: Configuration) -> sc_service::error::Result<sc_service::TaskManager> {
-    crate::service::start_parachain_node_spacewalk_foucoco_standalone(config)
+async fn start_instant(
+	config: Configuration,
+) -> sc_service::error::Result<sc_service::TaskManager> {
+	crate::service::start_parachain_node_spacewalk_foucoco_standalone(config)
 		.await
 		.map(|r| r.0)
 		.map_err(Into::into)
 }
 
-async fn start_node(cli: Cli, config: Configuration) -> sc_service::error::Result<sc_service::TaskManager> {
-
+async fn start_node(
+	cli: Cli,
+	config: Configuration,
+) -> sc_service::error::Result<sc_service::TaskManager> {
 	let collator_options = cli.run.collator_options();
 
-    let hwbench = if !cli.no_hardware_benchmarks {
+	let hwbench = if !cli.no_hardware_benchmarks {
 		config.database.path().map(|database_path| {
 			let _ = std::fs::create_dir_all(database_path);
 			sc_sysinfo::gather_hwbench(Some(database_path))
@@ -467,8 +483,8 @@ async fn start_node(cli: Cli, config: Configuration) -> sc_service::error::Resul
 		AccountIdConversion::<polkadot_primitives::v4::AccountId>::into_account_truncating(&id);
 
 	let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
-	let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
-		.map_err(|e| format!("{e:?}"))?;
+	let block: Block =
+		generate_genesis_block(&*config.chain_spec, state_version).map_err(|e| format!("{e:?}"))?;
 	let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
 	let tokio_handle = config.tokio_handle.clone();
@@ -487,9 +503,7 @@ async fn start_node(cli: Cli, config: Configuration) -> sc_service::error::Resul
 
 	match config.chain_spec.identify() {
 		ChainIdentity::Amplitude => {
-			sp_core::crypto::set_default_ss58_version(
-				amplitude_runtime::SS58Prefix::get().into(),
-			);
+			sp_core::crypto::set_default_ss58_version(amplitude_runtime::SS58Prefix::get().into());
 			crate::service::start_parachain_node_spacewalk_amplitude(
 				config,
 				polkadot_config,
@@ -502,9 +516,7 @@ async fn start_node(cli: Cli, config: Configuration) -> sc_service::error::Resul
 			.map_err(Into::into)
 		},
 		ChainIdentity::Foucoco => {
-			sp_core::crypto::set_default_ss58_version(
-				foucoco_runtime::SS58Prefix::get().into(),
-			);
+			sp_core::crypto::set_default_ss58_version(foucoco_runtime::SS58Prefix::get().into());
 			crate::service::start_parachain_node_spacewalk_foucoco(
 				config,
 				polkadot_config,
@@ -517,9 +529,7 @@ async fn start_node(cli: Cli, config: Configuration) -> sc_service::error::Resul
 			.map_err(Into::into)
 		},
 		ChainIdentity::Pendulum => {
-			sp_core::crypto::set_default_ss58_version(
-				pendulum_runtime::SS58Prefix::get().into(),
-			);
+			sp_core::crypto::set_default_ss58_version(pendulum_runtime::SS58Prefix::get().into());
 			crate::service::start_parachain_node_pendulum(
 				config,
 				polkadot_config,

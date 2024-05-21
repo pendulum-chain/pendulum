@@ -1,12 +1,17 @@
 use cumulus_primitives_core::ParaId;
-use runtime_common::{AccountId, AuraId, Balance, BlockNumber, UNIT};
+use runtime_common::{AccountId, AuraId, Balance, BlockNumber, Signature, UNIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
-use sp_core::{crypto::{Ss58Codec, UncheckedInto}, sr25519, Pair, Public};
-use sp_runtime::{FixedPointNumber, FixedU128, Perquintill, traits::{IdentifyAccount, Verify}};
+use sp_core::{
+	crypto::{Ss58Codec, UncheckedInto},
+	sr25519, Pair, Public,
+};
+use sp_runtime::{
+	traits::{IdentifyAccount, Verify},
+	FixedPointNumber, FixedU128, Perquintill,
+};
 use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
-use runtime_common::Signature;
 
 use crate::constants::{
 	amplitude, foucoco, pendulum, MAINNET_BRL_CURRENCY_ID, MAINNET_TZS_CURRENCY_ID,
@@ -653,7 +658,6 @@ fn foucoco_genesis(
 		.iter()
 		.flat_map(|k| vec![(k.0.clone(), XCM(0), u128::pow(10, 18))])
 		.collect();
-	
 
 	let stakers: Vec<_> = invulnerables
 		.iter()
@@ -859,9 +863,7 @@ fn foucoco_genesis(
 			batching_api: b"https://dia-00.pendulumchain.tech/currencies".to_vec(),
 			coin_infos_map: vec![],
 		},
-		token_allowance: foucoco_runtime::TokenAllowanceConfig {
-			allowed_currencies,
-		},
+		token_allowance: foucoco_runtime::TokenAllowanceConfig { allowed_currencies },
 	}
 }
 
@@ -1012,4 +1014,3 @@ fn pendulum_genesis(
 		nomination: pendulum_runtime::NominationConfig { is_nomination_enabled: false },
 	}
 }
-

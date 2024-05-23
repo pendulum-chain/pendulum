@@ -9,50 +9,12 @@ on:
       - main
 
 jobs:
-  test-code:
+  build-check:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Freeing up more disk space
-        run: |
-          sudo swapoff -a
-          sudo rm -f /mnt/swapfile
-          free -h
-          docker rmi $(docker image ls -aq)
-          sudo rm -rf /usr/local/lib/android # will release about 10 GB if you don't need Android
-          sudo rm -rf /usr/share/dotnet # will release about 20GB if you don't need .NET
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf /opt/hostedtoolcache
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          sudo apt-get remove -y 'php.*' --fix-missing
-          sudo apt-get remove -y '^mongodb-.*' --fix-missing
-          sudo apt-get remove -y '^mysql-.*' --fix-missing
-          sudo apt-get remove -y azure-cli google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri --fix-missing
-          sudo apt-get remove -y google-cloud-sdk --fix-missing
-          sudo apt-get remove -y google-cloud-cli --fix-missing
-          sudo apt-get autoremove -y
-          sudo apt-get clean          
-          df -h
-
-      - name: Install package
-        run: |
-          echo 'APT::Get::Always-Include-Phased-Updates "false";' | sudo tee /etc/apt/apt.conf.d/99-phased-updates
-          sudo apt-get update && sudo apt-get upgrade -y
-          sudo apt-get install -y protobuf-compiler libprotobuf-dev
-
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-        # Steps taken from https://github.com/actions/cache/blob/master/examples.md#rust---cargo
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/shared
 
       - name: Install toolchain
         # Call `rustup show` as a hack so that the toolchain defined in rust-toolchain.toml is installed
@@ -70,5 +32,35 @@ jobs:
       - name: Check Code
         run: cargo check
 
-      - name: Test Code
-        run: cargo test
+  test-code:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/shared
+
+      - name: Remove rust-toolchain.toml
+        # To make sure that the nightly version will be used all throughout
+        run: |
+          rm /home/runner/work/pendulum/pendulum/rust-toolchain.toml
+
+      - name: Setup nightly Rust toolchain
+        uses:  dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2024-04-18
+          components: rustfmt, clippy
+          target: wasm32-unknown-unknown
+
+      - name: Setup nightly Rust as default
+        run: rustup default nightly-2024-04-18
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          toolchain: nightly-2024-04-18
+          command: test

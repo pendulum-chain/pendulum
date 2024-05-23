@@ -29,20 +29,16 @@ use frame_support::{
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_arithmetic::{
-	per_things::Rounding,
-	traits::{CheckedAdd, Saturating},
-};
+use sp_arithmetic::traits::{CheckedAdd, CheckedMul, CheckedDiv, Saturating};
 use sp_runtime::{
-	traits::{DispatchInfoOf, One, SignedExtension, Zero},
+	traits::{DispatchInfoOf, One, SignedExtension, UniqueSaturatedInto, Zero},
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
 	},
 	ArithmeticError, FixedPointNumber, FixedU128,
 };
 use sp_std::{fmt::Debug, marker::PhantomData, vec::Vec};
-
-pub use pallet::*;
+use spacewalk_primitives::DecimalsLookup;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -73,6 +69,9 @@ pub mod pallet {
 
 		/// Used for fetching prices of currencies from oracle
 		type PriceGetter: PriceGetter<CurrencyIdOf<Self>>;
+
+		/// Used for fetching decimals of assets
+		type DecimalsLookup: DecimalsLookup<CurrencyId = CurrencyIdOf<Self>>;
 
 		/// Min amount of native token to buyout
 		#[pallet::constant]
@@ -117,6 +116,8 @@ pub mod pallet {
 		BuyoutWithTreasuryAccount,
 		/// Exchange failed
 		ExchangeFailure,
+		/// Decimals conversion error
+		DecimalsConversionError,
 	}
 
 	#[pallet::event]
@@ -343,14 +344,14 @@ impl<T: Config> Pallet<T> {
 			.ok_or::<DispatchError>(ArithmeticError::Overflow.into())?;
 		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
-		let exchange_amount = Self::multiply_by_rational(
-			buyout_amount.saturated_into::<u128>(),
-			basic_asset_price_with_fee.into_inner(),
-			exchange_asset_price.into_inner(),
-		)
-		.map(|n| n.try_into().ok())
-		.flatten()
-		.ok_or(ArithmeticError::Overflow.into());
+		// Calculate exchange amount taking into consideration assets' prices and decimals
+		let exchange_amount = Self::convert_amount(
+			buyout_amount,
+			basic_asset_price_with_fee,
+			exchange_asset_price,
+			T::DecimalsLookup::decimals(basic_asset),
+			T::DecimalsLookup::decimals(asset),
+		);
 
 		exchange_amount
 	}
@@ -372,14 +373,14 @@ impl<T: Config> Pallet<T> {
 			.ok_or::<DispatchError>(ArithmeticError::Overflow.into())?;
 		let basic_asset_price_with_fee = basic_asset_price.saturating_mul(fee_plus_one);
 
-		let buyout_amount = Self::multiply_by_rational(
-			exchange_amount.saturated_into::<u128>(),
-			exchange_asset_price.into_inner(),
-			basic_asset_price_with_fee.into_inner(),
-		)
-		.map(|b| b.try_into().ok())
-		.flatten()
-		.ok_or(ArithmeticError::Overflow.into());
+		// Calculate buyout amount taking into consideration assets' prices and decimals
+		let buyout_amount = Self::convert_amount(
+			exchange_amount,
+			exchange_asset_price,
+			basic_asset_price_with_fee,
+			T::DecimalsLookup::decimals(asset),
+			T::DecimalsLookup::decimals(basic_asset),
+		);
 
 		buyout_amount
 	}
@@ -448,22 +449,6 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	/// Used for calculating exchange amount based on buyout amount(a), price of basic asset with fee(b) and price of exchange asset(c)
-	/// or buyout amount based on exchange amount(a), price of exchange asset(b) and price of basic asset with fee(c)
-	fn multiply_by_rational(
-		a: impl Into<u128>,
-		b: impl Into<u128>,
-		c: impl Into<u128>,
-	) -> Option<u128> {
-		// return a * b / c
-		sp_runtime::helpers_128bit::multiply_by_rational_with_rounding(
-			a.into(),
-			b.into(),
-			c.into(),
-			Rounding::NearestPrefDown,
-		)
-	}
-
 	/// Used for fetching asset prices
 	/// The concrete implementation of PriceGetter trait must be provided by the runtime e.g. oracle pallet
 	fn fetch_prices(
@@ -476,6 +461,59 @@ impl<T: Config> Pallet<T> {
 			.map_err(|_| Error::<T>::NoPrice)?
 			.into();
 		Ok((basic_asset_price, exchange_asset_price))
+	}
+
+	/// Used for converting amount from one asset to another based on their decimals and prices
+	fn convert_amount(
+		from_amount: BalanceOf<T>,
+		from_price: FixedU128,
+		to_price: FixedU128,
+		from_decimals: u32,
+		to_decimals: u32,
+	) -> Result<BalanceOf<T>, DispatchError> {
+		if from_amount.is_zero() {
+			return Ok(Zero::zero())
+		}
+
+		let from_amount = FixedU128::from_inner(from_amount.saturated_into::<u128>());
+
+		if from_decimals > to_decimals {
+			// result = from_amount * from_price / to_price / 10^(from_decimals - to_decimals)
+			let to_amount = from_price
+				.checked_mul(&from_amount)
+				.ok_or(ArithmeticError::Overflow)?
+				.checked_div(&to_price)
+				.ok_or(ArithmeticError::Underflow)?
+				.checked_div(
+					&FixedU128::checked_from_integer(
+						10u128.pow(from_decimals.saturating_sub(to_decimals)),
+					)
+					.ok_or(Error::<T>::DecimalsConversionError)?,
+				)
+				.ok_or(ArithmeticError::Underflow)?
+				.into_inner()
+				.unique_saturated_into();
+
+			Ok(to_amount)
+		} else {
+			// result = from_amount * from_price * 10^(to_decimals - from_decimals) / to_price
+			let to_amount = from_price
+				.checked_mul(&from_amount)
+				.ok_or(ArithmeticError::Overflow)?
+				.checked_mul(
+					&FixedU128::checked_from_integer(
+						10u128.pow(to_decimals.saturating_sub(from_decimals)),
+					)
+					.ok_or(Error::<T>::DecimalsConversionError)?,
+				)
+				.ok_or(ArithmeticError::Overflow)?
+				.checked_div(&to_price)
+				.ok_or(ArithmeticError::Underflow)?
+				.into_inner()
+				.unique_saturated_into();
+
+			Ok(to_amount)
+		}
 	}
 }
 

@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
+pub use sc_rpc::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 
 use bifrost_farming_rpc_api::{FarmingRpc, FarmingRpcApiServer};

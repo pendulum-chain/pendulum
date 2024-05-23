@@ -198,8 +198,6 @@ impl<
 			location,
 		)
 		.ok_or(location)
-<<<<<<< HEAD
-=======
 	}
 }
 
@@ -282,6 +280,5 @@ impl<
 				.map_err(|_| DispatchError::Other("Failed to convert price"))?;
 			Ok(price)
 		}
->>>>>>> main
 	}
 }

@@ -231,7 +231,6 @@ pub fn foucoco_standalone_config() -> FoucocoChainSpec {
 	// add mock accounts to signatories so they get funded
 	// Pre-funded accounts
 	let prefunded_accounts = vec![
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
 		get_account_id_from_seed::<sr25519::Public>("Charlie"),
 		get_account_id_from_seed::<sr25519::Public>("Dave"),
@@ -252,10 +251,25 @@ pub fn foucoco_standalone_config() -> FoucocoChainSpec {
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
 
-	let sudo_account = get_account_id_from_seed::<sr25519::Public>("AltoParaíso"); //pallet_multisig::Pallet::<Runtime>::multi_account_id(&signatories[..], 3);
+	let sudo_account = get_account_id_from_seed::<sr25519::Public>("Alice"); 
 
 	let offchain_worker_price_feeder =
 		AccountId::from_ss58check(foucoco::OFF_CHAIN_WORKER_ADDRESS).unwrap();
+
+	let allowed_currencies = vec![
+			CurrencyId::Native,
+			CurrencyId::XCM(0),
+			CurrencyId::XCM(1),
+			CurrencyId::XCM(2),
+			CurrencyId::XCM(3),
+			CurrencyId::XCM(4),
+			CurrencyId::XCM(5),
+			CurrencyId::XCM(6),
+			CurrencyId::XCM(7),
+			CurrencyId::XCM(8),
+			CurrencyId::XCM(9),
+			CurrencyId::XCM(10),
+		];
 
 	FoucocoChainSpec::from_genesis(
 		// Name
@@ -264,20 +278,7 @@ pub fn foucoco_standalone_config() -> FoucocoChainSpec {
 		"foucoco-standalone",
 		ChainType::Development,
 		move || {
-			let allowed_currencies = vec![
-				CurrencyId::Native,
-				CurrencyId::XCM(0),
-				CurrencyId::XCM(1),
-				CurrencyId::XCM(2),
-				CurrencyId::XCM(3),
-				CurrencyId::XCM(4),
-				CurrencyId::XCM(5),
-				CurrencyId::XCM(6),
-				CurrencyId::XCM(7),
-				CurrencyId::XCM(8),
-				CurrencyId::XCM(9),
-				CurrencyId::XCM(10),
-			];
+			let allowed_currencies_clone = allowed_currencies.clone();
 			foucoco_genesis(
 				// initial collators.
 				invulnerables.clone(),
@@ -286,7 +287,7 @@ pub fn foucoco_standalone_config() -> FoucocoChainSpec {
 				sudo_account.clone(),
 				foucoco::PARACHAIN_ID.into(),
 				false,
-				allowed_currencies,
+				allowed_currencies_clone,
 			)
 		},
 		// Bootnodes

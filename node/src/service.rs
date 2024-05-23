@@ -466,7 +466,7 @@ where
 
 	if validator {
 		let parachain_consensus = build_consensus(
-			client_clone.clone(),
+			client.clone(),
 			block_import,
 			prometheus_registry.as_ref(),
 			telemetry.as_ref().map(|t| t.handle()),

@@ -192,3 +192,35 @@ runtimes `lib.rs` file.
     --repeat 20 \
     --output runtime/foucoco/src/weights/
 ```
+
+### How to run in standalone mode
+
+For testing purposes, it is useful to run an instance of the chain locally with the same runtime as the live chain, but using the instant-seal consensus mechanism. This means that upon every successful extrinsic, a new block will be produced instantly.
+
+Currently we only support the use of the foucoco runtime to run the chain in this standalone mode.
+
+To run: 
+
+```shell
+cargo run -p pendulum-node -- --chain {x}-spec-raw.json --instant-seal
+```
+
+Most other flags are irrelevant when instant-seal is used, and should not be passed, but it is still possible 
+to use the port definition flags to change the default ports used.
+
+#### Run with a specific genesis config
+
+The previous command assumes there exist already a `...spec-raw.json` which defines the genesis config. The process
+of creating this file is the same as the one described above in section [How to Generate Genesis State](#how-to-generate-chain-spec)
+
+To run with the default standalone genesis config defined in `node/chain_spec.rs` (`foucoco_standalone_config()` function) use:
+
+```shell
+cargo run -p pendulum-node -- --chain res/foucoco-standalone-spec-raw.json --instant-seal
+```
+
+or simply:
+
+```shell
+cargo run -p pendulum-node -- --chain foucoco-standalone --instant-seal
+```

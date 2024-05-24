@@ -1,37 +1,33 @@
-
 pub mod moonbeam {
-    use runtime_common::{parachain_asset_location};
-    use xcm::latest::{
-        Junction::{AccountKey20, PalletInstance, Parachain},
-        Junctions::{X3},
-    };
+	use runtime_common::parachain_asset_location;
+	use xcm::latest::{
+		Junction::{AccountKey20, PalletInstance, Parachain},
+		Junctions::X3,
+	};
 
-    pub const PARA_ID: u32 = 2004;
-    pub const ASSET_PALLET_INDEX: u8 = 110;
-    pub const BALANCES_PALLET_INDEX: u8 = 10;
+	pub const PARA_ID: u32 = 2004;
+	pub const ASSET_PALLET_INDEX: u8 = 110;
+	pub const BALANCES_PALLET_INDEX: u8 = 10;
 
-    // The address of the BRZ token on Moonbeam `0x3225edCe8aD30Ae282e62fa32e7418E4b9cf197b` as byte array
-    pub const BRZ_ASSET_ACCOUNT_IN_BYTES: [u8; 20] = [
-        50, 37, 237, 206, 138, 211, 10, 226, 130, 230, 47, 163, 46, 116, 24, 228, 185, 207, 25, 123
-    ];
+	// The address of the BRZ token on Moonbeam `0x3225edCe8aD30Ae282e62fa32e7418E4b9cf197b` as byte array
+	pub const BRZ_ASSET_ACCOUNT_IN_BYTES: [u8; 20] = [
+		50, 37, 237, 206, 138, 211, 10, 226, 130, 230, 47, 163, 46, 116, 24, 228, 185, 207, 25, 123,
+	];
 
-    parachain_asset_location!(
-        BRZ,
-        X3(
-            Parachain(PARA_ID),
-            PalletInstance(ASSET_PALLET_INDEX),
-            AccountKey20 { network: None, key: BRZ_ASSET_ACCOUNT_IN_BYTES }
-        )
-    );
-
+	parachain_asset_location!(
+		BRZ,
+		X3(
+			Parachain(PARA_ID),
+			PalletInstance(ASSET_PALLET_INDEX),
+			AccountKey20 { network: None, key: BRZ_ASSET_ACCOUNT_IN_BYTES }
+		)
+	);
 }
 
 #[cfg(test)]
 mod tests {
-	use super::{moonbeam};
-	use xcm::{
-		latest::prelude::{AccountKey20, PalletInstance, Parachain},
-	};
+	use super::moonbeam;
+	use xcm::latest::prelude::{AccountKey20, PalletInstance, Parachain};
 
 	#[test]
 	fn test_brz() {
@@ -46,5 +42,4 @@ mod tests {
 		);
 		assert_eq!(junctions.next(), None);
 	}
-
 }

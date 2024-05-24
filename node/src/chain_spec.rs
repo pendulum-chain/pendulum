@@ -1,10 +1,16 @@
 use cumulus_primitives_core::ParaId;
-use runtime_common::{AccountId, AuraId, Balance, BlockNumber, UNIT};
+use runtime_common::{AccountId, AuraId, Balance, BlockNumber, Signature, UNIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
-use sp_core::crypto::{Ss58Codec, UncheckedInto};
-use sp_runtime::{FixedPointNumber, FixedU128, Perquintill};
+use sp_core::{
+	crypto::{Ss58Codec, UncheckedInto},
+	sr25519, Pair, Public,
+};
+use sp_runtime::{
+	traits::{IdentifyAccount, Verify},
+	FixedPointNumber, FixedU128, Perquintill,
+};
 use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
 
 use crate::constants::{
@@ -34,6 +40,23 @@ pub fn create_pendulum_multisig_account(id: &str) -> AccountId {
 	signatories.sort();
 
 	pallet_multisig::Pallet::<pendulum_runtime::Runtime>::multi_account_id(&signatories[..], 4)
+}
+
+/// Generate a crypto pair from seed.
+pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+	<TPublic::Pair as Pair>::from_string(&format!("//{}", seed), None)
+		.expect("static values are valid; qed")
+		.public()
+}
+
+type AccountPublic = <Signature as Verify>::Signer;
+
+/// Generate an account ID from seed.
+pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
+where
+	AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+{
+	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
 /// The extensions for the [`ChainSpec`].
@@ -169,6 +192,102 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 				sudo_account.clone(),
 				foucoco::PARACHAIN_ID.into(),
 				false,
+				vec![],
+			)
+		},
+		// Bootnodes
+		Vec::new(),
+		// Telemetry
+		None,
+		// Protocol ID
+		Some("foucoco"),
+		// Fork ID
+		None,
+		// Properties
+		Some(properties),
+		// Extensions
+		ParachainExtensions {
+			relay_chain: "kusama".into(), // You MUST set this to the correct network!
+			para_id: foucoco::PARACHAIN_ID,
+		},
+	)
+}
+
+pub fn foucoco_standalone_config() -> FoucocoChainSpec {
+	sp_core::crypto::set_default_ss58_version(foucoco_runtime::SS58Prefix::get().into());
+
+	// Give your base currency a unit name and decimal places
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "AMPE".into());
+	properties.insert("tokenDecimals".into(), foucoco::TOKEN_DECIMALS.into());
+	properties.insert("ss58Format".into(), foucoco_runtime::SS58Prefix::get().into());
+
+	let mut signatories: Vec<_> = foucoco::INITIAL_SUDO_SIGNATORIES
+		.iter()
+		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
+		.collect();
+	signatories.sort();
+
+	// add mock accounts to signatories so they get funded
+	// Pre-funded accounts
+	let prefunded_accounts = vec![
+		get_account_id_from_seed::<sr25519::Public>("Bob"),
+		get_account_id_from_seed::<sr25519::Public>("Charlie"),
+		get_account_id_from_seed::<sr25519::Public>("Dave"),
+		get_account_id_from_seed::<sr25519::Public>("Eve"),
+		get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+		get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+	];
+
+	signatories.extend(prefunded_accounts.iter().cloned());
+
+	let invulnerables: Vec<_> = foucoco::INITIAL_COLLATORS
+		.iter()
+		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
+		.collect();
+
+	let sudo_account = get_account_id_from_seed::<sr25519::Public>("Alice"); 
+
+	let offchain_worker_price_feeder =
+		AccountId::from_ss58check(foucoco::OFF_CHAIN_WORKER_ADDRESS).unwrap();
+
+	let allowed_currencies = vec![
+			CurrencyId::Native,
+			CurrencyId::XCM(0),
+			CurrencyId::XCM(1),
+			CurrencyId::XCM(2),
+			CurrencyId::XCM(3),
+			CurrencyId::XCM(4),
+			CurrencyId::XCM(5),
+			CurrencyId::XCM(6),
+			CurrencyId::XCM(7),
+			CurrencyId::XCM(8),
+			CurrencyId::XCM(9),
+			CurrencyId::XCM(10),
+		];
+
+	FoucocoChainSpec::from_genesis(
+		// Name
+		"Foucoco-Standalone",
+		// ID
+		"foucoco-standalone",
+		ChainType::Development,
+		move || {
+			let allowed_currencies_clone = allowed_currencies.clone();
+			foucoco_genesis(
+				// initial collators.
+				invulnerables.clone(),
+				signatories.clone(),
+				vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
+				sudo_account.clone(),
+				foucoco::PARACHAIN_ID.into(),
+				false,
+				allowed_currencies_clone,
 			)
 		},
 		// Bootnodes
@@ -502,6 +621,7 @@ fn foucoco_genesis(
 	sudo_account: AccountId,
 	id: ParaId,
 	start_shutdown: bool,
+	allowed_currencies: Vec<CurrencyId>,
 ) -> foucoco_runtime::GenesisConfig {
 	fn get_vault_currency_pair(
 		collateral: CurrencyId,
@@ -539,7 +659,6 @@ fn foucoco_genesis(
 		.iter()
 		.flat_map(|k| vec![(k.0.clone(), XCM(0), u128::pow(10, 18))])
 		.collect();
-	
 
 	let stakers: Vec<_> = invulnerables
 		.iter()
@@ -745,6 +864,7 @@ fn foucoco_genesis(
 			batching_api: b"https://dia-00.pendulumchain.tech/currencies".to_vec(),
 			coin_infos_map: vec![],
 		},
+		token_allowance: foucoco_runtime::TokenAllowanceConfig { allowed_currencies },
 	}
 }
 

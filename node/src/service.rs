@@ -424,7 +424,6 @@ where
 	let transaction_pool = params.transaction_pool.clone();
 	let keystore_ptr = params.keystore_container.keystore().clone();
 
-	let client_clone = client.clone();
 	let (
 		start_network,
 		sync_service,
@@ -482,9 +481,9 @@ where
 		let spawner = task_manager.spawn_handle();
 		let params = StartCollatorParams {
 			para_id: id,
-			block_status: client_clone.clone(),
+			block_status: client.clone(),
 			announce_block,
-			client: client_clone.clone(),
+			client: client.clone(),
 			task_manager: &mut task_manager,
 			relay_chain_interface,
 			spawner,
@@ -499,7 +498,7 @@ where
 		start_collator(params).await?;
 	} else {
 		let params = StartFullNodeParams {
-			client: client_clone.clone(),
+			client: client.clone(),
 			announce_block,
 			task_manager: &mut task_manager,
 			para_id: id,
@@ -515,7 +514,7 @@ where
 
 	start_network.start_network();
 
-	Ok((task_manager, client_clone))
+	Ok((task_manager, client))
 }
 
 /// Build the import queue for the parachain runtime.
@@ -592,7 +591,6 @@ where
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
 	let transaction_pool = params.transaction_pool.clone();
 
-	let client_clone = client.clone();
 	let (
 		start_network,
 		_sync_service,
@@ -604,14 +602,14 @@ where
 
 	let proposer_factory = sc_basic_authorship::ProposerFactory::new(
 		task_manager.spawn_handle(),
-		client_clone.clone(),
+		client.clone(),
 		transaction_pool.clone(),
 		prometheus_registry.as_ref(),
 		telemetry.as_ref().map(|x| x.handle()),
 	);
 
 	let select_chain = sc_consensus::LongestChain::new(backend.clone());
-	let client_clone_move = client_clone.clone();
+	let client_clone_move = client.clone();
 
 	let instant_seal_params = sc_consensus_manual_seal::InstantSealParams {
 		block_import: client.clone(),
@@ -655,7 +653,7 @@ where
 
 	start_network.start_network();
 
-	Ok((task_manager, client_clone))
+	Ok((task_manager, client))
 }
 
 #[allow(clippy::too_many_arguments)]

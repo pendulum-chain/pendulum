@@ -3,6 +3,7 @@
 Pendulum chain by SatoshiPay. More information about Pendulum can be found [here](https://docs.pendulumchain.org/).
 
 ### How to Run Tests
+
 [`mocktopus`](https://docs.rs/mocktopus/latest/mocktopus/) is nightly-only lib, and is used in testing.  
 So to run the tests, override the toolchain with nightly; minimum version is `nightly-2024-04-18`.
 
@@ -162,7 +163,9 @@ runtimes `lib.rs` file.
     --extrinsic "*" \
     --steps 50 \
     --repeat 20 \
-    --output runtime/pendulum/src/weights/
+    --output runtime/pendulum/src/weights/ \
+    --template .maintain/frame-weight-template.hbs
+
 ```
 
 #### Amplitude
@@ -176,7 +179,8 @@ runtimes `lib.rs` file.
     --extrinsic "*" \
     --steps 50 \
     --repeat 20 \
-    --output runtime/amplitude/src/weights/
+    --output runtime/amplitude/src/weights/ \
+    --template .maintain/frame-weight-template.hbs
 ```
 
 #### Foucoco
@@ -190,5 +194,6 @@ runtimes `lib.rs` file.
     --extrinsic "*" \
     --steps 50 \
     --repeat 20 \
-    --output runtime/foucoco/src/weights/
+    --output runtime/foucoco/src/weights/ \
+    --template .maintain/frame-weight-template.hbs
 ```

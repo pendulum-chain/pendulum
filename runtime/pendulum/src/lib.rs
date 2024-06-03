@@ -38,8 +38,8 @@ use bifrost_farming_rpc_runtime_api as farming_rpc_runtime_api;
 
 pub use spacewalk_primitives::CurrencyId;
 use spacewalk_primitives::{
-	self as primitives, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner, UnsignedFixedPoint,
-	UnsignedInner, Asset
+	self as primitives, Asset, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner,
+	UnsignedFixedPoint, UnsignedInner,
 };
 
 #[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
@@ -1369,8 +1369,7 @@ impl pallet_proxy::Config for Runtime {
 
 impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo =
-		weights::orml_currencies_allowance_extension::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::orml_currencies_allowance_extension::SubstrateWeight<Runtime>;
 	type MaxAllowedCurrencies = ConstU32<256>;
 }
 
@@ -1466,7 +1465,7 @@ construct_runtime!(
 		Identity: pallet_identity::{Pallet, Storage, Call, Event<T>} = 55,
 		Contracts: pallet_contracts::{Pallet, Storage, Call, Event<T>} = 56,
 		RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 57,
-		DiaOracleModule: dia_oracle::{Pallet, Storage, Call, Event<T>} = 58,
+		DiaOracleModule: dia_oracle::{Pallet, Config<T>, Storage, Call, Event<T>} = 58,
 
 		// Zenlink
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,

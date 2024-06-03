@@ -7,10 +7,7 @@ use sp_core::crypto::{Ss58Codec, UncheckedInto};
 use sp_runtime::{FixedPointNumber, FixedU128, Perquintill};
 use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
 
-use crate::constants::{
-	amplitude, foucoco, pendulum, MAINNET_BRL_CURRENCY_ID, MAINNET_TZS_CURRENCY_ID,
-	MAINNET_USDC_CURRENCY_ID,
-};
+use crate::constants::{amplitude, foucoco, pendulum, TESTNET_USDC_CURRENCY_ID};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type AmplitudeChainSpec =
@@ -314,7 +311,7 @@ pub fn pendulum_config() -> PendulumChainSpec {
 }
 
 fn default_pair(currency_id: CurrencyId) -> VaultCurrencyPair<CurrencyId> {
-	VaultCurrencyPair { collateral: currency_id, wrapped: MAINNET_USDC_CURRENCY_ID }
+	VaultCurrencyPair { collateral: currency_id, wrapped: TESTNET_USDC_CURRENCY_ID }
 }
 
 fn amplitude_genesis(
@@ -447,7 +444,7 @@ fn amplitude_genesis(
 			max_delay: u32::MAX,
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(0)),
-				Key::ExchangeRate(MAINNET_USDC_CURRENCY_ID),
+				Key::ExchangeRate(TESTNET_USDC_CURRENCY_ID),
 			],
 		},
 		vault_registry: amplitude_runtime::VaultRegistryConfig {
@@ -539,7 +536,6 @@ fn foucoco_genesis(
 		.iter()
 		.flat_map(|k| vec![(k.0.clone(), XCM(0), u128::pow(10, 18))])
 		.collect();
-	
 
 	let stakers: Vec<_> = invulnerables
 		.iter()
@@ -639,9 +635,7 @@ fn foucoco_genesis(
 				Key::ExchangeRate(CurrencyId::XCM(0)),
 				Key::ExchangeRate(CurrencyId::Native),
 				Key::ExchangeRate(CurrencyId::Stellar(Asset::StellarNative)),
-				Key::ExchangeRate(MAINNET_USDC_CURRENCY_ID),
-				Key::ExchangeRate(MAINNET_BRL_CURRENCY_ID),
-				Key::ExchangeRate(MAINNET_TZS_CURRENCY_ID),
+				Key::ExchangeRate(TESTNET_USDC_CURRENCY_ID),
 			],
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
@@ -649,15 +643,7 @@ fn foucoco_genesis(
 			punishment_delay: foucoco_runtime::DAYS * 2,
 			secure_collateral_threshold: vec![
 				(
-					get_vault_currency_pair(XCM(0), MAINNET_USDC_CURRENCY_ID),
-					FixedU128::checked_from_rational(160, 100).unwrap(),
-				),
-				(
-					get_vault_currency_pair(XCM(0), MAINNET_BRL_CURRENCY_ID),
-					FixedU128::checked_from_rational(160, 100).unwrap(),
-				),
-				(
-					get_vault_currency_pair(XCM(0), MAINNET_TZS_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
 					FixedU128::checked_from_rational(160, 100).unwrap(),
 				),
 				(
@@ -668,15 +654,7 @@ fn foucoco_genesis(
 			/* 140% */
 			premium_redeem_threshold: vec![
 				(
-					get_vault_currency_pair(XCM(0), MAINNET_USDC_CURRENCY_ID),
-					FixedU128::checked_from_rational(140, 100).unwrap(),
-				),
-				(
-					get_vault_currency_pair(XCM(0), MAINNET_BRL_CURRENCY_ID),
-					FixedU128::checked_from_rational(140, 100).unwrap(),
-				),
-				(
-					get_vault_currency_pair(XCM(0), MAINNET_TZS_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
 					FixedU128::checked_from_rational(140, 100).unwrap(),
 				),
 				(
@@ -687,15 +665,7 @@ fn foucoco_genesis(
 			/* 125% */
 			liquidation_collateral_threshold: vec![
 				(
-					get_vault_currency_pair(XCM(0), MAINNET_USDC_CURRENCY_ID),
-					FixedU128::checked_from_rational(125, 100).unwrap(),
-				),
-				(
-					get_vault_currency_pair(XCM(0), MAINNET_BRL_CURRENCY_ID),
-					FixedU128::checked_from_rational(125, 100).unwrap(),
-				),
-				(
-					get_vault_currency_pair(XCM(0), MAINNET_TZS_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
 					FixedU128::checked_from_rational(125, 100).unwrap(),
 				),
 				(
@@ -705,16 +675,8 @@ fn foucoco_genesis(
 			],
 			system_collateral_ceiling: vec![
 				(
-					get_vault_currency_pair(XCM(0), MAINNET_USDC_CURRENCY_ID),
+					get_vault_currency_pair(XCM(0), TESTNET_USDC_CURRENCY_ID),
 					50 * 10u128.pow(foucoco::TOKEN_DECIMALS),
-				),
-				(
-					get_vault_currency_pair(XCM(0), MAINNET_BRL_CURRENCY_ID),
-					25 * 10u128.pow(foucoco::TOKEN_DECIMALS),
-				),
-				(
-					get_vault_currency_pair(XCM(0), MAINNET_TZS_CURRENCY_ID),
-					25 * 10u128.pow(foucoco::TOKEN_DECIMALS),
 				),
 				(
 					get_vault_currency_pair(XCM(0), CurrencyId::Stellar(Asset::StellarNative)),
@@ -737,10 +699,7 @@ fn foucoco_genesis(
 			supported_currencies: vec![
 				foucoco_runtime::AssetId::new(b"Kusama".to_vec(), b"KSM".to_vec()),
 				foucoco_runtime::AssetId::new(b"Stellar".to_vec(), b"XLM".to_vec()),
-				foucoco_runtime::AssetId::new(b"FIAT".to_vec(), b"BRL-USD".to_vec()),
 				foucoco_runtime::AssetId::new(b"FIAT".to_vec(), b"USD-USD".to_vec()),
-				foucoco_runtime::AssetId::new(b"FIAT".to_vec(), b"TZS-USD".to_vec()),
-				foucoco_runtime::AssetId::new(b"FIAT".to_vec(), b"MXN-USD".to_vec()),
 			],
 			batching_api: b"https://dia-00.pendulumchain.tech/currencies".to_vec(),
 			coin_infos_map: vec![],
@@ -857,7 +816,7 @@ fn pendulum_genesis(
 			max_delay: u32::MAX,
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::XCM(0)),
-				Key::ExchangeRate(MAINNET_USDC_CURRENCY_ID),
+				Key::ExchangeRate(TESTNET_USDC_CURRENCY_ID),
 			],
 		},
 		vault_registry: pendulum_runtime::VaultRegistryConfig {

@@ -34,7 +34,7 @@ orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-modu
 dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.42" }
 zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.42" }
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "4a39d0fa39495a0248f463cc90d15a2984437eed" }
 treasury-buyout-extension = { path = "../../pallets/treasury-buyout-extension", default-features = false }
 
 [features]
@@ -62,7 +62,6 @@ std = [
     "spacewalk-primitives/std",
     "cumulus-primitives-core/std",
     "treasury-buyout-extension/std",
-
 ]
 
 runtime-benchmarks = [
@@ -71,5 +70,4 @@ runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "treasury-buyout-extension/runtime-benchmarks",
-
 ]

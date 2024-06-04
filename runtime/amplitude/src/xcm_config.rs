@@ -22,7 +22,7 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
-use runtime_common::{asset_registry::{FixedConversionRateProvider}, CurrencyIdConvert};
+use runtime_common::{asset_registry::FixedConversionRateProvider, CurrencyIdConvert};
 
 use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 
@@ -56,7 +56,6 @@ pub type LocationToAccountId = (
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
-
 
 /// A `FilterAssetLocation` implementation. Filters multi native assets whose
 /// reserve is same with `origin`.

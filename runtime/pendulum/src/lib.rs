@@ -1272,7 +1272,7 @@ impl vault_registry::Config for Runtime {
 
 impl redeem::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = redeem::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::redeem::SubstrateWeight<Runtime>;
 }
 
 pub struct BlockNumberToBalance;

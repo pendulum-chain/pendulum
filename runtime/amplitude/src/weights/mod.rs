@@ -26,6 +26,7 @@ pub mod orml_asset_registry;
 pub mod orml_currencies_allowance_extension;
 pub mod treasury_buyout_extension;
 pub mod fee;
+pub mod issue;
 pub mod nomination;
 pub mod oracle;
 pub mod redeem;

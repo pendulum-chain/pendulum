@@ -7,7 +7,7 @@ version = "1.0.0"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0" }
 jsonrpsee = { version = "0.16.0", features = ["server", "macros"] }
-module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "4a39d0fa39495a0248f463cc90d15a2984437eed" }
+module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
 module-pallet-staking-rpc-runtime-api = { path = "runtime-api" }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }

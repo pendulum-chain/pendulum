@@ -201,15 +201,6 @@ pub type Executive = frame_executive::Executive<
 	),
 >;
 
-type DataProviderImpl = DiaOracleAdapter<
-	DiaOracleModule,
-	UnsignedFixedPoint,
-	Moment,
-	asset_registry::AssetRegistryToDiaOracleKeyConvertor<Runtime>,
-	ConvertPrice,
-	ConvertMoment,
->;
-
 pub struct ConvertPrice;
 
 impl Convert<u128, Option<UnsignedFixedPoint>> for ConvertPrice {
@@ -1199,6 +1190,31 @@ impl<K, V, A> orml_traits::DataFeeder<K, V, A> for DataFeederBenchmark<K, V, A> 
 impl<K, V, A> orml_traits::DataProvider<K, V> for DataFeederBenchmark<K, V, A> {
 	fn get(_key: &K) -> Option<V> {
 		None
+	}
+}
+
+cfg_if::cfg_if! {
+	if #[cfg(feature = "runtime-benchmarks")] {
+		use oracle::testing_utils::{
+			MockConvertMoment, MockConvertPrice, MockDiaOracle, MockOracleKeyConvertor,
+		};
+		type DataProviderImpl = DiaOracleAdapter<
+			MockDiaOracle,
+			UnsignedFixedPoint,
+			Moment,
+			MockOracleKeyConvertor,
+			MockConvertPrice,
+			MockConvertMoment<Moment>,
+		>;
+	} else {
+		type DataProviderImpl = DiaOracleAdapter<
+			DiaOracleModule,
+			UnsignedFixedPoint,
+			Moment,
+			asset_registry::AssetRegistryToDiaOracleKeyConvertor<Runtime>,
+			ConvertPrice,
+			ConvertMoment,
+		>;
 	}
 }
 

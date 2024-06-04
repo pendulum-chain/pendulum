@@ -94,8 +94,8 @@ pub use stellar_relay::traits::{FieldLength, Organization, Validator};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use spacewalk_primitives::{
-	self as primitives, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner, UnsignedFixedPoint,
-	UnsignedInner, Asset,
+	self as primitives, Asset, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner,
+	UnsignedFixedPoint, UnsignedInner,
 };
 
 #[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
@@ -218,31 +218,6 @@ pub type Executive = frame_executive::Executive<
 		pallet_transaction_payment::migrations::v1::ForceSetVersionToV2<Runtime>,
 	),
 >;
-
-cfg_if::cfg_if! {
-	if #[cfg(feature = "runtime-benchmarks")] {
-		use oracle::testing_utils::{
-			MockConvertMoment, MockConvertPrice, MockDiaOracle, MockOracleKeyConvertor,
-		};
-		type DataProviderImpl = DiaOracleAdapter<
-			MockDiaOracle,
-			UnsignedFixedPoint,
-			Moment,
-			MockOracleKeyConvertor,
-			MockConvertPrice,
-			MockConvertMoment<Moment>,
-		>;
-	} else {
-		type DataProviderImpl = DiaOracleAdapter<
-			DiaOracleModule,
-			UnsignedFixedPoint,
-			Moment,
-			asset_registry::AssetRegistryToDiaOracleKeyConvertor<Runtime>,
-			ConvertPrice,
-			ConvertMoment,
-		>;
-	}
-}
 
 pub struct ConvertPrice;
 
@@ -1212,6 +1187,31 @@ impl<K, V, A> orml_traits::DataProvider<K, V> for DataFeederBenchmark<K, V, A> {
 	}
 }
 
+cfg_if::cfg_if! {
+	if #[cfg(feature = "runtime-benchmarks")] {
+		use oracle::testing_utils::{
+			MockConvertMoment, MockConvertPrice, MockDiaOracle, MockOracleKeyConvertor,
+		};
+		type DataProviderImpl = DiaOracleAdapter<
+			MockDiaOracle,
+			UnsignedFixedPoint,
+			Moment,
+			MockOracleKeyConvertor,
+			MockConvertPrice,
+			MockConvertMoment<Moment>,
+		>;
+	} else {
+		type DataProviderImpl = DiaOracleAdapter<
+			DiaOracleModule,
+			UnsignedFixedPoint,
+			Moment,
+			asset_registry::AssetRegistryToDiaOracleKeyConvertor<Runtime>,
+			ConvertPrice,
+			ConvertMoment,
+		>;
+	}
+}
+
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = weights::oracle::SubstrateWeight<Runtime>;
@@ -1403,8 +1403,7 @@ impl pallet_proxy::Config for Runtime {
 
 impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo =
-		weights::orml_currencies_allowance_extension::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::orml_currencies_allowance_extension::SubstrateWeight<Runtime>;
 	type MaxAllowedCurrencies = ConstU32<256>;
 }
 

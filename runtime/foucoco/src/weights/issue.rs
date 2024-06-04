@@ -5,14 +5,14 @@
 //! DATE: 2024-06-04, STEPS: `50`, REPEAT: `20`, LOW RANGE: `[]`, HIGH RANGE: `[]`
 //! WORST CASE MAP SIZE: `1000000`
 //! HOSTNAME: `Marcels-MBP`, CPU: `<UNKNOWN>`
-//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("amplitude"), DB CACHE: 1024
+//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("foucoco"), DB CACHE: 1024
 
 // Executed Command:
 // ./target/production/pendulum-node
 // benchmark
 // pallet
 // --chain
-// amplitude
+// foucoco
 // --execution=wasm
 // --wasm-execution=compiled
 // --pallet
@@ -24,7 +24,7 @@
 // --repeat
 // 20
 // --output
-// runtime/amplitude/src/weights/
+// runtime/foucoco/src/weights/
 // --template
 // .maintain/frame-weight-template.hbs
 
@@ -85,10 +85,10 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	/// Proof: Issue IssueRequests (max_values: None, max_size: Some(339), added: 2814, mode: MaxEncodedLen)
 	fn request_issue() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `1923`
-		//  Estimated: `10338`
+		//  Measured:  `1962`
+		//  Estimated: `10377`
 		// Minimum execution time: 102_000_000 picoseconds.
-		Weight::from_parts(105_000_000, 10338)
+		Weight::from_parts(104_000_000, 10377)
 			.saturating_add(T::DbWeight::get().reads(18_u64))
 			.saturating_add(T::DbWeight::get().writes(4_u64))
 	}
@@ -114,10 +114,10 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	/// Proof Skipped: AssetRegistry Metadata (max_values: None, max_size: None, mode: Measured)
 	fn execute_issue() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `2498`
+		//  Measured:  `2499`
 		//  Estimated: `71867`
-		// Minimum execution time: 8_831_000_000 picoseconds.
-		Weight::from_parts(8_902_000_000, 71867)
+		// Minimum execution time: 8_834_000_000 picoseconds.
+		Weight::from_parts(8_916_000_000, 71867)
 			.saturating_add(T::DbWeight::get().reads(11_u64))
 			.saturating_add(T::DbWeight::get().writes(2_u64))
 	}
@@ -131,10 +131,10 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	/// Proof Skipped: VaultRegistry Vaults (max_values: None, max_size: None, mode: Measured)
 	fn cancel_issue() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `1303`
-		//  Estimated: `4768`
+		//  Measured:  `1270`
+		//  Estimated: `4735`
 		// Minimum execution time: 38_000_000 picoseconds.
-		Weight::from_parts(39_000_000, 4768)
+		Weight::from_parts(39_000_000, 4735)
 			.saturating_add(T::DbWeight::get().reads(4_u64))
 			.saturating_add(T::DbWeight::get().writes(2_u64))
 	}
@@ -158,7 +158,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 10_000_000 picoseconds.
+		// Minimum execution time: 9_000_000 picoseconds.
 		Weight::from_parts(10_000_000, 0)
 			.saturating_add(T::DbWeight::get().writes(3_u64))
 	}
@@ -212,10 +212,10 @@ impl WeightInfo for () {
 	/// Proof: Issue IssueRequests (max_values: None, max_size: Some(339), added: 2814, mode: MaxEncodedLen)
 	fn request_issue() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `1923`
-		//  Estimated: `10338`
+		//  Measured:  `1962`
+		//  Estimated: `10377`
 		// Minimum execution time: 102_000_000 picoseconds.
-		Weight::from_parts(105_000_000, 10338)
+		Weight::from_parts(104_000_000, 10377)
 			.saturating_add(RocksDbWeight::get().reads(18_u64))
 			.saturating_add(RocksDbWeight::get().writes(4_u64))
 	}
@@ -241,10 +241,10 @@ impl WeightInfo for () {
 	/// Proof Skipped: AssetRegistry Metadata (max_values: None, max_size: None, mode: Measured)
 	fn execute_issue() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `2498`
+		//  Measured:  `2499`
 		//  Estimated: `71867`
-		// Minimum execution time: 8_831_000_000 picoseconds.
-		Weight::from_parts(8_902_000_000, 71867)
+		// Minimum execution time: 8_834_000_000 picoseconds.
+		Weight::from_parts(8_916_000_000, 71867)
 			.saturating_add(RocksDbWeight::get().reads(11_u64))
 			.saturating_add(RocksDbWeight::get().writes(2_u64))
 	}
@@ -258,10 +258,10 @@ impl WeightInfo for () {
 	/// Proof Skipped: VaultRegistry Vaults (max_values: None, max_size: None, mode: Measured)
 	fn cancel_issue() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `1303`
-		//  Estimated: `4768`
+		//  Measured:  `1270`
+		//  Estimated: `4735`
 		// Minimum execution time: 38_000_000 picoseconds.
-		Weight::from_parts(39_000_000, 4768)
+		Weight::from_parts(39_000_000, 4735)
 			.saturating_add(RocksDbWeight::get().reads(4_u64))
 			.saturating_add(RocksDbWeight::get().writes(2_u64))
 	}
@@ -285,7 +285,7 @@ impl WeightInfo for () {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 10_000_000 picoseconds.
+		// Minimum execution time: 9_000_000 picoseconds.
 		Weight::from_parts(10_000_000, 0)
 			.saturating_add(RocksDbWeight::get().writes(3_u64))
 	}

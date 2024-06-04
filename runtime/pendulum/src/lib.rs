@@ -1286,7 +1286,7 @@ impl sp_runtime::traits::Convert<BlockNumber, Balance> for BlockNumberToBalance 
 impl issue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type BlockNumberToBalance = BlockNumberToBalance;
-	type WeightInfo = issue::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::issue::SubstrateWeight<Runtime>;
 }
 
 impl nomination::Config for Runtime {

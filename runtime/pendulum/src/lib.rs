@@ -930,7 +930,7 @@ impl parachain_staking::Config for Runtime {
 	type NetworkRewardStart = NetworkRewardStart;
 	type NetworkRewardBeneficiary = Treasury;
 	type CollatorRewardRateDecay = CollatorRewardRateDecay;
-	type WeightInfo = parachain_staking::default_weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::parachain_staking::SubstrateWeight<Runtime>;
 
 	const BLOCKS_PER_YEAR: BlockNumber = BLOCKS_PER_YEAR;
 }
@@ -1527,6 +1527,7 @@ mod benches {
 		[pallet_session, SessionBench::<Runtime>]
 		[pallet_timestamp, Timestamp]
 		[cumulus_pallet_xcmp_queue, XcmpQueue]
+		[parachain_staking, ParachainStaking]
 
 		[fee, Fee]
 		[issue, Issue]

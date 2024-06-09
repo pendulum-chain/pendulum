@@ -22,6 +22,7 @@ pub mod extrinsic_weights;
 pub mod pallet_xcm;
 pub mod paritydb_weights;
 pub mod rocksdb_weights;
+pub mod parachain_staking;
 pub mod orml_asset_registry;
 pub mod orml_currencies_allowance_extension;
 pub mod orml_tokens_management_extension;

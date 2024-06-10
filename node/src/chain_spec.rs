@@ -570,7 +570,7 @@ fn amplitude_genesis(
 			oracle_keys: vec![
 				Key::ExchangeRate(CurrencyId::Native),
 				Key::ExchangeRate(CurrencyId::XCM(0)),
-				Key::ExchangeRate(TESTNET_USDC_CURRENCY_ID),
+				Key::ExchangeRate(MAINNET_USDC_CURRENCY_ID),
 			],
 		},
 		vault_registry: amplitude_runtime::VaultRegistryConfig {

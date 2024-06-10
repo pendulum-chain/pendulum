@@ -976,10 +976,10 @@ fn pendulum_genesis(
 		dia_oracle_module: pendulum_runtime::DiaOracleModuleConfig {
 			authorized_accounts: authorized_oracles,
 			supported_currencies: vec![
-				foucoco_runtime::AssetId::new(b"Pendulum".to_vec(), b"PEN".to_vec()),
-				foucoco_runtime::AssetId::new(b"Polkadot".to_vec(), b"DOT".to_vec()),
-				foucoco_runtime::AssetId::new(b"Stellar".to_vec(), b"XLM".to_vec()),
-				foucoco_runtime::AssetId::new(b"FIAT".to_vec(), b"USD-USD".to_vec()),
+				pendulum_runtime::AssetId::new(b"Pendulum".to_vec(), b"PEN".to_vec()),
+				pendulum_runtime::AssetId::new(b"Polkadot".to_vec(), b"DOT".to_vec()),
+				pendulum_runtime::AssetId::new(b"Stellar".to_vec(), b"XLM".to_vec()),
+				pendulum_runtime::AssetId::new(b"FIAT".to_vec(), b"USD-USD".to_vec()),
 			],
 			batching_api: b"https://dia-00.pendulumchain.tech/currencies".to_vec(),
 			coin_infos_map: vec![],

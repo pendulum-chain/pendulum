@@ -100,11 +100,11 @@ fn fill_unstaking<T: Config>(
 	delegator: Option<&T::AccountId>,
 	unstaked: u64,
 ) where
-	u64: Into<<T as frame_system::Config>::BlockNumber>,
+	u32: Into<<T as frame_system::Config>::BlockNumber>,
 {
 	let who = delegator.unwrap_or(collator);
 	assert_eq!(<Unstaking<T>>::get(who).len(), 0);
-	while System::<T>::block_number() < unstaked.into() {
+	while (System::<T>::block_number().saturated_into::<u64>()) < unstaked {
 		if let Some(delegator) = delegator {
 			assert_ok!(<Pallet<T>>::delegator_stake_less(
 				RawOrigin::Signed(delegator.clone()).into(),
@@ -124,7 +124,7 @@ fn fill_unstaking<T: Config>(
 }
 
 benchmarks! {
-	where_clause { where u64: Into<<T as frame_system::Config>::BlockNumber> }
+	where_clause { where u32: Into<<T as frame_system::Config>::BlockNumber> }
 
 	on_initialize_no_action {
 		assert_eq!(<Round<T>>::get().current, 0u32);
@@ -145,13 +145,15 @@ benchmarks! {
 	on_initialize_network_rewards {
 		let issuance = T::Currency::total_issuance();
 		// if we only add by one, we also initialize a new year
-		let block = T::NetworkRewardStart::get() + T::BlockNumber::one() * 2_u64.into();
+		let block = T::NetworkRewardStart::get() + T::BlockNumber::one() * 2_u32.into();
 	}: { Pallet::<T>::on_initialize(block) }
 	verify {
 		let new_issuance = T::Currency::total_issuance();
-		let max_col_reward = InflationConfig::<T>::get().collator.reward_rate.per_block * MaxCollatorCandidateStake::<T>::get() * MaxSelectedCandidates::<T>::get().into();
+		let max_col_reward = InflationConfig::<T>::get().collator.reward_rate.per_block * MaxCollatorCandidateStake::<T>::get() * (MaxSelectedCandidates::<T>::get() as u64).into();
 		let network_block_reward = T::NetworkRewardRate::get() * max_col_reward;
-		assert!(new_issuance > issuance);
+		if network_block_reward > 0_u64.into() {
+			assert!(new_issuance > issuance)
+		}
 		assert_eq!(new_issuance - issuance, network_block_reward)
 	}
 

@@ -94,8 +94,8 @@ pub use stellar_relay::traits::{FieldLength, Organization, Validator};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use spacewalk_primitives::{
-	self as primitives, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner, UnsignedFixedPoint,
-	UnsignedInner,
+	self as primitives, Asset, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner,
+	UnsignedFixedPoint, UnsignedInner,
 };
 
 #[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
@@ -218,31 +218,6 @@ pub type Executive = frame_executive::Executive<
 		pallet_transaction_payment::migrations::v1::ForceSetVersionToV2<Runtime>,
 	),
 >;
-
-cfg_if::cfg_if! {
-	if #[cfg(feature = "runtime-benchmarks")] {
-		use oracle::testing_utils::{
-			MockConvertMoment, MockConvertPrice, MockDiaOracle, MockOracleKeyConvertor,
-		};
-		type DataProviderImpl = DiaOracleAdapter<
-			MockDiaOracle,
-			UnsignedFixedPoint,
-			Moment,
-			MockOracleKeyConvertor,
-			MockConvertPrice,
-			MockConvertMoment<Moment>,
-		>;
-	} else {
-		type DataProviderImpl = DiaOracleAdapter<
-			DiaOracleModule,
-			UnsignedFixedPoint,
-			Moment,
-			asset_registry::AssetRegistryToDiaOracleKeyConvertor<Runtime>,
-			ConvertPrice,
-			ConvertMoment,
-		>;
-	}
-}
 
 pub struct ConvertPrice;
 
@@ -973,7 +948,7 @@ impl parachain_staking::Config for Runtime {
 	type NetworkRewardStart = NetworkRewardStart;
 	type NetworkRewardBeneficiary = Treasury;
 	type CollatorRewardRateDecay = CollatorRewardRateDecay;
-	type WeightInfo = parachain_staking::default_weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::parachain_staking::SubstrateWeight<Runtime>;
 
 	const BLOCKS_PER_YEAR: BlockNumber = BLOCKS_PER_YEAR;
 }
@@ -1154,6 +1129,14 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 }
 parameter_types! {
 	pub const RelayChainCurrencyId: CurrencyId = XCM(0); // 0 is the index of the relay chain in our XCM mapping
+	// This specific asset is used for benchmarking Spacewalk pallets as it's already used as the wrapped currency in the genesis config
+	pub const GetWrappedCurrencyId: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
+		code: *b"USDC",
+		issuer: [
+			59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
+			190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
+		],
+	});
 }
 impl currency::Config for Runtime {
 	type UnsignedFixedPoint = UnsignedFixedPoint;
@@ -1161,6 +1144,8 @@ impl currency::Config for Runtime {
 	type SignedFixedPoint = SignedFixedPoint;
 	type Balance = Balance;
 	type GetRelayChainCurrencyId = RelayChainCurrencyId;
+	#[cfg(feature = "runtime-benchmarks")]
+	type GetWrappedCurrencyId = GetWrappedCurrencyId;
 	type AssetConversion = primitives::AssetConversion;
 	type BalanceConversion = primitives::BalanceConversion;
 	type CurrencyConversion = CurrencyConvert;
@@ -1202,9 +1187,34 @@ impl<K, V, A> orml_traits::DataProvider<K, V> for DataFeederBenchmark<K, V, A> {
 	}
 }
 
+cfg_if::cfg_if! {
+	if #[cfg(feature = "runtime-benchmarks")] {
+		use oracle::testing_utils::{
+			MockConvertMoment, MockConvertPrice, MockDiaOracle, MockOracleKeyConvertor,
+		};
+		type DataProviderImpl = DiaOracleAdapter<
+			MockDiaOracle,
+			UnsignedFixedPoint,
+			Moment,
+			MockOracleKeyConvertor,
+			MockConvertPrice,
+			MockConvertMoment<Moment>,
+		>;
+	} else {
+		type DataProviderImpl = DiaOracleAdapter<
+			DiaOracleModule,
+			UnsignedFixedPoint,
+			Moment,
+			asset_registry::AssetRegistryToDiaOracleKeyConvertor<Runtime>,
+			ConvertPrice,
+			ConvertMoment,
+		>;
+	}
+}
+
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = oracle::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::oracle::SubstrateWeight<Runtime>;
 	type DecimalsLookup = DecimalsLookupImpl;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -1223,7 +1233,7 @@ impl stellar_relay::Config for Runtime {
 	type OrganizationLimit = OrganizationLimit;
 	type ValidatorLimit = ValidatorLimit;
 	type IsPublicNetwork = IsPublicNetwork;
-	type WeightInfo = stellar_relay::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::stellar_relay::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1234,7 +1244,7 @@ parameter_types! {
 }
 impl fee::Config for Runtime {
 	type FeePalletId = FeePalletId;
-	type WeightInfo = fee::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::fee::SubstrateWeight<Runtime>;
 	type SignedFixedPoint = SignedFixedPoint;
 	type SignedInner = SignedInner;
 	type UnsignedFixedPoint = UnsignedFixedPoint;
@@ -1250,13 +1260,13 @@ impl vault_registry::Config for Runtime {
 	type PalletId = VaultRegistryPalletId;
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
-	type WeightInfo = vault_registry::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::vault_registry::SubstrateWeight<Runtime>;
 	type GetGriefingCollateralCurrencyId = NativeCurrencyId;
 }
 
 impl redeem::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = redeem::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::redeem::SubstrateWeight<Runtime>;
 }
 
 pub struct BlockNumberToBalance;
@@ -1270,17 +1280,17 @@ impl sp_runtime::traits::Convert<BlockNumber, Balance> for BlockNumberToBalance 
 impl issue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type BlockNumberToBalance = BlockNumberToBalance;
-	type WeightInfo = issue::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::issue::SubstrateWeight<Runtime>;
 }
 
 impl nomination::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = nomination::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::nomination::SubstrateWeight<Runtime>;
 }
 
 impl replace::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = replace::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::replace::SubstrateWeight<Runtime>;
 }
 
 impl clients_info::Config for Runtime {
@@ -1392,8 +1402,7 @@ impl pallet_proxy::Config for Runtime {
 
 impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo =
-		orml_currencies_allowance_extension::default_weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::orml_currencies_allowance_extension::SubstrateWeight<Runtime>;
 	type MaxAllowedCurrencies = ConstU32<256>;
 }
 
@@ -1429,7 +1438,7 @@ impl treasury_buyout_extension::Config for Runtime {
 	type DecimalsLookup = DecimalsLookupImpl;
 	type MinAmountToBuyout = MinAmountToBuyout;
 	type MaxAllowedBuyoutCurrencies = MaxAllowedBuyoutCurrencies;
-	type WeightInfo = treasury_buyout_extension::default_weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::treasury_buyout_extension::SubstrateWeight<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type RelayChainCurrencyId = RelayChainCurrencyId;
 }
@@ -1534,6 +1543,7 @@ mod benches {
 		[pallet_session, SessionBench::<Runtime>]
 		[pallet_timestamp, Timestamp]
 		[cumulus_pallet_xcmp_queue, XcmpQueue]
+		[parachain_staking, ParachainStaking]
 
 		[fee, Fee]
 		[issue, Issue]

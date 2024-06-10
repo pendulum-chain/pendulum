@@ -609,10 +609,10 @@ fn amplitude_genesis(
 		dia_oracle_module: amplitude_runtime::DiaOracleModuleConfig {
 			authorized_accounts: authorized_oracles,
 			supported_currencies: vec![
-				foucoco_runtime::AssetId::new(b"Amplitude".to_vec(), b"AMPE".to_vec()),
-				foucoco_runtime::AssetId::new(b"Kusama".to_vec(), b"KSM".to_vec()),
-				foucoco_runtime::AssetId::new(b"Stellar".to_vec(), b"XLM".to_vec()),
-				foucoco_runtime::AssetId::new(b"FIAT".to_vec(), b"USD-USD".to_vec()),
+				amplitude_runtime::AssetId::new(b"Amplitude".to_vec(), b"AMPE".to_vec()),
+				amplitude_runtime::AssetId::new(b"Kusama".to_vec(), b"KSM".to_vec()),
+				ampltiude_runtime::AssetId::new(b"Stellar".to_vec(), b"XLM".to_vec()),
+				amplitude_runtime::AssetId::new(b"FIAT".to_vec(), b"USD-USD".to_vec()),
 			],
 			batching_api: b"https://dia-00.pendulumchain.tech/currencies".to_vec(),
 			coin_infos_map: vec![],

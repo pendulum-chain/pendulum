@@ -151,6 +151,9 @@ benchmarks! {
 		let new_issuance = T::Currency::total_issuance();
 		let max_col_reward = InflationConfig::<T>::get().collator.reward_rate.per_block * MaxCollatorCandidateStake::<T>::get() * (MaxSelectedCandidates::<T>::get() as u64).into();
 		let network_block_reward = T::NetworkRewardRate::get() * max_col_reward;
+		if network_block_reward > 0_u64.into() {
+			assert!(new_issuance > issuance)
+		}
 		assert_eq!(new_issuance - issuance, network_block_reward)
 	}
 

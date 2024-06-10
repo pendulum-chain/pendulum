@@ -78,6 +78,7 @@ use runtime_common::{
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 
 use dia_oracle::DiaOracle;
+pub use dia_oracle::dia::AssetId;
 pub use issue::{Event as IssueEvent, IssueRequest};
 pub use nomination::Event as NominationEvent;
 use oracle::dia::DiaOracleAdapter;

@@ -165,7 +165,6 @@ runtimes `lib.rs` file.
     --repeat 20 \
     --output runtime/pendulum/src/weights/ \
     --template .maintain/frame-weight-template.hbs
-
 ```
 
 #### Amplitude

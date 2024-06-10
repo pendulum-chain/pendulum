@@ -611,7 +611,7 @@ fn amplitude_genesis(
 			supported_currencies: vec![
 				amplitude_runtime::AssetId::new(b"Amplitude".to_vec(), b"AMPE".to_vec()),
 				amplitude_runtime::AssetId::new(b"Kusama".to_vec(), b"KSM".to_vec()),
-				ampltiude_runtime::AssetId::new(b"Stellar".to_vec(), b"XLM".to_vec()),
+				amplitude_runtime::AssetId::new(b"Stellar".to_vec(), b"XLM".to_vec()),
 				amplitude_runtime::AssetId::new(b"FIAT".to_vec(), b"USD-USD".to_vec()),
 			],
 			batching_api: b"https://dia-00.pendulumchain.tech/currencies".to_vec(),

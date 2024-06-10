@@ -1266,7 +1266,6 @@ impl stellar_relay::Config for Runtime {
 	type OrganizationLimit = OrganizationLimit;
 	type ValidatorLimit = ValidatorLimit;
 	type IsPublicNetwork = IsPublicNetwork;
-	//TODO change this
 	type WeightInfo = weights::stellar_relay::SubstrateWeight<Runtime>;
 }
 

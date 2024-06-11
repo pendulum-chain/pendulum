@@ -30,10 +30,9 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
-		One, Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, FixedPointNumber, FixedU128, SaturatedConversion,
+	ApplyExtrinsicResult, DispatchError, FixedPointNumber, SaturatedConversion,
 };
 use sp_std::fmt::Debug;
 
@@ -70,8 +69,6 @@ use runtime_common::{
 #[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
 use oracle::testing_utils::MockDataFeeder;
 
-use oracle::OracleKey;
-
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 
 use dia_oracle::DiaOracle;
@@ -95,13 +92,13 @@ pub use stellar_relay::traits::{FieldLength, Organization, Validator};
 const CONTRACTS_DEBUG_OUTPUT: bool = true;
 
 use module_oracle_rpc_runtime_api::BalanceWrapper;
-use oracle::dia::{DiaOracleAdapter, XCMCurrencyConversion};
+use oracle::dia::DiaOracleAdapter;
 
 // Polkadot imports
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use spacewalk_primitives::{
-	self as primitives, CurrencyId, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner,
+	self as primitives, Asset, CurrencyId, CurrencyId::XCM, Moment, SignedFixedPoint, SignedInner,
 	UnsignedFixedPoint, UnsignedInner,
 };
 
@@ -196,59 +193,6 @@ pub type Executive = frame_executive::Executive<
 	),
 >;
 
-pub struct SpacewalkNativeCurrency;
-
-impl oracle::dia::NativeCurrencyKey for SpacewalkNativeCurrency {
-	fn native_symbol() -> Vec<u8> {
-		"AMPE".as_bytes().to_vec()
-	}
-
-	fn native_chain() -> Vec<u8> {
-		"Amplitude".as_bytes().to_vec()
-	}
-}
-
-impl XCMCurrencyConversion for SpacewalkNativeCurrency {
-	fn convert_to_dia_currency_id(token_symbol: u8) -> Option<(Vec<u8>, Vec<u8>)> {
-		match token_symbol {
-			0 => Some((b"Kusama".to_vec(), b"KSM".to_vec())),
-			_ => None,
-		}
-	}
-
-	fn convert_from_dia_currency_id(blockchain: Vec<u8>, symbol: Vec<u8>) -> Option<u8> {
-		match (blockchain.as_slice(), symbol.as_slice()) {
-			(b"Kusama", b"KSM") => Some(0),
-			_ => None,
-		}
-	}
-}
-
-cfg_if::cfg_if! {
-	if #[cfg(feature = "runtime-benchmarks")] {
-		use oracle::testing_utils::{
-			MockConvertMoment, MockConvertPrice, MockDiaOracle, MockOracleKeyConvertor,
-		};
-		type DataProviderImpl = DiaOracleAdapter<
-			MockDiaOracle,
-			UnsignedFixedPoint,
-			Moment,
-			MockOracleKeyConvertor,
-			MockConvertPrice,
-			MockConvertMoment<Moment>,
-		>;
-	} else {
-		type DataProviderImpl = DiaOracleAdapter<
-			DiaOracleModule,
-			UnsignedFixedPoint,
-			Moment,
-			oracle::dia::DiaOracleKeyConvertor<SpacewalkNativeCurrency>,
-			ConvertPrice,
-			ConvertMoment,
-		>;
-	}
-}
-
 pub struct ConvertPrice;
 
 impl Convert<u128, Option<UnsignedFixedPoint>> for ConvertPrice {
@@ -305,7 +249,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("foucoco"),
 	impl_name: create_runtime_str!("foucoco"),
 	authoring_version: 1,
-	spec_version: 15,
+	spec_version: 18,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 8,
@@ -385,53 +329,53 @@ impl Contains<RuntimeCall> for BaseFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		match call {
 			// These modules are all allowed to be called by transactions:
-			RuntimeCall::Bounties(_) |
-			RuntimeCall::ChildBounties(_) |
-			RuntimeCall::ClientsInfo(_) |
-			RuntimeCall::Treasury(_) |
-			RuntimeCall::Tokens(_) |
-			RuntimeCall::Currencies(_) |
-			RuntimeCall::ParachainStaking(_) |
-			RuntimeCall::Democracy(_) |
-			RuntimeCall::Council(_) |
-			RuntimeCall::TechnicalCommittee(_) |
-			RuntimeCall::System(_) |
-			RuntimeCall::Scheduler(_) |
-			RuntimeCall::Preimage(_) |
-			RuntimeCall::Timestamp(_) |
-			RuntimeCall::Balances(_) |
-			RuntimeCall::Session(_) |
-			RuntimeCall::ParachainSystem(_) |
-			RuntimeCall::Sudo(_) |
-			RuntimeCall::XcmpQueue(_) |
-			RuntimeCall::PolkadotXcm(_) |
-			RuntimeCall::DmpQueue(_) |
-			RuntimeCall::Utility(_) |
-			RuntimeCall::Vesting(_) |
-			RuntimeCall::XTokens(_) |
-			RuntimeCall::Multisig(_) |
-			RuntimeCall::Identity(_) |
-			RuntimeCall::Contracts(_) |
-			RuntimeCall::ZenlinkProtocol(_) |
-			RuntimeCall::DiaOracleModule(_) |
-			RuntimeCall::Fee(_) |
-			RuntimeCall::Issue(_) |
-			RuntimeCall::Nomination(_) |
-			RuntimeCall::Oracle(_) |
-			RuntimeCall::Redeem(_) |
-			RuntimeCall::Replace(_) |
-			RuntimeCall::Security(_) |
-			RuntimeCall::StellarRelay(_) |
-			RuntimeCall::VaultRegistry(_) |
-			RuntimeCall::PooledVaultRewards(_) |
-			RuntimeCall::Farming(_) |
-			RuntimeCall::TokenAllowance(_) |
-			RuntimeCall::AssetRegistry(_) |
-			RuntimeCall::Proxy(_) |
-			RuntimeCall::OrmlExtension(_) |
-			RuntimeCall::TreasuryBuyoutExtension(_) |
-			RuntimeCall::RewardDistribution(_) => true, // All pallets are allowed, but exhaustive match is defensive
-			                                            // in the case of adding new pallets.
+			RuntimeCall::Bounties(_)
+			| RuntimeCall::ChildBounties(_)
+			| RuntimeCall::ClientsInfo(_)
+			| RuntimeCall::Treasury(_)
+			| RuntimeCall::Tokens(_)
+			| RuntimeCall::Currencies(_)
+			| RuntimeCall::ParachainStaking(_)
+			| RuntimeCall::Democracy(_)
+			| RuntimeCall::Council(_)
+			| RuntimeCall::TechnicalCommittee(_)
+			| RuntimeCall::System(_)
+			| RuntimeCall::Scheduler(_)
+			| RuntimeCall::Preimage(_)
+			| RuntimeCall::Timestamp(_)
+			| RuntimeCall::Balances(_)
+			| RuntimeCall::Session(_)
+			| RuntimeCall::ParachainSystem(_)
+			| RuntimeCall::Sudo(_)
+			| RuntimeCall::XcmpQueue(_)
+			| RuntimeCall::PolkadotXcm(_)
+			| RuntimeCall::DmpQueue(_)
+			| RuntimeCall::Utility(_)
+			| RuntimeCall::Vesting(_)
+			| RuntimeCall::XTokens(_)
+			| RuntimeCall::Multisig(_)
+			| RuntimeCall::Identity(_)
+			| RuntimeCall::Contracts(_)
+			| RuntimeCall::ZenlinkProtocol(_)
+			| RuntimeCall::DiaOracleModule(_)
+			| RuntimeCall::Fee(_)
+			| RuntimeCall::Issue(_)
+			| RuntimeCall::Nomination(_)
+			| RuntimeCall::Oracle(_)
+			| RuntimeCall::Redeem(_)
+			| RuntimeCall::Replace(_)
+			| RuntimeCall::Security(_)
+			| RuntimeCall::StellarRelay(_)
+			| RuntimeCall::VaultRegistry(_)
+			| RuntimeCall::PooledVaultRewards(_)
+			| RuntimeCall::Farming(_)
+			| RuntimeCall::TokenAllowance(_)
+			| RuntimeCall::AssetRegistry(_)
+			| RuntimeCall::Proxy(_)
+			| RuntimeCall::OrmlExtension(_)
+			| RuntimeCall::TreasuryBuyoutExtension(_)
+			| RuntimeCall::RewardDistribution(_) => true, // All pallets are allowed, but exhaustive match is defensive
+			                                              // in the case of adding new pallets.
 		}
 	}
 }
@@ -958,7 +902,7 @@ impl parachain_staking::Config for Runtime {
 	type NetworkRewardStart = NetworkRewardStart;
 	type NetworkRewardBeneficiary = Treasury;
 	type CollatorRewardRateDecay = CollatorRewardRateDecay;
-	type WeightInfo = parachain_staking::default_weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::parachain_staking::SubstrateWeight<Runtime>;
 
 	const BLOCKS_PER_YEAR: BlockNumber = BLOCKS_PER_YEAR;
 }
@@ -1031,62 +975,10 @@ parameter_types! {
 
 impl orml_tokens_management_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = orml_tokens_management_extension::default_weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::orml_tokens_management_extension::SubstrateWeight<Runtime>;
 	type CurrencyIdChecker = CurrencyIdCheckerImpl;
 	type DepositCurrency = DepositCurrency;
 	type AssetDeposit = AssetDeposit;
-}
-
-pub struct OraclePriceGetter(Oracle);
-
-impl treasury_buyout_extension::PriceGetter<CurrencyId> for OraclePriceGetter {
-	#[cfg(not(feature = "runtime-benchmarks"))]
-	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
-	where
-		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
-	{
-		let key = OracleKey::ExchangeRate(currency_id);
-		let asset_price = Oracle::get_price(key.clone())?;
-
-		let converted_asset_price = FixedNumber::try_from(asset_price);
-
-		match converted_asset_price {
-			Ok(price) => Ok(price),
-			Err(_) => Err(DispatchError::Other("Failed to convert price")),
-		}
-	}
-	#[cfg(feature = "runtime-benchmarks")]
-	fn get_price<FixedNumber>(currency_id: CurrencyId) -> Result<FixedNumber, DispatchError>
-	where
-		FixedNumber: FixedPointNumber + One + Zero + Debug + TryFrom<FixedU128>,
-	{
-		// Forcefully set chain status to running when benchmarking so that the oracle doesn't fail
-		Security::set_status(StatusCode::Running);
-
-		let key = OracleKey::ExchangeRate(currency_id);
-
-		// Attempt to get the price once and use the result to decide if feeding a value is necessary
-		match Oracle::get_price(key.clone()) {
-			Ok(asset_price) => {
-				// If the price is successfully retrieved, use it directly
-				let converted_asset_price = FixedNumber::try_from(asset_price)
-					.map_err(|_| DispatchError::Other("Failed to convert price"))?;
-				Ok(converted_asset_price)
-			},
-			Err(_) => {
-				// Price not found, feed the default value
-				let rate = FixedU128::checked_from_rational(100, 1).expect("This is a valid ratio");
-				// Account used for feeding values
-				let account = AccountId::from([0u8; 32]);
-				Oracle::feed_values(account, vec![(key, rate)])?;
-
-				// If feeding was successful, just use the feeded price to spare a read
-				let converted_asset_price = FixedNumber::try_from(rate)
-					.map_err(|_| DispatchError::Other("Failed to convert price"))?;
-				Ok(converted_asset_price)
-			},
-		}
-	}
 }
 
 pub struct DecimalsLookupImpl;
@@ -1104,7 +996,7 @@ impl spacewalk_primitives::DecimalsLookup for DecimalsLookupImpl {
 
 parameter_types! {
 	pub const SellFee: Permill = Permill::from_percent(1);
-	pub const MinAmountToBuyout: Balance = NANOUNIT;
+	pub const MinAmountToBuyout: Balance = 100 * MILLIUNIT;
 	// 24 hours in blocks (where average block time is 12 seconds)
 	pub const BuyoutPeriod: u32 = 7200;
 	// Maximum number of allowed currencies for buyout
@@ -1117,11 +1009,11 @@ impl treasury_buyout_extension::Config for Runtime {
 	type TreasuryAccount = FoucocoTreasuryAccount;
 	type BuyoutPeriod = BuyoutPeriod;
 	type SellFee = SellFee;
-	type PriceGetter = OraclePriceGetter;
+	type PriceGetter = runtime_common::OraclePriceGetter<Runtime>;
 	type DecimalsLookup = DecimalsLookupImpl;
 	type MinAmountToBuyout = MinAmountToBuyout;
 	type MaxAllowedBuyoutCurrencies = MaxAllowedBuyoutCurrencies;
-	type WeightInfo = treasury_buyout_extension::default_weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::treasury_buyout_extension::SubstrateWeight<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type RelayChainCurrencyId = RelayChainCurrencyId;
 }
@@ -1170,8 +1062,7 @@ impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
 
 impl orml_currencies_allowance_extension::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo =
-		orml_currencies_allowance_extension::default_weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::orml_currencies_allowance_extension::SubstrateWeight<Runtime>;
 	type MaxAllowedCurrencies = ConstU32<256>;
 }
 
@@ -1265,6 +1156,14 @@ impl currency::CurrencyConversion<currency::Amount<Runtime>, CurrencyId> for Cur
 
 parameter_types! {
 	pub const RelayChainCurrencyId: CurrencyId = XCM(0);
+	// This specific asset is used for benchmarking Spacewalk pallets as it's already used as the wrapped currency in the genesis config
+	pub const GetWrappedCurrencyId: CurrencyId = CurrencyId::Stellar(Asset::AlphaNum4 {
+		code: *b"USDC",
+		issuer: [
+			59, 153, 17, 56, 14, 254, 152, 139, 160, 168, 144, 14, 177, 207, 228, 79, 54, 111, 125,
+			190, 148, 107, 237, 7, 114, 64, 247, 246, 36, 223, 21, 197,
+		],
+	});
 }
 impl currency::Config for Runtime {
 	type UnsignedFixedPoint = UnsignedFixedPoint;
@@ -1272,6 +1171,8 @@ impl currency::Config for Runtime {
 	type SignedFixedPoint = SignedFixedPoint;
 	type Balance = Balance;
 	type GetRelayChainCurrencyId = RelayChainCurrencyId;
+	#[cfg(feature = "runtime-benchmarks")]
+	type GetWrappedCurrencyId = GetWrappedCurrencyId;
 	type AssetConversion = primitives::AssetConversion;
 	type BalanceConversion = primitives::BalanceConversion;
 	type CurrencyConversion = CurrencyConvert;
@@ -1319,9 +1220,34 @@ impl staking::Config for Runtime {
 	type MaxRewardCurrencies = MaxRewardCurrencies;
 }
 
+cfg_if::cfg_if! {
+	if #[cfg(feature = "runtime-benchmarks")] {
+		use oracle::testing_utils::{
+			MockConvertMoment, MockConvertPrice, MockDiaOracle, MockOracleKeyConvertor,
+		};
+		type DataProviderImpl = DiaOracleAdapter<
+			MockDiaOracle,
+			UnsignedFixedPoint,
+			Moment,
+			MockOracleKeyConvertor,
+			MockConvertPrice,
+			MockConvertMoment<Moment>,
+		>;
+	} else {
+		type DataProviderImpl = DiaOracleAdapter<
+			DiaOracleModule,
+			UnsignedFixedPoint,
+			Moment,
+			asset_registry::AssetRegistryToDiaOracleKeyConvertor<Runtime>,
+			ConvertPrice,
+			ConvertMoment,
+		>;
+	}
+}
+
 impl oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = oracle::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::oracle::SubstrateWeight<Runtime>;
 	type DecimalsLookup = DecimalsLookupImpl;
 	type DataProvider = DataProviderImpl;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -1340,7 +1266,7 @@ impl stellar_relay::Config for Runtime {
 	type OrganizationLimit = OrganizationLimit;
 	type ValidatorLimit = ValidatorLimit;
 	type IsPublicNetwork = IsPublicNetwork;
-	type WeightInfo = stellar_relay::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::stellar_relay::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1353,7 +1279,7 @@ parameter_types! {
 
 impl fee::Config for Runtime {
 	type FeePalletId = FeePalletId;
-	type WeightInfo = fee::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::fee::SubstrateWeight<Runtime>;
 	type SignedFixedPoint = SignedFixedPoint;
 	type SignedInner = SignedInner;
 	type UnsignedFixedPoint = UnsignedFixedPoint;
@@ -1369,13 +1295,13 @@ impl vault_registry::Config for Runtime {
 	type PalletId = VaultRegistryPalletId;
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
-	type WeightInfo = vault_registry::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::vault_registry::SubstrateWeight<Runtime>;
 	type GetGriefingCollateralCurrencyId = NativeCurrencyId;
 }
 
 impl redeem::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = redeem::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::redeem::SubstrateWeight<Runtime>;
 }
 
 pub struct BlockNumberToBalance;
@@ -1389,17 +1315,17 @@ impl sp_runtime::traits::Convert<BlockNumber, Balance> for BlockNumberToBalance 
 impl issue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type BlockNumberToBalance = BlockNumberToBalance;
-	type WeightInfo = issue::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::issue::SubstrateWeight<Runtime>;
 }
 
 impl nomination::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = nomination::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::nomination::SubstrateWeight<Runtime>;
 }
 
 impl replace::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = replace::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::replace::SubstrateWeight<Runtime>;
 }
 
 impl clients_info::Config for Runtime {
@@ -1571,7 +1497,7 @@ construct_runtime!(
 		ClientsInfo: clients_info::{Pallet, Call, Storage, Event<T>} = 72,
 		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,
 
-		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
+		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>, Config<T>} = 80,
 		OrmlExtension: orml_tokens_management_extension::{Pallet, Storage, Call, Event<T>} = 81,
 
 		TreasuryBuyoutExtension: treasury_buyout_extension::{Pallet, Storage, Call, Event<T>} = 82,
@@ -1597,6 +1523,7 @@ mod benches {
 		[pallet_session, SessionBench::<Runtime>]
 		[pallet_timestamp, Timestamp]
 		[cumulus_pallet_xcmp_queue, XcmpQueue]
+		[parachain_staking, ParachainStaking]
 
 		[fee, Fee]
 		[issue, Issue]

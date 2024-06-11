@@ -13,79 +13,55 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Freeing up more disk space
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/shared
+
+      - name: Remove rust-toolchain.toml
+        # To make sure that the nightly version will be used all throughout
         run: |
-          sudo swapoff -a
-          sudo rm -f /mnt/swapfile
-          free -h
-          docker rmi $(docker image ls -aq)
-          sudo rm -rf /usr/local/lib/android # will release about 10 GB if you don't need Android
-          sudo rm -rf /usr/share/dotnet # will release about 20GB if you don't need .NET
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf /opt/hostedtoolcache
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          sudo apt-get remove -y 'php.*' --fix-missing
-          sudo apt-get remove -y '^mongodb-.*' --fix-missing
-          sudo apt-get remove -y '^mysql-.*' --fix-missing
-          sudo apt-get remove -y azure-cli google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri --fix-missing
-          sudo apt-get remove -y google-cloud-sdk --fix-missing
-          sudo apt-get remove -y google-cloud-cli --fix-missing
-          sudo apt-get autoremove -y
-          sudo apt-get clean          
-          df -h
+          rm /home/runner/work/pendulum/pendulum/rust-toolchain.toml
 
-      - name: Install package
-        run: |
-          echo 'APT::Get::Always-Include-Phased-Updates "false";' | sudo tee /etc/apt/apt.conf.d/99-phased-updates
-          sudo apt-get update && sudo apt-get upgrade -y
-          sudo apt-get install -y protobuf-compiler libprotobuf-dev
-
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-        # Steps taken from https://github.com/actions/cache/blob/master/examples.md#rust---cargo
-      - name: Cache cargo registry
-        uses: actions/cache@v4
+      - name: Setup nightly Rust toolchain
+        uses:  dtolnay/rust-toolchain@nightly
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          toolchain: nightly-2024-04-18
+          components: rustfmt, clippy
+          target: wasm32-unknown-unknown
 
-      - name: Install toolchain
-        # Call `rustup show` as a hack so that the toolchain defined in rust-toolchain.toml is installed
-        run: rustup show
+      - name: Setup nightly Rust as default
+        run: rustup default nightly-2024-04-18
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check Code
-        run: cargo check
-
-      - name: Test Code
-        run: cargo test
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          toolchain: nightly-2024-04-18
+          command: test
 
       - name: Clippy -- Main
         uses: actions-rs/cargo@v1
         with:
+          toolchain: nightly-2024-04-18
           command: clippy
-          args: --all-features -- -W clippy::all -A clippy::style -A clippy::forget_copy -A clippy::forget_ref
+          args: --all-features -- -W clippy::all -A clippy::style -A forgetting_copy_types -A forgetting_references
 
       - name: Clippy -- All Targets (except integration)
         uses: actions-rs/cargo@v1
         with:
+          toolchain: nightly-2024-04-18
           command: clippy
           # We are a bit more forgiving when it comes to the code in tests and only check for correctness
-          args: --workspace --all-features --all-targets --exclude runtime-integration-tests -- -A clippy::all -W clippy::correctness -A clippy::forget_copy -A clippy::forget_ref
+          args: --workspace --all-features --all-targets --exclude runtime-integration-tests -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
 
       - name: Clippy -- Integration
         uses: actions-rs/cargo@v1
         with:
+          toolchain: nightly-2024-04-18
           command: clippy
           # We are a bit more forgiving when it comes to the code in tests and only check for correctness
-          args: --package runtime-integration-tests --all-features --all-targets -- -A clippy::all -W clippy::correctness -A clippy::forget_copy -A clippy::forget_ref
-      
+          args: --package runtime-integration-tests --all-features --all-targets -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
+    

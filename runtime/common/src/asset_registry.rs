@@ -10,6 +10,8 @@ use scale_info::TypeInfo;
 use sp_core::Get;
 use sp_runtime::{traits::PhantomData, BoundedVec, DispatchError};
 use sp_std::fmt::Debug;
+use sp_std::vec::Vec;
+use spacewalk_primitives::oracle::Key;
 use spacewalk_primitives::CurrencyId;
 use xcm::opaque::v3::MultiLocation;
 
@@ -71,5 +73,52 @@ impl<
 	fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
 		let metadata = OrmlAssetRegistry::metadata_by_location(&location)?;
 		Some(metadata.additional.fee_per_second)
+	}
+}
+
+// Define a convertor to convert between a CurrencyId and the dia oracle keys using the metadata
+// stored in the asset registry
+pub struct AssetRegistryToDiaOracleKeyConvertor<Runtime>(PhantomData<Runtime>);
+
+impl<
+		Runtime: orml_asset_registry::Config<AssetId = CurrencyId, CustomMetadata = CustomMetadata>,
+	> Convert<Key, Option<(Vec<u8>, Vec<u8>)>> for AssetRegistryToDiaOracleKeyConvertor<Runtime>
+{
+	fn convert(spacewalk_oracle_key: Key) -> Option<(Vec<u8>, Vec<u8>)> {
+		let currency_id = match spacewalk_oracle_key {
+			Key::ExchangeRate(currency_id) => currency_id,
+		};
+
+		// Try to find the dia keys in the asset registry metadata
+		orml_asset_registry::Pallet::<Runtime>::metadata(currency_id).and_then(|metadata| {
+			let dia_keys = metadata.additional.dia_keys;
+			if dia_keys.blockchain.is_empty() || dia_keys.symbol.is_empty() {
+				return None;
+			}
+			return Some((dia_keys.blockchain.to_vec(), dia_keys.symbol.to_vec()));
+		})
+	}
+}
+
+impl<
+		Runtime: orml_asset_registry::Config<AssetId = CurrencyId, CustomMetadata = CustomMetadata>,
+	> Convert<(Vec<u8>, Vec<u8>), Option<Key>> for AssetRegistryToDiaOracleKeyConvertor<Runtime>
+{
+	fn convert(dia_oracle_key: (Vec<u8>, Vec<u8>)) -> Option<Key> {
+		if dia_oracle_key.0.is_empty() || dia_oracle_key.1.is_empty() {
+			return None;
+		}
+
+		// Try to find the currency id in the asset registry metadata for which the dia keys are
+		// matching the ones provided
+		let blockchain = dia_oracle_key.0;
+		let symbol = dia_oracle_key.1;
+		orml_asset_registry::Metadata::<Runtime>::iter().find_map(|(currency_id, metadata)| {
+			let dia_keys = metadata.additional.dia_keys;
+			if dia_keys.blockchain.to_vec() == blockchain && dia_keys.symbol.to_vec() == symbol {
+				return Some(Key::ExchangeRate(currency_id));
+			}
+			None
+		})
 	}
 }

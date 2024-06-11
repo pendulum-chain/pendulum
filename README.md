@@ -4,10 +4,11 @@ Pendulum chain by SatoshiPay. More information about Pendulum can be found [here
 
 ### How to Run Tests
 
-To run the unit tests, execute
+[`mocktopus`](https://docs.rs/mocktopus/latest/mocktopus/) is nightly-only lib, and is used in testing.  
+So to run the tests, override the toolchain with nightly; minimum version is `nightly-2024-04-18`.
 
 ```
-cargo test
+cargo +nightly test
 ```
 
 ### How to Build
@@ -162,7 +163,8 @@ runtimes `lib.rs` file.
     --extrinsic "*" \
     --steps 50 \
     --repeat 20 \
-    --output runtime/pendulum/src/weights/
+    --output runtime/pendulum/src/weights/ \
+    --template .maintain/frame-weight-template.hbs
 ```
 
 #### Amplitude
@@ -176,7 +178,8 @@ runtimes `lib.rs` file.
     --extrinsic "*" \
     --steps 50 \
     --repeat 20 \
-    --output runtime/amplitude/src/weights/
+    --output runtime/amplitude/src/weights/ \
+    --template .maintain/frame-weight-template.hbs
 ```
 
 #### Foucoco
@@ -190,5 +193,38 @@ runtimes `lib.rs` file.
     --extrinsic "*" \
     --steps 50 \
     --repeat 20 \
-    --output runtime/foucoco/src/weights/
+    --output runtime/foucoco/src/weights/ \
+    --template .maintain/frame-weight-template.hbs
+```
+
+### How to run in standalone mode
+
+For testing purposes, it is useful to run an instance of the chain locally with the same runtime as the live chain, but using the instant-seal consensus mechanism. This means that upon every successful extrinsic, a new block will be produced instantly.
+
+Currently we only support the use of the foucoco runtime to run the chain in this standalone mode.
+
+To run: 
+
+```shell
+cargo run -p pendulum-node -- --chain {x}-spec-raw.json --instant-seal
+```
+
+Most other flags are irrelevant when instant-seal is used, and should not be passed, but it is still possible 
+to use the port definition flags to change the default ports used.
+
+#### Run with a specific genesis config
+
+The previous command assumes there exist already a `...spec-raw.json` which defines the genesis config. The process
+of creating this file is the same as the one described above in section [How to Generate Genesis State](#how-to-generate-chain-spec)
+
+To run with the default standalone genesis config defined in `node/chain_spec.rs` (`foucoco_standalone_config()` function) use:
+
+```shell
+cargo run -p pendulum-node -- --chain res/foucoco-standalone-spec-raw.json --instant-seal
+```
+
+or simply:
+
+```shell
+cargo run -p pendulum-node -- --chain foucoco-standalone --instant-seal
 ```

@@ -238,7 +238,7 @@ pub mod pallet {
 	}
 }
 
-#[allow(clippy::forget_non_drop, clippy::swap_ptr_to_ref, clippy::forget_ref, clippy::forget_copy)]
+#[allow(clippy::forget_non_drop, clippy::swap_ptr_to_ref, forgetting_references, forgetting_copy_types)]
 #[cfg_attr(test, mockable)]
 impl<T: Config> Pallet<T> {
 	// Check the amount approved to be spent by an owner to a delegate

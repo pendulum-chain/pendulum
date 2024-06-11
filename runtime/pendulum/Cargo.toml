@@ -12,9 +12,10 @@ version = "0.1.0"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [build-dependencies]
-substrate-wasm-builder = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42"}
+substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 
 [dependencies]
+cfg-if = "1.0.0"
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 hex-literal = { version = "0.3.4", optional = true }
 log = { version = "0.4.17", default-features = false }
@@ -25,32 +26,32 @@ smallvec = "1.9.0"
 
 # Local
 runtime-common = { path = "../common", default-features = false }
-token-chain-extension = {path = "../../chain-extensions/token", default-features = false }
-price-chain-extension = {path = "../../chain-extensions/price", default-features = false }
-treasury-buyout-extension = {path = "../../pallets/treasury-buyout-extension", default-features = false}
+token-chain-extension = { path = "../../chain-extensions/token", default-features = false }
+price-chain-extension = { path = "../../chain-extensions/price", default-features = false }
+treasury-buyout-extension = { path = "../../pallets/treasury-buyout-extension", default-features = false }
 
 # Custom libraries for Spacewalk
-clients-info = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-security = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-staking = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-oracle = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-stellar-relay = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-fee = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-vault-registry = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-redeem = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-issue = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-nomination = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-replace = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-module-issue-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
+clients-info = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+security = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+staking = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+oracle = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+stellar-relay = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+fee = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+vault-registry = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+redeem = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+issue = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+nomination = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+replace = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+module-issue-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
 module-pallet-staking-rpc-runtime-api = { path = "../../pallets/parachain-staking/rpc/runtime-api", default-features = false }
-pooled-rewards = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
-reward-distribution = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev ="e7a672ba1e21c98a70df30a6ee458317951dd597"}
+pooled-rewards = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+reward-distribution = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.42" }
@@ -116,24 +117,24 @@ dia-oracle-runtime-api = { git = "https://github.com/pendulum-chain/oracle-palle
 vesting-manager = { path = "../../pallets/vesting-manager", default-features = false }
 
 # Polkadot
-pallet-xcm = {git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42"}
-polkadot-parachain = {git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42"}
-polkadot-runtime-common = {git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42"}
-xcm = {git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42"}
-xcm-builder = {git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42"}
-xcm-executor = {git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42"}
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42" }
+polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42" }
+xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.42" }
 
 # Cumulus
-cumulus-pallet-aura-ext = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42"}
-cumulus-pallet-dmp-queue = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42"}
-cumulus-pallet-parachain-system = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42"}
-cumulus-pallet-session-benchmarking = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42"}
-cumulus-pallet-xcm = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42"}
-cumulus-pallet-xcmp-queue = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42"}
-cumulus-primitives-core = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42"}
-cumulus-primitives-timestamp = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42"}
-cumulus-primitives-utility = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42"}
-parachain-info = {git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42"}
+cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42" }
+cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42" }
+cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42" }
+cumulus-pallet-session-benchmarking = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42" }
+cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42" }
+cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42" }
+cumulus-primitives-timestamp = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42" }
+cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42" }
+parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42" }
 
 # Zenlink
 zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false, branch = "polkadot-v0.9.42" }
@@ -257,6 +258,7 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
+    "currency/runtime-benchmarks",
     "fee/runtime-benchmarks",
     "issue/runtime-benchmarks",
     "nomination/runtime-benchmarks",
@@ -272,6 +274,7 @@ runtime-benchmarks = [
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
     "runtime-common/runtime-benchmarks",
+    "parachain-staking/runtime-benchmarks",
     "orml-currencies-allowance-extension/runtime-benchmarks",
     "treasury-buyout-extension/runtime-benchmarks",
 ]

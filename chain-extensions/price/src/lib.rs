@@ -46,7 +46,7 @@ where
 	T: SysConfig + pallet_contracts::Config + dia_oracle::Config,
 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 {
-	fn call<E: Ext>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
+	fn call<E>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
 	where
 		E: Ext<T = T>,
 		<E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
@@ -74,7 +74,7 @@ where
 	}
 }
 
-fn get_coin_info<E: Ext, T>(
+fn get_coin_info<E, T>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>

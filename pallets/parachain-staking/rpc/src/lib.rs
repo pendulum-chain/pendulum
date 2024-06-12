@@ -72,7 +72,7 @@ where
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
 		api.get_unclaimed_staking_rewards(at, account)
-			.map_err(|_e| internal_err(format!("Unable to get unclaimed staking rewards")))
+			.map_err(|_e| internal_err("Unable to get unclaimed staking rewards"))
 	}
 
 	fn get_staking_rates(&self, at: Option<<Block as BlockT>::Hash>) -> RpcResult<StakingRates> {
@@ -80,6 +80,6 @@ where
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
 		api.get_staking_rates(at)
-			.map_err(|_e| internal_err(format!("Unable to get staking rates")))
+			.map_err(|_e| internal_err("Unable to get staking rates"))
 	}
 }

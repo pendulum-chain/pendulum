@@ -1824,15 +1824,11 @@ impl_runtime_apis! {
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use baseline::Pallet as BaselineBench;
 
-			#[allow(clippy::non_local_impl)]
 			impl frame_system_benchmarking::Config for Runtime {}
-			#[allow(clippy::non_local_impl)]
 			impl baseline::Config for Runtime {}
-			#[allow(clippy::non_local_impl)]
 			impl runtime_common::benchmarking::orml_asset_registry::Config for Runtime {}
 
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
-			#[allow(clippy::non_local_impl)]
 			impl cumulus_pallet_session_benchmarking::Config for Runtime {}
 
 			let whitelist: Vec<TrackedStorageKey> = vec![

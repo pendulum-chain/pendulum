@@ -258,6 +258,8 @@ match_types! {
 //TODO: move DenyThenTry to polkadot's xcm module.
 /// Deny executing the xcm message if it matches any of the Deny filter regardless of anything else.
 /// If it passes the Deny, and matches one of the Allow cases then it is let through.
+
+#[allow(dead_code)]
 pub struct DenyThenTry<Deny, Allow>(PhantomData<Deny>, PhantomData<Allow>)
 where
 	Deny: ShouldExecute,
@@ -280,6 +282,7 @@ where
 }
 
 // See issue #5233
+#[allow(dead_code)]
 pub struct DenyReserveTransferToRelayChain;
 impl ShouldExecute for DenyReserveTransferToRelayChain {
 	fn should_execute<RuntimeCall>(

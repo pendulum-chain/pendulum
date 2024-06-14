@@ -11,6 +11,9 @@ on:
 jobs:
   test-code:
     runs-on: ubuntu-latest
+    env:
+      # Make sure CI fails on all warnings, including Clippy lints
+      RUSTFLAGS: "-Dwarnings"
 
     steps:
       - uses: actions/checkout@v3

@@ -3,12 +3,15 @@
 
 use asset_registry::CustomMetadata;
 use core::{fmt::Debug, marker::PhantomData};
-use dia_oracle::{CoinInfo, DiaOracle};
+#[cfg(feature = "runtime-benchmarks")]
+use dia_oracle::CoinInfo;
+use dia_oracle::DiaOracle;
 use orml_traits::asset_registry::Inspect;
 use sp_runtime::{
 	traits::{Convert, IdentifyAccount, One, Verify, Zero},
 	DispatchError, FixedPointNumber, FixedU128, MultiSignature,
 };
+#[cfg(feature = "runtime-benchmarks")]
 use sp_std::vec;
 use spacewalk_primitives::CurrencyId;
 use treasury_buyout_extension::PriceGetter;

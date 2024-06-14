@@ -1809,11 +1809,15 @@ impl_runtime_apis! {
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use baseline::Pallet as BaselineBench;
 
+			#[allow(non_local_definitions)]
 			impl frame_system_benchmarking::Config for Runtime {}
+			#[allow(non_local_definitions)]
 			impl baseline::Config for Runtime {}
+			#[allow(non_local_definitions)]
 			impl runtime_common::benchmarking::orml_asset_registry::Config for Runtime {}
 
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
+			#[allow(non_local_definitions)]
 			impl cumulus_pallet_session_benchmarking::Config for Runtime {}
 
 
@@ -2015,6 +2019,7 @@ impl_runtime_apis! {
 
 }
 
+#[allow(dead_code)]
 struct CheckInherents;
 
 impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {

@@ -266,7 +266,7 @@ pub mod pallet {
 			// Update `AllowedCurrencies` storage with provided `assets`
 			for asset in assets.clone() {
 				// Check for duplicates
-				if !AllowedCurrencies::<T>::contains_key(&asset) {
+				if !AllowedCurrencies::<T>::contains_key(asset) {
 					AllowedCurrencies::<T>::insert(asset, ());
 					allowed_assets.push(asset);
 				}
@@ -291,7 +291,7 @@ impl<T: Config> Pallet<T> {
 				<frame_system::Pallet<T>>::block_number().saturated_into::<u32>();
 			let current_period_start_number = current_block_number
 				.checked_div(buyout_period)
-				.and_then(|n| Some(n.saturating_mul(buyout_period)))
+				.map(|n| n.saturating_mul(buyout_period))
 				.unwrap_or_default();
 			let (mut buyouts, last_buyout) = Buyouts::<T>::get(account_id);
 
@@ -454,12 +454,10 @@ impl<T: Config> Pallet<T> {
 	fn fetch_prices(
 		assets: (&CurrencyIdOf<T>, &CurrencyIdOf<T>),
 	) -> Result<(FixedU128, FixedU128), DispatchError> {
-		let basic_asset_price: FixedU128 = T::PriceGetter::get_price::<FixedU128>(*assets.0)
-			.map_err(|_| Error::<T>::NoPrice)?
-			.into();
-		let exchange_asset_price: FixedU128 = T::PriceGetter::get_price::<FixedU128>(*assets.1)
-			.map_err(|_| Error::<T>::NoPrice)?
-			.into();
+		let basic_asset_price: FixedU128 =
+			T::PriceGetter::get_price::<FixedU128>(*assets.0).map_err(|_| Error::<T>::NoPrice)?;
+		let exchange_asset_price: FixedU128 =
+			T::PriceGetter::get_price::<FixedU128>(*assets.1).map_err(|_| Error::<T>::NoPrice)?;
 		Ok((basic_asset_price, exchange_asset_price))
 	}
 
@@ -626,32 +624,30 @@ where
 		_info: &DispatchInfoOf<Self::Call>,
 		_len: usize,
 	) -> TransactionValidity {
-		if let Some(local_call) = call.is_sub_type() {
-			if let Call::buyout { asset, amount } = local_call {
-				Pallet::<T>::ensure_asset_allowed_for_buyout(asset).map_err(|_| {
-					InvalidTransaction::Custom(ValidityError::WrongAssetToBuyout.into())
-				})?;
+		if let Some(Call::buyout { asset, amount }) = call.is_sub_type() {
+			Pallet::<T>::ensure_asset_allowed_for_buyout(asset).map_err(|_| {
+				InvalidTransaction::Custom(ValidityError::WrongAssetToBuyout.into())
+			})?;
 
-				let (buyout_amount, exchange_amount) =
-					Pallet::<T>::split_to_buyout_and_exchange(*asset, *amount)
-						.map_err(|_| InvalidTransaction::Custom(ValidityError::Math.into()))?;
+			let (buyout_amount, exchange_amount) =
+				Pallet::<T>::split_to_buyout_and_exchange(*asset, *amount)
+					.map_err(|_| InvalidTransaction::Custom(ValidityError::Math.into()))?;
 
-				ensure!(
-					buyout_amount >= T::MinAmountToBuyout::get(),
-					InvalidTransaction::Custom(ValidityError::LessThanMinBuyoutAmount.into())
-				);
+			ensure!(
+				buyout_amount >= T::MinAmountToBuyout::get(),
+				InvalidTransaction::Custom(ValidityError::LessThanMinBuyoutAmount.into())
+			);
 
-				let free_balance = T::Currency::free_balance(*asset, who);
+			let free_balance = T::Currency::free_balance(*asset, who);
 
-				ensure!(
-					free_balance >= exchange_amount,
-					InvalidTransaction::Custom(ValidityError::NotEnoughToBuyout.into())
-				);
+			ensure!(
+				free_balance >= exchange_amount,
+				InvalidTransaction::Custom(ValidityError::NotEnoughToBuyout.into())
+			);
 
-				Pallet::<T>::ensure_buyout_limit_not_exceeded(who, buyout_amount).map_err(
-					|_| InvalidTransaction::Custom(ValidityError::BuyoutLimitExceeded.into()),
-				)?;
-			}
+			Pallet::<T>::ensure_buyout_limit_not_exceeded(who, buyout_amount).map_err(|_| {
+				InvalidTransaction::Custom(ValidityError::BuyoutLimitExceeded.into())
+			})?;
 		}
 
 		Ok(ValidTransaction::default())

@@ -30,6 +30,7 @@
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
 #![allow(unused_parens)]
+#![allow(dead_code)]
 #![allow(unused_imports)]
 #![allow(missing_docs)]
 

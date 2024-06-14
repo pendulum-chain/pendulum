@@ -35,6 +35,7 @@ pub fn log_and_return_error_message(error_message: String) -> &'static str {
 	"Sanity test error"
 }
 
+#[allow(dead_code)]
 pub(crate) fn do_try_state<T: Config>() -> Result<(), &'static str> {
 	validate_candiate_pool::<T>()?;
 	validate_delegators::<T>()?;

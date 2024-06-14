@@ -73,9 +73,9 @@ where
 		+ orml_currencies_allowance_extension::Config,
 	<T as SysConfig>::AccountId: UncheckedFrom<<T as SysConfig>::Hash> + AsRef<[u8]>,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
-	AccountId: sp_std::fmt::Debug + Decode,
+	AccountId: sp_std::fmt::Debug + Decode + core::clone::Clone,
 {
-	fn call<E: Ext>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
+	fn call<E>(&mut self, env: Environment<E, InitState>) -> Result<RetVal, DispatchError>
 	where
 		E: Ext<T = T>,
 		<E::T as SysConfig>::AccountId: UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
@@ -92,15 +92,14 @@ where
 			0,
 		);
 
-		let result = match func_id {
+		match func_id {
 			FuncId::TotalSupply => total_supply(env, overhead_weight),
 			FuncId::BalanceOf => balance_of(env, overhead_weight),
 			FuncId::Transfer => transfer(env, overhead_weight),
 			FuncId::Allowance => allowance(env, overhead_weight),
 			FuncId::Approve => approve(env, overhead_weight),
 			FuncId::TransferFrom => transfer_from(env, overhead_weight),
-		};
-		result
+		}
 	}
 
 	fn enabled() -> bool {
@@ -108,7 +107,7 @@ where
 	}
 }
 
-fn total_supply<E: Ext, T, Tokens, AccountId>(
+fn total_supply<E, T, Tokens, AccountId>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
@@ -147,7 +146,7 @@ where
 	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
-fn balance_of<E: Ext, T, Tokens, AccountId>(
+fn balance_of<E, T, Tokens, AccountId>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
@@ -189,7 +188,7 @@ where
 	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
-fn transfer<E: Ext, T, Tokens, AccountId>(
+fn transfer<E, T, Tokens, AccountId>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
@@ -200,7 +199,7 @@ where
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
-	AccountId: sp_std::fmt::Debug,
+	AccountId: sp_std::fmt::Debug + core::clone::Clone,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 	(CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode,
 {
@@ -229,14 +228,14 @@ where
 
 	<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 		currency_id,
-		&env.ext().caller(),
+		env.ext().caller(),
 		&recipient,
 		amount,
 	)?;
 	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
-fn allowance<E: Ext, T, Tokens, AccountId>(
+fn allowance<E, T, Tokens, AccountId>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
@@ -281,7 +280,7 @@ where
 	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
-fn approve<E: Ext, T, Tokens, AccountId>(
+fn approve<E, T, Tokens, AccountId>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
@@ -292,7 +291,7 @@ where
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
-	AccountId: sp_std::fmt::Debug,
+	AccountId: sp_std::fmt::Debug + core::clone::Clone,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 	(CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode,
 {
@@ -320,14 +319,14 @@ where
 
 	orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
 		currency_id,
-		&env.ext().caller(),
+		env.ext().caller(),
 		&spender,
 		amount,
 	)?;
 	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
 }
 
-fn transfer_from<E: Ext, T, Tokens, AccountId>(
+fn transfer_from<E, T, Tokens, AccountId>(
 	env: Environment<'_, '_, E, InitState>,
 	overhead_weight: Weight,
 ) -> Result<RetVal, DispatchError>
@@ -338,7 +337,7 @@ where
 		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
-	AccountId: sp_std::fmt::Debug,
+	AccountId: sp_std::fmt::Debug + core::clone::Clone,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 	(AccountId, CurrencyId, AccountId, <Tokens as MultiCurrency<AccountId>>::Balance): Decode,
 {
@@ -372,7 +371,7 @@ where
 	orml_currencies_allowance_extension::Pallet::<T>::do_transfer_approved(
 		currency_id,
 		&owner,
-		&env.ext().caller(),
+		env.ext().caller(),
 		&recipient,
 		amount,
 	)?;

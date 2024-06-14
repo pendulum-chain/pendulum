@@ -13,6 +13,7 @@ use crate::{
 };
 
 use frame_support::assert_ok;
+#[allow(unused_imports)]
 use pendulum_runtime::definitions::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
 use statemint_runtime as polkadot_asset_hub_runtime;
 use xcm::latest::NetworkId;

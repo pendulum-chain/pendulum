@@ -124,14 +124,14 @@ pub mod pallet {
 				T::CurrencyIdChecker::is_valid_currency_id(&currency_id),
 				Error::<T>::NotOwnableCurrency
 			);
-			ensure!(!CurrencyData::<T>::contains_key(&currency_id), Error::<T>::AlreadyCreated);
+			ensure!(!CurrencyData::<T>::contains_key(currency_id), Error::<T>::AlreadyCreated);
 
 			let deposit = T::AssetDeposit::get();
 			ext::orml_tokens::reserve::<T>(T::DepositCurrency::get(), &creator, deposit)
 				.map_err(|_| Error::<T>::InsufficientBalance)?;
 
 			CurrencyData::<T>::insert(
-				currency_id.clone(),
+				currency_id,
 				CurrencyDetails {
 					owner: creator.clone(),
 					issuer: creator.clone(),
@@ -175,7 +175,7 @@ pub mod pallet {
 			ensure!(origin == currency_data.issuer, Error::<T>::NoPermission);
 
 			// do mint via orml-currencies
-			let _ = ext::orml_tokens::mint::<T>(currency_id, &to, amount)?;
+			ext::orml_tokens::mint::<T>(currency_id, &to, amount)?;
 
 			Self::deposit_event(Event::Mint { currency_id, to, amount });
 			Ok(())
@@ -207,7 +207,7 @@ pub mod pallet {
 			ensure!(origin == currency_data.admin, Error::<T>::NoPermission);
 
 			// do burn via orml-currencies
-			let _ = ext::orml_tokens::burn::<T>(currency_id, &from, amount)?;
+			ext::orml_tokens::burn::<T>(currency_id, &from, amount)?;
 
 			Self::deposit_event(Event::Burned { currency_id, from, amount });
 			Ok(())
@@ -231,7 +231,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
 
-			CurrencyData::<T>::try_mutate(currency_id.clone(), |maybe_details| {
+			CurrencyData::<T>::try_mutate(currency_id, |maybe_details| {
 				let details = maybe_details.as_mut().ok_or(Error::<T>::NotCreated)?;
 				ensure!(origin == details.owner, Error::<T>::NoPermission);
 
@@ -241,7 +241,7 @@ pub mod pallet {
 				details.owner = new_owner.clone();
 
 				// move reserved balance to the new owner's account
-				let _ = ext::orml_tokens::repatriate_reserve::<T>(
+				ext::orml_tokens::repatriate_reserve::<T>(
 					T::DepositCurrency::get(),
 					&origin,
 					&new_owner,
@@ -271,13 +271,13 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			CurrencyData::<T>::try_mutate(currency_id.clone(), |maybe_details| {
+			CurrencyData::<T>::try_mutate(currency_id, |maybe_details| {
 				let details = maybe_details.as_mut().ok_or(Error::<T>::NotCreated)?;
 
 				if details.owner == new_owner {
 					return Ok(())
 				}
-				let _ = ext::orml_tokens::repatriate_reserve::<T>(
+				ext::orml_tokens::repatriate_reserve::<T>(
 					T::DepositCurrency::get(),
 					&details.owner,
 					&new_owner,
@@ -311,7 +311,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
 
-			CurrencyData::<T>::try_mutate(currency_id.clone(), |maybe_details| {
+			CurrencyData::<T>::try_mutate(currency_id, |maybe_details| {
 				let details = maybe_details.as_mut().ok_or(Error::<T>::NotCreated)?;
 
 				ensure!(origin == details.owner, Error::<T>::NoPermission);

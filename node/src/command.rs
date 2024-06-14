@@ -404,19 +404,19 @@ pub fn run() -> Result<()> {
 						.map_err(|e| format!("Error: {:?}", e))?;
 
 				match runner.config().chain_spec.identify() {
-					ChainIdentity::Amplitude => runner.async_run(|config| {
+					ChainIdentity::Amplitude => runner.async_run(|_config| {
 						Ok((cmd.run::<Block, ExtendedHostFunctions<
 							sp_io::SubstrateHostFunctions,
 							<AmplitudeRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
 						>, _>(Some(substrate_info(BLOCK_TIME_MILLIS))), task_manager))
 					}),
-					ChainIdentity::Foucoco => runner.async_run(|config| {
+					ChainIdentity::Foucoco => runner.async_run(|_config| {
 						Ok((cmd.run::<Block, ExtendedHostFunctions<
 							sp_io::SubstrateHostFunctions,
 							<FoucocoRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
 						>, _>(Some(substrate_info(BLOCK_TIME_MILLIS))), task_manager))
 					}),
-					ChainIdentity::Pendulum => runner.async_run(|config| {
+					ChainIdentity::Pendulum => runner.async_run(|_config| {
 						Ok((cmd.run::<Block, ExtendedHostFunctions<
 							sp_io::SubstrateHostFunctions,
 							<PendulumRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,

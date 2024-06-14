@@ -30,8 +30,10 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		// TODO to remove this manually assigned weight, we need to add benchmarks to the pallet
 		#[pallet::call_index(0)]
-		#[pallet::weight(10_000_000)]
+		#[pallet::weight(Weight::from_parts(10_000_000, 0)
+			.saturating_add(T::DbWeight::get().writes(1_u64)))]
 		pub fn remove_vesting_schedule(
 			origin: OriginFor<T>,
 			who: AccountIdLookupOf<T>,

@@ -9,31 +9,11 @@ on:
       - main
 
 jobs:
-  build-check:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/shared
-
-      - name: Install toolchain
-        # Call `rustup show` as a hack so that the toolchain defined in rust-toolchain.toml is installed
-        run: rustup show
-
-      # Enable this for clippy linting.
-      # - name: Check and Lint Code
-      #   run: cargo +nightly-2021-12-01 clippy -- -D warnings
-
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v1
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check Code
-        run: cargo check
-
   test-code:
     runs-on: ubuntu-latest
+    env:
+      # Make sure CI fails on all warnings, including Clippy lints
+      RUSTFLAGS: "-Dwarnings"
 
     steps:
       - uses: actions/checkout@v3
@@ -64,3 +44,27 @@ jobs:
         with:
           toolchain: nightly-2024-04-18
           command: test
+
+      - name: Clippy -- Main
+        uses: actions-rs/cargo@v1
+        with:
+          toolchain: nightly-2024-04-18
+          command: clippy
+          args: --all-features -- -W clippy::all -A clippy::style -A forgetting_copy_types -A forgetting_references
+
+      - name: Clippy -- All Targets (except integration)
+        uses: actions-rs/cargo@v1
+        with:
+          toolchain: nightly-2024-04-18
+          command: clippy
+          # We are a bit more forgiving when it comes to the code in tests and only check for correctness
+          args: --workspace --all-features --all-targets --exclude runtime-integration-tests -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
+
+      - name: Clippy -- Integration
+        uses: actions-rs/cargo@v1
+        with:
+          toolchain: nightly-2024-04-18
+          command: clippy
+          # We are a bit more forgiving when it comes to the code in tests and only check for correctness
+          args: --package runtime-integration-tests --all-features --all-targets -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
+    

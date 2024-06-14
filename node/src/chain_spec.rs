@@ -34,7 +34,7 @@ const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 pub fn create_pendulum_multisig_account(id: &str) -> AccountId {
 	let mut signatories: Vec<_> = pendulum::SUDO_SIGNATORIES
 		.iter()
-		.chain(vec![id].iter())
+		.chain([id].iter())
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
 	signatories.sort();
@@ -384,7 +384,7 @@ pub fn pendulum_config() -> PendulumChainSpec {
 		pendulum::TREASURY_ALLOCATION * 20 / 100,
 	));
 
-	let multisig_identifiers = vec![
+	let multisig_identifiers = [
 		pendulum::MULTISIG_ID_GENESIS,
 		pendulum::MULTISIG_ID_TEAM,
 		pendulum::MULTISIG_ID_CL_RESERVES,

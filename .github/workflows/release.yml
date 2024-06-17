@@ -1,0 +1,48 @@
+# This action triggers a GitLab CI job that performs the following:
+# * Srtool Check
+# * Subwasm info of the compressed wasm file
+# * Propose a Parachain Upgrade
+# * Generate Release Notes
+name: Release and Propose an Upgrade
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - 'main'
+
+jobs:
+  release_check:
+#    This job will only run if:
+#     * the pull request is closed and merged to main branch;
+#     * the pull request has the "release:" in its title
+    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.title, 'release:') }}
+    name: ${{ matrix.chain }} need new release
+    strategy:
+      fail-fast: true
+      matrix:
+        chain: ["AMPLITUDE", "PENDULUM"]
+#       The job will run for Amplitude IF the pull request has the "amplitude" in its title
+        shouldReleaseAmp:
+          - ${{ contains(github.event.pull_request.title, 'amplitude') }}
+#       The job will run for Pendulum IF the pull request has the "pendulum" in its title
+        shouldReleasePen:
+          - ${{ contains(github.event.pull_request.title, 'pendulum') }}
+        exclude:
+          - shouldReleaseAmp: false
+            chain: "AMPLITUDE"
+          - shouldReleasePen: false
+            chain: "PENDULUM"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: trigger gitlab
+        uses: eic/trigger-gitlab-ci@v1
+        with:
+          url: https://gitlab.com
+          project_id: 56492543
+          token: ${{ secrets.GITLABAPI }}
+          ref_name: main
+          variables: |
+            ${{ matrix.chain }}=Y

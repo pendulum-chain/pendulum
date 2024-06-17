@@ -38,7 +38,7 @@ jobs:
 
     steps:
       - name: trigger gitlab
-        uses: eic/trigger-gitlab-ci@v1
+        uses: eic/trigger-gitlab-ci@v3
         with:
           url: https://gitlab.com
           project_id: 56492543

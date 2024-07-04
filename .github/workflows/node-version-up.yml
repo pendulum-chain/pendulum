@@ -7,6 +7,12 @@ on:
         description: "node version up: major, minor, or patch"
         required: true
         default: "patch"
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
 
 jobs:
   bump-version:

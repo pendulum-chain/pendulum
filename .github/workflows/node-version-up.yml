@@ -30,10 +30,12 @@ jobs:
       - name: install cargo-edit
         run: |
           cargo install cargo-edit
-      - name: set new version ${{ github.event.inputs.versioning }}
+#      - name: set new version ${{ github.event.inputs.versioning }}
+      - name: set new version
         continue-on-error: false
         run: |
-          cargo set-version --bump ${{ github.event.inputs.versioning }} --package pendulum-node
+          cargo set-version --bump patch --package pendulum-node
+#          cargo set-version --bump ${{ github.event.inputs.versioning }} --package pendulum-node
       - name: save updated version
         id: new-version
         run: |

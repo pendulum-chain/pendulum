@@ -48,7 +48,8 @@ jobs:
           echo "branch_name=release/upgrade-node-to-${{ steps.new-version.outputs.version }}" >> "$GITHUB_OUTPUT"
           git checkout -b release/upgrade-node-to-${{ steps.new-version.outputs.version }}
       - name: commit new version up
-        uses: chromeq/commit@v2.x
+        id: commit
+        uses: swinton/commit@v2.x
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

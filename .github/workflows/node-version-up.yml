@@ -49,13 +49,14 @@ jobs:
           git checkout -b release/upgrade-node-to-${{ steps.new-version.outputs.version }}
       - name: commit new version up
         id: commit
-        uses: swinton/commit@v2.x
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: chromeq/commit@v2.x
+#        env:
+#          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: |
             node/Cargo.toml
           commit-message: "upgrade node to ${{ steps.new-version.outputs.version }}"
+          ref: refs/head/main
       - name: push commit
         run: |
           git push --set-upstream origin ${{ steps.branch-name.outputs.branch_name }}

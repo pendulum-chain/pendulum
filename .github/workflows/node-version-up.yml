@@ -7,12 +7,6 @@ on:
         description: "node version up: major, minor, or patch"
         required: true
         default: "patch"
-  pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - main
 
 jobs:
   bump-version:
@@ -30,12 +24,10 @@ jobs:
       - name: install cargo-edit
         run: |
           cargo install cargo-edit
-#      - name: set new version ${{ github.event.inputs.versioning }}
-      - name: set new version
+      - name: set new version ${{ github.event.inputs.versioning }}
         continue-on-error: false
         run: |
-          cargo set-version --bump patch --package pendulum-node
-#          cargo set-version --bump ${{ github.event.inputs.versioning }} --package pendulum-node
+          cargo set-version --bump ${{ github.event.inputs.versioning }} --package pendulum-node
       - name: save updated version
         id: new-version
         run: |
@@ -47,24 +39,23 @@ jobs:
         run: |
           echo "branch_name=release/upgrade-node-to-${{ steps.new-version.outputs.version }}" >> "$GITHUB_OUTPUT"
           git checkout -b release/upgrade-node-to-${{ steps.new-version.outputs.version }}
+          git push --set-upstream origin release/upgrade-node-to-${{ steps.new-version.outputs.version }}
       - name: commit new version up
-        id: commit
-        uses: chromeq/commit@v2.x
-#        env:
-#          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: |
-            node/Cargo.toml
-          commit-message: "upgrade node to ${{ steps.new-version.outputs.version }}"
-          ref: refs/head/main
-      - name: push commit
         run: |
-          git push --set-upstream origin ${{ steps.branch-name.outputs.branch_name }}
+          gh api graphql \
+          -F githubRepository=${{ github.repository }} \
+          -F branchName=${{ steps.branch-name.outputs.branch_name }} \
+          -F expectedHeadOid=$(git rev-parse HEAD) \
+          -F commitMessage="chore: node upgrade to ${{ steps.new-version.outputs.version }}" \
+          -F files[][path]="node/Cargo.toml" -F files[][contents]=$(base64 -w0 node/Cargo.toml) \
+          -F 'query=@.github/api/createCommitOnBranch.gql'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.branch-name.outputs.branch_name }}
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6.1.0
+        uses: thomaseizinger/create-pull-request@master
         with:
-          base: "main"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           title: "release: upgrade node to ${{ steps.new-version.outputs.version }}"
-          branch: "${{ steps.branch-name.outputs.branch_name }}"
-          body: "View [CHANGES](https://github.com/${{ github.repository }}/compare/main...release/upgrade-node-to-${{ steps.new-version.outputs.version}})"
-          token: ${{ secrets.GITHUB_TOKEN }}
+          head: ${{ steps.branch-name.outputs.branch_name }}
+          base: main

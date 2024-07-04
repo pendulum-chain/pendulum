@@ -48,14 +48,13 @@ jobs:
           echo "branch_name=release/upgrade-node-to-${{ steps.new-version.outputs.version }}" >> "$GITHUB_OUTPUT"
           git checkout -b release/upgrade-node-to-${{ steps.new-version.outputs.version }}
       - name: commit new version up
-        uses: swinton/commit@v2.x
+        uses: chromeq/commit@v2.x
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files:
+          files: |
             node/Cargo.toml
           commit-message: "upgrade node to ${{ steps.new-version.outputs.version }}"
-        id: commit
       - name: push commit
         run: |
           git push --set-upstream origin ${{ steps.branch-name.outputs.branch_name }}

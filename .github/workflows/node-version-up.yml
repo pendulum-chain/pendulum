@@ -17,14 +17,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Setup user
+      - name: Setup User
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
       - name: install cargo-edit
         run: |
           cargo install cargo-edit
-      - name: set new version ${{ github.event.inputs.versioning }}
+      - name: Set New Version ${{ github.event.inputs.versioning }}
         continue-on-error: false
         run: |
           cargo set-version --bump ${{ github.event.inputs.versioning }} --package pendulum-node
@@ -34,13 +34,13 @@ jobs:
           cd node
           echo "version=$(cargo metadata --format-version=1 --no-deps | jq '.packages[0].version')" >> "$GITHUB_OUTPUT"
           cd ..
-      - name: save branch name
+      - name: Create Release Branch for version ${{ steps.new-version.outputs.version }}
         id: branch-name
         run: |
           echo "branch_name=release/upgrade-node-to-${{ steps.new-version.outputs.version }}" >> "$GITHUB_OUTPUT"
           git checkout -b release/upgrade-node-to-${{ steps.new-version.outputs.version }}
           git push --set-upstream origin release/upgrade-node-to-${{ steps.new-version.outputs.version }}
-      - name: commit new version up
+      - name: Commit New Changes to New Branch
         run: |
           gh api graphql \
           -F githubRepository=${{ github.repository }} \
@@ -59,3 +59,4 @@ jobs:
           title: "release: upgrade node to ${{ steps.new-version.outputs.version }}"
           head: ${{ steps.branch-name.outputs.branch_name }}
           base: main
+          reviewers: "ebma, TorstenStueber, bogdanS98, gianfra-t, b-yap"

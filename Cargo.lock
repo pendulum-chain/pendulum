@@ -3194,6 +3194,7 @@ dependencies = [
  "pallet-democracy",
  "pallet-identity",
  "pallet-insecure-randomness-collective-flip",
+ "pallet-mock-skip-blocks",
  "pallet-multisig",
  "pallet-preimage",
  "pallet-proxy",
@@ -7214,6 +7215,21 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-mmr-primitives",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-mock-skip-blocks"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]

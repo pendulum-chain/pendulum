@@ -110,6 +110,7 @@ parachain-staking = { path = "../../pallets/parachain-staking", default-features
 orml-currencies-allowance-extension = { path = "../../pallets/orml-currencies-allowance-extension", default-features = false }
 orml-tokens-management-extension = { path = "../../pallets/orml-tokens-management-extension", default-features = false }
 treasury-buyout-extension = { path = "../../pallets/treasury-buyout-extension", default-features = false }
+pallet-mock-skip-blocks = { path = "../../pallets/pallet-mock-skip-blocks", default-features = false }
 
 # DIA
 dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v0.9.42" }
@@ -337,4 +338,8 @@ try-runtime = [
     "treasury-buyout-extension/try-runtime",
     "bifrost-farming/try-runtime",
     "zenlink-protocol/try-runtime",
+]
+
+instant-seal = [
+    "pallet-mock-skip-blocks/instant-seal",
 ]

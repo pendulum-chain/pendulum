@@ -1415,15 +1415,15 @@ impl pallet_proxy::Config for Runtime {
 }
 
 cfg_if::cfg_if! {
-    if #[cfg(feature = "instant-seal")] {
-        impl pallet_mock_skip_blocks::Config for Runtime {
-            type RuntimeEvent = RuntimeEvent;
-        }
-    } else {
-        impl pallet_mock_skip_blocks::dummy::Config for Runtime {
+	if #[cfg(feature = "instant-seal")] {
+		impl pallet_mock_skip_blocks::Config for Runtime {
 			type RuntimeEvent = RuntimeEvent;
 		}
-    }
+	} else {
+		impl pallet_mock_skip_blocks::dummy::Config for Runtime {
+			type RuntimeEvent = RuntimeEvent;
+		}
+	}
 }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
@@ -1520,7 +1520,7 @@ construct_runtime!(
 		// Asset Metadata
 		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
 
-        MockSkipBlocks: pallet_mock_skip_blocks::{Pallet, Call, Storage, Event<T>} = 92,
+		MockSkipBlocks: pallet_mock_skip_blocks::{Pallet, Call, Storage, Event<T>} = 92,
 	}
 );
 

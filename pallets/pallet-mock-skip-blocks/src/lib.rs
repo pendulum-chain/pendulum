@@ -31,9 +31,11 @@ pub mod dummy {
 	impl<T: Config> Pallet<T> {}
 }
 
+#[cfg(feature = "instant-seal")]
 #[cfg(test)]
 mod mock;
 
+#[cfg(feature = "instant-seal")]
 #[cfg(test)]
 mod tests;
 

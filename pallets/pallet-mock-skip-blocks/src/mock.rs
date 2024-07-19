@@ -1,22 +1,15 @@
-#[cfg(feature = "instant-seal")]
 use crate::{self as pallet_mock_skip_blocks, Config};
-#[cfg(feature = "instant-seal")]
 use frame_support::{parameter_types, traits::Everything};
-#[cfg(feature = "instant-seal")]
 use sp_core::H256;
-#[cfg(feature = "instant-seal")]
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
 
-#[cfg(feature = "instant-seal")]
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
-#[cfg(feature = "instant-seal")]
 type Block = frame_system::mocking::MockBlock<Test>;
 
 // Configure a mock runtime to test the pallet.
-#[cfg(feature = "instant-seal")]
 frame_support::construct_runtime!(
 	pub enum Test where
 		Block = Block,
@@ -28,23 +21,17 @@ frame_support::construct_runtime!(
 	}
 );
 
-#[cfg(feature = "instant-seal")]
 pub type AccountId = u64;
-#[cfg(feature = "instant-seal")]
 pub type BlockNumber = u64;
-#[cfg(feature = "instant-seal")]
 pub type Index = u64;
 
-#[cfg(feature = "instant-seal")]
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const SS58Prefix: u8 = 42;
 }
 
-#[cfg(feature = "instant-seal")]
 pub type TestEvent = RuntimeEvent;
 
-#[cfg(feature = "instant-seal")]
 impl frame_system::Config for Test {
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
@@ -72,15 +59,12 @@ impl frame_system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-#[cfg(feature = "instant-seal")]
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 }
 
-#[cfg(feature = "instant-seal")]
 pub struct ExtBuilder;
 
-#[cfg(feature = "instant-seal")]
 impl ExtBuilder {
 	pub fn build() -> sp_io::TestExternalities {
 		let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
@@ -88,7 +72,6 @@ impl ExtBuilder {
 	}
 }
 
-#[cfg(feature = "instant-seal")]
 pub fn run_test<T>(test: T)
 where
 	T: FnOnce(),

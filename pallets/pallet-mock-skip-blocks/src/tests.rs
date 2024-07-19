@@ -1,10 +1,7 @@
 #![cfg(test)]
-#[cfg(feature = "instant-seal")]
 use crate::{mock::*, Error};
-#[cfg(feature = "instant-seal")]
 use frame_support::{assert_noop, assert_ok, traits::Hooks};
 
-#[cfg(feature = "instant-seal")]
 #[test]
 fn sets_and_reverts_block_number_success() {
 	run_test(|| {
@@ -39,7 +36,6 @@ fn sets_and_reverts_block_number_success() {
 	});
 }
 
-#[cfg(feature = "instant-seal")]
 #[test]
 fn setting_block_number_to_less_than_current_fails() {
 	run_test(|| {

@@ -1,10 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(feature = "instant-seal")]
-pub use pallet::*;
-
 #[cfg(not(feature = "instant-seal"))]
 pub use dummy as pallet;
+
+pub use pallet::*;
 
 #[cfg(not(feature = "instant-seal"))]
 #[frame_support::pallet]

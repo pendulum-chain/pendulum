@@ -113,3 +113,5 @@ try-runtime = [
     "pendulum-runtime/try-runtime",
     "try-runtime-cli/try-runtime"
 ]
+
+instant-seal = ["foucoco-runtime/instant-seal"]

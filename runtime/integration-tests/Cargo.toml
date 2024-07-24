@@ -66,4 +66,5 @@ amplitude-runtime = { path = "../amplitude" }
 default = ["std"]
 std = [
     "codec/std",
+    "xcm-builder/std"
 ]

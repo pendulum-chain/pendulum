@@ -44,6 +44,7 @@ jobs:
         with:
           toolchain: nightly-2024-05-30
           command: test
+          args: --features runtime-benchmarks try-runtime
 
       - name: Clippy -- Main
         uses: actions-rs/cargo@v1

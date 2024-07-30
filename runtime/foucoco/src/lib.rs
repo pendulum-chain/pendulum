@@ -1414,17 +1414,27 @@ impl pallet_proxy::Config for Runtime {
 	type AnnouncementDepositFactor = AnnouncementDepositFactor;
 }
 
-cfg_if::cfg_if! {
-	if #[cfg(feature = "instant-seal")] {
-		impl pallet_mock_skip_blocks::Config for Runtime {
-			type RuntimeEvent = RuntimeEvent;
-		}
-	} else {
-		impl pallet_mock_skip_blocks::dummy::Config for Runtime {
-			type RuntimeEvent = RuntimeEvent;
-		}
-	}
+// cfg_if::cfg_if! {
+// 	if #[cfg(feature = "instant-seal")] {
+// 		impl pallet_mock_skip_blocks::Config for Runtime {
+// 			type RuntimeEvent = RuntimeEvent;
+// 		}
+// 	} else {
+// 		impl pallet_mock_skip_blocks::dummy::Config for Runtime {
+// 			type RuntimeEvent = RuntimeEvent;
+// 		}
+// 	}
+// }
+
+//#[cfg(feature = "instant-seal")]
+impl pallet_mock_skip_blocks::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
 }
+
+// #[cfg(not(feature = "instant-seal"))]
+// impl pallet_mock_skip_blocks::dummy::Config for Runtime {
+// 	type RuntimeEvent = RuntimeEvent;
+// }
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
 where

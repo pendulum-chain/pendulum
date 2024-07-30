@@ -1,0 +1,27 @@
+[package]
+name = "pallet-mock-skip-blocks"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["std"]
+std = [
+    "frame-system/std",
+    "frame-support/std",
+]
+
+instant-seal = []
+
+[dependencies]
+# hex-literal = { version = "0.3.4", optional = true }
+codec = { package = "parity-scale-codec", version = "3.1.5", default-features = false, features = ["derive", "max-encoded-len"] }
+scale-info = { version = "2.2.0", default-features = false, features = ["derive"] }
+serde = { version = "1.0.130", default-features = false, features = ["derive"], optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+
+[dev-dependencies]
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }

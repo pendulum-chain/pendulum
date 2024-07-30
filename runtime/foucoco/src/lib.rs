@@ -374,6 +374,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			| RuntimeCall::Proxy(_)
 			| RuntimeCall::OrmlExtension(_)
 			| RuntimeCall::TreasuryBuyoutExtension(_)
+			| RuntimeCall::MockSkipBlocks(_)
 			| RuntimeCall::RewardDistribution(_) => true, // All pallets are allowed, but exhaustive match is defensive
 			                                              // in the case of adding new pallets.
 		}
@@ -1413,6 +1414,28 @@ impl pallet_proxy::Config for Runtime {
 	type AnnouncementDepositFactor = AnnouncementDepositFactor;
 }
 
+// cfg_if::cfg_if! {
+// 	if #[cfg(feature = "instant-seal")] {
+// 		impl pallet_mock_skip_blocks::Config for Runtime {
+// 			type RuntimeEvent = RuntimeEvent;
+// 		}
+// 	} else {
+// 		impl pallet_mock_skip_blocks::dummy::Config for Runtime {
+// 			type RuntimeEvent = RuntimeEvent;
+// 		}
+// 	}
+// }
+
+//#[cfg(feature = "instant-seal")]
+impl pallet_mock_skip_blocks::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+}
+
+// #[cfg(not(feature = "instant-seal"))]
+// impl pallet_mock_skip_blocks::dummy::Config for Runtime {
+// 	type RuntimeEvent = RuntimeEvent;
+// }
+
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
 where
 	RuntimeCall: From<C>,
@@ -1507,6 +1530,7 @@ construct_runtime!(
 		// Asset Metadata
 		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
 
+		MockSkipBlocks: pallet_mock_skip_blocks::{Pallet, Call, Storage, Event<T>} = 92,
 	}
 );
 

@@ -25,21 +25,22 @@ members = [
 # need this because of bifrost farming dependency in runtime
 # bifrost farming uses different orml-traits for orml-currencies
 [patch."https://github.com/open-web3-stack/open-runtime-module-library"]
-orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.42" }
+orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v1.1.0" }
 
+# TODO do we still need this? after using both from bifrost 
 # need this because of bifrost farming dependency in runtime
 # bifrost uses :
 # orml packages { version = "0.4.1-dev" }
 # zenlink packages  { version = "*" }
 [patch.crates-io]
-orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.42" }
-orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.42" }
-orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.42" }
-zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", branch = "polkadot-v0.9.42" }
-zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", branch = "polkadot-v0.9.42" }
+orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v1.1.0" }
+orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v1.1.0" }
+orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v1.1.0" }
+zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.1.0" }
+zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.1.0" }
 
-
-[patch.'https://github.com/paritytech/substrate']
-pallet-vesting = { git = "https://github.com/pendulum-chain/patch-pallet-vesting-transaction-storage", branch = "polkadot-v0.9.42" }
-pallet-transaction-payment = { git = "https://github.com/pendulum-chain/patch-pallet-vesting-transaction-storage", branch = "polkadot-v0.9.42" }
+# TODO remove comment once 1.1.0 branch exists for these
+#[patch.'https://github.com/paritytech/substrate']
+#pallet-vesting = { git = "https://github.com/pendulum-chain/patch-pallet-vesting-transaction-storage", branch = "polkadot-v0.9.42" }
+#pallet-transaction-payment = { git = "https://github.com/pendulum-chain/patch-pallet-vesting-transaction-storage", branch = "polkadot-v0.9.42" }
 

@@ -12,7 +12,7 @@ serde = { version = "1.0.144", features = ["derive"] }
 paste = "1.0.14"
 
 # Spacewalk libraries
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "a518fb489f3121983af182e337797d9704f88fe6" }
 
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
@@ -43,7 +43,7 @@ cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", bran
 cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
 cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
-cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.42" }
+cumulus-primitives-utility = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }
 
 statemint-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.42" }

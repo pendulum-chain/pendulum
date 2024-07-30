@@ -118,11 +118,11 @@ vesting-manager = { path = "../../pallets/vesting-manager", default-features = f
 
 # Polkadot
 pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot-sdk", package = "polkadot-parachain-bin", default-features = false, branch = "release-polkadot-v1.1.0"}
 polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-xcm = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-xcm-builder = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
+xcm = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm", default-features = false , branch = "release-polkadot-v1.1.0" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm-builder", default-features = false, branch = "release-polkadot-v1.1.0" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm-executor", default-features = false , branch = "release-polkadot-v1.1.0"}
 
 # Cumulus
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
@@ -200,7 +200,6 @@ std = [
     "pallet-vesting/std",
     "pallet-xcm/std",
     "parachain-info/std",
-    "polkadot-parachain/std",
     "polkadot-runtime-common/std",
     "runtime-common/std",
     "sp-api/std",

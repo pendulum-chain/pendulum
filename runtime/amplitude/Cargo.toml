@@ -120,11 +120,11 @@ dia-oracle-runtime-api = { git = "https://github.com/pendulum-chain/oracle-palle
 
 # Polkadot
 pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot-sdk", package = "polkadot-parachain-bin", branch = "release-polkadot-v1.1.0", default-features = false }
 polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-xcm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm", branch = "release-polkadot-v1.1.0", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm-builder", branch = "release-polkadot-v1.1.0", default-features = false }
+xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm-executor", branch = "release-polkadot-v1.1.0", default-features = false }
 
 # Cumulus
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
@@ -200,7 +200,6 @@ std = [
     "pallet-vesting/std",
     "pallet-xcm/std",
     "parachain-info/std",
-    "polkadot-parachain/std",
     "polkadot-runtime-common/std",
     "runtime-common/std",
     "sp-api/std",

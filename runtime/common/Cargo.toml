@@ -24,8 +24,8 @@ sp-consensus-aura = { git = "https://github.com/paritytech/polkadot-sdk", defaul
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 
-xcm = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
+xcm = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm", default-features = false, branch = "release-polkadot-v1.1.0" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm-executor", default-features = false, branch = "release-polkadot-v1.1.0" }
 
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v1.1.0" }
 orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "polkadot-v1.1.0" }

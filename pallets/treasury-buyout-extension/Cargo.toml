@@ -31,7 +31,7 @@ spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", de
 mocktopus = "0.8.0"
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm", branch = "release-polkadot-v1.1.0", default-features = false }
 
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
 

@@ -120,7 +120,7 @@ dia-oracle-runtime-api = { git = "https://github.com/pendulum-chain/oracle-palle
 
 # Polkadot
 pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot-sdk", package = "polkadot-parachain-bin", branch = "release-polkadot-v1.1.0", default-features = false }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot-sdk", package = "polkadot-parachain-primitives", branch = "release-polkadot-v1.1.0", default-features = false }
 polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm", branch = "release-polkadot-v1.1.0", default-features = false }
 xcm-builder = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm-builder", branch = "release-polkadot-v1.1.0", default-features = false }
@@ -142,8 +142,8 @@ parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", branch = 
 zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.1.0" }
 zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.1.0" }
 
-bifrost-farming = { git = "https://github.com/bifrost-finance/bifrost", default-features = false, branch = "polkadot-v1.1.0" }
-bifrost-farming-rpc-runtime-api = { git = "https://github.com/bifrost-finance/bifrost", default-features = false, branch = "polkadot-v1.1.0" }
+bifrost-farming = { git = "https://github.com/bifrost-finance/bifrost", default-features = false, rev = "46ba3689c2fe1011cce0d752cb479e0e522e2e76" }
+bifrost-farming-rpc-runtime-api = { git = "https://github.com/bifrost-finance/bifrost", default-features = false, rev = "46ba3689c2fe1011cce0d752cb479e0e522e2e76" }
 
 [features]
 default = [

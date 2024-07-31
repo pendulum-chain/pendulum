@@ -198,7 +198,7 @@ dependencies = [
  "parachain-staking",
  "parity-scale-codec",
  "paste",
- "polkadot-parachain-bin",
+ "polkadot-parachain-primitives 1.0.0",
  "polkadot-runtime-common 1.0.0",
  "pooled-rewards",
  "price-chain-extension",
@@ -621,83 +621,10 @@ checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
 
 [[package]]
 name = "asset-hub-kusama-runtime"
-version = "0.9.420"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "assets-common 0.1.0",
- "cumulus-pallet-aura-ext 0.1.0",
- "cumulus-pallet-dmp-queue 0.1.0",
- "cumulus-pallet-parachain-system 0.1.0",
- "cumulus-pallet-session-benchmarking 3.0.0",
- "cumulus-pallet-xcm 0.1.0",
- "cumulus-pallet-xcmp-queue 0.1.0",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "cumulus-primitives-utility 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-executive 4.0.0-dev",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-rpc-runtime-api 4.0.0-dev",
- "frame-try-runtime 0.10.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "hex-literal 0.4.1",
- "kusama-runtime-constants 1.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "pallet-asset-conversion 4.0.0-dev",
- "pallet-asset-conversion-tx-payment 4.0.0-dev",
- "pallet-assets 4.0.0-dev",
- "pallet-aura 4.0.0-dev",
- "pallet-authorship 4.0.0-dev",
- "pallet-balances 4.0.0-dev",
- "pallet-collator-selection 3.0.0",
- "pallet-multisig 4.0.0-dev",
- "pallet-nft-fractionalization 4.0.0-dev",
- "pallet-nfts 4.0.0-dev",
- "pallet-nfts-runtime-api 4.0.0-dev",
- "pallet-proxy 4.0.0-dev",
- "pallet-session 4.0.0-dev",
- "pallet-state-trie-migration 4.0.0-dev",
- "pallet-timestamp 4.0.0-dev",
- "pallet-transaction-payment 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-transaction-payment-rpc-runtime-api 4.0.0-dev",
- "pallet-uniques 4.0.0-dev",
- "pallet-utility 4.0.0-dev",
- "pallet-xcm 1.0.0",
- "pallet-xcm-benchmarks 1.0.0",
- "parachain-info",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "polkadot-core-primitives 1.0.0",
- "polkadot-parachain-primitives 1.0.0",
- "polkadot-runtime-common 1.0.0",
- "primitive-types",
- "scale-info",
- "smallvec",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-consensus-aura 0.10.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-std 8.0.0",
- "sp-storage 13.0.0",
- "sp-transaction-pool 4.0.0-dev",
- "sp-version 22.0.0",
- "sp-weights 20.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
- "staging-xcm-executor 1.0.0",
- "substrate-wasm-builder",
-]
-
-[[package]]
-name = "asset-hub-kusama-runtime"
 version = "1.0.0"
 source = "git+https://github.com/polkadot-fellows/runtimes?rev=45cb7b4346542be0c94af500422de61d14dd364a#45cb7b4346542be0c94af500422de61d14dd364a"
 dependencies = [
- "assets-common 0.4.0",
+ "assets-common",
  "bp-asset-hub-kusama",
  "bp-asset-hub-polkadot",
  "bp-bridge-hub-kusama",
@@ -720,24 +647,24 @@ dependencies = [
  "hex-literal 0.4.1",
  "kusama-runtime-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?rev=45cb7b4346542be0c94af500422de61d14dd364a)",
  "log",
- "pallet-asset-conversion 7.0.0",
- "pallet-asset-conversion-tx-payment 7.0.0",
+ "pallet-asset-conversion",
+ "pallet-asset-conversion-tx-payment",
  "pallet-assets 26.0.0",
  "pallet-aura 24.0.0",
  "pallet-authorship 25.0.0",
  "pallet-balances 25.0.0",
  "pallet-collator-selection 6.0.0",
  "pallet-multisig 25.0.0",
- "pallet-nft-fractionalization 7.0.0",
- "pallet-nfts 19.0.0",
- "pallet-nfts-runtime-api 11.0.0",
+ "pallet-nft-fractionalization",
+ "pallet-nfts",
+ "pallet-nfts-runtime-api",
  "pallet-proxy 25.0.0",
  "pallet-session 25.0.0",
  "pallet-state-trie-migration 26.0.0",
  "pallet-timestamp 24.0.0",
  "pallet-transaction-payment 25.0.0",
  "pallet-transaction-payment-rpc-runtime-api 25.0.0",
- "pallet-uniques 25.0.0",
+ "pallet-uniques",
  "pallet-utility 25.0.0",
  "pallet-xcm 4.0.0",
  "pallet-xcm-benchmarks 4.0.1",
@@ -775,78 +702,10 @@ dependencies = [
 
 [[package]]
 name = "asset-hub-polkadot-runtime"
-version = "0.9.420"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "assets-common 0.1.0",
- "cumulus-pallet-aura-ext 0.1.0",
- "cumulus-pallet-dmp-queue 0.1.0",
- "cumulus-pallet-parachain-system 0.1.0",
- "cumulus-pallet-session-benchmarking 3.0.0",
- "cumulus-pallet-xcm 0.1.0",
- "cumulus-pallet-xcmp-queue 0.1.0",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "cumulus-primitives-utility 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-executive 4.0.0-dev",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-rpc-runtime-api 4.0.0-dev",
- "frame-try-runtime 0.10.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "pallet-asset-tx-payment 4.0.0-dev",
- "pallet-assets 4.0.0-dev",
- "pallet-aura 4.0.0-dev",
- "pallet-authorship 4.0.0-dev",
- "pallet-balances 4.0.0-dev",
- "pallet-collator-selection 3.0.0",
- "pallet-multisig 4.0.0-dev",
- "pallet-nfts 4.0.0-dev",
- "pallet-nfts-runtime-api 4.0.0-dev",
- "pallet-proxy 4.0.0-dev",
- "pallet-session 4.0.0-dev",
- "pallet-timestamp 4.0.0-dev",
- "pallet-transaction-payment 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-transaction-payment-rpc-runtime-api 4.0.0-dev",
- "pallet-uniques 4.0.0-dev",
- "pallet-utility 4.0.0-dev",
- "pallet-xcm 1.0.0",
- "pallet-xcm-benchmarks 1.0.0",
- "parachain-info",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "polkadot-core-primitives 1.0.0",
- "polkadot-parachain-primitives 1.0.0",
- "polkadot-runtime-common 1.0.0",
- "polkadot-runtime-constants 1.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "scale-info",
- "smallvec",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-consensus-aura 0.10.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-std 8.0.0",
- "sp-storage 13.0.0",
- "sp-transaction-pool 4.0.0-dev",
- "sp-version 22.0.0",
- "sp-weights 20.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
- "staging-xcm-executor 1.0.0",
- "substrate-wasm-builder",
-]
-
-[[package]]
-name = "asset-hub-polkadot-runtime"
 version = "1.0.0"
 source = "git+https://github.com/polkadot-fellows/runtimes?rev=45cb7b4346542be0c94af500422de61d14dd364a#45cb7b4346542be0c94af500422de61d14dd364a"
 dependencies = [
- "assets-common 0.4.0",
+ "assets-common",
  "bp-asset-hub-kusama",
  "bp-asset-hub-polkadot",
  "bp-bridge-hub-kusama",
@@ -875,14 +734,14 @@ dependencies = [
  "pallet-balances 25.0.0",
  "pallet-collator-selection 6.0.0",
  "pallet-multisig 25.0.0",
- "pallet-nfts 19.0.0",
- "pallet-nfts-runtime-api 11.0.0",
+ "pallet-nfts",
+ "pallet-nfts-runtime-api",
  "pallet-proxy 25.0.0",
  "pallet-session 25.0.0",
  "pallet-timestamp 24.0.0",
  "pallet-transaction-payment 25.0.0",
  "pallet-transaction-payment-rpc-runtime-api 25.0.0",
- "pallet-uniques 25.0.0",
+ "pallet-uniques",
  "pallet-utility 25.0.0",
  "pallet-xcm 4.0.0",
  "pallet-xcm-benchmarks 4.0.1",
@@ -918,101 +777,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "asset-hub-westend-runtime"
-version = "0.9.420"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "assets-common 0.1.0",
- "cumulus-pallet-aura-ext 0.1.0",
- "cumulus-pallet-dmp-queue 0.1.0",
- "cumulus-pallet-parachain-system 0.1.0",
- "cumulus-pallet-session-benchmarking 3.0.0",
- "cumulus-pallet-xcm 0.1.0",
- "cumulus-pallet-xcmp-queue 0.1.0",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "cumulus-primitives-utility 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-executive 4.0.0-dev",
- "frame-metadata-hash-extension",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-rpc-runtime-api 4.0.0-dev",
- "frame-try-runtime 0.10.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "pallet-asset-conversion 4.0.0-dev",
- "pallet-asset-conversion-tx-payment 4.0.0-dev",
- "pallet-assets 4.0.0-dev",
- "pallet-aura 4.0.0-dev",
- "pallet-authorship 4.0.0-dev",
- "pallet-balances 4.0.0-dev",
- "pallet-collator-selection 3.0.0",
- "pallet-multisig 4.0.0-dev",
- "pallet-nft-fractionalization 4.0.0-dev",
- "pallet-nfts 4.0.0-dev",
- "pallet-nfts-runtime-api 4.0.0-dev",
- "pallet-proxy 4.0.0-dev",
- "pallet-session 4.0.0-dev",
- "pallet-timestamp 4.0.0-dev",
- "pallet-transaction-payment 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-transaction-payment-rpc-runtime-api 4.0.0-dev",
- "pallet-uniques 4.0.0-dev",
- "pallet-utility 4.0.0-dev",
- "pallet-xcm 1.0.0",
- "pallet-xcm-benchmarks 1.0.0",
- "parachain-info",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "polkadot-core-primitives 1.0.0",
- "polkadot-parachain-primitives 1.0.0",
- "polkadot-runtime-common 1.0.0",
- "primitive-types",
- "scale-info",
- "smallvec",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-consensus-aura 0.10.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-std 8.0.0",
- "sp-storage 13.0.0",
- "sp-transaction-pool 4.0.0-dev",
- "sp-version 22.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
- "staging-xcm-executor 1.0.0",
- "substrate-wasm-builder",
- "westend-runtime-constants 1.0.0",
-]
-
-[[package]]
-name = "assets-common"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "impl-trait-for-tuples",
- "log",
- "pallet-asset-conversion 4.0.0-dev",
- "pallet-asset-tx-payment 4.0.0-dev",
- "pallet-xcm 1.0.0",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "scale-info",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
- "staging-xcm-executor 1.0.0",
- "substrate-wasm-builder",
-]
-
-[[package]]
 name = "assets-common"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1022,7 +786,7 @@ dependencies = [
  "frame-support 25.0.0",
  "impl-trait-for-tuples",
  "log",
- "pallet-asset-conversion 7.0.0",
+ "pallet-asset-conversion",
  "pallet-asset-tx-payment 25.0.0",
  "pallet-xcm 4.0.0",
  "parachains-common 4.0.0",
@@ -1345,7 +1109,7 @@ dependencies = [
 [[package]]
 name = "bifrost-farming"
 version = "0.8.0"
-source = "git+https://github.com/bifrost-finance/bifrost?branch=polkadot-v1.1.0#39adf660ad5d7b79c3fcfdd510a841ba2320d887"
+source = "git+https://github.com/bifrost-finance/bifrost?rev=46ba3689c2fe1011cce0d752cb479e0e522e2e76#46ba3689c2fe1011cce0d752cb479e0e522e2e76"
 dependencies = [
  "bifrost-primitives",
  "bifrost-ve-minting",
@@ -1365,9 +1129,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "bifrost-farming-rpc-api"
+name = "bifrost-farming-rpc"
 version = "0.8.0"
-source = "git+https://github.com/bifrost-finance/bifrost?branch=polkadot-v1.1.0#39adf660ad5d7b79c3fcfdd510a841ba2320d887"
+source = "git+https://github.com/bifrost-finance/bifrost?rev=46ba3689c2fe1011cce0d752cb479e0e522e2e76#46ba3689c2fe1011cce0d752cb479e0e522e2e76"
 dependencies = [
  "bifrost-farming-rpc-runtime-api",
  "bifrost-primitives",
@@ -1384,7 +1148,7 @@ dependencies = [
 [[package]]
 name = "bifrost-farming-rpc-runtime-api"
 version = "0.8.0"
-source = "git+https://github.com/bifrost-finance/bifrost?branch=polkadot-v1.1.0#39adf660ad5d7b79c3fcfdd510a841ba2320d887"
+source = "git+https://github.com/bifrost-finance/bifrost?rev=46ba3689c2fe1011cce0d752cb479e0e522e2e76#46ba3689c2fe1011cce0d752cb479e0e522e2e76"
 dependencies = [
  "bifrost-primitives",
  "parity-scale-codec",
@@ -1395,10 +1159,11 @@ dependencies = [
 [[package]]
 name = "bifrost-primitives"
 version = "0.8.0"
-source = "git+https://github.com/bifrost-finance/bifrost?branch=polkadot-v1.1.0#39adf660ad5d7b79c3fcfdd510a841ba2320d887"
+source = "git+https://github.com/bifrost-finance/bifrost?rev=46ba3689c2fe1011cce0d752cb479e0e522e2e76#46ba3689c2fe1011cce0d752cb479e0e522e2e76"
 dependencies = [
  "bstringify",
  "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
+ "orml-oracle 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=b3694e631df7f1ca16b1973122937753fcdee9d4)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -1412,7 +1177,7 @@ dependencies = [
 [[package]]
 name = "bifrost-ve-minting"
 version = "0.8.0"
-source = "git+https://github.com/bifrost-finance/bifrost?branch=polkadot-v1.1.0#39adf660ad5d7b79c3fcfdd510a841ba2320d887"
+source = "git+https://github.com/bifrost-finance/bifrost?rev=46ba3689c2fe1011cce0d752cb479e0e522e2e76#46ba3689c2fe1011cce0d752cb479e0e522e2e76"
 dependencies = [
  "bifrost-primitives",
  "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
@@ -1662,7 +1427,7 @@ name = "bp-asset-hub-kusama"
 version = "1.0.0"
 source = "git+https://github.com/polkadot-fellows/runtimes?rev=45cb7b4346542be0c94af500422de61d14dd364a#45cb7b4346542be0c94af500422de61d14dd364a"
 dependencies = [
- "bp-xcm-bridge-hub-router 0.3.0",
+ "bp-xcm-bridge-hub-router",
  "frame-support 25.0.0",
  "parity-scale-codec",
  "scale-info",
@@ -1675,7 +1440,7 @@ name = "bp-asset-hub-polkadot"
 version = "1.0.0"
 source = "git+https://github.com/polkadot-fellows/runtimes?rev=45cb7b4346542be0c94af500422de61d14dd364a#45cb7b4346542be0c94af500422de61d14dd364a"
 dependencies = [
- "bp-xcm-bridge-hub-router 0.3.0",
+ "bp-xcm-bridge-hub-router",
  "frame-support 25.0.0",
  "parity-scale-codec",
  "scale-info",
@@ -1685,28 +1450,13 @@ dependencies = [
 
 [[package]]
 name = "bp-bridge-hub-cumulus"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-messages 0.1.0",
- "bp-polkadot-core 0.1.0",
- "bp-runtime 0.1.0",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "polkadot-primitives 1.0.0",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "bp-bridge-hub-cumulus"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b18aaf9ed9ecffade4d56bb1a63cd70b9e61ea4ef69023f2dcd0fd54d18f280"
 dependencies = [
- "bp-messages 0.4.0",
- "bp-polkadot-core 0.4.0",
- "bp-runtime 0.4.0",
+ "bp-messages",
+ "bp-polkadot-core",
+ "bp-runtime",
  "frame-support 25.0.0",
  "frame-system 25.0.0",
  "polkadot-primitives 4.0.0",
@@ -1719,9 +1469,9 @@ name = "bp-bridge-hub-kusama"
 version = "1.0.0"
 source = "git+https://github.com/polkadot-fellows/runtimes?rev=45cb7b4346542be0c94af500422de61d14dd364a#45cb7b4346542be0c94af500422de61d14dd364a"
 dependencies = [
- "bp-bridge-hub-cumulus 0.4.0",
- "bp-messages 0.4.0",
- "bp-runtime 0.4.0",
+ "bp-bridge-hub-cumulus",
+ "bp-messages",
+ "bp-runtime",
  "frame-support 25.0.0",
  "kusama-runtime-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?rev=45cb7b4346542be0c94af500422de61d14dd364a)",
  "polkadot-runtime-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?rev=45cb7b4346542be0c94af500422de61d14dd364a)",
@@ -1735,9 +1485,9 @@ name = "bp-bridge-hub-polkadot"
 version = "1.0.0"
 source = "git+https://github.com/polkadot-fellows/runtimes?rev=45cb7b4346542be0c94af500422de61d14dd364a#45cb7b4346542be0c94af500422de61d14dd364a"
 dependencies = [
- "bp-bridge-hub-cumulus 0.4.0",
- "bp-messages 0.4.0",
- "bp-runtime 0.4.0",
+ "bp-bridge-hub-cumulus",
+ "bp-messages",
+ "bp-runtime",
  "frame-support 25.0.0",
  "kusama-runtime-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?rev=45cb7b4346542be0c94af500422de61d14dd364a)",
  "polkadot-runtime-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?rev=45cb7b4346542be0c94af500422de61d14dd364a)",
@@ -1747,57 +1497,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "bp-bridge-hub-rococo"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-bridge-hub-cumulus 0.1.0",
- "bp-messages 0.1.0",
- "bp-runtime 0.1.0",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "bp-bridge-hub-wococo"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-bridge-hub-cumulus 0.1.0",
- "bp-messages 0.1.0",
- "bp-runtime 0.1.0",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "bp-header-chain"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-runtime 0.1.0",
- "finality-grandpa",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-consensus-grandpa 4.0.0-dev",
- "sp-core 21.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
 name = "bp-header-chain"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb057324305f7cacce9d87a82d0e6e8de8ec2ff40fd2df707f97f74ddd0631f9"
 dependencies = [
- "bp-runtime 0.4.0",
+ "bp-runtime",
  "finality-grandpa",
  "frame-support 25.0.0",
  "parity-scale-codec",
@@ -1811,27 +1516,12 @@ dependencies = [
 
 [[package]]
 name = "bp-messages"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-header-chain 0.1.0",
- "bp-runtime 0.1.0",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core 21.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "bp-messages"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4df7b23c2c5cdfb7260c0c88835e554f857b0a80e4c1cfa48dd1194e6fb6c6d"
 dependencies = [
- "bp-header-chain 0.4.0",
- "bp-runtime 0.4.0",
+ "bp-header-chain",
+ "bp-runtime",
  "frame-support 25.0.0",
  "parity-scale-codec",
  "scale-info",
@@ -1841,48 +1531,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "bp-parachains"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-header-chain 0.1.0",
- "bp-polkadot-core 0.1.0",
- "bp-runtime 0.1.0",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "impl-trait-for-tuples",
- "parity-scale-codec",
- "scale-info",
- "sp-core 21.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "bp-polkadot-core"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-messages 0.1.0",
- "bp-runtime 0.1.0",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "parity-scale-codec",
- "parity-util-mem",
- "scale-info",
- "serde",
- "sp-core 21.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
 name = "bp-polkadot-core"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34f0342d051a3b07fecbcabc7efca35880865ede7ef5b2b49ca323c94bdb6d53"
 dependencies = [
- "bp-messages 0.4.0",
- "bp-runtime 0.4.0",
+ "bp-messages",
+ "bp-runtime",
  "frame-support 25.0.0",
  "frame-system 25.0.0",
  "parity-scale-codec",
@@ -1892,56 +1547,6 @@ dependencies = [
  "sp-core 25.0.0",
  "sp-runtime 28.0.0",
  "sp-std 12.0.0",
-]
-
-[[package]]
-name = "bp-relayers"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-messages 0.1.0",
- "bp-runtime 0.1.0",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "bp-rococo"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-header-chain 0.1.0",
- "bp-polkadot-core 0.1.0",
- "bp-runtime 0.1.0",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "bp-runtime"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "hash-db",
- "impl-trait-for-tuples",
- "log",
- "num-traits",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core 21.0.0",
- "sp-io 23.0.0",
- "sp-runtime 24.0.0",
- "sp-state-machine 0.28.0",
- "sp-std 8.0.0",
- "sp-trie 22.0.0",
- "trie-db 0.27.1",
 ]
 
 [[package]]
@@ -1969,51 +1574,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bp-test-utils"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-header-chain 0.1.0",
- "bp-parachains",
- "bp-polkadot-core 0.1.0",
- "bp-runtime 0.1.0",
- "ed25519-dalek 1.0.1",
- "finality-grandpa",
- "parity-scale-codec",
- "sp-application-crypto 23.0.0",
- "sp-consensus-grandpa 4.0.0-dev",
- "sp-core 21.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
- "sp-trie 22.0.0",
-]
-
-[[package]]
-name = "bp-wococo"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-header-chain 0.1.0",
- "bp-polkadot-core 0.1.0",
- "bp-rococo",
- "bp-runtime 0.1.0",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "bp-xcm-bridge-hub-router"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "parity-scale-codec",
- "scale-info",
- "sp-core 21.0.0",
- "sp-runtime 24.0.0",
-]
-
-[[package]]
 name = "bp-xcm-bridge-hub-router"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2023,244 +1583,6 @@ dependencies = [
  "scale-info",
  "sp-core 25.0.0",
  "sp-runtime 28.0.0",
-]
-
-[[package]]
-name = "bridge-hub-kusama-runtime"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "cumulus-pallet-aura-ext 0.1.0",
- "cumulus-pallet-dmp-queue 0.1.0",
- "cumulus-pallet-parachain-system 0.1.0",
- "cumulus-pallet-session-benchmarking 3.0.0",
- "cumulus-pallet-xcm 0.1.0",
- "cumulus-pallet-xcmp-queue 0.1.0",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "cumulus-primitives-utility 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-executive 4.0.0-dev",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-rpc-runtime-api 4.0.0-dev",
- "frame-try-runtime 0.10.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "hex-literal 0.4.1",
- "kusama-runtime-constants 1.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "pallet-aura 4.0.0-dev",
- "pallet-authorship 4.0.0-dev",
- "pallet-balances 4.0.0-dev",
- "pallet-collator-selection 3.0.0",
- "pallet-multisig 4.0.0-dev",
- "pallet-session 4.0.0-dev",
- "pallet-timestamp 4.0.0-dev",
- "pallet-transaction-payment 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-transaction-payment-rpc-runtime-api 4.0.0-dev",
- "pallet-utility 4.0.0-dev",
- "pallet-xcm 1.0.0",
- "pallet-xcm-benchmarks 1.0.0",
- "parachain-info",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "polkadot-core-primitives 1.0.0",
- "polkadot-parachain-primitives 1.0.0",
- "polkadot-runtime-common 1.0.0",
- "scale-info",
- "serde",
- "smallvec",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-consensus-aura 0.10.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-io 23.0.0",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-std 8.0.0",
- "sp-storage 13.0.0",
- "sp-transaction-pool 4.0.0-dev",
- "sp-version 22.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
- "staging-xcm-executor 1.0.0",
- "substrate-wasm-builder",
-]
-
-[[package]]
-name = "bridge-hub-polkadot-runtime"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "cumulus-pallet-aura-ext 0.1.0",
- "cumulus-pallet-dmp-queue 0.1.0",
- "cumulus-pallet-parachain-system 0.1.0",
- "cumulus-pallet-session-benchmarking 3.0.0",
- "cumulus-pallet-xcm 0.1.0",
- "cumulus-pallet-xcmp-queue 0.1.0",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "cumulus-primitives-utility 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-executive 4.0.0-dev",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-rpc-runtime-api 4.0.0-dev",
- "frame-try-runtime 0.10.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "hex-literal 0.4.1",
- "log",
- "pallet-aura 4.0.0-dev",
- "pallet-authorship 4.0.0-dev",
- "pallet-balances 4.0.0-dev",
- "pallet-collator-selection 3.0.0",
- "pallet-multisig 4.0.0-dev",
- "pallet-session 4.0.0-dev",
- "pallet-timestamp 4.0.0-dev",
- "pallet-transaction-payment 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-transaction-payment-rpc-runtime-api 4.0.0-dev",
- "pallet-utility 4.0.0-dev",
- "pallet-xcm 1.0.0",
- "pallet-xcm-benchmarks 1.0.0",
- "parachain-info",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "polkadot-core-primitives 1.0.0",
- "polkadot-parachain-primitives 1.0.0",
- "polkadot-runtime-common 1.0.0",
- "polkadot-runtime-constants 1.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "scale-info",
- "serde",
- "smallvec",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-consensus-aura 0.10.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-io 23.0.0",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-std 8.0.0",
- "sp-storage 13.0.0",
- "sp-transaction-pool 4.0.0-dev",
- "sp-version 22.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
- "staging-xcm-executor 1.0.0",
- "substrate-wasm-builder",
-]
-
-[[package]]
-name = "bridge-hub-rococo-runtime"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-bridge-hub-rococo",
- "bp-bridge-hub-wococo",
- "bp-header-chain 0.1.0",
- "bp-messages 0.1.0",
- "bp-parachains",
- "bp-polkadot-core 0.1.0",
- "bp-relayers",
- "bp-rococo",
- "bp-runtime 0.1.0",
- "bp-wococo",
- "bridge-runtime-common",
- "cumulus-pallet-aura-ext 0.1.0",
- "cumulus-pallet-dmp-queue 0.1.0",
- "cumulus-pallet-parachain-system 0.1.0",
- "cumulus-pallet-session-benchmarking 3.0.0",
- "cumulus-pallet-xcm 0.1.0",
- "cumulus-pallet-xcmp-queue 0.1.0",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "cumulus-primitives-utility 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-executive 4.0.0-dev",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-rpc-runtime-api 4.0.0-dev",
- "frame-try-runtime 0.10.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "hex-literal 0.4.1",
- "log",
- "pallet-aura 4.0.0-dev",
- "pallet-authorship 4.0.0-dev",
- "pallet-balances 4.0.0-dev",
- "pallet-bridge-grandpa",
- "pallet-bridge-messages",
- "pallet-bridge-parachains",
- "pallet-bridge-relayers",
- "pallet-collator-selection 3.0.0",
- "pallet-multisig 4.0.0-dev",
- "pallet-session 4.0.0-dev",
- "pallet-timestamp 4.0.0-dev",
- "pallet-transaction-payment 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-transaction-payment-rpc-runtime-api 4.0.0-dev",
- "pallet-utility 4.0.0-dev",
- "pallet-xcm 1.0.0",
- "pallet-xcm-benchmarks 1.0.0",
- "parachain-info",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "polkadot-core-primitives 1.0.0",
- "polkadot-parachain-primitives 1.0.0",
- "polkadot-runtime-common 1.0.0",
- "rococo-runtime-constants 1.0.0",
- "scale-info",
- "serde",
- "smallvec",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-consensus-aura 0.10.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-io 23.0.0",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-std 8.0.0",
- "sp-storage 13.0.0",
- "sp-transaction-pool 4.0.0-dev",
- "sp-version 22.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
- "staging-xcm-executor 1.0.0",
- "substrate-wasm-builder",
-]
-
-[[package]]
-name = "bridge-runtime-common"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-header-chain 0.1.0",
- "bp-messages 0.1.0",
- "bp-parachains",
- "bp-polkadot-core 0.1.0",
- "bp-relayers",
- "bp-runtime 0.1.0",
- "bp-xcm-bridge-hub-router 0.1.0",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "hash-db",
- "log",
- "pallet-bridge-grandpa",
- "pallet-bridge-messages",
- "pallet-bridge-parachains",
- "pallet-bridge-relayers",
- "pallet-transaction-payment 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-utility 4.0.0-dev",
- "parity-scale-codec",
- "scale-info",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-core 21.0.0",
- "sp-io 23.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
- "sp-trie 22.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
 ]
 
 [[package]]
@@ -2635,97 +1957,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "collectives-polkadot-runtime"
-version = "1.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "cumulus-pallet-aura-ext 0.1.0",
- "cumulus-pallet-dmp-queue 0.1.0",
- "cumulus-pallet-parachain-system 0.1.0",
- "cumulus-pallet-session-benchmarking 3.0.0",
- "cumulus-pallet-xcm 0.1.0",
- "cumulus-pallet-xcmp-queue 0.1.0",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "cumulus-primitives-utility 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-executive 4.0.0-dev",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-rpc-runtime-api 4.0.0-dev",
- "frame-try-runtime 0.10.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "hex-literal 0.4.1",
- "log",
- "pallet-alliance",
- "pallet-aura 4.0.0-dev",
- "pallet-authorship 4.0.0-dev",
- "pallet-balances 4.0.0-dev",
- "pallet-collator-selection 3.0.0",
- "pallet-collective 4.0.0-dev",
- "pallet-core-fellowship",
- "pallet-multisig 4.0.0-dev",
- "pallet-preimage 4.0.0-dev",
- "pallet-proxy 4.0.0-dev",
- "pallet-ranked-collective 4.0.0-dev",
- "pallet-referenda 4.0.0-dev",
- "pallet-salary",
- "pallet-scheduler 4.0.0-dev",
- "pallet-session 4.0.0-dev",
- "pallet-timestamp 4.0.0-dev",
- "pallet-transaction-payment 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-transaction-payment-rpc-runtime-api 4.0.0-dev",
- "pallet-utility 4.0.0-dev",
- "pallet-xcm 1.0.0",
- "parachain-info",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "polkadot-core-primitives 1.0.0",
- "polkadot-parachain-primitives 1.0.0",
- "polkadot-runtime-common 1.0.0",
- "polkadot-runtime-constants 1.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "scale-info",
- "smallvec",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-arithmetic 16.0.0",
- "sp-block-builder 4.0.0-dev",
- "sp-consensus-aura 0.10.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-std 8.0.0",
- "sp-storage 13.0.0",
- "sp-transaction-pool 4.0.0-dev",
- "sp-version 22.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
- "staging-xcm-executor 1.0.0",
- "substrate-wasm-builder",
-]
-
-[[package]]
-name = "color-print"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ee543c60ff3888934877a5671f45494dd27ed4ba25c6670b9a7576b7ed7a8c0"
-dependencies = [
- "color-print-proc-macro",
-]
-
-[[package]]
-name = "color-print-proc-macro"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77ff1a80c5f3cb1ca7c06ffdd71b6a6dd6d8f896c42141fbd43f50ed28dcdb93"
-dependencies = [
- "nom",
- "proc-macro2",
- "quote",
- "syn 2.0.65",
-]
-
-[[package]]
 name = "colorchoice"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2827,69 +2058,6 @@ name = "constcat"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd7e35aee659887cbfb97aaf227ac12cad1a9d7c71e55ff3376839ed4e282d08"
-
-[[package]]
-name = "contracts-rococo-runtime"
-version = "0.2.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "cumulus-pallet-aura-ext 0.1.0",
- "cumulus-pallet-dmp-queue 0.1.0",
- "cumulus-pallet-parachain-system 0.1.0",
- "cumulus-pallet-session-benchmarking 3.0.0",
- "cumulus-pallet-xcm 0.1.0",
- "cumulus-pallet-xcmp-queue 0.1.0",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "cumulus-primitives-utility 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-executive 4.0.0-dev",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-rpc-runtime-api 4.0.0-dev",
- "frame-try-runtime 0.10.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "kusama-runtime-constants 1.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "pallet-aura 4.0.0-dev",
- "pallet-authorship 4.0.0-dev",
- "pallet-balances 4.0.0-dev",
- "pallet-collator-selection 3.0.0",
- "pallet-contracts",
- "pallet-contracts-primitives",
- "pallet-insecure-randomness-collective-flip",
- "pallet-multisig 4.0.0-dev",
- "pallet-session 4.0.0-dev",
- "pallet-sudo",
- "pallet-timestamp 4.0.0-dev",
- "pallet-transaction-payment 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-transaction-payment-rpc-runtime-api 4.0.0-dev",
- "pallet-utility 4.0.0-dev",
- "pallet-xcm 1.0.0",
- "parachain-info",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "polkadot-core-primitives 1.0.0",
- "polkadot-parachain-primitives 1.0.0",
- "polkadot-runtime-common 1.0.0",
- "scale-info",
- "smallvec",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-consensus-aura 0.10.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-std 8.0.0",
- "sp-storage 13.0.0",
- "sp-transaction-pool 4.0.0-dev",
- "sp-version 22.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
- "staging-xcm-executor 1.0.0",
- "substrate-wasm-builder",
-]
 
 [[package]]
 name = "convert_case"
@@ -3294,29 +2462,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cumulus-client-consensus-relay-chain"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "async-trait",
- "cumulus-client-consensus-common",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "cumulus-relay-chain-interface 0.1.0",
- "futures",
- "parking_lot 0.12.2",
- "sc-consensus 0.10.0-dev",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-blockchain 4.0.0-dev",
- "sp-consensus 0.10.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-runtime 24.0.0",
- "substrate-prometheus-endpoint 0.10.0-dev",
- "tracing",
-]
-
-[[package]]
 name = "cumulus-client-network"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
@@ -3585,22 +2730,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cumulus-pallet-solo-to-para"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "cumulus-pallet-parachain-system 0.1.0",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-sudo",
- "parity-scale-codec",
- "polkadot-primitives 1.0.0",
- "scale-info",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
 name = "cumulus-pallet-xcm"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
@@ -3660,7 +2789,7 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6af9816dd6564149729ba133c2c984c88fb15c4a2cb66f57be06b9147744e51"
 dependencies = [
- "bp-xcm-bridge-hub-router 0.3.0",
+ "bp-xcm-bridge-hub-router",
  "cumulus-primitives-core 0.4.0",
  "frame-benchmarking 25.0.0",
  "frame-support 25.0.0",
@@ -3677,22 +2806,6 @@ dependencies = [
  "sp-std 12.0.0",
  "staging-xcm 4.0.0",
  "staging-xcm-executor 4.0.2",
-]
-
-[[package]]
-name = "cumulus-ping"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "cumulus-pallet-xcm 0.1.0",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
- "staging-xcm 1.0.0",
 ]
 
 [[package]]
@@ -4563,8 +3676,6 @@ checksum = "c762bae6dcaf24c4c84667b8579785430908723d5c889f469d76a41d59cc7a9d"
 dependencies = [
  "curve25519-dalek 3.2.0",
  "ed25519 1.5.3",
- "rand 0.7.3",
- "serde",
  "sha2 0.9.9",
  "zeroize",
 ]
@@ -5190,7 +4301,7 @@ dependencies = [
  "parachain-staking",
  "parity-scale-codec",
  "paste",
- "polkadot-parachain-bin",
+ "polkadot-parachain-primitives 1.0.0",
  "polkadot-runtime-common 1.0.0",
  "pooled-rewards",
  "price-chain-extension",
@@ -6252,44 +5363,6 @@ dependencies = [
  "serde_json",
  "wasm-bindgen",
  "web-sys",
-]
-
-[[package]]
-name = "glutton-runtime"
-version = "1.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "cumulus-pallet-parachain-system 0.1.0",
- "cumulus-pallet-xcm 0.1.0",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-executive 4.0.0-dev",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-rpc-runtime-api 4.0.0-dev",
- "frame-try-runtime 0.10.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-glutton",
- "pallet-sudo",
- "parachain-info",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "scale-info",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-std 8.0.0",
- "sp-storage 13.0.0",
- "sp-transaction-pool 4.0.0-dev",
- "sp-version 22.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
- "staging-xcm-executor 1.0.0",
- "substrate-wasm-builder",
 ]
 
 [[package]]
@@ -8813,7 +7886,7 @@ dependencies = [
  "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
  "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
  "once_cell",
- "orml-oracle",
+ "orml-oracle 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v1.1.0)",
  "pallet-balances 4.0.0-dev",
  "pallet-timestamp 4.0.0-dev",
  "parity-scale-codec",
@@ -9001,6 +8074,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-oracle"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=b3694e631df7f1ca16b1973122937753fcdee9d4#b3694e631df7f1ca16b1973122937753fcdee9d4"
+dependencies = [
+ "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
+ "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
+ "orml-traits",
+ "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=b3694e631df7f1ca16b1973122937753fcdee9d4)",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-application-crypto 23.0.0",
+ "sp-io 23.0.0",
+ "sp-runtime 24.0.0",
+ "sp-std 8.0.0",
+]
+
+[[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v1.1.0#b3694e631df7f1ca16b1973122937753fcdee9d4"
@@ -9108,6 +8199,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-utilities"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=b3694e631df7f1ca16b1973122937753fcdee9d4#b3694e631df7f1ca16b1973122937753fcdee9d4"
+dependencies = [
+ "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core 21.0.0",
+ "sp-io 23.0.0",
+ "sp-runtime 24.0.0",
+ "sp-std 8.0.0",
+]
+
+[[package]]
 name = "orml-xcm"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v1.1.0#b3694e631df7f1ca16b1973122937753fcdee9d4"
@@ -9193,44 +8299,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-alliance"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "pallet-collective 4.0.0-dev",
- "pallet-identity 4.0.0-dev",
- "parity-scale-codec",
- "scale-info",
- "sp-core 21.0.0",
- "sp-core-hashing 9.0.0",
- "sp-io 23.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "pallet-asset-conversion"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "parity-scale-codec",
- "scale-info",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-arithmetic 16.0.0",
- "sp-core 21.0.0",
- "sp-io 23.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
 name = "pallet-asset-conversion"
 version = "7.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9251,28 +8319,13 @@ dependencies = [
 
 [[package]]
 name = "pallet-asset-conversion-tx-payment"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-asset-conversion 4.0.0-dev",
- "pallet-transaction-payment 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "pallet-asset-conversion-tx-payment"
 version = "7.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64952179a5a409dead964a387c86a29d16d40a34cf54bf88e4d74ffdcdddf7a6"
 dependencies = [
  "frame-support 25.0.0",
  "frame-system 25.0.0",
- "pallet-asset-conversion 7.0.0",
+ "pallet-asset-conversion",
  "pallet-transaction-payment 25.0.0",
  "parity-scale-codec",
  "scale-info",
@@ -9718,87 +8771,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-bridge-grandpa"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-header-chain 0.1.0",
- "bp-runtime 0.1.0",
- "bp-test-utils",
- "finality-grandpa",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-consensus-grandpa 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
- "sp-trie 22.0.0",
-]
-
-[[package]]
-name = "pallet-bridge-messages"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-messages 0.1.0",
- "bp-runtime 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "num-traits",
- "parity-scale-codec",
- "scale-info",
- "sp-core 21.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "pallet-bridge-parachains"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-header-chain 0.1.0",
- "bp-parachains",
- "bp-polkadot-core 0.1.0",
- "bp-runtime 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "pallet-bridge-grandpa",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
- "sp-trie 22.0.0",
-]
-
-[[package]]
-name = "pallet-bridge-relayers"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "bp-messages 0.1.0",
- "bp-relayers",
- "bp-runtime 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "pallet-bridge-messages",
- "parity-scale-codec",
- "scale-info",
- "sp-arithmetic 16.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
 name = "pallet-child-bounties"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
@@ -9999,24 +8971,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-core-fellowship"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-arithmetic 16.0.0",
- "sp-core 21.0.0",
- "sp-io 23.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
 name = "pallet-democracy"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
@@ -10205,24 +9159,6 @@ dependencies = [
  "sp-runtime 28.0.0",
  "sp-staking 23.0.0",
  "sp-std 12.0.0",
-]
-
-[[package]]
-name = "pallet-glutton"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "blake2 0.10.6",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-core 21.0.0",
- "sp-io 23.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
 ]
 
 [[package]]
@@ -10541,23 +9477,6 @@ dependencies = [
 
 [[package]]
 name = "pallet-nft-fractionalization"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "pallet-assets 4.0.0-dev",
- "pallet-nfts 4.0.0-dev",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "pallet-nft-fractionalization"
 version = "7.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "959fb2e68e4421650538d9b64a3243f0a0cdc8962f35f749af18bf9b70f7253d"
@@ -10567,29 +9486,11 @@ dependencies = [
  "frame-system 25.0.0",
  "log",
  "pallet-assets 26.0.0",
- "pallet-nfts 19.0.0",
+ "pallet-nfts",
  "parity-scale-codec",
  "scale-info",
  "sp-runtime 28.0.0",
  "sp-std 12.0.0",
-]
-
-[[package]]
-name = "pallet-nfts"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "enumflags2",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-core 21.0.0",
- "sp-io 23.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
 ]
 
 [[package]]
@@ -10613,21 +9514,11 @@ dependencies = [
 
 [[package]]
 name = "pallet-nfts-runtime-api"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "pallet-nfts 4.0.0-dev",
- "parity-scale-codec",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
-]
-
-[[package]]
-name = "pallet-nfts-runtime-api"
 version = "11.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1a64c725e28fdf7d2512c1ce8eab8ba05fc7211fb864ee6c3d2300a2b3bd381"
 dependencies = [
- "pallet-nfts 19.0.0",
+ "pallet-nfts",
  "parity-scale-codec",
  "sp-api 23.0.0",
 ]
@@ -11022,24 +9913,6 @@ dependencies = [
  "sp-io 27.0.0",
  "sp-runtime 28.0.0",
  "sp-std 12.0.0",
-]
-
-[[package]]
-name = "pallet-salary"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-arithmetic 16.0.0",
- "sp-core 21.0.0",
- "sp-io 23.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
 ]
 
 [[package]]
@@ -11561,21 +10434,6 @@ dependencies = [
 
 [[package]]
 name = "pallet-uniques"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "pallet-uniques"
 version = "25.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8010c79bac1b78fb35b3ee17b40469dec3fcf2eaa6fd863c5be5d96f2ad46bfd"
@@ -11794,7 +10652,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e2d8a783510d2fb4c0e81f591baad76fa8ebbed0f77852bf23720b299539b61"
 dependencies = [
- "bp-xcm-bridge-hub-router 0.3.0",
+ "bp-xcm-bridge-hub-router",
  "frame-benchmarking 25.0.0",
  "frame-support 25.0.0",
  "frame-system 25.0.0",
@@ -12122,7 +10980,7 @@ name = "pendulum-node"
 version = "0.1.0"
 dependencies = [
  "amplitude-runtime",
- "bifrost-farming-rpc-api",
+ "bifrost-farming-rpc",
  "bifrost-farming-rpc-runtime-api",
  "clap",
  "cumulus-client-cli",
@@ -12270,7 +11128,7 @@ dependencies = [
  "parachain-staking",
  "parity-scale-codec",
  "paste",
- "polkadot-parachain-bin",
+ "polkadot-parachain-primitives 1.0.0",
  "polkadot-runtime-common 1.0.0",
  "pooled-rewards",
  "price-chain-extension",
@@ -12307,65 +11165,6 @@ dependencies = [
  "vesting-manager",
  "zenlink-protocol",
  "zenlink-protocol-runtime-api",
-]
-
-[[package]]
-name = "penpal-runtime"
-version = "0.9.27"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "cumulus-pallet-aura-ext 0.1.0",
- "cumulus-pallet-dmp-queue 0.1.0",
- "cumulus-pallet-parachain-system 0.1.0",
- "cumulus-pallet-session-benchmarking 3.0.0",
- "cumulus-pallet-xcm 0.1.0",
- "cumulus-pallet-xcmp-queue 0.1.0",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "cumulus-primitives-utility 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-executive 4.0.0-dev",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-rpc-runtime-api 4.0.0-dev",
- "frame-try-runtime 0.10.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "log",
- "pallet-asset-tx-payment 4.0.0-dev",
- "pallet-assets 4.0.0-dev",
- "pallet-aura 4.0.0-dev",
- "pallet-authorship 4.0.0-dev",
- "pallet-balances 4.0.0-dev",
- "pallet-collator-selection 3.0.0",
- "pallet-session 4.0.0-dev",
- "pallet-sudo",
- "pallet-timestamp 4.0.0-dev",
- "pallet-transaction-payment 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-transaction-payment-rpc-runtime-api 4.0.0-dev",
- "pallet-xcm 1.0.0",
- "parachain-info",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "polkadot-parachain-primitives 1.0.0",
- "polkadot-primitives 1.0.0",
- "polkadot-runtime-common 1.0.0",
- "scale-info",
- "smallvec",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-consensus-aura 0.10.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-std 8.0.0",
- "sp-storage 13.0.0",
- "sp-transaction-pool 4.0.0-dev",
- "sp-version 22.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
- "staging-xcm-executor 1.0.0",
- "substrate-wasm-builder",
 ]
 
 [[package]]
@@ -13405,85 +12204,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "polkadot-parachain-bin"
-version = "1.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "asset-hub-kusama-runtime 0.9.420",
- "asset-hub-polkadot-runtime 0.9.420",
- "asset-hub-westend-runtime",
- "async-trait",
- "bridge-hub-kusama-runtime",
- "bridge-hub-polkadot-runtime",
- "bridge-hub-rococo-runtime",
- "clap",
- "collectives-polkadot-runtime",
- "color-print",
- "contracts-rococo-runtime",
- "cumulus-client-cli",
- "cumulus-client-collator",
- "cumulus-client-consensus-aura",
- "cumulus-client-consensus-common",
- "cumulus-client-consensus-proposer",
- "cumulus-client-consensus-relay-chain",
- "cumulus-client-service",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "cumulus-primitives-parachain-inherent 0.1.0",
- "cumulus-relay-chain-interface 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-benchmarking-cli",
- "futures",
- "glutton-runtime",
- "hex-literal 0.4.1",
- "jsonrpsee",
- "log",
- "pallet-transaction-payment-rpc",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "penpal-runtime",
- "polkadot-cli",
- "polkadot-primitives 1.0.0",
- "polkadot-service",
- "rococo-parachain-runtime",
- "sc-basic-authorship",
- "sc-chain-spec 4.0.0-dev",
- "sc-cli 0.10.0-dev",
- "sc-client-api 4.0.0-dev",
- "sc-consensus 0.10.0-dev",
- "sc-executor 0.10.0-dev",
- "sc-network 0.10.0-dev",
- "sc-network-sync 0.10.0-dev",
- "sc-rpc 4.0.0-dev",
- "sc-service 0.10.0-dev",
- "sc-sysinfo 6.0.0-dev",
- "sc-telemetry 4.0.0-dev",
- "sc-tracing 4.0.0-dev",
- "sc-transaction-pool 4.0.0-dev",
- "sc-transaction-pool-api 4.0.0-dev",
- "seedling-runtime",
- "serde",
- "serde_json",
- "shell-runtime",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-blockchain 4.0.0-dev",
- "sp-consensus-aura 0.10.0-dev",
- "sp-core 21.0.0",
- "sp-io 23.0.0",
- "sp-keystore 0.27.0",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-timestamp 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-transaction-pool 4.0.0-dev",
- "staging-xcm 1.0.0",
- "substrate-build-script-utils",
- "substrate-frame-rpc-system",
- "substrate-prometheus-endpoint 0.10.0-dev",
- "substrate-state-trie-migration-rpc",
-]
-
-[[package]]
 name = "polkadot-parachain-primitives"
 version = "1.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
@@ -14101,7 +12821,6 @@ dependencies = [
  "async-trait",
  "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
  "frame-benchmarking-cli",
- "frame-metadata-hash-extension",
  "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
  "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
  "frame-system-rpc-runtime-api 4.0.0-dev",
@@ -14157,7 +12876,6 @@ dependencies = [
  "polkadot-runtime-parachains 1.0.0",
  "polkadot-statement-distribution",
  "rococo-runtime",
- "rococo-runtime-constants 1.0.0",
  "sc-authority-discovery 0.10.0-dev",
  "sc-basic-authorship",
  "sc-block-builder 0.10.0-dev",
@@ -15211,54 +13929,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rococo-parachain-runtime"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "cumulus-pallet-aura-ext 0.1.0",
- "cumulus-pallet-dmp-queue 0.1.0",
- "cumulus-pallet-parachain-system 0.1.0",
- "cumulus-pallet-xcm 0.1.0",
- "cumulus-pallet-xcmp-queue 0.1.0",
- "cumulus-ping",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "cumulus-primitives-utility 0.1.0",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-executive 4.0.0-dev",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system-rpc-runtime-api 4.0.0-dev",
- "pallet-assets 4.0.0-dev",
- "pallet-aura 4.0.0-dev",
- "pallet-balances 4.0.0-dev",
- "pallet-sudo",
- "pallet-timestamp 4.0.0-dev",
- "pallet-transaction-payment 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-transaction-payment-rpc-runtime-api 4.0.0-dev",
- "pallet-xcm 1.0.0",
- "parachain-info",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "polkadot-parachain-primitives 1.0.0",
- "scale-info",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-consensus-aura 0.10.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-std 8.0.0",
- "sp-transaction-pool 4.0.0-dev",
- "sp-version 22.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
- "staging-xcm-executor 1.0.0",
- "substrate-wasm-builder",
-]
-
-[[package]]
 name = "rococo-runtime"
 version = "1.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
@@ -15444,8 +14114,8 @@ name = "runtime-integration-tests"
 version = "0.1.0"
 dependencies = [
  "amplitude-runtime",
- "asset-hub-kusama-runtime 1.0.0",
- "asset-hub-polkadot-runtime 1.0.0",
+ "asset-hub-kusama-runtime",
+ "asset-hub-polkadot-runtime",
  "cumulus-pallet-dmp-queue 0.1.0",
  "cumulus-pallet-xcm 0.1.0",
  "cumulus-pallet-xcmp-queue 0.1.0",
@@ -15467,7 +14137,7 @@ dependencies = [
  "paste",
  "pendulum-runtime",
  "polkadot-core-primitives 1.0.0",
- "polkadot-parachain-bin",
+ "polkadot-parachain-primitives 1.0.0",
  "polkadot-primitives 1.0.0",
  "polkadot-runtime 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?rev=45cb7b4346542be0c94af500422de61d14dd364a)",
  "polkadot-runtime-common 1.0.0",
@@ -17889,36 +16559,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "seedling-runtime"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "cumulus-pallet-parachain-system 0.1.0",
- "cumulus-pallet-solo-to-para",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-executive 4.0.0-dev",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "pallet-balances 4.0.0-dev",
- "pallet-sudo",
- "parachain-info",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "scale-info",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-std 8.0.0",
- "sp-transaction-pool 4.0.0-dev",
- "sp-version 22.0.0",
- "substrate-wasm-builder",
-]
-
-[[package]]
 name = "semver"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -18063,38 +16703,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static",
-]
-
-[[package]]
-name = "shell-runtime"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-dependencies = [
- "cumulus-pallet-parachain-system 0.1.0",
- "cumulus-pallet-xcm 0.1.0",
- "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-executive 4.0.0-dev",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "frame-try-runtime 0.10.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "parachain-info",
- "parachains-common 1.0.0",
- "parity-scale-codec",
- "scale-info",
- "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-block-builder 4.0.0-dev",
- "sp-core 21.0.0",
- "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
- "sp-offchain 4.0.0-dev",
- "sp-runtime 24.0.0",
- "sp-session 4.0.0-dev",
- "sp-std 8.0.0",
- "sp-transaction-pool 4.0.0-dev",
- "sp-version 22.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-builder 1.0.0",
- "staging-xcm-executor 1.0.0",
- "substrate-wasm-builder",
 ]
 
 [[package]]
@@ -23507,11 +22115,6 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "substrate-wasm-builder"
-version = "5.0.0-dev"
-source = "git+https://github.com/paritytech//polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
-
-[[patch.unused]]
 name = "orml-currencies"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack//open-runtime-module-library?branch=polkadot-v1.1.0#b3694e631df7f1ca16b1973122937753fcdee9d4"
@@ -23520,3 +22123,8 @@ source = "git+https://github.com/open-web3-stack//open-runtime-module-library?br
 name = "orml-tokens"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack//open-runtime-module-library?branch=polkadot-v1.1.0#b3694e631df7f1ca16b1973122937753fcdee9d4"
+
+[[patch.unused]]
+name = "substrate-wasm-builder"
+version = "5.0.0-dev"
+source = "git+https://github.com/paritytech//polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"

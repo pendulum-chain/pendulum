@@ -118,7 +118,7 @@ vesting-manager = { path = "../../pallets/vesting-manager", default-features = f
 
 # Polkadot
 pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot-sdk", package = "polkadot-parachain-bin", default-features = false, branch = "release-polkadot-v1.1.0"}
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot-sdk", package = "polkadot-parachain-primitives", default-features = false, branch = "release-polkadot-v1.1.0"}
 polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 xcm = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm", default-features = false , branch = "release-polkadot-v1.1.0" }
 xcm-builder = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm-builder", default-features = false, branch = "release-polkadot-v1.1.0" }
@@ -141,8 +141,8 @@ zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Modul
 zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.1.0" }
 
 #Bifrost
-bifrost-farming = { git = "https://github.com/bifrost-finance/bifrost", default-features = false, branch = "polkadot-v1.1.0" }
-bifrost-farming-rpc-runtime-api = { git = "https://github.com/bifrost-finance/bifrost", default-features = false, branch = "polkadot-v1.1.0" }
+bifrost-farming = { git = "https://github.com/bifrost-finance/bifrost", default-features = false, rev = "46ba3689c2fe1011cce0d752cb479e0e522e2e76" }
+bifrost-farming-rpc-runtime-api = { git = "https://github.com/bifrost-finance/bifrost", default-features = false, rev = "46ba3689c2fe1011cce0d752cb479e0e522e2e76" }
 
 [features]
 default = [

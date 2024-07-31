@@ -115,7 +115,7 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			for i in &self.allowed_currencies.clone() {
 				AllowedCurrencies::<T>::insert(i, ());

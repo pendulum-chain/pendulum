@@ -71,6 +71,8 @@ pub enum ChainExtensionTokenError {
 	CannotCreateHold,
 	/// Withdrawal would cause unwanted loss of account.
 	NotExpendable,
+	/// Blocked
+	Blocked,
 	/// Unknown error
 	Unknown,
 }
@@ -121,6 +123,7 @@ impl From<TokenError> for ChainExtensionTokenError {
 			TokenError::CannotCreateHold => ChainExtensionTokenError::CannotCreateHold,
 			TokenError::NotExpendable => ChainExtensionTokenError::NotExpendable,
 			TokenError::Unsupported => ChainExtensionTokenError::Unsupported,
+			TokenError::Blocked => ChainExtensionTokenError::Blocked,
 		}
 	}
 }
@@ -197,6 +200,7 @@ impl ChainExtensionTokenError {
 			ChainExtensionTokenError::OnlyProvider => 6,
 			ChainExtensionTokenError::CannotCreateHold => 7,
 			ChainExtensionTokenError::NotExpendable => 8,
+			ChainExtensionTokenError::Blocked => 9,
 			ChainExtensionTokenError::Unknown => 999,
 		}
 	}

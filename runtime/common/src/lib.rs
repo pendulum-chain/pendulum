@@ -13,6 +13,7 @@ use sp_runtime::{
 };
 #[cfg(feature = "runtime-benchmarks")]
 use sp_std::vec;
+use sp_std::borrow::Borrow;
 use spacewalk_primitives::CurrencyId;
 use treasury_buyout_extension::PriceGetter;
 use xcm::v3::{AssetId, MultiAsset, MultiLocation};
@@ -189,12 +190,30 @@ impl<
 	}
 }
 
+/// Infallible conversion trait. Generic over both source and destination types.
+pub trait ConvertMultilocation<A: Clone, B: Clone> {
+	/// Convert from `value` (of type `A`) into an equivalent value of type `B`, `Err` if not possible.
+	fn convert(value: A) -> Result<B, A> {
+		Self::convert_ref(&value).map_err(|_| value)
+	}
+	fn convert_ref(value: impl Borrow<A>) -> Result<B, ()> {
+		Self::convert(value.borrow().clone()).map_err(|_| ())
+	}
+	/// Convert from `value` (of type `B`) into an equivalent value of type `A`, `Err` if not possible.
+	fn reverse(value: B) -> Result<A, B> {
+		Self::reverse_ref(&value).map_err(|_| value)
+	}
+	fn reverse_ref(value: impl Borrow<B>) -> Result<A, ()> {
+		Self::reverse(value.borrow().clone()).map_err(|_| ())
+	}
+}
+
 /// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
 /// Here we need to know the canonical representation of all the tokens we handle in order to
 /// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
 impl<
 		AssetRegistry: Inspect<AssetId = CurrencyId, Balance = Balance, CustomMetadata = CustomMetadata>,
-	> xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert<AssetRegistry>
+	> ConvertMultilocation<MultiLocation, CurrencyId> for CurrencyIdConvert<AssetRegistry>
 {
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
 		<CurrencyIdConvert<AssetRegistry> as Convert<MultiLocation, Option<CurrencyId>>>::convert(

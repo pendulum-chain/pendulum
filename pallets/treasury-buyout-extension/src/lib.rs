@@ -21,7 +21,7 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use frame_support::{
-	dispatch::{DispatchError, DispatchResult},
+	dispatch::DispatchResult,
 	ensure,
 	sp_runtime::SaturatedConversion,
 	traits::{Get, IsSubType},
@@ -36,6 +36,7 @@ use sp_runtime::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
 	},
 	ArithmeticError, FixedPointNumber, FixedU128,
+	DispatchError,
 };
 use sp_std::{fmt::Debug, marker::PhantomData, vec::Vec};
 use spacewalk_primitives::DecimalsLookup;
@@ -166,7 +167,7 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			for i in &self.allowed_currencies.clone() {
 				AllowedCurrencies::<T>::insert(i, ());

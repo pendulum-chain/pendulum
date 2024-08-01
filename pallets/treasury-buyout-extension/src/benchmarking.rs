@@ -3,7 +3,7 @@
 
 use super::{Pallet as TreasuryBuyoutExtension, *};
 use crate::types::{AccountIdOf, BalanceOf, CurrencyIdOf};
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, Vec};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use sp_std::prelude::*;

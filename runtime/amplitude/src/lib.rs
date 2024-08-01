@@ -151,8 +151,6 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
 
-use frame_support::pallet_prelude::{GetStorageVersion};
-
 use runtime_common::asset_registry::StringLimit;
 
 parameter_types! {
@@ -966,10 +964,10 @@ parameter_types! {
 	pub const DepositPerItem: Balance = deposit(1, 0);
 	pub const DepositPerByte: Balance = deposit(0, 1);
 	pub const DefaultDepositLimit: Balance = deposit(1024, 1024 * 1024);
+	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 	// TODO is this value okay?
 	pub const CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(10);
 	pub const MaxDelegateDependencies: u32 = 32;
-	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 }
 
 impl pallet_contracts::Config for Runtime {
@@ -1952,7 +1950,7 @@ impl_runtime_apis! {
 		{
 			let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
 			Contracts::bare_instantiate(
-			origin,
+				origin,
                 value,
                 gas_limit,
                 storage_deposit_limit,

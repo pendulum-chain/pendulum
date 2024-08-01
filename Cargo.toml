@@ -45,10 +45,3 @@ substrate-wasm-builder = { git = "https://github.com/paritytech//polkadot-sdk", 
 # fix to a new version of that used in polkadto-sdk 1.1.0 (5.0.0), due to different one (14.0.0) used from polkadot-fellows/runtimes.
 [patch."https://github.com/paritytech/polkadot-sdk"]
 substrate-wasm-builder = {version = "14.0.0" }
-
-
-# TODO remove comment once 1.1.0 branch exists for these
-#[patch.'https://github.com/paritytech/substrate']
-#pallet-vesting = { git = "https://github.com/pendulum-chain/patch-pallet-vesting-transaction-storage", branch = "polkadot-v0.9.42" }
-#pallet-transaction-payment = { git = "https://github.com/pendulum-chain/patch-pallet-vesting-transaction-storage", branch = "polkadot-v0.9.42" }
-

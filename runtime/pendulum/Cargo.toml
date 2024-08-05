@@ -93,6 +93,7 @@ sp-offchain = { git = "https://github.com/paritytech/polkadot-sdk", default-feat
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 sp-session = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 sp-std = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
+sp-storage = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 sp-transaction-pool = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 sp-version = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 
@@ -212,6 +213,7 @@ std = [
     "sp-runtime/std",
     "sp-session/std",
     "sp-std/std",
+    "sp-storage/std",
     "sp-transaction-pool/std",
     "sp-version/std",
     "xcm-builder/std",

@@ -1166,7 +1166,7 @@ pub struct DataFeederBenchmark<K, V, A>(PhantomData<(K, V, A)>);
 
 #[cfg(feature = "runtime-benchmarks")]
 impl<K, V, A> orml_traits::DataFeeder<K, V, A> for DataFeederBenchmark<K, V, A> {
-	fn feed_value(_who: A, _key: K, _value: V) -> sp_runtime::DispatchResult {
+	fn feed_value(_who: Option<A>, _key: K, _value: V) -> sp_runtime::DispatchResult {
 		Ok(())
 	}
 }
@@ -1783,8 +1783,8 @@ impl_runtime_apis! {
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch, TrackedStorageKey};
-
+			use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch};
+			use sp_storage::TrackedStorageKey;
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use baseline::Pallet as BaselineBench;
 

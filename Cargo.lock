@@ -10627,8 +10627,10 @@ dependencies = [
  "bifrost-farming-rpc-runtime-api",
  "clap",
  "cumulus-client-cli",
+ "cumulus-client-collator",
  "cumulus-client-consensus-aura",
  "cumulus-client-consensus-common",
+ "cumulus-client-consensus-proposer",
  "cumulus-client-network",
  "cumulus-client-service",
  "cumulus-primitives-core 0.1.0",
@@ -10640,6 +10642,7 @@ dependencies = [
  "foucoco-runtime",
  "frame-benchmarking 4.0.0-dev",
  "frame-benchmarking-cli",
+ "futures",
  "jsonrpsee",
  "log",
  "module-issue-rpc",
@@ -10666,6 +10669,7 @@ dependencies = [
  "sc-executor 0.10.0-dev",
  "sc-network 0.10.0-dev",
  "sc-network-sync 0.10.0-dev",
+ "sc-offchain",
  "sc-rpc 4.0.0-dev",
  "sc-service 0.10.0-dev",
  "sc-sysinfo 6.0.0-dev",
@@ -20968,6 +20972,11 @@ dependencies = [
 ]
 
 [[patch.unused]]
+name = "substrate-wasm-builder"
+version = "5.0.0-dev"
+source = "git+https://github.com/paritytech//polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
+
+[[patch.unused]]
 name = "orml-currencies"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack//open-runtime-module-library?branch=polkadot-v1.1.0#b3694e631df7f1ca16b1973122937753fcdee9d4"
@@ -20976,8 +20985,3 @@ source = "git+https://github.com/open-web3-stack//open-runtime-module-library?br
 name = "orml-tokens"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack//open-runtime-module-library?branch=polkadot-v1.1.0#b3694e631df7f1ca16b1973122937753fcdee9d4"
-
-[[patch.unused]]
-name = "substrate-wasm-builder"
-version = "5.0.0-dev"
-source = "git+https://github.com/paritytech//polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"

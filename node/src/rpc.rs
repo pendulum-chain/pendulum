@@ -10,7 +10,7 @@ use std::sync::Arc;
 pub use sc_rpc::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 
-use bifrost_farming_rpc_api::{FarmingRpc, FarmingRpcApiServer};
+use bifrost_farming_rpc::{FarmingRpc, FarmingRpcApiServer};
 
 use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApiServer};
 

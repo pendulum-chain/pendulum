@@ -10,6 +10,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0" }
 scale-info = { version = "2.1.2", features = ["derive"] }
 serde = { version = "1.0.144", features = ["derive"] }
 paste = "1.0.14"
+log = { version = "0.4.17" }
 
 # Spacewalk libraries
 spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "a518fb489f3121983af182e337797d9704f88fe6" }
@@ -33,21 +34,24 @@ polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot-sdk",
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot-sdk", package = "polkadot-parachain-primitives", branch = "release-polkadot-v1.1.0" }
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-polkadot-runtime = { git = "https://github.com/polkadot-fellows/runtimes", rev = "45cb7b4346542be0c94af500422de61d14dd364a"}
-kusama-runtime = { git = "https://github.com/polkadot-fellows/runtimes", package = "staging-kusama-runtime", rev = "45cb7b4346542be0c94af500422de61d14dd364a"}
+polkadot-runtime = { git = "https://github.com/polkadot-fellows/runtimes", rev = "c0e66c3e121cc5da7d59415015019c3bb0ec6581"}
+kusama-runtime = { git = "https://github.com/polkadot-fellows/runtimes", package = "staging-kusama-runtime", rev = "c0e66c3e121cc5da7d59415015019c3bb0ec6581"}
 polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 
 xcm-emulator = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+xcm-simulator = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 
 cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 cumulus-pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 cumulus-primitives-utility = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
+cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
+pallet-message-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 
-statemint-runtime = { git = "https://github.com/polkadot-fellows/runtimes", package = "asset-hub-polkadot-runtime", rev = "45cb7b4346542be0c94af500422de61d14dd364a" }
-statemine-runtime = { git = "https://github.com/polkadot-fellows/runtimes", package = "asset-hub-kusama-runtime", rev = "45cb7b4346542be0c94af500422de61d14dd364a" }
+statemint-runtime = { git = "https://github.com/polkadot-fellows/runtimes", package = "asset-hub-polkadot-runtime", rev = "c0e66c3e121cc5da7d59415015019c3bb0ec6581" }
+statemine-runtime = { git = "https://github.com/polkadot-fellows/runtimes", package = "asset-hub-kusama-runtime", rev = "c0e66c3e121cc5da7d59415015019c3bb0ec6581" }
 
 orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", branch = "polkadot-v1.1.0" }
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", branch = "polkadot-v1.1.0" }

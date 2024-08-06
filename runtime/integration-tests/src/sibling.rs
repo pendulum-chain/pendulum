@@ -3,10 +3,12 @@
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use core::marker::PhantomData;
+use std::ops::Mul;
 use frame_support::{
-	log, match_types, parameter_types,
+	match_types, parameter_types,
 	traits::{ConstU32, ContainsPair, Everything, Nothing, ProcessMessageError},
 };
+use log;
 use frame_system::EnsureRoot;
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
@@ -21,14 +23,14 @@ use sp_core::H256;
 use sp_debug_derive::RuntimeDebug;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, Convert, IdentityLookup, Zero},
+	traits::{BlakeTwo256, Convert, IdentityLookup, Zero, MaybeEquivalence},
 	AccountId32,
 };
 use xcm::v3::prelude::*;
 use xcm_emulator::{
-	cumulus_pallet_parachain_system::{self, RelayNumberStrictlyIncreases},
 	Weight,
 };
+use cumulus_pallet_parachain_system::{self, RelayNumberStrictlyIncreases};
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute, WeightTrader},
 	Assets, XcmExecutor,
@@ -41,9 +43,9 @@ use xcm_builder::{
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation,
 };
-
+use xcm_executor::traits::Properties;
 use crate::{definitions::asset_hub, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
-
+use runtime_common::ConvertMultilocation;
 use pendulum_runtime::definitions::moonbeam::BRZ_location;
 
 const XCM_ASSET_RELAY_DOT: u8 = 0;
@@ -167,7 +169,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(a: MultiAsset) -> Option<CurrencyId> {
 		if let MultiAsset { id: AssetId::Concrete(id), fun: _ } = a {
-			Self::convert(id)
+			<Self as Convert<MultiLocation, Option<CurrencyId>>>::convert(id)
 		} else {
 			None
 		}
@@ -177,12 +179,24 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 /// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
 /// Here we need to know the canonical representation of all the tokens we handle in order to
 /// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
-impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
+impl ConvertMultilocation<MultiLocation, CurrencyId> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
 		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
 			.ok_or(location)
 	}
 }
+
+// // Update 1.1.0 comment: We required this now for AssetTransactor.
+// impl<MultiLocation, CurrencyId> MaybeEquivalence<MultiLocation, CurrencyId>
+// for CurrencyIdConvert  where CurrencyIdConvert: Convert<MultiLocation, std::option::Option<CurrencyId>>
+// {
+// 	fn convert(id: &MultiLocation) -> Option<CurrencyId> {
+// 		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(id.as_ref())
+// 	}
+// 	fn convert_back(what: &CurrencyId) -> Option<MultiLocation> {
+// 		<CurrencyIdConvert as Convert<CurrencyId, Option<MultiLocation>>>::convert(what.as_ref())
+// 	}
+// }
 
 /// A `FilterAssetLocation` implementation. Filters multi native assets whose
 /// reserve is same with `origin`.
@@ -273,8 +287,8 @@ where
 	fn should_execute<RuntimeCall>(
 		origin: &MultiLocation,
 		instructions: &mut [Instruction<RuntimeCall>],
-		max_weight: XCMWeight,
-		weight_credit: &mut XCMWeight,
+		max_weight: Weight,
+		weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
 		Deny::should_execute(origin, instructions, max_weight, weight_credit)?;
 		Allow::should_execute(origin, instructions, max_weight, weight_credit)
@@ -288,8 +302,8 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	fn should_execute<RuntimeCall>(
 		origin: &MultiLocation,
 		instructions: &mut [Instruction<RuntimeCall>],
-		_max_weight: XCMWeight,
-		_weight_credit: &mut XCMWeight,
+		_max_weight: Weight,
+		_weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
 		if instructions.iter().any(|inst| {
 			matches!(
@@ -350,6 +364,7 @@ impl xcm_executor::Config for XcmConfig {
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;
+	type Aliasers = ();
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -392,6 +407,8 @@ impl pallet_xcm::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -447,23 +464,18 @@ type Block = frame_system::mocking::MockBlock<Runtime>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
+	pub enum Runtime
 	{
-		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-		Tokens: orml_tokens::{Pallet, Storage, Config<T>, Event<T>},
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+		System: frame_system,
+		Tokens: orml_tokens,
+		XTokens: orml_xtokens,
+		Balances: pallet_balances,
 		PolkadotXcm: pallet_xcm,
-		ParachainSystem: cumulus_pallet_parachain_system::{
-			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
-		},
-		ParachainInfo: parachain_info::{Pallet, Storage, Config},
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>},
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin},
+		ParachainSystem: cumulus_pallet_parachain_system,
+		ParachainInfo: parachain_info,
+		XcmpQueue: cumulus_pallet_xcmp_queue,
+		DmpQueue: cumulus_pallet_dmp_queue,
+		CumulusXcm: cumulus_pallet_xcm
 	}
 );
 
@@ -477,19 +489,18 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 42;
 }
 impl frame_system::Config for Runtime {
+	type Block = Block;
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = Index;
-	type BlockNumber = BlockNumber;
+	type Nonce = Index;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
@@ -561,7 +572,7 @@ impl pallet_balances::Config for Runtime {
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
 	type MaxHolds = ConstU32<1>;
-	type HoldIdentifier = RuntimeHoldReason;
+	type RuntimeHoldReason = RuntimeHoldReason;
 }
 
 parameter_types! {
@@ -611,7 +622,7 @@ impl WeightTrader for AllTokensAreCreatedEqualToWeight {
 		Self(MultiLocation::parent())
 	}
 
-	fn buy_weight(&mut self, weight: Weight, payment: Assets) -> Result<Assets, XcmError> {
+	fn buy_weight(&mut self, weight: Weight, payment: Assets, _context: &XcmContext) -> Result<Assets, XcmError> {
 		let asset_id = payment.fungible.iter().next().expect("Payment must be something; qed").0;
 		let required = MultiAsset { id: *asset_id, fun: Fungible(weight.ref_time() as u128) };
 
@@ -623,7 +634,7 @@ impl WeightTrader for AllTokensAreCreatedEqualToWeight {
 		Ok(unused)
 	}
 
-	fn refund_weight(&mut self, weight: Weight) -> Option<MultiAsset> {
+	fn refund_weight(&mut self, weight: Weight, _context: &XcmContext) -> Option<MultiAsset> {
 		if weight.is_zero() {
 			None
 		} else {

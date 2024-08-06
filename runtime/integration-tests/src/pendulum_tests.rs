@@ -17,7 +17,7 @@ use frame_support::assert_ok;
 use pendulum_runtime::definitions::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
 use statemint_runtime as polkadot_asset_hub_runtime;
 use xcm::latest::NetworkId;
-use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
+use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
 
 // Native fee expected for each token according to the `fee_per_second` values defined in the mock
 const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
@@ -31,7 +31,11 @@ const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
 decl_test_relay_chain! {
 	pub struct PolkadotRelay {
 		Runtime = polkadot_runtime::Runtime,
-		XcmConfig = polkadot_runtime::xcm_config::XcmConfig,
+		RuntimeCall = polkadot_runtime::RuntimeCall,
+		RuntimeEvent = polkadot_runtime::RuntimeEvent,
+		XcmConfig = polkadot_runtime::XcmConfig,
+		MessageQueue = polkadot_runtime::MessageQueue,
+		System = polkadot_runtime::System,
 		new_ext = polkadot_relay_ext(),
 	}
 }
@@ -39,7 +43,6 @@ decl_test_relay_chain! {
 decl_test_parachain! {
 	pub struct PendulumParachain {
 		Runtime = pendulum_runtime::Runtime,
-		RuntimeOrigin = pendulum_runtime::RuntimeOrigin,
 		XcmpMessageHandler = pendulum_runtime::XcmpQueue,
 		DmpMessageHandler = pendulum_runtime::DmpQueue,
 		new_ext = para_ext(ParachainType::Pendulum),
@@ -49,7 +52,6 @@ decl_test_parachain! {
 decl_test_parachain! {
 	pub struct SiblingParachain {
 		Runtime = sibling::Runtime,
-		RuntimeOrigin = sibling::RuntimeOrigin,
 		XcmpMessageHandler = sibling::XcmpQueue,
 		DmpMessageHandler = sibling::DmpQueue,
 		new_ext = para_ext(ParachainType::Sibling),
@@ -59,7 +61,6 @@ decl_test_parachain! {
 decl_test_parachain! {
 	pub struct AssetHubParachain {
 		Runtime = polkadot_asset_hub_runtime::Runtime,
-		RuntimeOrigin = polkadot_asset_hub_runtime::RuntimeOrigin,
 		XcmpMessageHandler = polkadot_asset_hub_runtime::XcmpQueue,
 		DmpMessageHandler = polkadot_asset_hub_runtime::DmpQueue,
 		new_ext = para_ext(ParachainType::PolkadotAssetHub),
@@ -69,7 +70,6 @@ decl_test_parachain! {
 decl_test_parachain! {
 	pub struct MoonbeamParachain {
 		Runtime = sibling::Runtime,
-		RuntimeOrigin = sibling::RuntimeOrigin,
 		XcmpMessageHandler = sibling::XcmpQueue,
 		DmpMessageHandler = sibling::DmpQueue,
 		new_ext = para_ext(ParachainType::Moonbeam),

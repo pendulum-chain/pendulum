@@ -51,10 +51,10 @@ pallet-message-queue = { git = "https://github.com/paritytech/polkadot-sdk", bra
 #polkadot-runtime = { git = "https://github.com/polkadot-fellows/runtimes", rev = "c0e66c3e121cc5da7d59415015019c3bb0ec6581"}
 #kusama-runtime = { git = "https://github.com/polkadot-fellows/runtimes", package = "staging-kusama-runtime", rev = "c0e66c3e121cc5da7d59415015019c3bb0ec6581"}
 
-statemint-runtime = { version = "0.10.0", package = "asset-hub-polkadot-runtime" }
-statemine-runtime = { version = "0.10.0", package = "asset-hub-kusama-runtime" }
-polkadot-runtime = { version = "2.0.0" }
-kusama-runtime = { version = "2.0.0", package = "staging-kusama-runtime" }
+statemint-runtime = { version = "0.10.0", package = "asset-hub-polkadot-runtime" , default-features = false}
+statemine-runtime = { version = "0.10.0", package = "asset-hub-kusama-runtime", default-features = false }
+polkadot-runtime = { version = "2.0.0", default-features = false }
+kusama-runtime = { version = "2.0.0", package = "staging-kusama-runtime", default-features = false }
 
 orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", branch = "polkadot-v1.1.0" }
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", branch = "polkadot-v1.1.0" }

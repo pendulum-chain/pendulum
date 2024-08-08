@@ -38,6 +38,7 @@ orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-modu
 orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v1.1.0" }
 zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.1.0" }
 zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.1.0" }
+pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 
 #[patch."https://github.com/polkadot-fellows/runtimes"]
 #substrate-wasm-builder = { git = "https://github.com/paritytech//polkadot-sdk", branch = "release-polkadot-v1.1.0", version = "5.0.0-dev" } # fix this version used in polkadto-sdk, due to different one (14) used from polkadot-fellows/runtimes.

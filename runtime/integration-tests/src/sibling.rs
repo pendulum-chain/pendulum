@@ -45,7 +45,6 @@ use xcm_builder::{
 };
 use xcm_executor::traits::Properties;
 use crate::{definitions::asset_hub, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
-use runtime_common::ConvertMultilocation;
 use pendulum_runtime::definitions::moonbeam::BRZ_location;
 
 const XCM_ASSET_RELAY_DOT: u8 = 0;
@@ -173,16 +172,6 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 		} else {
 			None
 		}
-	}
-}
-
-/// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
-/// Here we need to know the canonical representation of all the tokens we handle in order to
-/// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
-impl ConvertMultilocation<MultiLocation, CurrencyId> for CurrencyIdConvert {
-	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
-			.ok_or(location)
 	}
 }
 

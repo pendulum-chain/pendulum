@@ -13,10 +13,10 @@ sp-core =  { git = "https://github.com/paritytech/polkadot-sdk", branch = "relea
 sp-io =  { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
 
 [dependencies]
-log = { version = "0.4.17" }
+log = { version = "0.4.17", default-features = false }
 parity-scale-codec = {version = "3.1.5", default-features = false, features = ["derive"]}
 scale-info = {version = "2.1.1", default-features = false, features = ["derive"]}
-serde = {version = "1.0.142", optional = true}
+serde = {version = "1.0.142", default-features = false}
 sp-api =  { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 module-pallet-staking-rpc-runtime-api = { path = "./rpc/runtime-api", default-features = false }
 
@@ -42,7 +42,7 @@ runtime-benchmarks = [
   "pallet-balances/runtime-benchmarks",
 ]
 std = [
-  "serde",
+  "serde/std",
   "frame-support/std",
   "frame-system/std",
   "log/std",

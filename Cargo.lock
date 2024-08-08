@@ -147,12 +147,12 @@ dependencies = [
  "hex-literal 0.3.4",
  "issue",
  "log",
- "module-issue-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
- "module-oracle-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "module-issue-rpc-runtime-api",
+ "module-oracle-rpc-runtime-api",
  "module-pallet-staking-rpc-runtime-api",
- "module-redeem-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
- "module-replace-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
- "module-vault-registry-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "module-redeem-rpc-runtime-api",
+ "module-replace-rpc-runtime-api",
+ "module-vault-registry-rpc-runtime-api",
  "nomination",
  "oracle",
  "orml-asset-registry",
@@ -214,7 +214,7 @@ dependencies = [
  "sp-storage 13.0.0",
  "sp-transaction-pool 4.0.0-dev",
  "sp-version 22.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "staging-xcm 1.0.0",
  "staging-xcm-builder 1.0.0",
  "staging-xcm-executor 1.0.0",
@@ -2798,7 +2798,7 @@ dependencies = [
  "serde",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
 ]
 
 [[package]]
@@ -3638,7 +3638,7 @@ dependencies = [
  "sp-io 23.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "staking",
 ]
 
@@ -3811,12 +3811,12 @@ dependencies = [
  "hex-literal 0.3.4",
  "issue",
  "log",
- "module-issue-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
- "module-oracle-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "module-issue-rpc-runtime-api",
+ "module-oracle-rpc-runtime-api",
  "module-pallet-staking-rpc-runtime-api",
- "module-redeem-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
- "module-replace-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
- "module-vault-registry-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "module-redeem-rpc-runtime-api",
+ "module-replace-rpc-runtime-api",
+ "module-vault-registry-rpc-runtime-api",
  "nomination",
  "oracle",
  "orml-asset-registry",
@@ -3880,7 +3880,7 @@ dependencies = [
  "sp-storage 13.0.0",
  "sp-transaction-pool 4.0.0-dev",
  "sp-version 22.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "staging-xcm 1.0.0",
  "staging-xcm-builder 1.0.0",
  "staging-xcm-executor 1.0.0",
@@ -5296,7 +5296,7 @@ dependencies = [
  "sp-io 23.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "stellar-relay",
  "vault-registry",
 ]
@@ -6507,25 +6507,14 @@ dependencies = [
 [[package]]
 name = "module-issue-rpc"
 version = "1.0.10"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6#a518fb489f3121983af182e337797d9704f88fe6"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f#d74009bf1d8c27fbd1f314c4fe486cd230e8b73f"
 dependencies = [
  "jsonrpsee",
- "module-issue-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6)",
+ "module-issue-rpc-runtime-api",
  "parity-scale-codec",
  "sp-api 4.0.0-dev",
  "sp-blockchain",
  "sp-runtime 24.0.0",
-]
-
-[[package]]
-name = "module-issue-rpc-runtime-api"
-version = "1.0.10"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6#a518fb489f3121983af182e337797d9704f88fe6"
-dependencies = [
- "frame-support 4.0.0-dev",
- "parity-scale-codec",
- "sp-api 4.0.0-dev",
- "sp-std 8.0.0",
 ]
 
 [[package]]
@@ -6542,29 +6531,15 @@ dependencies = [
 [[package]]
 name = "module-oracle-rpc"
 version = "1.0.10"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6#a518fb489f3121983af182e337797d9704f88fe6"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f#d74009bf1d8c27fbd1f314c4fe486cd230e8b73f"
 dependencies = [
  "jsonrpsee",
- "module-oracle-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6)",
+ "module-oracle-rpc-runtime-api",
  "parity-scale-codec",
  "sp-api 4.0.0-dev",
  "sp-blockchain",
  "sp-runtime 24.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6)",
-]
-
-[[package]]
-name = "module-oracle-rpc-runtime-api"
-version = "1.0.10"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6#a518fb489f3121983af182e337797d9704f88fe6"
-dependencies = [
- "frame-support 4.0.0-dev",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-api 4.0.0-dev",
- "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6)",
+ "spacewalk-primitives",
 ]
 
 [[package]]
@@ -6578,7 +6553,7 @@ dependencies = [
  "serde",
  "sp-api 4.0.0-dev",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
 ]
 
 [[package]]
@@ -6586,7 +6561,7 @@ name = "module-pallet-staking-rpc"
 version = "1.0.0"
 dependencies = [
  "jsonrpsee",
- "module-oracle-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "module-oracle-rpc-runtime-api",
  "module-pallet-staking-rpc-runtime-api",
  "parity-scale-codec",
  "sp-api 4.0.0-dev",
@@ -6599,7 +6574,7 @@ name = "module-pallet-staking-rpc-runtime-api"
 version = "1.0.0"
 dependencies = [
  "frame-support 4.0.0-dev",
- "module-oracle-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "module-oracle-rpc-runtime-api",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -6611,25 +6586,14 @@ dependencies = [
 [[package]]
 name = "module-redeem-rpc"
 version = "1.0.10"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6#a518fb489f3121983af182e337797d9704f88fe6"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f#d74009bf1d8c27fbd1f314c4fe486cd230e8b73f"
 dependencies = [
  "jsonrpsee",
- "module-redeem-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6)",
+ "module-redeem-rpc-runtime-api",
  "parity-scale-codec",
  "sp-api 4.0.0-dev",
  "sp-blockchain",
  "sp-runtime 24.0.0",
-]
-
-[[package]]
-name = "module-redeem-rpc-runtime-api"
-version = "1.0.10"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6#a518fb489f3121983af182e337797d9704f88fe6"
-dependencies = [
- "frame-support 4.0.0-dev",
- "parity-scale-codec",
- "sp-api 4.0.0-dev",
- "sp-std 8.0.0",
 ]
 
 [[package]]
@@ -6646,25 +6610,14 @@ dependencies = [
 [[package]]
 name = "module-replace-rpc"
 version = "1.0.10"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6#a518fb489f3121983af182e337797d9704f88fe6"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f#d74009bf1d8c27fbd1f314c4fe486cd230e8b73f"
 dependencies = [
  "jsonrpsee",
- "module-replace-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6)",
+ "module-replace-rpc-runtime-api",
  "parity-scale-codec",
  "sp-api 4.0.0-dev",
  "sp-blockchain",
  "sp-runtime 24.0.0",
-]
-
-[[package]]
-name = "module-replace-rpc-runtime-api"
-version = "1.0.10"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6#a518fb489f3121983af182e337797d9704f88fe6"
-dependencies = [
- "frame-support 4.0.0-dev",
- "parity-scale-codec",
- "sp-api 4.0.0-dev",
- "sp-std 8.0.0",
 ]
 
 [[package]]
@@ -6681,11 +6634,11 @@ dependencies = [
 [[package]]
 name = "module-vault-registry-rpc"
 version = "1.0.10"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6#a518fb489f3121983af182e337797d9704f88fe6"
+source = "git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f#d74009bf1d8c27fbd1f314c4fe486cd230e8b73f"
 dependencies = [
  "jsonrpsee",
- "module-oracle-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6)",
- "module-vault-registry-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6)",
+ "module-oracle-rpc-runtime-api",
+ "module-vault-registry-rpc-runtime-api",
  "parity-scale-codec",
  "sp-api 4.0.0-dev",
  "sp-blockchain",
@@ -6695,22 +6648,10 @@ dependencies = [
 [[package]]
 name = "module-vault-registry-rpc-runtime-api"
 version = "1.0.10"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6#a518fb489f3121983af182e337797d9704f88fe6"
-dependencies = [
- "frame-support 4.0.0-dev",
- "module-oracle-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6)",
- "parity-scale-codec",
- "sp-api 4.0.0-dev",
- "sp-std 8.0.0",
-]
-
-[[package]]
-name = "module-vault-registry-rpc-runtime-api"
-version = "1.0.10"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f#d74009bf1d8c27fbd1f314c4fe486cd230e8b73f"
 dependencies = [
  "frame-support 4.0.0-dev",
- "module-oracle-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "module-oracle-rpc-runtime-api",
  "parity-scale-codec",
  "sp-api 4.0.0-dev",
  "sp-std 8.0.0",
@@ -6971,7 +6912,7 @@ dependencies = [
  "sp-io 23.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "staking",
  "vault-registry",
 ]
@@ -7138,7 +7079,7 @@ dependencies = [
  "sp-io 23.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "spin 0.9.8",
  "staking",
 ]
@@ -7334,7 +7275,7 @@ dependencies = [
  "sp-io 23.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
 ]
 
 [[package]]
@@ -9933,7 +9874,7 @@ dependencies = [
  "sp-session 4.0.0-dev",
  "sp-timestamp 4.0.0-dev",
  "sp-transaction-pool 4.0.0-dev",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6)",
+ "spacewalk-primitives",
  "staging-xcm 1.0.0",
  "substrate-build-script-utils",
  "substrate-frame-rpc-system",
@@ -9975,12 +9916,12 @@ dependencies = [
  "hex-literal 0.3.4",
  "issue",
  "log",
- "module-issue-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
- "module-oracle-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "module-issue-rpc-runtime-api",
+ "module-oracle-rpc-runtime-api",
  "module-pallet-staking-rpc-runtime-api",
- "module-redeem-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
- "module-replace-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
- "module-vault-registry-rpc-runtime-api 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "module-redeem-rpc-runtime-api",
+ "module-replace-rpc-runtime-api",
+ "module-vault-registry-rpc-runtime-api",
  "nomination",
  "oracle",
  "orml-asset-registry",
@@ -10042,7 +9983,7 @@ dependencies = [
  "sp-storage 13.0.0",
  "sp-transaction-pool 4.0.0-dev",
  "sp-version 22.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "staging-xcm 1.0.0",
  "staging-xcm-builder 1.0.0",
  "staging-xcm-executor 1.0.0",
@@ -11709,7 +11650,7 @@ dependencies = [
  "sp-io 23.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
 ]
 
 [[package]]
@@ -11809,7 +11750,7 @@ dependencies = [
  "sp-runtime 24.0.0",
  "sp-tracing 10.0.0",
  "sp-weights 20.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "vesting-manager",
 ]
 
@@ -12224,7 +12165,7 @@ dependencies = [
  "sp-io 23.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "stellar-relay",
  "vault-registry",
 ]
@@ -12386,7 +12327,7 @@ dependencies = [
  "sp-io 23.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "stellar-relay",
  "vault-registry",
 ]
@@ -12417,7 +12358,7 @@ dependencies = [
  "sp-io 23.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
 ]
 
 [[package]]
@@ -12445,7 +12386,7 @@ dependencies = [
  "sp-io 23.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "staking",
 ]
 
@@ -12687,7 +12628,7 @@ dependencies = [
  "sp-core 21.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "staging-xcm 1.0.0",
  "staging-xcm-executor 1.0.0",
  "treasury-buyout-extension",
@@ -12739,7 +12680,7 @@ dependencies = [
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
  "sp-tracing 10.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "staging-kusama-runtime 2.0.0",
  "staging-xcm 1.0.0",
  "staging-xcm-builder 1.0.0",
@@ -16086,26 +16027,6 @@ dependencies = [
 [[package]]
 name = "spacewalk-primitives"
 version = "1.0.10"
-source = "git+https://github.com/pendulum-chain/spacewalk?rev=a518fb489f3121983af182e337797d9704f88fe6#a518fb489f3121983af182e337797d9704f88fe6"
-dependencies = [
- "base58",
- "bstringify",
- "frame-support 4.0.0-dev",
- "hex",
- "parity-scale-codec",
- "scale-decode",
- "scale-encode",
- "scale-info",
- "serde",
- "sp-core 21.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
- "substrate-stellar-sdk",
-]
-
-[[package]]
-name = "spacewalk-primitives"
-version = "1.0.10"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f#d74009bf1d8c27fbd1f314c4fe486cd230e8b73f"
 dependencies = [
  "base58",
@@ -16537,7 +16458,7 @@ dependencies = [
  "sp-io 23.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
 ]
 
 [[package]]
@@ -16591,7 +16512,7 @@ dependencies = [
  "sp-core 21.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
 ]
 
 [[package]]
@@ -17080,7 +17001,7 @@ dependencies = [
  "sp-std 8.0.0",
  "sp-tracing 10.0.0",
  "sp-weights 20.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
 ]
 
 [[package]]
@@ -17414,7 +17335,7 @@ dependencies = [
  "sp-io 23.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "staging-xcm 1.0.0",
 ]
 
@@ -17690,7 +17611,7 @@ dependencies = [
  "sp-io 23.0.0",
  "sp-runtime 24.0.0",
  "sp-std 8.0.0",
- "spacewalk-primitives 1.0.10 (git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f)",
+ "spacewalk-primitives",
  "staking",
 ]
 

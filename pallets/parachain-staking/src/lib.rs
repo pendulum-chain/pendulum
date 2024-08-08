@@ -150,8 +150,8 @@ pub mod pallet {
 		},
 		BoundedVec,
 	};
-
-	#[cfg(feature = "std")]
+	// TESTING
+	//#[cfg(feature = "std")]
 	use frame_support::assert_ok;
 	use frame_system::pallet_prelude::*;
 	use pallet_balances::{BalanceLock, Locks};
@@ -675,7 +675,7 @@ pub mod pallet {
 		pub max_selected_candidates: u32,
 	}
 
-	#[cfg(feature = "std")]
+	//#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self {

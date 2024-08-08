@@ -107,7 +107,7 @@ pub mod pallet {
 		pub allowed_currencies: Vec<CurrencyOf<T>>,
 	}
 
-	#[cfg(feature = "std")]
+	//#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self { allowed_currencies: vec![] }

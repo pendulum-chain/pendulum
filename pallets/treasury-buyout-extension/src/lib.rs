@@ -39,6 +39,7 @@ use sp_runtime::{
 	DispatchError,
 };
 use sp_std::{fmt::Debug, marker::PhantomData, vec::Vec};
+use sp_std::vec;
 use spacewalk_primitives::DecimalsLookup;
 
 #[frame_support::pallet]
@@ -159,7 +160,7 @@ pub mod pallet {
 		pub allowed_currencies: Vec<CurrencyIdOf<T>>,
 	}
 
-	#[cfg(feature = "std")]
+	//#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self { allowed_currencies: vec![] }

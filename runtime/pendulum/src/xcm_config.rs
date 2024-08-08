@@ -2,9 +2,10 @@ use core::marker::PhantomData;
 
 use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
 use frame_support::{
-	log, match_types, parameter_types,
+	match_types, parameter_types,
 	traits::{ContainsPair, Everything, Nothing, ProcessMessageError},
 };
+use log;
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
@@ -22,7 +23,7 @@ use xcm_builder::{
 	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
-use xcm_executor::{traits::ShouldExecute, XcmExecutor};
+use xcm_executor::{traits::{ShouldExecute, Properties}, XcmExecutor};
 
 use runtime_common::{
 	asset_registry::FixedConversionRateProvider,
@@ -125,8 +126,8 @@ where
 	fn should_execute<RuntimeCall>(
 		origin: &MultiLocation,
 		instructions: &mut [Instruction<RuntimeCall>],
-		max_weight: XCMWeight,
-		weight_credit: &mut XCMWeight,
+		max_weight: Weight,
+		weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
 		Deny::should_execute(origin, instructions, max_weight, weight_credit)?;
 		Allow::should_execute(origin, instructions, max_weight, weight_credit)
@@ -139,8 +140,8 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	fn should_execute<RuntimeCall>(
 		origin: &MultiLocation,
 		instructions: &mut [Instruction<RuntimeCall>],
-		_max_weight: XCMWeight,
-		_weight_credit: &mut XCMWeight,
+		_max_weight: Weight,
+		_weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
 		if instructions.iter().any(|inst| {
 			matches!(
@@ -277,6 +278,7 @@ impl xcm_executor::Config for XcmConfig {
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;
+	type Aliasers = ();
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -319,6 +321,8 @@ impl pallet_xcm::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 #[cfg(feature = "runtime-benchmarks")]

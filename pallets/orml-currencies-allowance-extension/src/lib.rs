@@ -107,7 +107,7 @@ pub mod pallet {
 		pub allowed_currencies: Vec<CurrencyOf<T>>,
 	}
 
-	#[cfg(feature = "std")]
+	//#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self { allowed_currencies: vec![] }
@@ -115,7 +115,7 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			for i in &self.allowed_currencies.clone() {
 				AllowedCurrencies::<T>::insert(i, ());

@@ -14,7 +14,7 @@ use crate::{
 use frame_support::assert_ok;
 use statemine_runtime as kusama_asset_hub_runtime;
 use xcm::latest::NetworkId;
-use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
+use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
 
 // Native fee expected for each token according to the `fee_per_second` values defined in the mock
 const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
@@ -26,7 +26,11 @@ const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
 decl_test_relay_chain! {
 	pub struct KusamaRelay {
 		Runtime = kusama_runtime::Runtime,
-		XcmConfig = kusama_runtime::xcm_config::XcmConfig,
+		RuntimeCall = kusama_runtime::RuntimeCall,
+		RuntimeEvent = kusama_runtime::RuntimeEvent,
+		XcmConfig = kusama_runtime::XcmConfig,
+		MessageQueue = kusama_runtime::MessageQueue,
+		System = kusama_runtime::System,
 		new_ext = kusama_relay_ext(),
 	}
 }
@@ -34,7 +38,6 @@ decl_test_relay_chain! {
 decl_test_parachain! {
 	pub struct AmplitudeParachain {
 		Runtime = amplitude_runtime::Runtime,
-		RuntimeOrigin = amplitude_runtime::RuntimeOrigin,
 		XcmpMessageHandler = amplitude_runtime::XcmpQueue,
 		DmpMessageHandler = amplitude_runtime::DmpQueue,
 		new_ext = para_ext(ParachainType::Amplitude),
@@ -44,7 +47,6 @@ decl_test_parachain! {
 decl_test_parachain! {
 	pub struct SiblingParachain {
 		Runtime = sibling::Runtime,
-		RuntimeOrigin = sibling::RuntimeOrigin,
 		XcmpMessageHandler = sibling::XcmpQueue,
 		DmpMessageHandler = sibling::DmpQueue,
 		new_ext = para_ext(ParachainType::Sibling),
@@ -54,7 +56,6 @@ decl_test_parachain! {
 decl_test_parachain! {
 	pub struct AssetHubParachain {
 		Runtime = kusama_asset_hub_runtime::Runtime,
-		RuntimeOrigin = kusama_asset_hub_runtime::RuntimeOrigin,
 		XcmpMessageHandler = kusama_asset_hub_runtime::XcmpQueue,
 		DmpMessageHandler = kusama_asset_hub_runtime::DmpQueue,
 		new_ext = para_ext(ParachainType::KusamaAssetHub),

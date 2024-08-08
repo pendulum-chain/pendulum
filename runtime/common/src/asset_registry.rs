@@ -40,11 +40,11 @@ pub struct DiaKeys<T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync> {
 )]
 pub struct CustomAssetProcessor;
 
-impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for CustomAssetProcessor {
+impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata, StringLimit>> for CustomAssetProcessor {
 	fn pre_register(
 		id: Option<CurrencyId>,
-		metadata: AssetMetadata<Balance, CustomMetadata>,
-	) -> Result<(CurrencyId, AssetMetadata<Balance, CustomMetadata>), DispatchError> {
+		metadata: AssetMetadata<Balance, CustomMetadata, StringLimit>,
+	) -> Result<(CurrencyId, AssetMetadata<Balance, CustomMetadata, StringLimit>), DispatchError> {
 		match id {
 			Some(id) => Ok((id, metadata)),
 			None => Err(DispatchError::Other("asset-registry: AssetId is required")),
@@ -53,7 +53,7 @@ impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for Cust
 
 	fn post_register(
 		_id: CurrencyId,
-		_asset_metadata: AssetMetadata<Balance, CustomMetadata>,
+		_asset_metadata: AssetMetadata<Balance, CustomMetadata, StringLimit>,
 	) -> Result<(), DispatchError> {
 		Ok(())
 	}

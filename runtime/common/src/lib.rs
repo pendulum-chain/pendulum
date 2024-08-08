@@ -13,6 +13,7 @@ use sp_runtime::{
 };
 #[cfg(feature = "runtime-benchmarks")]
 use sp_std::vec;
+use sp_std::borrow::Borrow;
 use spacewalk_primitives::CurrencyId;
 use treasury_buyout_extension::PriceGetter;
 use xcm::v3::{AssetId, MultiAsset, MultiLocation};
@@ -186,21 +187,6 @@ impl<
 		} else {
 			None
 		}
-	}
-}
-
-/// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
-/// Here we need to know the canonical representation of all the tokens we handle in order to
-/// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
-impl<
-		AssetRegistry: Inspect<AssetId = CurrencyId, Balance = Balance, CustomMetadata = CustomMetadata>,
-	> xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert<AssetRegistry>
-{
-	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		<CurrencyIdConvert<AssetRegistry> as Convert<MultiLocation, Option<CurrencyId>>>::convert(
-			location,
-		)
-		.ok_or(location)
 	}
 }
 

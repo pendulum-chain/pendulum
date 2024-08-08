@@ -1,26 +1,27 @@
 use crate::{definitions::asset_hub, sibling, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID};
 use amplitude_runtime::CurrencyId as AmplitudeCurrencyId;
-use frame_support::traits::GenesisBuild;
+use frame_support::traits::BuildGenesisConfig;
 use pendulum_runtime::CurrencyId as PendulumCurrencyId;
 use polkadot_core_primitives::{AccountId, Balance, BlockNumber};
 use polkadot_parachain::primitives::Id as ParaId;
-use polkadot_primitives::v4::{MAX_CODE_SIZE, MAX_POV_SIZE};
+use polkadot_primitives::v5::{MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sibling::CurrencyId as SiblingCurrencyId;
 use sp_io::TestExternalities;
 use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::Weight;
-
 use codec::Encode;
 use frame_support::BoundedVec;
 use runtime_common::asset_registry::{CustomMetadata, DiaKeys, StringLimit};
 
 use xcm::{v3::MultiLocation, VersionedMultiLocation};
 
+use core::default::Default;
+
 use pendulum_runtime::definitions::{moonbeam, moonbeam::PARA_ID as MOONBEAM_PARA_ID};
 use statemine_runtime as kusama_asset_hub_runtime;
 use statemint_runtime as polkadot_asset_hub_runtime;
-
+use sp_runtime::BuildStorage;
 pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];
 
@@ -34,12 +35,14 @@ pub const NATIVE_INITIAL_BALANCE: Balance = TEN_UNITS;
 pub const ORML_INITIAL_BALANCE: Balance = TEN_UNITS;
 
 macro_rules! create_test_externalities {
+
 	($runtime:ty, $system:ident, $storage:ident) => {{
-		<pallet_xcm::GenesisConfig as GenesisBuild<$runtime>>::assimilate_storage(
-			&pallet_xcm::GenesisConfig { safe_xcm_version: Some(2) },
-			&mut $storage,
-		)
+		&pallet_xcm::GenesisConfig::<$runtime> {
+			safe_xcm_version: Some(2), _config: Default::default()
+		}
+		.assimilate_storage($storage)
 		.unwrap();
+
 		let mut ext = sp_io::TestExternalities::new($storage);
 		ext.execute_with(|| $system::set_block_number(1));
 		ext
@@ -48,7 +51,7 @@ macro_rules! create_test_externalities {
 
 macro_rules! build_relaychain {
 	($runtime:ty, $system:tt, $para_account_id: ident) => {{
-		let mut t = frame_system::GenesisConfig::default().build_storage::<$runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::default().build_storage().unwrap();
 		pallet_balances::GenesisConfig::<$runtime> {
 			balances: vec![
 				(AccountId::from(ALICE), units(100000)),
@@ -58,6 +61,7 @@ macro_rules! build_relaychain {
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
+
 		polkadot_runtime_parachains::configuration::GenesisConfig::<$runtime> {
 			config: default_parachains_host_configuration(),
 		}
@@ -70,7 +74,7 @@ macro_rules! build_relaychain {
 
 macro_rules! build_parachain_with_orml {
 	($self:ident, $runtime:ty, $system:tt, $balance:tt, $orml_balance:tt, $currency_id_type:ty) => {{
-		let mut t = frame_system::GenesisConfig::default().build_storage::<$runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::default().build_storage().unwrap();
 		pallet_balances::GenesisConfig::<$runtime> {
 			balances: vec![(AccountId::from(ALICE), $balance), (AccountId::from(BOB), $balance)],
 		}
@@ -93,7 +97,7 @@ macro_rules! build_parachain_with_orml {
 
 macro_rules! build_parachain_with_orml_and_asset_registry {
 	($self:ident, $runtime:ty, $system:tt, $balance:tt, $orml_balance:tt, $currency_id_type:ty, $registry_assets:tt) => {{
-		let mut t = frame_system::GenesisConfig::default().build_storage::<$runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::default().build_storage().unwrap();
 		pallet_balances::GenesisConfig::<$runtime> {
 			balances: vec![(AccountId::from(ALICE), $balance), (AccountId::from(BOB), $balance)],
 		}
@@ -123,7 +127,7 @@ macro_rules! build_parachain_with_orml_and_asset_registry {
 
 macro_rules! build_parachain {
 	($self:ident, $runtime:ty, $system:tt) => {{
-		let mut t = frame_system::GenesisConfig::default().build_storage::<$runtime>().unwrap();
+		let mut t = frame_system::GenesisConfig::default().build_storage().unwrap();
 
 		pallet_balances::GenesisConfig::<$runtime> { balances: vec![] }
 			.assimilate_storage(&mut t)
@@ -133,10 +137,11 @@ macro_rules! build_parachain {
 	}};
 
 	($self:ident, $runtime:ty, $system:tt, $storage:ident) => {{
-		<parachain_info::GenesisConfig as GenesisBuild<$runtime>>::assimilate_storage(
-			&parachain_info::GenesisConfig { parachain_id: $self.get_parachain_id().into() },
-			&mut $storage,
-		)
+		parachain_info::GenesisConfig::<$runtime> {
+			parachain_id: $self.get_parachain_id().into(),
+			_config: Default::default()
+		}
+		.assimilate_storage(&mut $storage)
 		.unwrap();
 
 		create_test_externalities!($runtime, $system, $storage)
@@ -190,12 +195,9 @@ fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
 		max_pov_size: MAX_POV_SIZE,
 		max_head_data_size: 32 * 1024,
 		group_rotation_frequency: 20,
-		chain_availability_period: 4,
-		thread_availability_period: 4,
 		max_upward_queue_count: 8,
 		max_upward_queue_size: 1024 * 1024,
 		max_downward_message_size: 1024,
-		ump_service_total_weight: Weight::from_parts(4 * 1_000_000_000, 0),
 		max_upward_message_size: 50 * 1024,
 		max_upward_message_num_per_candidate: 5,
 		hrmp_sender_deposit: 0,
@@ -203,10 +205,8 @@ fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
 		hrmp_channel_max_capacity: 8,
 		hrmp_channel_max_total_size: 8 * 1024,
 		hrmp_max_parachain_inbound_channels: 4,
-		hrmp_max_parathread_inbound_channels: 4,
 		hrmp_channel_max_message_size: 1024 * 1024,
 		hrmp_max_parachain_outbound_channels: 4,
-		hrmp_max_parathread_outbound_channels: 4,
 		hrmp_max_message_num_per_candidate: 5,
 		dispute_period: 6,
 		no_show_slots: 2,
@@ -324,8 +324,8 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 			AmplitudeCurrencyId::XCM(1),
 			orml_asset_registry::AssetMetadata {
 				decimals: 12u32,
-				name: "USDT Assethub".as_bytes().to_vec(),
-				symbol: "USDT".as_bytes().to_vec(),
+				name: BoundedVec::truncate_from("USDT Assethub".as_bytes().to_vec()),
+				symbol: BoundedVec::truncate_from("USDT".as_bytes().to_vec()),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(asset_hub::USDT_location())),
 				additional: CustomMetadata {
@@ -342,8 +342,8 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 			AmplitudeCurrencyId::XCM(0),
 			orml_asset_registry::AssetMetadata {
 				decimals: 12u32,
-				name: "Kusama".as_bytes().to_vec(),
-				symbol: "KSM".as_bytes().to_vec(),
+				name: BoundedVec::truncate_from("Kusama".as_bytes().to_vec()),
+				symbol: BoundedVec::truncate_from("KSM".as_bytes().to_vec()),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(MultiLocation::parent())),
 				additional: CustomMetadata {

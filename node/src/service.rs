@@ -14,7 +14,7 @@ use cumulus_client_consensus_common::{
 };
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
-	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
+	prepare_node_config, start_relay_chain_tasks, StartCollatorParams, StartRelayChainTasksParams, DARecoveryProfile
 };
 use cumulus_primitives_core::{relay_chain::Hash, ParaId};
 use cumulus_primitives_parachain_inherent::{
@@ -483,6 +483,23 @@ where
 		let sync_service = sync_service.clone();
 		Arc::new(move |hash, data| sync_service.announce_block(hash, data))
 	};
+
+	start_relay_chain_tasks(StartRelayChainTasksParams {
+		client: client.clone(),
+		announce_block: announce_block.clone(),
+		para_id: id,
+		relay_chain_interface: relay_chain_interface.clone(),
+		task_manager: &mut task_manager,
+		da_recovery_profile: if validator {
+			DARecoveryProfile::Collator
+		} else {
+			DARecoveryProfile::FullNode
+		},
+		import_queue: import_queue_service,
+		relay_chain_slot_duration,
+		recovery_handle: Box::new(overseer_handle.clone()),
+		sync_service: sync_service.clone(),
+	})?;
 
 	if validator {
 		start_consensus(

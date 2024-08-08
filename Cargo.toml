@@ -5,21 +5,22 @@ panic = "unwind"
 inherits = "release"
 
 [workspace]
+resolver = "2"
 members = [
-	"node",
-	"pallets/parachain-staking",
-	"pallets/vesting-manager",
-	"pallets/orml-currencies-allowance-extension",
-	"pallets/orml-tokens-management-extension",
-	"pallets/treasury-buyout-extension",
-	"runtime/common",
-	"runtime/amplitude",
-	"runtime/foucoco",
-	"runtime/pendulum",
-	"runtime/integration-tests",
-	"chain-extensions/token",
-	"chain-extensions/price",
-	"chain-extensions/common",
+    "node",
+    "pallets/parachain-staking",
+    "pallets/vesting-manager",
+    "pallets/orml-currencies-allowance-extension",
+    "pallets/orml-tokens-management-extension",
+    "pallets/treasury-buyout-extension",
+    "runtime/common",
+    "runtime/amplitude",
+    "runtime/foucoco",
+    "runtime/pendulum",
+    "runtime/integration-tests",
+    "chain-extensions/token",
+    "chain-extensions/price",
+    "chain-extensions/common",
 ]
 
 # need this because of bifrost farming dependency in runtime

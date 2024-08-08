@@ -139,8 +139,8 @@ parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", default-f
 #orml
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v1.1.0" }
 
-zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.1.0" }
-zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.1.0" }
+zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.1.0" }
+zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.1.0" }
 
 bifrost-farming = { git = "https://github.com/bifrost-finance/bifrost", default-features = false, rev = "46ba3689c2fe1011cce0d752cb479e0e522e2e76" }
 bifrost-farming-rpc-runtime-api = { git = "https://github.com/bifrost-finance/bifrost", default-features = false, rev = "46ba3689c2fe1011cce0d752cb479e0e522e2e76" }

@@ -186,17 +186,17 @@ impl ConvertMultilocation<MultiLocation, CurrencyId> for CurrencyIdConvert {
 	}
 }
 
-// // Update 1.1.0 comment: We required this now for AssetTransactor.
-// impl<MultiLocation, CurrencyId> MaybeEquivalence<MultiLocation, CurrencyId>
-// for CurrencyIdConvert  where CurrencyIdConvert: Convert<MultiLocation, std::option::Option<CurrencyId>>
-// {
-// 	fn convert(id: &MultiLocation) -> Option<CurrencyId> {
-// 		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(id.as_ref())
-// 	}
-// 	fn convert_back(what: &CurrencyId) -> Option<MultiLocation> {
-// 		<CurrencyIdConvert as Convert<CurrencyId, Option<MultiLocation>>>::convert(what.as_ref())
-// 	}
-// }
+// Required this now for FungiblesAdapter.
+impl MaybeEquivalence<MultiLocation, CurrencyId>
+for CurrencyIdConvert
+{
+	fn convert(id: &MultiLocation) -> Option<CurrencyId> {
+		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(*id)
+	}
+	fn convert_back(what: &CurrencyId) -> Option<MultiLocation> {
+		<CurrencyIdConvert as Convert<CurrencyId, Option<MultiLocation>>>::convert(*what)
+	}
+}
 
 /// A `FilterAssetLocation` implementation. Filters multi native assets whose
 /// reserve is same with `origin`.

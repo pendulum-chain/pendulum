@@ -2,7 +2,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 use frame_support::sp_runtime::Perquintill;
-use module_oracle_rpc_runtime_api::BalanceWrapper;
+// use module_oracle_rpc_runtime_api::BalanceWrapper;
 use parity_scale_codec::{Codec, Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_std::fmt::Debug;
@@ -25,7 +25,7 @@ sp_api::decl_runtime_apis! {
 		AccountId:  Codec,
 		Balance: Codec
 	{
-		fn get_unclaimed_staking_rewards(account: AccountId) -> BalanceWrapper<Balance>;
+		fn get_unclaimed_staking_rewards(account: AccountId) -> u128;
 		fn get_staking_rates() -> StakingRates;
 	}
 }

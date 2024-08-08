@@ -14,24 +14,24 @@ scale-info = { version = "2.1.1", default-features = false, features = ["derive"
 serde = { version = "1.0.142", default-features = false }
 module-pallet-staking-rpc-runtime-api = { path = "./rpc/runtime-api", default-features = false }
 
-frame-support = { version = "24.0.0", default-features = false }
-frame-system = { version = "24.0.0", default-features = false }
-pallet-authorship = { version = "24.0.0", default-features = false }
-pallet-balances = { version = "24.0.0", default-features = false }
-pallet-session = { version = "24.0.0", default-features = false }
-sp-api = { version = "22.0.0", default-features = false }
-sp-runtime = { version = "27.0.0", default-features = false }
-sp-staking = { version = "22.0.0", default-features = false }
-sp-std = { version = "11.0.0", default-features = false }
+frame-support = { version = "23.0.0", default-features = false }
+frame-system = { version = "23.0.0", default-features = false }
+pallet-authorship = { version = "23.0.0", default-features = false }
+pallet-balances = { version = "23.0.0", default-features = false }
+pallet-session = { version = "23.0.0", default-features = false }
+sp-api = { version = "21.0.0", default-features = false }
+sp-runtime = { version = "26.0.0", default-features = false }
+sp-staking = { version = "21.0.0", default-features = false }
+sp-std = { version = "10.0.0", default-features = false }
 
-pallet-aura = { version = "23.0.0", default-features = false }
-pallet-timestamp = { version = "23.0.0", default-features = false }
-sp-consensus-aura = { version = "0.28.0", default-features = false }
-sp-core = { version = "24.0.0", default-features = false }
-sp-io = { version = "26.0.0", default-features = false }
+pallet-aura = { version = "22.0.0", default-features = false }
+pallet-timestamp = { version = "22.0.0", default-features = false }
+sp-consensus-aura = { version = "0.27.0", default-features = false }
+sp-core = { version = "23.0.0", default-features = false }
+sp-io = { version = "25.0.0", default-features = false }
 
 # benchmarking
-frame-benchmarking = { version = "24.0.0", default-features = false, optional = true }
+frame-benchmarking = { version = "23.0.0", default-features = false, optional = true }
 
 [features]
 default = ["std"]

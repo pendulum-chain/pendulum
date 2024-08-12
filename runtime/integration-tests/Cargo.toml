@@ -64,7 +64,7 @@ orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0" }
 
 # Local
-runtime-common = { path = "../common" }
+runtime-common = { path = "../common" , default-features = false }
 
 pendulum-runtime = { path = "../pendulum" }
 amplitude-runtime = { path = "../amplitude" }

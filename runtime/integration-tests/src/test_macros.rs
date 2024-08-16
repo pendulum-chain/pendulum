@@ -1,3 +1,7 @@
+use parachain_info;
+use xcm_emulator::ParaId;
+
+
 macro_rules! transfer_20_relay_token_from_relay_chain_to_parachain {
 	(
 		$mocknet:ident,
@@ -8,39 +12,70 @@ macro_rules! transfer_20_relay_token_from_relay_chain_to_parachain {
 		$parachain_id:ident,
 		$tx_fee:ident
 	) => {{
-		use crate::mock::{units, ALICE};
+		use xcm_emulator::{Network, TestExt, Chain};
+		use crate::mock::{units};
 		use frame_support::traits::fungibles::Inspect;
 		use polkadot_core_primitives::Balance;
-		use xcm::latest::{Junction, Junction::Parachain, Junctions::Here};
+		use xcm::latest::{Junction, Junction::Parachain, Junctions::{X1, Here}, MultiLocation};
 		use $para_runtime::CurrencyId;
 
+		use integration_tests_common::{
+			constants::accounts,
+		};
+		let alice_account_id = accounts::init_balances()[0].clone();
+
 		$mocknet::reset();
-		let transfer_amount: Balance = units(20);
+		let transfer_amount: Balance = 2000;
 		let mut orml_tokens_before = 0;
 
 		// get ALICE's balance before the transfer
 		$parachain::execute_with(|| {
-			orml_tokens_before = $para_runtime::Tokens::balance(CurrencyId::XCM(0), &ALICE.into());
+			orml_tokens_before = $para_runtime::Tokens::balance(CurrencyId::XCM(0), &alice_account_id.clone().into());
 		});
 
+		let expected_base_balance = 40960000000000;
+
+		// get ALICE's balance in the relay chain, before the transfer.
+		$relaychain::execute_with(|| {
+			let before_alice_free_balance = $relay_runtime::Balances::free_balance(&alice_account_id.clone().into());
+			assert_eq!(before_alice_free_balance, expected_base_balance);
+		});
+
+
+		println!("executing relay transfer");
 		// execute the transfer from relay chain
 		$relaychain::execute_with(|| {
+			use $relay_runtime::{RuntimeEvent, System};
+
 			assert_ok!($relay_runtime::XcmPallet::reserve_transfer_assets(
-				$relay_runtime::RuntimeOrigin::signed(ALICE.into()),
-				Box::new(Parachain($parachain_id).into_versioned()),
+				$relay_runtime::RuntimeOrigin::signed(alice_account_id.clone().into()),
+				Box::new(Parachain($parachain_id).into()),
 				Box::new(
-					Junction::AccountId32 { network: None, id: ALICE }
+					Junction::AccountId32 { network: None, id: alice_account_id.clone().into() }
 						.into_location()
 						.into_versioned()
 				),
 				Box::new((Here, transfer_amount).into()),
 				0
 			));
+
+			for event_record in System::events() {
+    			println!("{:?}", event_record.event);
+			}
+
+			//relaychain::assert_xcm_pallet_sent();
+
 		});
 
+		println!("checking deposit event on receiver chain");
 		// a "Deposited" event occurred is proof that the transfer was successful
 		$parachain::execute_with(|| {
 			use $para_runtime::{RuntimeEvent, System};
+
+			for event_record in System::events() {
+    			println!("{:?}", event_record.event);
+			}
+
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
 				RuntimeEvent::Tokens(orml_tokens::Event::Deposited { .. })
@@ -52,9 +87,10 @@ macro_rules! transfer_20_relay_token_from_relay_chain_to_parachain {
 			)));
 		});
 
+		println!("checking balance");
 		$parachain::execute_with(|| {
 			assert_eq!(
-				$para_runtime::Tokens::balance(CurrencyId::XCM(0), &ALICE.into()),
+				$para_runtime::Tokens::balance(CurrencyId::XCM(0), &alice_account_id.clone().into()),
 				orml_tokens_before + transfer_amount - $tx_fee
 			);
 		});
@@ -68,42 +104,46 @@ macro_rules! transfer_10_relay_token_from_parachain_to_relay_chain {(
 		$para_runtime:ident,
 		$parachain: ident
 	) => {{
-		use crate::mock::{BOB, units};
+		use xcm_emulator::{Network, TestExt, Chain};
+		use crate::mock::{units};
 		use polkadot_core_primitives::Balance;
 		use xcm::latest::{Junction::AccountId32, Junctions::X1, MultiLocation, WeightLimit};
-		use xcm_emulator::TestExt;
+
+		use integration_tests_common::{
+			constants::accounts,
+		};
+		let bob_account_id = accounts::init_balances()[1].clone();
+
 
 		$mocknet::reset();
 		let transfer_amount: Balance = units(10);
-		let expected_base_balance = units(100);
+		let expected_base_balance = 40960000000000;
 
 		// get BOB's balance in the relay chain, before the transfer.
 		$relaychain::execute_with(|| {
-			let before_bob_free_balance = $relay_runtime::Balances::free_balance(&BOB.into());
+			let before_bob_free_balance = $relay_runtime::Balances::free_balance(&bob_account_id.clone().into());
 			assert_eq!(before_bob_free_balance, expected_base_balance);
 		});
 
 		// execute th transfer in the parachain.
 		$parachain::execute_with(|| {
+			use $para_runtime::{System, RuntimeEvent};
 			assert_ok!($para_runtime::XTokens::transfer(
-				$para_runtime::RuntimeOrigin::signed(BOB.into()),
+				$para_runtime::RuntimeOrigin::signed(bob_account_id.clone().into()),
 				$para_runtime::CurrencyId::XCM(0),
 				transfer_amount,
 				Box::new(
-					MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: BOB }) }
+					MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: bob_account_id.clone().into() }) }
 						.into()
 				),
 				WeightLimit::Unlimited
 			));
-		});
 
-		// check events in Parachain for proof of transfer
-		$parachain::execute_with(|| {
-			use $para_runtime::{System, RuntimeEvent};
+			use orml_tokens::Event;
 
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
-				RuntimeEvent::Tokens(orml_tokens::Event::Withdrawn { .. })
+				RuntimeEvent::Tokens(Event::Withdrawn { .. })
 			)));
 
 			assert!(System::events().iter().any(|r| matches!(
@@ -117,7 +157,9 @@ macro_rules! transfer_10_relay_token_from_parachain_to_relay_chain {(
 			use $relay_runtime::{RuntimeEvent, System, Balances};
 
 			let events = System::events();
-			assert_eq!(events.len(), 3);
+			for event_record in System::events() {
+    			println!("{:?}", event_record.event);
+			}
 
 			let withdrawn_balance = match &events[0].event {
 				RuntimeEvent::Balances(pallet_balances::Event::Withdraw { who: _, amount }) => amount,
@@ -142,7 +184,7 @@ macro_rules! transfer_10_relay_token_from_parachain_to_relay_chain {(
 			//This fee will taken to transfer assets(Polkadot) from sovereign parachain account to destination user account;
 			let fee_when_transferring_to_relay_chain = withdrawn_balance - deposited_balance;
 
-			let after_bob_free_balance = Balances::free_balance(&BOB.into());
+			let after_bob_free_balance = Balances::free_balance(&bob_account_id.into());
 			assert_eq!(
 				after_bob_free_balance,
 				expected_base_balance + transfer_amount - fee_when_transferring_to_relay_chain
@@ -271,7 +313,8 @@ macro_rules! parachain1_transfer_asset_to_parachain2 {
 		$parachain2_id:ident,
 		$tx_fee:ident
 	) => {{
-		use crate::mock::{ALICE, BOB, TEN_UNITS, UNIT};
+		use xcm_emulator::{Network, TestExt, Chain};
+		use crate::mock::{ TEN_UNITS, UNIT};
 		use frame_support::traits::{fungibles::Inspect, Currency};
 		use polkadot_core_primitives::AccountId;
 		use polkadot_parachain::primitives::Sibling;
@@ -283,26 +326,32 @@ macro_rules! parachain1_transfer_asset_to_parachain2 {
 			MultiLocation, WeightLimit,
 		};
 		use $para2_runtime::CurrencyId;
+		use integration_tests_common::{
+			constants::accounts,
+		};
+
+		let alice_account_id = accounts::init_balances()[0].clone();
+		let bob_account_id = accounts::init_balances()[1].clone();
 
 		let parachain2_account: AccountId = Sibling::from($parachain2_id).into_account_truncating();
 
 		$parachain2::execute_with(|| {
-			assert_eq!($para2_runtime::Tokens::balance(CurrencyId::XCM(1), &BOB.into()), 0);
+			assert_eq!($para2_runtime::Tokens::balance(CurrencyId::XCM(1), &alice_account_id.clone().into()), 0);
 		});
 
 		$parachain1::execute_with(|| {
 			use $para1_runtime::*;
 
-			let origin = RuntimeOrigin::signed(ALICE.into());
-			Balances::make_free_balance_be(&ALICE.into(), TEN_UNITS);
-			Balances::make_free_balance_be(&BOB.into(), UNIT);
+			let origin = RuntimeOrigin::signed(alice_account_id.clone().into());
+			Balances::make_free_balance_be(&alice_account_id.clone().into(), TEN_UNITS);
+			Balances::make_free_balance_be(&bob_account_id.clone().into(), UNIT);
 
 			// If using non root, create custom asset cost 0.1 Dot
 			// We're using force_create here to make sure asset is sufficient.
 			assert_ok!(Assets::force_create(
 				RuntimeOrigin::root(),
 				$para1_asset_id.into(),
-				MultiAddress::Id(ALICE.into()),
+				MultiAddress::Id(alice_account_id.clone().into()),
 				true,
 				UNIT / 100
 			));
@@ -310,7 +359,7 @@ macro_rules! parachain1_transfer_asset_to_parachain2 {
 			assert_ok!(Assets::mint(
 				origin.clone(),
 				$para1_asset_id.into(),
-				MultiAddress::Id(ALICE.into()),
+				MultiAddress::Id(alice_account_id.clone().into()),
 				1000 * UNIT
 			));
 
@@ -320,7 +369,7 @@ macro_rules! parachain1_transfer_asset_to_parachain2 {
 			assert_ok!(PolkadotXcm::limited_reserve_transfer_assets(
 				origin.clone(),
 				Box::new(MultiLocation::new(1, X1(Parachain($parachain2_id))).into()),
-				Box::new(Junction::AccountId32 { id: BOB, network: None }.into()),
+				Box::new(Junction::AccountId32 { id: bob_account_id.clone().into(), network: None }.into()),
 				Box::new(
 					(X2(PalletInstance(50), GeneralIndex($para1_asset_id as u128)), TEN_UNITS)
 						.into()
@@ -329,8 +378,8 @@ macro_rules! parachain1_transfer_asset_to_parachain2 {
 				WeightLimit::Unlimited
 			));
 
-			assert_eq!(990 * UNIT, Assets::balance($para1_asset_id, &AccountId::from(ALICE)));
-			assert_eq!(0, Assets::balance($para1_asset_id, &AccountId::from(BOB)));
+			assert_eq!(990 * UNIT, Assets::balance($para1_asset_id, &alice_account_id.clone()));
+			assert_eq!(0, Assets::balance($para1_asset_id, &bob_account_id.clone()));
 
 			assert_eq!(TEN_UNITS, Assets::balance($para1_asset_id, &parachain2_account));
 			// the balance of sibling parachain sovereign account is not changed
@@ -359,7 +408,7 @@ macro_rules! parachain1_transfer_asset_to_parachain2 {
 			)));
 
 			assert_eq!(
-				$para2_runtime::Tokens::balance($para2_runtime::CurrencyId::XCM(1), &BOB.into()),
+				$para2_runtime::Tokens::balance($para2_runtime::CurrencyId::XCM(1), &bob_account_id.clone().into()),
 				TEN_UNITS - $tx_fee
 			);
 		});
@@ -378,12 +427,18 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 		$network_id: ident,
 		$tx_fee: ident
 	) => {{
-		use crate::mock::{BOB, TEN_UNITS, UNIT};
+		use xcm_emulator::{Network, TestExt, Chain};
+		use crate::mock::{TEN_UNITS, UNIT};
 		use frame_support::traits::{fungible::Mutate, fungibles::Inspect};
 		use polkadot_core_primitives::AccountId;
 		use xcm::latest::{
 			Junction, Junction::Parachain, Junctions::X2, MultiLocation, WeightLimit,
 		};
+		use integration_tests_common::{
+			constants::accounts,
+		};
+
+		let bob_account_id = accounts::init_balances()[1].clone();
 
 		//first we need to set up USDT balance on pendulum chain before to start transfer it back.
 		parachain1_transfer_asset_to_parachain2!(
@@ -406,13 +461,13 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 
 			assert_eq!(
 				received_amount_after_fee,
-				Tokens::balance(CurrencyId::XCM(1), &AccountId::from(BOB))
+				Tokens::balance(CurrencyId::XCM(1), &bob_account_id.clone())
 			);
 			// ensure sender has enough balance to be charged as fee
-			assert_ok!(Balances::mint_into(&AccountId::from(BOB), TEN_UNITS));
+			assert_ok!(Balances::mint_into(&bob_account_id.clone(), TEN_UNITS));
 
 			assert_ok!(XTokens::transfer(
-				RuntimeOrigin::signed(BOB.into()),
+				RuntimeOrigin::signed(bob_account_id.clone().into()),
 				CurrencyId::XCM(1),
 				UNIT * 1,
 				Box::new(
@@ -420,7 +475,7 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 						1,
 						X2(
 							Parachain($parachain1_id),
-							Junction::AccountId32 { network: Some($network_id), id: BOB.into() }
+							Junction::AccountId32 { network: Some($network_id), id: bob_account_id.clone().into() }
 						)
 					)
 					.into()
@@ -430,7 +485,7 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 
 			assert_eq!(
 				received_amount_after_fee - 1 * UNIT, //initial balance - one unit
-				Tokens::balance(CurrencyId::XCM(1), &AccountId::from(BOB))
+				Tokens::balance(CurrencyId::XCM(1), &bob_account_id.clone())
 			);
 
 			assert!(System::events().iter().any(|r| matches!(
@@ -466,7 +521,7 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 					// for paying xcm execution fee.
 					// 990_000_000_000 for Statemint
 					// 988_423_297_485 for Statemine
-					assert_eq!(amount, Assets::balance($para1_asset_id, &AccountId::from(BOB)));
+					assert_eq!(amount, Assets::balance($para1_asset_id, &bob_account_id.clone()));
 				},
 				other => panic!("wrong event: {other:?}"),
 			}

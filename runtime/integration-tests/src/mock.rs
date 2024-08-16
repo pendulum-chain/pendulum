@@ -20,8 +20,8 @@ use core::default::Default;
 
 use pendulum_runtime::definitions::{moonbeam, moonbeam::PARA_ID as MOONBEAM_PARA_ID};
 use statemine_runtime as kusama_asset_hub_runtime;
-use statemint_runtime as polkadot_asset_hub_runtime;
 use sp_runtime::BuildStorage;
+
 pub const ALICE: [u8; 32] = [4u8; 32];
 pub const BOB: [u8; 32] = [5u8; 32];
 
@@ -137,6 +137,7 @@ macro_rules! build_parachain {
 	}};
 
 	($self:ident, $runtime:ty, $system:tt, $storage:ident) => {{
+		//staging_parachain_info must be used if asset_hub_kusama/polkadot from polkadot fellows is used!!!
 		parachain_info::GenesisConfig::<$runtime> {
 			parachain_id: $self.get_parachain_id().into(),
 			_config: Default::default()
@@ -147,6 +148,7 @@ macro_rules! build_parachain {
 		create_test_externalities!($runtime, $system, $storage)
 	}};
 }
+
 
 pub trait Builder<Currency> {
 	fn balances(self, balances: Vec<(AccountId, Currency, Balance)>) -> Self;
@@ -217,7 +219,7 @@ fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
 		..Default::default()
 	}
 }
-fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)> {
+pub fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)> {
 	vec![
 		(
 			PendulumCurrencyId::Native,
@@ -502,7 +504,7 @@ impl Builder<u128> for ExtBuilderParachain<u128> {
 	fn build(self) -> TestExternalities {
 		match self.chain {
 			ParachainType::PolkadotAssetHub => {
-				use polkadot_asset_hub_runtime::{Runtime, System};
+				use asset_hub_polkadot_runtime::{Runtime, System};
 				build_parachain!(self, Runtime, System)
 			},
 			ParachainType::KusamaAssetHub => {

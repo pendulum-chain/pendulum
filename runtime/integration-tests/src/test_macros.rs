@@ -247,7 +247,7 @@ macro_rules! parachain1_transfer_incorrect_asset_to_parachain2_should_fail {
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Fail {
 					message_hash: _,
 					error: xcm::v3::Error::TooExpensive,
-					weight: _
+					weight: _, ..
 				})
 			)));
 		});

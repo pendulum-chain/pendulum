@@ -40,7 +40,7 @@ macro_rules! create_test_externalities {
 		&pallet_xcm::GenesisConfig::<$runtime> {
 			safe_xcm_version: Some(2), _config: Default::default()
 		}
-		.assimilate_storage($storage)
+		.assimilate_storage(&mut $storage)
 		.unwrap();
 
 		let mut ext = sp_io::TestExternalities::new($storage);
@@ -51,7 +51,7 @@ macro_rules! create_test_externalities {
 
 macro_rules! build_relaychain {
 	($runtime:ty, $system:tt, $para_account_id: ident) => {{
-		let mut t = frame_system::GenesisConfig::default().build_storage().unwrap();
+		let mut t = frame_system::GenesisConfig::<$runtime>::default().build_storage().unwrap();
 		pallet_balances::GenesisConfig::<$runtime> {
 			balances: vec![
 				(AccountId::from(ALICE), units(100000)),
@@ -74,7 +74,7 @@ macro_rules! build_relaychain {
 
 macro_rules! build_parachain_with_orml {
 	($self:ident, $runtime:ty, $system:tt, $balance:tt, $orml_balance:tt, $currency_id_type:ty) => {{
-		let mut t = frame_system::GenesisConfig::default().build_storage().unwrap();
+		let mut t = frame_system::GenesisConfig::<$runtime>::default().build_storage().unwrap();
 		pallet_balances::GenesisConfig::<$runtime> {
 			balances: vec![(AccountId::from(ALICE), $balance), (AccountId::from(BOB), $balance)],
 		}
@@ -97,7 +97,7 @@ macro_rules! build_parachain_with_orml {
 
 macro_rules! build_parachain_with_orml_and_asset_registry {
 	($self:ident, $runtime:ty, $system:tt, $balance:tt, $orml_balance:tt, $currency_id_type:ty, $registry_assets:tt) => {{
-		let mut t = frame_system::GenesisConfig::default().build_storage().unwrap();
+		let mut t = frame_system::GenesisConfig::<$runtime>::default().build_storage().unwrap();
 		pallet_balances::GenesisConfig::<$runtime> {
 			balances: vec![(AccountId::from(ALICE), $balance), (AccountId::from(BOB), $balance)],
 		}
@@ -127,7 +127,7 @@ macro_rules! build_parachain_with_orml_and_asset_registry {
 
 macro_rules! build_parachain {
 	($self:ident, $runtime:ty, $system:tt) => {{
-		let mut t = frame_system::GenesisConfig::default().build_storage().unwrap();
+		let mut t = frame_system::GenesisConfig::<$runtime>::default().build_storage().unwrap();
 
 		pallet_balances::GenesisConfig::<$runtime> { balances: vec![] }
 			.assimilate_storage(&mut t)
@@ -223,8 +223,8 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 			PendulumCurrencyId::Native,
 			orml_asset_registry::AssetMetadata {
 				decimals: 12u32,
-				name: "Pendulum".as_bytes().to_vec(),
-				symbol: "PEN".as_bytes().to_vec(),
+				name: BoundedVec::<u8, StringLimit>::truncate_from("Pendulum".as_bytes().to_vec()),
+				symbol: BoundedVec::<u8, StringLimit>::truncate_from("PEN".as_bytes().to_vec()),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(MultiLocation::new(
 					0u8,
@@ -244,8 +244,8 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 			PendulumCurrencyId::XCM(1),
 			orml_asset_registry::AssetMetadata {
 				decimals: 12u32,
-				name: "USDT Assethub".as_bytes().to_vec(),
-				symbol: "USDT".as_bytes().to_vec(),
+				name: BoundedVec::<u8, StringLimit>::truncate_from("USDT Assethub".as_bytes().to_vec()),
+				symbol: BoundedVec::<u8, StringLimit>::truncate_from("USDT".as_bytes().to_vec()),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(asset_hub::USDT_location())),
 				additional: CustomMetadata {
@@ -262,8 +262,8 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 			PendulumCurrencyId::XCM(0),
 			orml_asset_registry::AssetMetadata {
 				decimals: 12u32,
-				name: "Polkadot".as_bytes().to_vec(),
-				symbol: "DOT".as_bytes().to_vec(),
+				name: BoundedVec::<u8, StringLimit>::truncate_from("Polkadot".as_bytes().to_vec()),
+				symbol: BoundedVec::<u8, StringLimit>::truncate_from("DOT".as_bytes().to_vec()),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(MultiLocation::parent())),
 				additional: CustomMetadata {
@@ -280,8 +280,8 @@ fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u8>)>
 			PendulumCurrencyId::XCM(6),
 			orml_asset_registry::AssetMetadata {
 				decimals: 12u32,
-				name: "Moonbeam BRZ".as_bytes().to_vec(),
-				symbol: "BRZ".as_bytes().to_vec(),
+				name: BoundedVec::<u8, StringLimit>::truncate_from("Moonbeam BRZ".as_bytes().to_vec()),
+				symbol: BoundedVec::<u8, StringLimit>::truncate_from("BRZ".as_bytes().to_vec()),
 				existential_deposit: 1_000u128,
 				location: Some(xcm::VersionedMultiLocation::V3(moonbeam::BRZ_location())),
 				additional: CustomMetadata {
@@ -303,8 +303,8 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 			AmplitudeCurrencyId::Native,
 			orml_asset_registry::AssetMetadata {
 				decimals: 12u32,
-				name: "Amplitude".as_bytes().to_vec(),
-				symbol: "AMPE".as_bytes().to_vec(),
+				name: BoundedVec::<u8, StringLimit>::truncate_from("Amplitude".as_bytes().to_vec()),
+				symbol: BoundedVec::<u8, StringLimit>::truncate_from("AMPE".as_bytes().to_vec()),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(MultiLocation::new(
 					0u8,
@@ -324,8 +324,8 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 			AmplitudeCurrencyId::XCM(1),
 			orml_asset_registry::AssetMetadata {
 				decimals: 12u32,
-				name: BoundedVec::truncate_from("USDT Assethub".as_bytes().to_vec()),
-				symbol: BoundedVec::truncate_from("USDT".as_bytes().to_vec()),
+				name: BoundedVec::<u8, StringLimit>::truncate_from("USDT Assethub".as_bytes().to_vec()),
+				symbol: BoundedVec::<u8, StringLimit>::truncate_from("USDT".as_bytes().to_vec()),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(asset_hub::USDT_location())),
 				additional: CustomMetadata {
@@ -342,8 +342,8 @@ fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>
 			AmplitudeCurrencyId::XCM(0),
 			orml_asset_registry::AssetMetadata {
 				decimals: 12u32,
-				name: BoundedVec::truncate_from("Kusama".as_bytes().to_vec()),
-				symbol: BoundedVec::truncate_from("KSM".as_bytes().to_vec()),
+				name: BoundedVec::<u8, StringLimit>::truncate_from("Kusama".as_bytes().to_vec()),
+				symbol: BoundedVec::<u8, StringLimit>::truncate_from("KSM".as_bytes().to_vec()),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(MultiLocation::parent())),
 				additional: CustomMetadata {

@@ -11999,6 +11999,8 @@ dependencies = [
  "pallet-balances",
  "pallet-message-queue",
  "pallet-session",
+ "pallet-timestamp",
+ "pallet-treasury",
  "pallet-xcm",
  "parachain-info",
  "parachain-staking",

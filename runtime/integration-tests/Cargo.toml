@@ -54,6 +54,7 @@ parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", branch = 
 #staging-parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 pallet-message-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 parachain-staking = { path = "../../pallets/parachain-staking"}
+pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
 
 asset-hub-polkadot-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 statemine-runtime = { git = "https://github.com/paritytech/polkadot-sdk", package = "asset-hub-kusama-runtime", branch = "release-polkadot-v1.1.0" }
@@ -66,6 +67,8 @@ orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-modu
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", branch = "polkadot-v1.1.0" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", branch = "polkadot-v1.1.0" }
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0" }
+
+pallet-treasury = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 
 # Local
 runtime-common = { path = "../common" , default-features = false }

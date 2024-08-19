@@ -21,12 +21,13 @@ use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use sp_debug_derive::RuntimeDebug;
-use sp_runtime::{traits::{BlakeTwo256, Convert, IdentityLookup, Zero, MaybeEquivalence}, AccountId32, generic, impl_opaque_keys, Perquintill};
+use sp_runtime::{traits::{BlakeTwo256, Convert, IdentityLookup, Zero, MaybeEquivalence}, AccountId32, generic, impl_opaque_keys, Perquintill, Permill};
 use xcm::v3::prelude::*;
 use xcm_emulator::{
 	Weight,
 };
 use cumulus_pallet_parachain_system::{self, RelayNumberStrictlyIncreases};
+use frame_support::traits::EitherOfDiverse;
 use sp_runtime::traits::ConvertInto;
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute, WeightTrader},
@@ -45,6 +46,8 @@ use crate::{definitions::asset_hub, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
 use pendulum_runtime::definitions::moonbeam::BRZ_location;
 use runtime_common::AuraId;
 
+#[cfg(any(feature = "std", test))]
+pub use sp_runtime::BuildStorage;
 
 pub const UNIT: runtime_common::Balance = 1_000_000_000_000;
 pub const MILLISECS_PER_BLOCK: u64 = 12000;
@@ -442,6 +445,40 @@ impl orml_xtokens::Config for Runtime {
 	type UniversalLocation = UniversalLocation;
 }
 
+
+parameter_types! {
+	pub const ProposalBond: Permill = Permill::from_percent(5);
+	pub const ProposalBondMinimum: Balance = 10 * UNIT;
+	pub const SpendPeriod: BlockNumber = 7 * DAYS;
+	pub const Burn: Permill = Permill::from_percent(0);
+	pub const TreasuryPalletId: frame_support::PalletId = frame_support::PalletId(*b"py/trsry");
+	pub const MaxApprovals: u32 = 100;
+}
+
+type TreasuryApproveOrigin =
+	EnsureRoot<runtime_common::AccountId>;
+
+type TreasuryRejectOrigin =
+	EnsureRoot<runtime_common::AccountId>;
+
+impl pallet_treasury::Config for Runtime {
+	type PalletId = TreasuryPalletId;
+	type Currency = Balances;
+	type ApproveOrigin = TreasuryApproveOrigin;
+	type RejectOrigin = TreasuryRejectOrigin;
+	type RuntimeEvent = RuntimeEvent;
+	type OnSlash = Treasury;
+	type ProposalBond = ProposalBond;
+	type ProposalBondMinimum = ProposalBondMinimum;
+	type ProposalBondMaximum = ();
+	type SpendPeriod = SpendPeriod;
+	type Burn = Burn;
+	type BurnDestination = ();
+	type SpendFunds = ();
+	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+	type MaxApprovals = MaxApprovals;
+	type SpendOrigin = frame_support::traits::NeverEnsureOrigin<u128>;
+}
 pub struct AccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
@@ -463,7 +500,7 @@ parameter_types! {
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
-type Block = frame_system::mocking::MockBlock<Runtime>;
+pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -471,6 +508,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		Tokens: orml_tokens,
+		Timestamp: pallet_timestamp,
 		XTokens: orml_xtokens,
 		Balances: pallet_balances,
 		PolkadotXcm: pallet_xcm,
@@ -480,11 +518,15 @@ frame_support::construct_runtime!(
 		DmpQueue: cumulus_pallet_dmp_queue,
 		CumulusXcm: cumulus_pallet_xcm,
 
+		Treasury: pallet_treasury,
+
 		Aura: pallet_aura = 33,
 		Session: pallet_session = 32,
 		ParachainStaking: parachain_staking = 35,
 		Authorship: pallet_authorship = 30,
 		AuraExt: cumulus_pallet_aura_ext = 34,
+
+
 	}
 );
 
@@ -604,8 +646,6 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ConsensusHook = cumulus_pallet_parachain_system::consensus_hook::ExpectParentIncluded;
 }
 
-impl parachain_info::Config for Runtime {}
-
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
@@ -635,6 +675,18 @@ impl pallet_aura::Config for Runtime {
 	type DisabledValidators = ();
 	type MaxAuthorities = MaxAuthorities;
 	type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
+}
+
+parameter_types! {
+	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
+}
+
+impl pallet_timestamp::Config for Runtime {
+	/// A timestamp: milliseconds since the unix epoch.
+	type Moment = u64;
+	type OnTimestampSet = ();
+	type MinimumPeriod = MinimumPeriod;
+	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -694,7 +746,7 @@ impl parachain_staking::Config for Runtime {
 	type NetworkRewardStart = NetworkRewardStart;
 	type NetworkRewardBeneficiary = Treasury;
 	type CollatorRewardRateDecay = CollatorRewardRateDecay;
-	type WeightInfo = weights::parachain_staking::SubstrateWeight<Runtime>;
+	type WeightInfo = parachain_staking::default_weights::SubstrateWeight<Runtime>;
 
 	const BLOCKS_PER_YEAR: runtime_common::BlockNumber = BLOCKS_PER_YEAR;
 }

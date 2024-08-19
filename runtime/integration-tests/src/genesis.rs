@@ -74,3 +74,54 @@ pub fn genesis(para_id: u32) -> Storage {
 
     genesis_config.build_storage().unwrap()
 }
+
+pub fn genesis_sibling(para_id: u32) -> Storage {
+    use sibling::BuildStorage;
+
+    let token_balances = accounts::init_balances()
+        .iter()
+        .flat_map(|k| vec![(k.clone(), sibling::CurrencyId::XCM(0), units(100))])
+        .collect();
+
+    let genesis_config = sibling::RuntimeGenesisConfig {
+        system: sibling::SystemConfig {
+            code: pendulum_runtime::WASM_BINARY
+                .expect("WASM binary was not build, please build it!")
+                .to_vec(),
+            ..Default::default()
+        },
+        balances: sibling::BalancesConfig {
+            balances: accounts::init_balances()
+                .iter()
+                .cloned()
+                .map(|k| (k, units(100)))
+                .collect(),
+        },
+        tokens: sibling::TokensConfig {
+            balances: token_balances
+        },
+        parachain_info: sibling::ParachainInfoConfig {
+            parachain_id: para_id.into(),
+            ..Default::default()
+        },
+        session: sibling::SessionConfig {
+            keys: collators::invulnerables()
+                .into_iter()
+                .map(|(acc, aura)| {
+                    (
+                        acc.clone(),                          // account id
+                        acc,                                  // validator id
+                        sibling::SessionKeys { aura }, // session keys
+                    )
+                })
+                .collect(),
+        },
+        polkadot_xcm: sibling::PolkadotXcmConfig {
+            safe_xcm_version: Some(SAFE_XCM_VERSION),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
+    genesis_config.build_storage().unwrap()
+}

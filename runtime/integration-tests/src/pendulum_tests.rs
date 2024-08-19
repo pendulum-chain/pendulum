@@ -5,27 +5,32 @@ use crate::{mock::{para_ext, polkadot_relay_ext, ParachainType, USDT_ASSET_ID}, 
 	transfer_10_relay_token_from_parachain_to_relay_chain,
 	transfer_20_relay_token_from_relay_chain_to_parachain,
 	transfer_native_token_from_parachain1_to_parachain2_and_back,
-}, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID, genesis};
+}, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID};
 
 use frame_support::assert_ok;
 #[allow(unused_imports)]
 use pendulum_runtime::definitions::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
 use xcm::latest::NetworkId;
 use xcm_emulator::{decl_test_networks, decl_test_relay_chains, decl_test_parachains, DefaultMessageProcessor};
-use genesis::genesis;
+use crate::genesis::{genesis, genesis_sibling};
 use integration_tests_common::{
 	impl_assert_events_helpers_for_parachain, constants::{polkadot, asset_hub_polkadot},
 };
 use frame_support::traits::OnInitialize;
 
 // Native fee expected for each token according to the `fee_per_second` values defined in the mock
-const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 5000000000;
+
+const NATIVE_FEE_WHEN_TRANSFER_TO_ASSETHUB: polkadot_core_primitives::Balance = 5000000000;
+const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
 const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
 	NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN / 4;
 const MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
 	2 * NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN;
 const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
 	NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN / 2;
+
+const USDT_FEE_WHEN_TRANSFER_TO_ASSETHUB: polkadot_core_primitives::Balance =
+	NATIVE_FEE_WHEN_TRANSFER_TO_ASSETHUB / 2;
 
 decl_test_relay_chains! {
 	#[api_version(5)]
@@ -100,7 +105,26 @@ decl_test_parachains! {
 		}
 	},
 	pub struct SiblingParachain {
-		genesis = genesis(SIBLING_ID),
+		genesis = genesis_sibling(SIBLING_ID),
+		on_init = {
+			sibling::AuraExt::on_initialize(1);
+		},
+		runtime = sibling,
+		core = {
+			XcmpMessageHandler: sibling::XcmpQueue,
+			DmpMessageHandler: sibling::DmpQueue,
+			LocationToAccountId: sibling::LocationToAccountId,
+			ParachainInfo: sibling::ParachainInfo,
+		},
+		pallets = {
+			PolkadotXcm: sibling::PolkadotXcm,
+			Tokens: sibling::Tokens,
+			Balances: sibling::Balances,
+			XTokens: sibling::XTokens,
+		}
+	},
+	pub struct MoonbeamParachain {
+		genesis = genesis_sibling(MOONBEAM_PARA_ID),
 		on_init = {
 			sibling::AuraExt::on_initialize(1);
 		},
@@ -120,24 +144,14 @@ decl_test_parachains! {
 	},
 }
 
-
-// decl_test_parachain! {
-// 	pub struct MoonbeamParachain {
-// 		Runtime = sibling::Runtime,
-// 		XcmpMessageHandler = sibling::XcmpQueue,
-// 		DmpMessageHandler = sibling::DmpQueue,
-// 		new_ext = para_ext(ParachainType::Moonbeam),
-// 	}
-// }
-
 decl_test_networks! {
 	pub struct PolkadotMockNet {
 		relay_chain = Polkadot,
 		parachains = vec![
 			AssetHubPolkadot,
 			PendulumParachain,
-			//MoonbeamParachain,
-			//SiblingParachain,
+			MoonbeamParachain,
+			SiblingParachain,
 		],
 		bridge = ()
 	},
@@ -167,30 +181,30 @@ decl_test_networks! {
 // 	);
 // }
 
-// #[test]
-// fn assethub_transfer_incorrect_asset_to_pendulum_should_fail() {
-// 	parachain1_transfer_incorrect_asset_to_parachain2_should_fail!(
-// 		polkadot_asset_hub_runtime,
-// 		AssetHubParachain,
-// 		pendulum_runtime,
-// 		PendulumParachain,
-// 		PENDULUM_ID
-// 	);
-// }
-//
-// #[test]
-// fn assethub_transfer_asset_to_pendulum() {
-// 	parachain1_transfer_asset_to_parachain2!(
-// 		asset_hub_polkadot_runtime,
-// 		AssetHubPolkadot,
-// 		USDT_ASSET_ID,
-// 		pendulum_runtime,
-// 		PendulumParachain,
-// 		PENDULUM_ID,
-// 		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
-// 	);
-// }
-//
+#[test]
+fn assethub_transfer_incorrect_asset_to_pendulum_should_fail() {
+	parachain1_transfer_incorrect_asset_to_parachain2_should_fail!(
+		asset_hub_polkadot_runtime,
+		AssetHubPolkadot,
+		pendulum_runtime,
+		PendulumParachain,
+		PENDULUM_ID
+	);
+}
+
+#[test]
+fn assethub_transfer_asset_to_pendulum() {
+	parachain1_transfer_asset_to_parachain2!(
+		asset_hub_polkadot_runtime,
+		AssetHubPolkadot,
+		USDT_ASSET_ID,
+		pendulum_runtime,
+		PendulumParachain,
+		PENDULUM_ID,
+		USDT_FEE_WHEN_TRANSFER_TO_ASSETHUB
+	);
+}
+
 #[test]
 fn assethub_transfer_asset_to_pendulum_and_back() {
 	let network_id = NetworkId::Polkadot;
@@ -204,34 +218,34 @@ fn assethub_transfer_asset_to_pendulum_and_back() {
 		PendulumParachain,
 		PENDULUM_ID,
 		network_id,
-		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
+		USDT_FEE_WHEN_TRANSFER_TO_ASSETHUB
 	);
 }
-//
-// #[test]
-// fn transfer_native_token_from_pendulum_to_sibling_parachain_and_back() {
-// 	transfer_native_token_from_parachain1_to_parachain2_and_back!(
-// 		PolkadotMockNet,
-// 		pendulum_runtime,
-// 		PendulumParachain,
-// 		sibling,
-// 		SiblingParachain,
-// 		PENDULUM_ID,
-// 		SIBLING_ID,
-// 		NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN
-// 	);
-// }
-//
-// #[test]
-// fn moonbeam_transfers_token_and_handle_automation() {
-// 	moonbeam_transfers_token_and_handle_automation!(
-// 		PolkadotMockNet,
-// 		pendulum_runtime,
-// 		PendulumParachain,
-// 		sibling,
-// 		MoonbeamParachain,
-// 		PENDULUM_ID,
-// 		MOONBEAM_PARA_ID,
-// 		MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN
-// 	);
-// }
+
+#[test]
+fn transfer_native_token_from_pendulum_to_sibling_parachain_and_back() {
+	transfer_native_token_from_parachain1_to_parachain2_and_back!(
+		PolkadotMockNet,
+		pendulum_runtime,
+		PendulumParachain,
+		sibling,
+		SiblingParachain,
+		PENDULUM_ID,
+		SIBLING_ID,
+		NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN
+	);
+}
+
+#[test]
+fn moonbeam_transfers_token_and_handle_automation() {
+	moonbeam_transfers_token_and_handle_automation!(
+		PolkadotMockNet,
+		pendulum_runtime,
+		PendulumParachain,
+		sibling,
+		MoonbeamParachain,
+		PENDULUM_ID,
+		MOONBEAM_PARA_ID,
+		MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN
+	);
+}

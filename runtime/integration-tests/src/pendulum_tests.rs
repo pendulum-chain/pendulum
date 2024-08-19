@@ -99,31 +99,26 @@ decl_test_parachains! {
 			XTokens: pendulum_runtime::XTokens,
 		}
 	},
-	// TODO error u32 vs u64
-	// pub struct SiblingParachain {
-	// 	genesis = genesis(SIBLING_ID),
-	// 	on_init = (),
-	// 	runtime = sibling,
-	// 	core = {
-	// 		XcmpMessageHandler: sibling::XcmpQueue,
-	// 		DmpMessageHandler: sibling::DmpQueue,
-	// 		LocationToAccountId: sibling::LocationToAccountId,
-	// 		ParachainInfo: sibling::ParachainInfo,
-	// 	},
-	// 	pallets = {
-	// 		PolkadotXcm: sibling::PolkadotXcm,
-	// 		Tokens: sibling::Tokens,
-	// 		Balances: sibling::Balances,
-	// 		XTokens: sibling::XTokens,
-	// 	}
-	// },
+	pub struct SiblingParachain {
+		genesis = genesis(SIBLING_ID),
+		on_init = {
+			sibling::AuraExt::on_initialize(1);
+		},
+		runtime = sibling,
+		core = {
+			XcmpMessageHandler: sibling::XcmpQueue,
+			DmpMessageHandler: sibling::DmpQueue,
+			LocationToAccountId: sibling::LocationToAccountId,
+			ParachainInfo: sibling::ParachainInfo,
+		},
+		pallets = {
+			PolkadotXcm: sibling::PolkadotXcm,
+			Tokens: sibling::Tokens,
+			Balances: sibling::Balances,
+			XTokens: sibling::XTokens,
+		}
+	},
 }
-
-
-//Pendulum impls
-//impl_assert_events_helpers_for_parachain!(PendulumParachain);
-
-
 
 
 // decl_test_parachain! {

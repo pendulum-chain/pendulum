@@ -21,16 +21,13 @@ use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use sp_debug_derive::RuntimeDebug;
-use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, Convert, IdentityLookup, Zero, MaybeEquivalence},
-	AccountId32,
-};
+use sp_runtime::{traits::{BlakeTwo256, Convert, IdentityLookup, Zero, MaybeEquivalence}, AccountId32, generic, impl_opaque_keys, Perquintill};
 use xcm::v3::prelude::*;
 use xcm_emulator::{
 	Weight,
 };
 use cumulus_pallet_parachain_system::{self, RelayNumberStrictlyIncreases};
+use sp_runtime::traits::ConvertInto;
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute, WeightTrader},
 	Assets, XcmExecutor,
@@ -46,11 +43,28 @@ use xcm_builder::{
 use xcm_executor::traits::Properties;
 use crate::{definitions::asset_hub, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
 use pendulum_runtime::definitions::moonbeam::BRZ_location;
+use runtime_common::AuraId;
+
+
+pub const UNIT: runtime_common::Balance = 1_000_000_000_000;
+pub const MILLISECS_PER_BLOCK: u64 = 12000;
+
+// NOTE: Currently it is not possible to change the slot duration after the chain has started.
+//       Attempting to do so will brick block production.
+pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
+
+// Time is measured by number of blocks.
+pub const MINUTES: runtime_common::BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as runtime_common::BlockNumber);
+pub const HOURS: runtime_common::BlockNumber = MINUTES * 60;
+pub const DAYS: runtime_common::BlockNumber = HOURS * 24;
+pub const BLOCKS_PER_YEAR: runtime_common::BlockNumber = DAYS * 36525 / 100;
 
 const XCM_ASSET_RELAY_DOT: u8 = 0;
 const XCM_ASSET_ASSETHUB_USDT: u8 = 1;
 
 pub type AccountId = AccountId32;
+
+pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -464,17 +478,24 @@ frame_support::construct_runtime!(
 		ParachainInfo: parachain_info,
 		XcmpQueue: cumulus_pallet_xcmp_queue,
 		DmpQueue: cumulus_pallet_dmp_queue,
-		CumulusXcm: cumulus_pallet_xcm
+		CumulusXcm: cumulus_pallet_xcm,
+
+		Aura: pallet_aura = 33,
+		Session: pallet_session = 32,
+		ParachainStaking: parachain_staking = 35,
+		Authorship: pallet_authorship = 30,
+		AuraExt: cumulus_pallet_aura_ext = 34,
 	}
 );
 
+
 pub type Balance = u128;
-pub type BlockNumber = u64;
-pub type Index = u64;
+pub type BlockNumber = u32;
+pub type Index = u32;
 pub type Amount = i64;
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
+	pub const BlockHashCount: u32 = 250;
 	pub const SS58Prefix: u8 = 42;
 }
 impl frame_system::Config for Runtime {
@@ -602,6 +623,97 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 }
+
+parameter_types! {
+	// as per documentation, typical value for this is false "unless this pallet is being augmented by another pallet"
+	pub const AllowMultipleBlocksPerSlot: bool = false;
+	pub const MaxAuthorities: u32 = 200;
+}
+
+impl pallet_aura::Config for Runtime {
+	type AuthorityId = AuraId;
+	type DisabledValidators = ();
+	type MaxAuthorities = MaxAuthorities;
+	type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
+}
+
+parameter_types! {
+	pub const Offset: u32 = 0;
+}
+
+impl pallet_authorship::Config for Runtime {
+	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
+	type EventHandler = ParachainStaking;
+}
+
+impl_opaque_keys! {
+	pub struct SessionKeys {
+		pub aura: Aura,
+	}
+}
+
+parameter_types! {
+	pub const MinBlocksPerRound: BlockNumber = HOURS;
+	pub const DefaultBlocksPerRound: BlockNumber = 2 * HOURS;
+	pub const StakeDuration: BlockNumber = 7 * DAYS;
+	pub const ExitQueueDelay: u32 = 2;
+	pub const MinCollators: u32 = 8;
+	pub const MinRequiredCollators: u32 = 2;
+	pub const MaxDelegationsPerRound: u32 = 1;
+	#[derive(Debug, Eq, PartialEq)]
+	pub const MaxDelegatorsPerCollator: u32 = 40;
+	pub const MinCollatorStake: Balance = 5_000 * UNIT;
+	pub const MinDelegatorStake: Balance = 10 * UNIT;
+	#[derive(Debug, Eq, PartialEq)]
+	pub const MaxCollatorCandidates: u32 = 40;
+	pub const MaxUnstakeRequests: u32 = 10;
+	pub const NetworkRewardStart: BlockNumber = BlockNumber::MAX;
+	pub const NetworkRewardRate: Perquintill = Perquintill::from_percent(0);
+	pub const CollatorRewardRateDecay: Perquintill = Perquintill::from_parts(936_879_853_200_000_000u64);
+}
+
+impl parachain_staking::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type CurrencyBalance = runtime_common::Balance;
+
+	type MinBlocksPerRound = MinBlocksPerRound;
+	type DefaultBlocksPerRound = DefaultBlocksPerRound;
+	type StakeDuration = StakeDuration;
+	type ExitQueueDelay = ExitQueueDelay;
+	type MinCollators = MinCollators;
+	type MinRequiredCollators = MinRequiredCollators;
+	type MaxDelegationsPerRound = MaxDelegationsPerRound;
+	type MaxDelegatorsPerCollator = MaxDelegatorsPerCollator;
+	type MinCollatorStake = MinCollatorStake;
+	type MinCollatorCandidateStake = MinCollatorStake;
+	type MaxTopCandidates = MaxCollatorCandidates;
+	type MinDelegatorStake = MinDelegatorStake;
+	type MaxUnstakeRequests = MaxUnstakeRequests;
+	type NetworkRewardRate = NetworkRewardRate;
+	type NetworkRewardStart = NetworkRewardStart;
+	type NetworkRewardBeneficiary = Treasury;
+	type CollatorRewardRateDecay = CollatorRewardRateDecay;
+	type WeightInfo = weights::parachain_staking::SubstrateWeight<Runtime>;
+
+	const BLOCKS_PER_YEAR: runtime_common::BlockNumber = BLOCKS_PER_YEAR;
+}
+
+impl pallet_session::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type ValidatorId = <Self as frame_system::Config>::AccountId;
+	type ValidatorIdOf = ConvertInto;
+	type ShouldEndSession = ParachainStaking;
+	type NextSessionRotation = ParachainStaking;
+	type SessionManager = ParachainStaking;
+	type SessionHandler = <SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
+	type Keys = SessionKeys;
+	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
+}
+
+impl parachain_info::Config for Runtime {}
+
+impl cumulus_pallet_aura_ext::Config for Runtime {}
 
 /// A trader who believes all tokens are created equal to "weight" of any chain,
 /// which is not true, but good enough to mock the fee payment of XCM execution.

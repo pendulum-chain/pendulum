@@ -58,7 +58,7 @@ parachain-staking = { path = "../../pallets/parachain-staking"}
 pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0"}
 
 asset-hub-polkadot-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
-statemine-runtime = { git = "https://github.com/paritytech/polkadot-sdk", package = "asset-hub-kusama-runtime", branch = "release-polkadot-v1.1.0" }
+asset-hub-kusama-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 polkadot-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 polkadot-runtime-constants = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 

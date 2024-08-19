@@ -19,7 +19,7 @@ use xcm::{v3::MultiLocation, VersionedMultiLocation};
 use core::default::Default;
 
 use pendulum_runtime::definitions::{moonbeam, moonbeam::PARA_ID as MOONBEAM_PARA_ID};
-use statemine_runtime as kusama_asset_hub_runtime;
+use asset_hub_kusama_runtime as kusama_asset_hub_runtime;
 use sp_runtime::BuildStorage;
 
 pub const ALICE: [u8; 32] = [4u8; 32];
@@ -37,7 +37,7 @@ pub const ORML_INITIAL_BALANCE: Balance = TEN_UNITS;
 macro_rules! create_test_externalities {
 
 	($runtime:ty, $system:ident, $storage:ident) => {{
-		&pallet_xcm::GenesisConfig::<$runtime> {
+		let _ = &pallet_xcm::GenesisConfig::<$runtime> {
 			safe_xcm_version: Some(2), _config: Default::default()
 		}
 		.assimilate_storage(&mut $storage)
@@ -52,7 +52,7 @@ macro_rules! create_test_externalities {
 macro_rules! build_relaychain {
 	($runtime:ty, $system:tt, $para_account_id: ident) => {{
 		let mut t = frame_system::GenesisConfig::<$runtime>::default().build_storage().unwrap();
-		pallet_balances::GenesisConfig::<$runtime> {
+		let _ = pallet_balances::GenesisConfig::<$runtime> {
 			balances: vec![
 				(AccountId::from(ALICE), units(100000)),
 				(AccountId::from(BOB), units(100)),
@@ -299,7 +299,7 @@ pub fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u
 	]
 }
 
-fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>)> {
+pub fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec<u8>)> {
 	vec![
 		(
 			AmplitudeCurrencyId::Native,

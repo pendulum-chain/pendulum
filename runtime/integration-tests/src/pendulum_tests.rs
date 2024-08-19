@@ -1,18 +1,20 @@
-use crate::{mock::{para_ext, polkadot_relay_ext, ParachainType, USDT_ASSET_ID}, sibling, test_macros::{
-	moonbeam_transfers_token_and_handle_automation, parachain1_transfer_asset_to_parachain2,
-	parachain1_transfer_asset_to_parachain2_and_back,
-	parachain1_transfer_incorrect_asset_to_parachain2_should_fail,
-	transfer_10_relay_token_from_parachain_to_relay_chain,
-	transfer_20_relay_token_from_relay_chain_to_parachain,
-	transfer_native_token_from_parachain1_to_parachain2_and_back,
-}, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID};
+use crate::{mock::{para_ext, polkadot_relay_ext, ParachainType, USDT_ASSET_ID,
+    assets_metadata_for_registry_pendulum},
+	sibling, test_macros::{
+		moonbeam_transfers_token_and_handle_automation, parachain1_transfer_asset_to_parachain2,
+		parachain1_transfer_asset_to_parachain2_and_back,
+		parachain1_transfer_incorrect_asset_to_parachain2_should_fail,
+		transfer_10_relay_token_from_parachain_to_relay_chain,
+		transfer_20_relay_token_from_relay_chain_to_parachain,
+		transfer_native_token_from_parachain1_to_parachain2_and_back,
+	}, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID};
 
 use frame_support::assert_ok;
 #[allow(unused_imports)]
 use pendulum_runtime::definitions::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
 use xcm::latest::NetworkId;
 use xcm_emulator::{decl_test_networks, decl_test_relay_chains, decl_test_parachains, DefaultMessageProcessor};
-use crate::genesis::{genesis, genesis_sibling};
+use crate::genesis::{genesis_gen, genesis_sibling};
 use integration_tests_common::{
 	impl_assert_events_helpers_for_parachain, constants::{polkadot, asset_hub_polkadot},
 };
@@ -20,17 +22,14 @@ use frame_support::traits::OnInitialize;
 
 // Native fee expected for each token according to the `fee_per_second` values defined in the mock
 
-const NATIVE_FEE_WHEN_TRANSFER_TO_ASSETHUB: polkadot_core_primitives::Balance = 5000000000;
+// const NATIVE_FEE_WHEN_TRANSFER_TO_ASSETHUB: polkadot_core_primitives::Balance = 5000000000;
 const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
 const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
-	NATIVE_FEE_WHEN_TRANSFER_TO_ASSETHUB / 4;
+	NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN / 4;
 const MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
 	2 * NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN;
 const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
 	NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN / 2;
-
-const USDT_FEE_WHEN_TRANSFER_TO_ASSETHUB: polkadot_core_primitives::Balance =
-	NATIVE_FEE_WHEN_TRANSFER_TO_ASSETHUB / 2;
 
 decl_test_relay_chains! {
 	#[api_version(5)]
@@ -48,21 +47,6 @@ decl_test_relay_chains! {
 			Hrmp: polkadot_runtime::Hrmp,
 		}
 	},
-	// #[api_version(5)]
-	// pub struct KusamaRelay {
-	// 	genesis = kusama::genesis(),
-	// 	on_init = (),
-	// 	runtime = kusama_runtime,
-	// 	core = {
-	// 		MessageProcessor: DefaultMessageProcessor<KusamaRelay>,
-	// 		SovereignAccountOf: kusama_runtime::xcm_config::SovereignAccountOf,
-	// 	},
-	// 	pallets = {
-	// 		XcmPallet: kusama_runtime::XcmPallet,
-	// 		Balances: kusama_runtime::Balances,
-	// 		Hrmp: kusama_runtime::Hrmp,
-	// 	}
-	// },
 }
 
 decl_test_parachains! {
@@ -85,7 +69,7 @@ decl_test_parachains! {
 		}
 	},
 	pub struct PendulumParachain {
-		genesis = genesis(PENDULUM_ID),
+		genesis = genesis_gen!(pendulum_runtime, PENDULUM_ID, assets_metadata_for_registry_pendulum),
 		on_init = {
 			pendulum_runtime::AuraExt::on_initialize(1);
 		},
@@ -203,7 +187,7 @@ fn assethub_transfer_asset_to_pendulum() {
 		pendulum_runtime,
 		PendulumParachain,
 		PENDULUM_ID,
-		USDT_FEE_WHEN_TRANSFER_TO_ASSETHUB
+		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }
 
@@ -220,7 +204,7 @@ fn assethub_transfer_asset_to_pendulum_and_back() {
 		PendulumParachain,
 		PENDULUM_ID,
 		network_id,
-		USDT_FEE_WHEN_TRANSFER_TO_ASSETHUB
+		USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }
 

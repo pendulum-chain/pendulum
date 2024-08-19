@@ -23,7 +23,7 @@ use frame_support::traits::OnInitialize;
 const NATIVE_FEE_WHEN_TRANSFER_TO_ASSETHUB: polkadot_core_primitives::Balance = 5000000000;
 const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
 const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
-	NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN / 4;
+	NATIVE_FEE_WHEN_TRANSFER_TO_ASSETHUB / 4;
 const MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
 	2 * NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN;
 const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
@@ -157,29 +157,31 @@ decl_test_networks! {
 	},
 }
 
-// #[test]
-// fn transfer_dot_from_polkadot_to_pendulum() {
-// 	transfer_20_relay_token_from_relay_chain_to_parachain!(
-// 		PolkadotMockNet,
-// 		polkadot_runtime,
-// 		Polkadot,
-// 		pendulum_runtime,
-// 		PendulumParachain,
-// 		PENDULUM_ID,
-// 		DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN
-// 	)
-// }
+#[test]
+fn transfer_dot_from_polkadot_to_pendulum() {
+	transfer_20_relay_token_from_relay_chain_to_parachain!(
+		PolkadotMockNet,
+		polkadot_runtime,
+		Polkadot,
+		pendulum_runtime,
+		PendulumParachain,
+		PENDULUM_ID,
+		DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN
+	);
+}
 
-// #[test]
-// fn transfer_dot_from_pendulum_to_polkadot() {
-// 	transfer_10_relay_token_from_parachain_to_relay_chain!(
-// 		PolkadotMockNet,
-// 		polkadot_runtime,
-// 		Polkadot,
-// 		pendulum_runtime,
-// 		PendulumParachain
-// 	);
-// }
+#[test]
+fn transfer_dot_from_pendulum_to_polkadot() {
+	transfer_10_relay_token_from_parachain_to_relay_chain!(
+		PolkadotMockNet,
+		polkadot_runtime,
+		Polkadot,
+		pendulum_runtime,
+		PendulumParachain,
+		PENDULUM_ID,
+		DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN
+	);
+}
 
 #[test]
 fn assethub_transfer_incorrect_asset_to_pendulum_should_fail() {

@@ -12,18 +12,18 @@ macro_rules! transfer_20_relay_token_from_relay_chain_to_parachain {
 		$parachain_id:ident,
 		$tx_fee:ident
 	) => {{
-		use xcm_emulator::{Network, TestExt, Chain};
+		use xcm_emulator::{Network, TestExt, Chain, RelayChain};
 		use crate::mock::{units};
 		use frame_support::traits::fungibles::Inspect;
 		use polkadot_core_primitives::Balance;
-		use xcm::latest::{Junction, Junction::Parachain, Junctions::{X1, Here}, MultiLocation};
+		use xcm::latest::{Junction, Junction::Parachain, Junctions::{X1, Here}, MultiLocation, WeightLimit};
 		use $para_runtime::CurrencyId;
 
 		use integration_tests_common::constants::accounts;
 		let alice_account_id = accounts::init_balances()[0].clone();
 
 		$mocknet::reset();
-		let transfer_amount: Balance = 2000;
+		let transfer_amount: Balance = units(100);
 		let mut orml_tokens_before = 0;
 
 		// get ALICE's balance before the transfer
@@ -57,10 +57,6 @@ macro_rules! transfer_20_relay_token_from_relay_chain_to_parachain {
 				0
 			));
 
-			for event_record in System::events() {
-    			println!("{:?}", event_record.event);
-			}
-
 			//relaychain::assert_xcm_pallet_sent();
 
 		});
@@ -69,10 +65,6 @@ macro_rules! transfer_20_relay_token_from_relay_chain_to_parachain {
 		// a "Deposited" event occurred is proof that the transfer was successful
 		$parachain::execute_with(|| {
 			use $para_runtime::{RuntimeEvent, System};
-
-			for event_record in System::events() {
-    			println!("{:?}", event_record.event);
-			}
 
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
@@ -100,21 +92,29 @@ macro_rules! transfer_10_relay_token_from_parachain_to_relay_chain {(
 		$relay_runtime:ident,
 		$relaychain:ident,
 		$para_runtime:ident,
-		$parachain: ident
+		$parachain: ident,
+		$parachain_id:ident,
+		$tx_fee:ident
 	) => {{
 		use xcm_emulator::{Network, TestExt, Chain};
 		use crate::mock::{units};
 		use polkadot_core_primitives::Balance;
 		use xcm::latest::{Junction::AccountId32, Junctions::X1, MultiLocation, WeightLimit};
 
-		use integration_tests_common::{
-			constants::accounts,
-		};
+		use integration_tests_common::constants::accounts;
 		let bob_account_id = accounts::init_balances()[1].clone();
 
+		transfer_20_relay_token_from_relay_chain_to_parachain!(
+			$mocknet,
+			$relay_runtime,
+			$relaychain,
+			$para_runtime,
+			$parachain,
+			$parachain_id,
+			$tx_fee
+		);
 
-		$mocknet::reset();
-		let transfer_amount: Balance = units(10);
+		let transfer_amount: Balance = units(90);
 		let expected_base_balance = 40960000000000;
 
 		// get BOB's balance in the relay chain, before the transfer.
@@ -156,7 +156,7 @@ macro_rules! transfer_10_relay_token_from_parachain_to_relay_chain {(
 
 			let events = System::events();
 			for event_record in System::events() {
-    			println!("{:?}", event_record.event);
+    			println!("relay {:?}", event_record.event);
 			}
 
 			let withdrawn_balance = match &events[0].event {
@@ -169,15 +169,6 @@ macro_rules! transfer_10_relay_token_from_parachain_to_relay_chain {(
 				other => panic!("wrong event: {:#?}", other),
 			};
 
-			// match &events[2].event {
-			//
-			// 	RuntimeEvent::Ump(polkadot_runtime_parachains::Event::ExecutedUpward(..)) =>
-			// 		assert!(true),
-			// 	other => panic!("wrong event: {:#?}", other),
-			// };
-
-			// TODO cannot find ExecutedUpward event in 1.1.0, how to validate?
-			println!{"{:?}", events[2].event}
 
 			//This fee will taken to transfer assets(Polkadot) from sovereign parachain account to destination user account;
 			let fee_when_transferring_to_relay_chain = withdrawn_balance - deposited_balance;
@@ -185,7 +176,8 @@ macro_rules! transfer_10_relay_token_from_parachain_to_relay_chain {(
 			let after_bob_free_balance = Balances::free_balance(&bob_account_id.into());
 			assert_eq!(
 				after_bob_free_balance,
-				expected_base_balance + transfer_amount - fee_when_transferring_to_relay_chain
+				expected_base_balance + transfer_amount - fee_when_transferring_to_relay_chain,
+				"Incorrect amount received"
 			);
 		});
 
@@ -490,18 +482,11 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 				r.event,
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. })
 			)));
-
-			for i in System::events().iter() {
-				println!("{}: {:?}\n", stringify!($para2_runtime), i);
-			}
 		});
 
 		$parachain1::execute_with(|| {
 			use $para1_runtime::*;
 
-			for i in System::events().iter() {
-				println!("{}: {:?}\n", stringify!($para1_runtime), i);
-			}
 
 			let events = System::events();
 			match &events[events.len() - 2] {
@@ -569,7 +554,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		let para1_native_currency_on_para2 = Parachain2CurrencyId::from($parachain1_id);
 
 		// Get ALICE's balance on parachain1 before the transfer (defined in mock config)
-		let native_tokens_before: Balance = units(100);
+		let native_tokens_before: Balance = units(1000);
 		let mut treasury_native_tokens_before: Balance = 0;
 
 
@@ -610,10 +595,6 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 				WeightLimit::Unlimited
 			));
 
-			for i in System::events().iter() {
-				println!("{}: {:?}\n", stringify!($para1_runtime), i);
-			}
-
 			// Alternatively, we should be able to use
 			// assert_ok!(XTokens::transfer(
 			// 	$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
@@ -641,10 +622,6 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Verify BOB's balance on parachain2 after receiving
 		// Should increase by the transfer amount
 		$parachain2::execute_with(|| {
-			use $parachain2_runtime::{ System};
-			for i in System::events().iter() {
-				println!("para 2 events {}: {:?}\n", stringify!($para2_runtime), i);
-			}
 			assert_eq!(
 				$parachain2_runtime::Tokens::balance(para1_native_currency_on_para2, &bob_account_id),
 				transfer_amount
@@ -699,9 +676,6 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Should become the same amount as initial balance before both transfers
 		$parachain1::execute_with(|| {
 			use $parachain1_runtime::{System, Treasury};
-			for i in System::events().iter() {
-				println!("para 1 events {}: {:?}\n", stringify!($para2_runtime), i);
-			}
 			assert_eq!(
 				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &alice_account_id),
 				native_tokens_before - $tx_fee,

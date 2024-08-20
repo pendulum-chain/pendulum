@@ -4,17 +4,12 @@ use sp_core::{ storage::Storage};
 
 // Cumulus
 use integration_tests_common::{
-    constants::{accounts, collators, validators, polkadot, asset_hub_polkadot},
+    constants::{accounts, collators},
 };
 
-use runtime_common::Balance;
-
-pub const ED: Balance = runtime_common::EXISTENTIAL_DEPOSIT;
 pub const SAFE_XCM_VERSION: u32 = 3;
 
-
-use crate::mock::{assets_metadata_for_registry_pendulum, units};
-pub use sp_runtime::{MultiAddress, Perbill, Permill, Perquintill};
+use crate::mock::units;
 
 
 
@@ -24,11 +19,8 @@ macro_rules! genesis_gen {
 		use $runtime::BuildStorage;
         use crate::mock::units;
         use integration_tests_common::constants::{collators, accounts};
-        use spacewalk_primitives::{CurrencyId::XCM, CurrencyId};
+        use spacewalk_primitives::CurrencyId;
         pub const SAFE_XCM_VERSION: u32 = 3;
-        use runtime_common::{BlockNumber, AccountId, Balance};
-        use sp_runtime::Perquintill;
-        use sp_core::crypto::Ss58Codec;
 
         let token_balances = accounts::init_balances()
             .iter()

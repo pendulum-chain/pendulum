@@ -1,6 +1,4 @@
-use crate::{
-	mock::{kusama_relay_ext, para_ext, ParachainType, USDT_ASSET_ID,
-   assets_metadata_for_registry_amplitude},
+use crate::{mock::{ USDT_ASSET_ID, assets_metadata_for_registry_amplitude},
 	sibling,
 	test_macros::{
 		parachain1_transfer_asset_to_parachain2, parachain1_transfer_asset_to_parachain2_and_back,
@@ -15,12 +13,12 @@ use crate::{
 use frame_support::assert_ok;
 use asset_hub_kusama_runtime;
 use integration_tests_common::{
-	impl_assert_events_helpers_for_parachain, constants::{kusama, asset_hub_kusama},
+	constants::{kusama, asset_hub_kusama},
 };
 
 use crate::genesis::{genesis_gen, genesis_sibling};
 use xcm::latest::NetworkId;
-use xcm_emulator::{decl_test_networks, decl_test_parachains, decl_test_relay_chains, DefaultMessageProcessor, TestExt};
+use xcm_emulator::{decl_test_networks, decl_test_parachains, decl_test_relay_chains, DefaultMessageProcessor};
 use frame_support::traits::OnInitialize;
 
 

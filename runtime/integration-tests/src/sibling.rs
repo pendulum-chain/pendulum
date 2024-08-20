@@ -3,7 +3,6 @@
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use core::marker::PhantomData;
-use std::ops::Mul;
 use frame_support::{
 	match_types, parameter_types,
 	traits::{ConstU32, ContainsPair, Everything, Nothing, ProcessMessageError},
@@ -27,7 +26,6 @@ use xcm_emulator::{
 	Weight,
 };
 use cumulus_pallet_parachain_system::{self, RelayNumberStrictlyIncreases};
-use frame_support::traits::EitherOfDiverse;
 use sp_runtime::traits::ConvertInto;
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute, WeightTrader},

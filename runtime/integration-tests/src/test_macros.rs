@@ -1,7 +1,3 @@
-use parachain_info;
-use xcm_emulator::ParaId;
-
-
 macro_rules! transfer_20_relay_token_from_relay_chain_to_parachain {
 	(
 		$mocknet:ident,
@@ -12,11 +8,11 @@ macro_rules! transfer_20_relay_token_from_relay_chain_to_parachain {
 		$parachain_id:ident,
 		$tx_fee:ident
 	) => {{
-		use xcm_emulator::{Network, TestExt, Chain, RelayChain};
+		use xcm_emulator::{Network, TestExt};
 		use crate::mock::{units};
 		use frame_support::traits::fungibles::Inspect;
 		use polkadot_core_primitives::Balance;
-		use xcm::latest::{Junction, Junction::Parachain, Junctions::{X1, Here}, MultiLocation, WeightLimit};
+		use xcm::latest::{Junction, Junction::Parachain, Junctions::Here};
 		use $para_runtime::CurrencyId;
 
 		use integration_tests_common::constants::accounts;
@@ -41,7 +37,6 @@ macro_rules! transfer_20_relay_token_from_relay_chain_to_parachain {
 
 		// execute the transfer from relay chain
 		$relaychain::execute_with(|| {
-			use $relay_runtime::{RuntimeEvent, System};
 
 			assert_ok!($relay_runtime::XcmPallet::reserve_transfer_assets(
 				$relay_runtime::RuntimeOrigin::signed(alice_account_id.clone().into()),
@@ -96,7 +91,7 @@ macro_rules! transfer_10_relay_token_from_parachain_to_relay_chain {(
 		$parachain_id:ident,
 		$tx_fee:ident
 	) => {{
-		use xcm_emulator::{Network, TestExt, Chain};
+		use xcm_emulator::TestExt;
 		use crate::mock::{units};
 		use polkadot_core_primitives::Balance;
 		use xcm::latest::{Junction::AccountId32, Junctions::X1, MultiLocation, WeightLimit};
@@ -119,7 +114,7 @@ macro_rules! transfer_10_relay_token_from_parachain_to_relay_chain {(
 
 		// get ALICE's balance in the relay chain, before the transfer.
 		$relaychain::execute_with(|| {
-			let before_alice_free_balance = $relay_runtime::Balances::free_balance(&alice_account_id.clone().into());
+			before_alice_free_balance = $relay_runtime::Balances::free_balance(&alice_account_id.clone().into());
 		});
 
 		// execute the transfer in the parachain.
@@ -155,6 +150,11 @@ macro_rules! transfer_10_relay_token_from_parachain_to_relay_chain {(
 
 			let events = System::events();
 
+			for event in System::events() {
+				println!{"Receiveing relay token on relay chain"}
+				println!{"{:?}", event}
+			}
+
 			let withdrawn_balance = match &events[0].event {
 				RuntimeEvent::Balances(pallet_balances::Event::Withdraw { who: _, amount }) => amount,
 				other => panic!("wrong event: {:#?}", other),
@@ -165,16 +165,14 @@ macro_rules! transfer_10_relay_token_from_parachain_to_relay_chain {(
 				other => panic!("wrong event: {:#?}", other),
 			};
 
-
-
 			//This fee will taken to transfer assets(Polkadot) from sovereign parachain account to destination user account;
 			let fee_when_transferring_to_relay_chain = withdrawn_balance - deposited_balance;
 
 			let after_alice_free_balance = Balances::free_balance(&alice_account_id.into());
-			assert!(
-				after_alice_free_balance >
-				before_alice_free_balance,
-				"Amount received should be higher"
+			assert_eq!(
+				after_alice_free_balance,
+				before_alice_free_balance + transfer_amount - fee_when_transferring_to_relay_chain,
+				"Amount received on relay chain incorrect"
 			);
 		});
 
@@ -194,7 +192,7 @@ macro_rules! parachain1_transfer_incorrect_asset_to_parachain2_should_fail {
 		$parachain2_id:ident
 	) => {{
 		use crate::mock::{INCORRECT_ASSET_ID, TEN_UNITS, UNIT};
-		use xcm_emulator::{Network, TestExt, Chain};
+		use xcm_emulator::TestExt;
 		use frame_support::traits::{fungibles::Inspect, Currency};
 		use polkadot_core_primitives::AccountId;
 		use polkadot_parachain::primitives::Sibling;
@@ -304,7 +302,7 @@ macro_rules! parachain1_transfer_asset_to_parachain2 {
 		$parachain2_id:ident,
 		$tx_fee:ident
 	) => {{
-		use xcm_emulator::{Network, TestExt, Chain};
+		use xcm_emulator::TestExt;
 		use crate::mock::{TEN_UNITS, UNIT};
 		use frame_support::traits::{fungibles::Inspect, Currency};
 		use polkadot_core_primitives::AccountId;
@@ -416,10 +414,9 @@ macro_rules! parachain1_transfer_asset_to_parachain2_and_back {
 		$network_id: ident,
 		$tx_fee: ident
 	) => {{
-		use xcm_emulator::{Network, TestExt, Chain};
+		use xcm_emulator::TestExt;
 		use crate::mock::{TEN_UNITS, UNIT};
 		use frame_support::traits::{fungible::Mutate, fungibles::Inspect};
-		use polkadot_core_primitives::AccountId;
 		use xcm::latest::{
 			Junction, Junction::Parachain, Junctions::X2, MultiLocation, WeightLimit,
 		};
@@ -520,7 +517,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
         $parachain2_id:ident,
 		$tx_fee:ident
     ) => {{
-		use crate::mock::{UNIT, NATIVE_INITIAL_BALANCE, units};
+		use crate::mock::units;
 		use frame_support::traits::fungibles::Inspect;
 		use polkadot_core_primitives::Balance;
 		use xcm::latest::{
@@ -623,7 +620,7 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Should increase by the transfer amount
 		$parachain2::execute_with(|| {
 
-			use $parachain2_runtime::{System, Treasury};
+			use $parachain2_runtime::System;
 			for event in System::events() {
 				println!{"Parachain 2 events when receiving native"}
 				println!{"{:?}", event}

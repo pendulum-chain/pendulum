@@ -13,7 +13,6 @@ use sp_runtime::{
 };
 #[cfg(feature = "runtime-benchmarks")]
 use sp_std::vec;
-use sp_std::borrow::Borrow;
 use spacewalk_primitives::CurrencyId;
 use treasury_buyout_extension::PriceGetter;
 use xcm::v3::{AssetId, MultiAsset, MultiLocation};

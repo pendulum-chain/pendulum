@@ -22,14 +22,14 @@ use frame_support::traits::OnInitialize;
 
 // Native fee expected for each token according to the `fee_per_second` values defined in the mock
 
-// const NATIVE_FEE_WHEN_TRANSFER_TO_ASSETHUB: polkadot_core_primitives::Balance = 5000000000;
+const BASE_FEE_WHEN_TRANSFER_NON_NATIVE_ASSET: polkadot_core_primitives::Balance = 5000000000;
 const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
 const DOT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
-	NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN / 4;
+	BASE_FEE_WHEN_TRANSFER_NON_NATIVE_ASSET / 4;
 const MOONBEAM_BRZ_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
 	2 * NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN;
 const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
-	NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN / 2;
+	BASE_FEE_WHEN_TRANSFER_NON_NATIVE_ASSET / 2;
 
 decl_test_relay_chains! {
 	#[api_version(5)]

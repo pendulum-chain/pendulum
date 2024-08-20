@@ -26,11 +26,22 @@ macro_rules! genesis_gen {
         use integration_tests_common::constants::{collators, accounts};
         use spacewalk_primitives::{CurrencyId::XCM, CurrencyId};
         pub const SAFE_XCM_VERSION: u32 = 3;
+        use runtime_common::{BlockNumber, AccountId, Balance};
+        use sp_runtime::Perquintill;
+        use sp_core::crypto::Ss58Codec;
 
         let token_balances = accounts::init_balances()
             .iter()
             .flat_map(|k| vec![(k.clone(), CurrencyId::XCM(0), units(1000))])
             .collect();
+
+
+        let stakers: Vec<_> = accounts::init_balances()
+            .iter()
+            .cloned()
+            .map(|account_id| (account_id, None,  units(10_000_000)))
+            .collect();
+
 
         let genesis_config = $runtime::RuntimeGenesisConfig {
             system: $runtime::SystemConfig {
@@ -43,7 +54,7 @@ macro_rules! genesis_gen {
                 balances: accounts::init_balances()
                     .iter()
                     .cloned()
-                    .map(|k| (k, units(1000)))
+                    .map(|k| (k, units(10_001_000)))
                     .collect(),
             },
             tokens: $runtime::TokensConfig {
@@ -73,6 +84,12 @@ macro_rules! genesis_gen {
                 assets: $asset_metadata(),
                 last_asset_id: CurrencyId::Native,
             },
+            parachain_staking: $runtime::ParachainStakingConfig {
+                stakers,
+                inflation_config: Default::default(),
+                max_candidate_stake: units(100_000_000_000),
+                max_selected_candidates: 40,
+		    },
             ..Default::default()
         };
 
@@ -125,6 +142,7 @@ pub fn genesis_sibling(para_id: u32) -> Storage {
             safe_xcm_version: Some(SAFE_XCM_VERSION),
             ..Default::default()
         },
+
         ..Default::default()
     };
 

@@ -32,14 +32,13 @@ macro_rules! transfer_20_relay_token_from_relay_chain_to_parachain {
 		});
 
 
-		// get ALICE's balance in the relay chain, before the transfer.
+		// get ALICE's balance in the relay chain, before the transfer. Ensure it is enough to transfer.
 		$relaychain::execute_with(|| {
 			let before_alice_free_balance = $relay_runtime::Balances::free_balance(&alice_account_id.clone().into());
 			assert!(before_alice_free_balance > transfer_amount);
 		});
 
 
-		println!("executing relay transfer");
 		// execute the transfer from relay chain
 		$relaychain::execute_with(|| {
 			use $relay_runtime::{RuntimeEvent, System};
@@ -56,14 +55,16 @@ macro_rules! transfer_20_relay_token_from_relay_chain_to_parachain {
 				0
 			));
 
-			//relaychain::assert_xcm_pallet_sent();
-
 		});
 
-		println!("checking deposit event on receiver chain");
 		// a "Deposited" event occurred is proof that the transfer was successful
 		$parachain::execute_with(|| {
 			use $para_runtime::{RuntimeEvent, System};
+
+			for event in System::events() {
+				println!{"Parachain events when receiving of relay token"}
+				println!{"{:?}", event}
+			}
 
 			assert!(System::events().iter().any(|r| matches!(
 				r.event,
@@ -549,18 +550,16 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Used for checking BOB's balance
 		let para1_native_currency_on_para2 = Parachain2CurrencyId::from($parachain1_id);
 
-		// Get ALICE's balance on parachain1 before the transfer (defined in mock config)
-		let native_tokens_before: Balance = units(1000);
+		// Get ALICE and Treasury's balance on parachain1 before the transfer
+		let mut native_tokens_before: Balance = 0;
 		let mut treasury_native_tokens_before: Balance = 0;
 
 
 
 		$parachain1::execute_with(|| {
 			use $parachain1_runtime::Treasury;
-			assert_eq!(
-				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &alice_account_id),
-				native_tokens_before
-			);
+
+			native_tokens_before = $parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &alice_account_id);
 			treasury_native_tokens_before = $parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &Treasury::account_id());
 		});
 		$parachain2::execute_with(|| {
@@ -591,6 +590,11 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 				WeightLimit::Unlimited
 			));
 
+			for event in System::events() {
+				println!{"Parachain events when sending native"}
+				println!{"{:?}", event}
+			}
+
 			// Alternatively, we should be able to use
 			// assert_ok!(XTokens::transfer(
 			// 	$parachain1_runtime::RuntimeOrigin::signed(ALICE.into()),
@@ -618,6 +622,12 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Verify BOB's balance on parachain2 after receiving
 		// Should increase by the transfer amount
 		$parachain2::execute_with(|| {
+
+			use $parachain2_runtime::{System, Treasury};
+			for event in System::events() {
+				println!{"Parachain 2 events when receiving native"}
+				println!{"{:?}", event}
+			}
 			assert_eq!(
 				$parachain2_runtime::Tokens::balance(para1_native_currency_on_para2, &bob_account_id),
 				transfer_amount
@@ -657,6 +667,11 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 				r.event,
 				RuntimeEvent::XTokens(orml_xtokens::Event::TransferredMultiAssets { .. })
 			)));
+
+			for event in System::events() {
+				println!{"Parachain 2 events when sending native back"}
+				println!{"{:?}", event}
+			}
 		});
 
 		// Verify BOB's balance on parachain2 after transfer
@@ -672,6 +687,11 @@ macro_rules! transfer_native_token_from_parachain1_to_parachain2_and_back {
 		// Should become the same amount as initial balance before both transfers
 		$parachain1::execute_with(|| {
 			use $parachain1_runtime::{System, Treasury};
+
+			for event in System::events() {
+				println!{"Parachain 1 events when receiving native back"}
+				println!{"{:?}", event}
+			}
 			assert_eq!(
 				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::Native, &alice_account_id),
 				native_tokens_before - $tx_fee,
@@ -769,8 +789,6 @@ macro_rules! moonbeam_transfers_token_and_handle_automation {
 				$parachain1_runtime::Currencies::free_balance(Parachain1CurrencyId::XCM(6), &Treasury::account_id()),
 				$expected_fee
 			);
-
-
 		});
 	}};
 }

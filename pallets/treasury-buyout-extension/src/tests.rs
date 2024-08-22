@@ -17,7 +17,7 @@ fn get_free_balance(currency_id: CurrencyIdOf<Test>, account: &AccountId) -> Bal
 	<orml_currencies::Pallet<Test> as MultiCurrency<AccountId>>::free_balance(currency_id, account)
 }
 
-fn run_to_block(new_block: <Test as frame_system::Config>::BlockNumber) {
+fn run_to_block(new_block: BlockNumber) {
 	frame_system::Pallet::<Test>::set_block_number(new_block);
 }
 

@@ -2,7 +2,6 @@ use crate::{
 	self as treasury_buyout_extension, default_weights::SubstrateWeight, Config, PriceGetter,
 };
 use frame_support::{
-	pallet_prelude::GenesisBuild,
 	parameter_types,
 	traits::{ConstU32, Everything},
 };
@@ -10,38 +9,30 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 use sp_arithmetic::{FixedPointNumber, FixedU128, Permill};
 use sp_core::H256;
-use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup, One, Zero},
-	DispatchError,
-};
+use sp_runtime::{traits::{BlakeTwo256, IdentityLookup, One, Zero}, DispatchError, BuildStorage};
 use sp_std::fmt::Debug;
 use spacewalk_primitives::DecimalsLookup;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 pub const UNIT: Balance = 1_000_000_000_000;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
+	pub enum Test
 	{
-		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-		Tokens: orml_tokens::{Pallet, Storage, Config<T>, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-		Currencies: orml_currencies::{Pallet, Call},
-		TreasuryBuyoutExtension: treasury_buyout_extension::{Pallet, Storage, Call, Event<T>},
+		System: frame_system,
+		Tokens: orml_tokens,
+		Balances: pallet_balances,
+		Currencies: orml_currencies,
+		TreasuryBuyoutExtension: treasury_buyout_extension,
 	}
 );
 
 pub type AccountId = u64;
 pub type Balance = u128;
 pub type BlockNumber = u64;
-pub type Index = u64;
+pub type Nonce = u64;
 pub type Amount = i64;
 pub type CurrencyId = u64;
 
@@ -53,19 +44,18 @@ parameter_types! {
 pub type TestEvent = RuntimeEvent;
 
 impl frame_system::Config for Test {
+	type Block = Block;
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = Index;
-	type BlockNumber = BlockNumber;
+	type Nonce = Nonce;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = TestEvent;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
@@ -144,7 +134,7 @@ impl pallet_balances::Config for Test {
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
 	type MaxHolds = ConstU32<1>;
-	type HoldIdentifier = RuntimeHoldReason;
+	type RuntimeHoldReason = RuntimeHoldReason;
 }
 
 impl orml_currencies::Config for Test {
@@ -227,7 +217,7 @@ pub struct ExtBuilder;
 
 impl ExtBuilder {
 	pub fn build() -> sp_io::TestExternalities {
-		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+		let mut storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
 		let dot_currency_id = RelayChainCurrencyId::get();
 

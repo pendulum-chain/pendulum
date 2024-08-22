@@ -159,6 +159,32 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
 // To be removed after contracts migrations executes.
 use pallet_contracts::migration::{v11, v12, v13, v14, v15};
+// Custom storage version bump
+use frame_support::traits::{GetStorageVersion, OnRuntimeUpgrade};
+use frame_support::pallet_prelude::StorageVersion;
+
+pub struct CustomOnRuntimeUpgrade;
+impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		log::info!("Custom on-runtime-upgrade function");
+
+		let mut writes = 0;
+		// WARNING: manually setting the storage version
+		if ParachainStaking::on_chain_storage_version() == 0 {
+			log::info!("Upgrading parachain staking storage version to 7");
+			StorageVersion::new(7).put::<ParachainStaking>();
+			writes += 1;
+		}
+
+		if Bounties::on_chain_storage_version() == 0 {
+			log::info!("Upgrading bounties storage version to 4");
+			StorageVersion::new(4).put::<Bounties>();
+			writes += 1;
+		}
+		// not really a heavy operation
+		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(4, writes)
+	}
+}
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
 	Runtime,
@@ -167,6 +193,7 @@ pub type Executive = frame_executive::Executive<
 	Runtime,
 	AllPalletsWithSystem,
 	(
+		CustomOnRuntimeUpgrade,
 		pallet_contracts::migration::Migration<Runtime>,
 	),
 >;
@@ -227,7 +254,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("foucoco"),
 	impl_name: create_runtime_str!("foucoco"),
 	authoring_version: 1,
-	spec_version: 18,
+	spec_version: 19,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 8,

@@ -66,7 +66,7 @@ use runtime_common::{
 	ProxyType, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
-#[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
+#[cfg(any(feature = "runtime-benchmarks"))]
 use oracle::testing_utils::MockDataFeeder;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;

@@ -2032,6 +2032,7 @@ impl_runtime_apis! {
 #[allow(dead_code)]
 struct CheckInherents;
 
+#[allow(deprecated)]
 impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
 	fn check_inherents(
 		block: &Block,

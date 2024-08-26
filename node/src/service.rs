@@ -709,33 +709,7 @@ where
 	let _relay_chain_interface_move = relay_chain_interface.clone();
 	let params = BasicAuraParams {
 		proposer,
-		create_inherent_data_providers: move |_relay_parent, _| {
-			async move {
-				// TODO how to get parachain inherent without validation data now?
-				// let parachain_inherent =
-				// 	cumulus_primitives_parachain_inherent::ParachainInherentData::create_at(
-				// 		relay_parent,
-				// 		&relay_chain_interface_move,
-				// 		&validation_data,
-				// 		id,
-				// 	)
-				// 	.await;
-				let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
-
-				let slot =
-						sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
-							*timestamp,
-							slot_duration,
-						);
-
-				// let parachain_inherent = parachain_inherent.ok_or_else(|| {
-				// 	Box::<dyn std::error::Error + Send + Sync>::from(
-				// 		"Failed to create parachain inherent",
-				// 	)
-				// })?;
-				Ok((slot, timestamp))
-			}
-		},
+		create_inherent_data_providers: move |_, ()| async move { Ok(()) },
 		block_import,
 		collator_key,
 		collator_service,

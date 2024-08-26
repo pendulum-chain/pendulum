@@ -8,13 +8,13 @@ use cumulus_client_cli::{RelayChainMode,CollatorOptions};
 use runtime_common::{opaque::Block, AccountId, Balance, Index as Nonce};
 
 // Cumulus Imports
-use cumulus_client_consensus_aura::{AuraConsensus, SlotProportion, collators::basic::{Params as BasicAuraParams, self as basic_aura}};
+use cumulus_client_consensus_aura::{collators::basic::{Params as BasicAuraParams, self as basic_aura}};
 use cumulus_client_consensus_common::{
-	ParachainBlockImport as TParachainBlockImport, ParachainConsensus,
+	ParachainBlockImport as TParachainBlockImport,
 };
 use cumulus_client_network::RequireSecondedInBlockAnnounce;
 use cumulus_client_service::{
-	prepare_node_config, start_relay_chain_tasks, StartCollatorParams, StartRelayChainTasksParams, DARecoveryProfile
+	prepare_node_config, start_relay_chain_tasks, StartRelayChainTasksParams, DARecoveryProfile
 };
 use cumulus_primitives_core::{relay_chain::Hash, ParaId};
 use cumulus_primitives_parachain_inherent::{
@@ -44,11 +44,8 @@ use sp_keystore::KeystorePtr;
 use sp_runtime::traits::BlakeTwo256;
 use substrate_prometheus_endpoint::Registry;
 
-use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
-
-use polkadot_service::{CollatorPair, Handle, OverseerHandle};
+use polkadot_service::{CollatorPair, Handle};
 use sc_consensus::{import_queue::ImportQueueService, ImportQueue};
-use sp_io::misc::HostFunctions;
 use crate::rpc::{
 	create_full_amplitude, create_full_foucoco, create_full_pendulum, FullDeps, ResultRpcExtension,
 };

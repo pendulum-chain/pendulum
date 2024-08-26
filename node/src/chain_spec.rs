@@ -1,4 +1,3 @@
-use std::default;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::__private::sp_std;
 use runtime_common::{AccountId, AuraId, Balance, BlockNumber, Signature, UNIT};

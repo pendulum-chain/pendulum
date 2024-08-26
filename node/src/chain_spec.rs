@@ -1,3 +1,5 @@
+#![allow(clippy::default_constructed_unit_structs)]
+
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::__private::sp_std;
 use runtime_common::{AccountId, AuraId, Balance, BlockNumber, Signature, UNIT};
@@ -495,6 +497,7 @@ fn amplitude_genesis(
 			code: amplitude_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
+			#[allow(clippy::wrong_self_convention)]
 			_config: sp_std::marker::PhantomData::default()
 		},
 		balances: amplitude_runtime::BalancesConfig { balances },

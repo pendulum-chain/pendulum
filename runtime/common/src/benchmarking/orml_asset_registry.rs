@@ -1,11 +1,10 @@
 use crate::asset_registry::{CustomMetadata, DiaKeys};
 use frame_benchmarking::v2::benchmarks;
 use frame_support::assert_ok;
-use frame_support::traits::ConstU32;
 use frame_system::RawOrigin;
 use orml_asset_registry::AssetMetadata;
 use sp_runtime::BoundedVec;
-use sp_std::{vec, vec::Vec};
+use sp_std::vec;
 use spacewalk_primitives::CurrencyId;
 use xcm::{
 	latest::MultiLocation,

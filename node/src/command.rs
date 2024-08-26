@@ -16,10 +16,6 @@ use sc_service::{
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 
-#[cfg(feature = "try-runtime")]
-use try_runtime_cli::block_building_info::substrate_info;
-#[cfg(feature = "try-runtime")]
-use sc_executor::sp_wasm_interface::ExtendedHostFunctions;
 use sc_executor::NativeExecutionDispatch;
 
 use crate::{
@@ -29,11 +25,6 @@ use crate::{
 		new_partial, AmplitudeRuntimeExecutor, FoucocoRuntimeExecutor, PendulumRuntimeExecutor,
 	},
 };
-
-#[cfg(feature = "try-runtime")]
-/// The time internavel for block production on our chain in milliseconds (12
-/// seconds to millis)
-const BLOCK_TIME_MILLIS: u64 = 12 * 1_000;
 
 #[derive(PartialEq, Eq)]
 enum ChainIdentity {
@@ -379,42 +370,11 @@ pub fn run() -> Result<()> {
 			#[allow(unreachable_patterns)]
 			_ => Err("Benchmarking sub-command unsupported".into()),
 		},
-		#[cfg(feature = "try-runtime")]
-		Some(Subcommand::TryRuntime(cmd)) => {
-			if cfg!(feature = "try-runtime") {
-				let runner = cli.create_runner(cmd)?;
-
-				// grab the task manager.
-				let registry = &runner.config().prometheus_config.as_ref().map(|cfg| &cfg.registry);
-				let task_manager =
-					sc_service::TaskManager::new(runner.config().tokio_handle.clone(), *registry)
-						.map_err(|e| format!("Error: {:?}", e))?;
-
-				match runner.config().chain_spec.identify() {
-					ChainIdentity::Amplitude => runner.async_run(|_config| {
-						Ok((cmd.run::<Block, ExtendedHostFunctions<
-							sp_io::SubstrateHostFunctions,
-							<AmplitudeRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
-						>, _>(Some(substrate_info(BLOCK_TIME_MILLIS))), task_manager))
-					}),
-					ChainIdentity::Foucoco => runner.async_run(|_config| {
-						Ok((cmd.run::<Block, ExtendedHostFunctions<
-							sp_io::SubstrateHostFunctions,
-							<FoucocoRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
-						>, _>(Some(substrate_info(BLOCK_TIME_MILLIS))), task_manager))
-					}),
-					ChainIdentity::Pendulum => runner.async_run(|_config| {
-						Ok((cmd.run::<Block, ExtendedHostFunctions<
-							sp_io::SubstrateHostFunctions,
-							<PendulumRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
-						>, _>(Some(substrate_info(BLOCK_TIME_MILLIS))), task_manager))
-					}),
-					ChainIdentity::FoucocoStandalone => unimplemented!(),
-				}
-			} else {
-				Err("Try-runtime must be enabled by `--features try-runtime`.".into())
-			}
-		},
+		Some(Subcommand::TryRuntime(_cmd)) => Err("The `try-runtime` subcommand has been migrated to a \
+			standalone CLI (https://github.com/paritytech/try-runtime-cli). It is no longer \
+			being maintained here and will be removed entirely some time after January 2024. \
+			Please remove this subcommand from your runtime and use the standalone CLI."
+			.into()),
 
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;

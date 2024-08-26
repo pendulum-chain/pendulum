@@ -370,6 +370,7 @@ pub fn run() -> Result<()> {
 			#[allow(unreachable_patterns)]
 			_ => Err("Benchmarking sub-command unsupported".into()),
 		},
+		#[cfg(feature = "try-runtime")]
 		Some(Subcommand::TryRuntime(_cmd)) => Err("The `try-runtime` subcommand has been migrated to a \
 			standalone CLI (https://github.com/paritytech/try-runtime-cli). It is no longer \
 			being maintained here and will be removed entirely some time after January 2024. \

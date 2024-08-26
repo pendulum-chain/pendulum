@@ -4,7 +4,7 @@ use codec::Encode;
 use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
-use log::{info, trace};
+use log::info;
 use runtime_common::opaque::Block;
 use sc_chain_spec::GenericChainSpec;
 use sc_cli::{
@@ -20,8 +20,9 @@ use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 
 #[cfg(feature = "try-runtime")]
 use try_runtime_cli::block_building_info::substrate_info;
-
-use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
+#[cfg(feature = "try-runtime")]
+use sc_executor::sp_wasm_interface::ExtendedHostFunctions;
+use sc_executor::NativeExecutionDispatch;
 
 use crate::{
 	chain_spec::{self, ParachainExtensions},

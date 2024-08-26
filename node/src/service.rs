@@ -12,7 +12,7 @@ use cumulus_client_consensus_aura::{AuraConsensus, SlotProportion, collators::ba
 use cumulus_client_consensus_common::{
 	ParachainBlockImport as TParachainBlockImport, ParachainConsensus,
 };
-use cumulus_client_network::BlockAnnounceValidator;
+use cumulus_client_network::RequireSecondedInBlockAnnounce;
 use cumulus_client_service::{
 	prepare_node_config, start_relay_chain_tasks, StartCollatorParams, StartRelayChainTasksParams, DARecoveryProfile
 };
@@ -302,7 +302,7 @@ async fn setup_common_services<RuntimeApi, Executor>(
 	parachain_config: Configuration,
 	params: ResultNewPartial<RuntimeApi, Executor>,
 	create_full_rpc: fn(deps: FullDepsOf<RuntimeApi, Executor>) -> ResultRpcExtension,
-	block_announce_validator: Option<BlockAnnounceValidator<Block, Arc<dyn RelayChainInterface>>>,
+	block_announce_validator: Option<RequireSecondedInBlockAnnounce<Block, Arc<dyn RelayChainInterface>>>,
 ) -> Result<
 	(
 		NetworkStarter,
@@ -437,9 +437,9 @@ where
 	)
 	.await
 	.map_err(|e| sc_service::Error::Application(Box::new(e)))?;
-	let block_announce_validator = BlockAnnounceValidator::new(relay_chain_interface.clone(), id);
+	let block_announce_validator = RequireSecondedInBlockAnnounce::new(relay_chain_interface.clone(), id);
 
-	let force_authoring = parachain_config.force_authoring;
+	let _force_authoring = parachain_config.force_authoring;
 	let validator = parachain_config.role.is_authority();
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
 	let transaction_pool = params.transaction_pool.clone();
@@ -709,10 +709,10 @@ where
 		client.clone(),
 	);
 
-	let relay_chain_interface_move = relay_chain_interface.clone();
+	let _relay_chain_interface_move = relay_chain_interface.clone();
 	let params = BasicAuraParams {
 		proposer,
-		create_inherent_data_providers: move |relay_parent, _| {
+		create_inherent_data_providers: move |_relay_parent, _| {
 			async move {
 				// TODO how to get parachain inherent without validation data now?
 				// let parachain_inherent =

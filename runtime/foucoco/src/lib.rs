@@ -1,5 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
+// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 512.
 #![recursion_limit = "512"]
 
 // Make the WASM binary available.
@@ -573,6 +573,7 @@ impl pallet_session::Config for Runtime {
 
 parameter_types! {
 	// as per documentation, typical value for this is false "unless this pallet is being augmented by another pallet"
+	// https://github.com/paritytech/polkadot-sdk/blob/release-polkadot-v1.1.0/substrate/frame/aura/src/lib.rs#L111
 	pub const AllowMultipleBlocksPerSlot: bool = false;
 }
 

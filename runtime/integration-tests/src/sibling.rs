@@ -329,10 +329,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 		if matches!(origin, MultiLocation { parents: 1, interior: Here }) &&
 			instructions.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
 		{
-			log::trace!(
-				target: "xcm::barriers",
-				"Unexpected ReserveAssetDeposited from the relay chain",
-			);
+			println!{"Unexpected ReserveAssetDeposited from the relay chain"};
 		}
 		// Permit everything else
 		Ok(())
@@ -664,6 +661,7 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 
 parameter_types! {
 	// as per documentation, typical value for this is false "unless this pallet is being augmented by another pallet"
+	// https://github.com/paritytech/polkadot-sdk/blob/release-polkadot-v1.1.0/substrate/frame/aura/src/lib.rs#L111
 	pub const AllowMultipleBlocksPerSlot: bool = false;
 	pub const MaxAuthorities: u32 = 200;
 }

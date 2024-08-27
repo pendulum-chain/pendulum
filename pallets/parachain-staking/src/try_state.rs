@@ -229,8 +229,8 @@ fn validate_delegators<T: Config>() -> Result<(), &'static str> {
 	DelegatorState::<T>::iter_values().try_for_each(
 		|delegator_details| -> Result<(), &'static str> {
 			let Some(owner) = &delegator_details.owner else {
-				return Err("owner not found");
-			};
+			return Err("owner not found");
+		};
 
 			ensure!(
 				CandidatePool::<T>::contains_key(owner),

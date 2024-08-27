@@ -27,9 +27,7 @@ use sp_runtime::{traits::Saturating, Perquintill, RuntimeDebug};
 use serde_derive::{Deserialize, Serialize};
 
 //#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(
-	Eq, PartialEq, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo, Serialize, Deserialize,
-)]
+#[derive(Eq, PartialEq, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo, Serialize, Deserialize)]
 pub struct RewardRate {
 	pub annual: Perquintill,
 	pub per_block: Perquintill,
@@ -55,9 +53,7 @@ impl RewardRate {
 
 /// Staking info (staking rate and reward rate) for collators and delegators.
 // #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(
-	Eq, PartialEq, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo, Serialize, Deserialize,
-)]
+#[derive(Eq, PartialEq, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo, Serialize, Deserialize)]
 pub struct StakingInfo {
 	/// Maximum staking rate.
 	pub max_rate: Perquintill,
@@ -105,19 +101,7 @@ impl StakingInfo {
 }
 
 //#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(
-	Eq,
-	PartialEq,
-	Clone,
-	Encode,
-	Decode,
-	Default,
-	RuntimeDebug,
-	TypeInfo,
-	MaxEncodedLen,
-	Serialize,
-	Deserialize,
-)]
+#[derive(Eq, PartialEq, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen, Serialize, Deserialize)]
 pub struct InflationInfo {
 	pub collator: StakingInfo,
 	pub delegator: StakingInfo,

@@ -19,7 +19,7 @@
 use frame_support::{traits::Get, BoundedVec, DefaultNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::{traits::Zero, SaturatedConversion, RuntimeDebug};
+use sp_runtime::{traits::Zero, RuntimeDebug, SaturatedConversion};
 use sp_std::{
 	cmp::Ordering,
 	convert::TryInto,

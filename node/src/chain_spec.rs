@@ -1,5 +1,7 @@
 #![allow(clippy::default_constructed_unit_structs)]
 
+use crate::constants::{amplitude, foucoco, pendulum};
+use core::default::Default;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::__private::sp_std;
 use runtime_common::{AccountId, AuraId, Balance, BlockNumber, Signature, UNIT};
@@ -14,9 +16,7 @@ use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	FixedPointNumber, FixedU128, Perquintill,
 };
-use core::default::Default;
 use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
-use crate::constants::{amplitude, foucoco, pendulum};
 
 const MAINNET_USDC_CURRENCY_ID: CurrencyId = pendulum_runtime::GetWrappedCurrencyId::get();
 const TESTNET_USDC_CURRENCY_ID: CurrencyId = amplitude_runtime::GetWrappedCurrencyId::get();
@@ -254,25 +254,25 @@ pub fn foucoco_standalone_config() -> FoucocoChainSpec {
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
 
-	let sudo_account = get_account_id_from_seed::<sr25519::Public>("Alice"); 
+	let sudo_account = get_account_id_from_seed::<sr25519::Public>("Alice");
 
 	let offchain_worker_price_feeder =
 		AccountId::from_ss58check(foucoco::OFF_CHAIN_WORKER_ADDRESS).unwrap();
 
 	let allowed_currencies = vec![
-			CurrencyId::Native,
-			CurrencyId::XCM(0),
-			CurrencyId::XCM(1),
-			CurrencyId::XCM(2),
-			CurrencyId::XCM(3),
-			CurrencyId::XCM(4),
-			CurrencyId::XCM(5),
-			CurrencyId::XCM(6),
-			CurrencyId::XCM(7),
-			CurrencyId::XCM(8),
-			CurrencyId::XCM(9),
-			CurrencyId::XCM(10),
-		];
+		CurrencyId::Native,
+		CurrencyId::XCM(0),
+		CurrencyId::XCM(1),
+		CurrencyId::XCM(2),
+		CurrencyId::XCM(3),
+		CurrencyId::XCM(4),
+		CurrencyId::XCM(5),
+		CurrencyId::XCM(6),
+		CurrencyId::XCM(7),
+		CurrencyId::XCM(8),
+		CurrencyId::XCM(9),
+		CurrencyId::XCM(10),
+	];
 
 	FoucocoChainSpec::from_genesis(
 		// Name
@@ -498,10 +498,13 @@ fn amplitude_genesis(
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
 			#[allow(clippy::wrong_self_convention)]
-			_config: sp_std::marker::PhantomData::default()
+			_config: sp_std::marker::PhantomData::default(),
 		},
 		balances: amplitude_runtime::BalancesConfig { balances },
-		parachain_info: amplitude_runtime::ParachainInfoConfig { parachain_id: id, _config: sp_std::marker::PhantomData::default() },
+		parachain_info: amplitude_runtime::ParachainInfoConfig {
+			parachain_id: id,
+			_config: sp_std::marker::PhantomData::default(),
+		},
 		parachain_staking: amplitude_runtime::ParachainStakingConfig {
 			stakers,
 			inflation_config,
@@ -527,7 +530,7 @@ fn amplitude_genesis(
 		parachain_system: Default::default(),
 		polkadot_xcm: amplitude_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
-			_config: sp_std::marker::PhantomData::default()
+			_config: sp_std::marker::PhantomData::default(),
 		},
 		council: amplitude_runtime::CouncilConfig {
 			members: signatories.clone(),
@@ -570,7 +573,7 @@ fn amplitude_genesis(
 			} else {
 				amplitude_runtime::StatusCode::Error
 			},
-			_phantom: sp_std::marker::PhantomData::default()
+			_phantom: sp_std::marker::PhantomData::default(),
 		},
 		oracle: amplitude_runtime::OracleConfig {
 			max_delay: u32::MAX,
@@ -613,7 +616,10 @@ fn amplitude_genesis(
 			punishment_fee: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 		},
-		nomination: amplitude_runtime::NominationConfig { is_nomination_enabled: false, _phantom: sp_std::marker::PhantomData::default() },
+		nomination: amplitude_runtime::NominationConfig {
+			is_nomination_enabled: false,
+			_phantom: sp_std::marker::PhantomData::default(),
+		},
 		dia_oracle_module: amplitude_runtime::DiaOracleModuleConfig {
 			authorized_accounts: authorized_oracles,
 			supported_currencies: vec![
@@ -626,8 +632,8 @@ fn amplitude_genesis(
 			coin_infos_map: vec![],
 		},
 		token_allowance: Default::default(),
-		transaction_payment:  Default::default(),
-		treasury:  Default::default(),
+		transaction_payment: Default::default(),
+		treasury: Default::default(),
 		treasury_buyout_extension: Default::default(),
 		vesting: Default::default(),
 		zenlink_protocol: Default::default(),
@@ -700,10 +706,13 @@ fn foucoco_genesis(
 			code: foucoco_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
-			_config: sp_std::marker::PhantomData::default()
+			_config: sp_std::marker::PhantomData::default(),
 		},
 		balances: foucoco_runtime::BalancesConfig { balances },
-		parachain_info: foucoco_runtime::ParachainInfoConfig { parachain_id: id , _config: sp_std::marker::PhantomData::default()},
+		parachain_info: foucoco_runtime::ParachainInfoConfig {
+			parachain_id: id,
+			_config: sp_std::marker::PhantomData::default(),
+		},
 		parachain_staking: foucoco_runtime::ParachainStakingConfig {
 			stakers,
 			inflation_config,
@@ -729,7 +738,7 @@ fn foucoco_genesis(
 		parachain_system: Default::default(),
 		polkadot_xcm: foucoco_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
-			_config: sp_std::marker::PhantomData::default()
+			_config: sp_std::marker::PhantomData::default(),
 		},
 		council: foucoco_runtime::CouncilConfig {
 			members: signatories.clone(),
@@ -773,7 +782,7 @@ fn foucoco_genesis(
 			} else {
 				foucoco_runtime::StatusCode::Error
 			},
-			_phantom: sp_std::marker::PhantomData::default()
+			_phantom: sp_std::marker::PhantomData::default(),
 		},
 		oracle: foucoco_runtime::OracleConfig {
 			max_delay: 604_800_000, // 7 days
@@ -783,7 +792,7 @@ fn foucoco_genesis(
 				Key::ExchangeRate(CurrencyId::Stellar(Asset::StellarNative)),
 				Key::ExchangeRate(TESTNET_USDC_CURRENCY_ID),
 			],
-			_phantom: sp_std::marker::PhantomData::default()
+			_phantom: sp_std::marker::PhantomData::default(),
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
 			minimum_collateral_vault: vec![(XCM(0), 0)],
@@ -828,7 +837,10 @@ fn foucoco_genesis(
 			punishment_fee: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 		},
-		nomination: foucoco_runtime::NominationConfig { is_nomination_enabled: false, _phantom: sp_std::marker::PhantomData::default() },
+		nomination: foucoco_runtime::NominationConfig {
+			is_nomination_enabled: false,
+			_phantom: sp_std::marker::PhantomData::default(),
+		},
 		dia_oracle_module: foucoco_runtime::DiaOracleModuleConfig {
 			authorized_accounts: authorized_oracles,
 			supported_currencies: vec![
@@ -841,8 +853,8 @@ fn foucoco_genesis(
 			coin_infos_map: vec![],
 		},
 		token_allowance: foucoco_runtime::TokenAllowanceConfig { allowed_currencies },
-		transaction_payment:  Default::default(),
-		treasury:  Default::default(),
+		transaction_payment: Default::default(),
+		treasury: Default::default(),
 		treasury_buyout_extension: Default::default(),
 		vesting: Default::default(),
 		zenlink_protocol: Default::default(),
@@ -890,10 +902,13 @@ fn pendulum_genesis(
 			code: pendulum_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
-			_config: sp_std::marker::PhantomData::default()
+			_config: sp_std::marker::PhantomData::default(),
 		},
 		balances: pendulum_runtime::BalancesConfig { balances },
-		parachain_info: pendulum_runtime::ParachainInfoConfig { parachain_id: id, _config: sp_std::marker::PhantomData::default() },
+		parachain_info: pendulum_runtime::ParachainInfoConfig {
+			parachain_id: id,
+			_config: sp_std::marker::PhantomData::default(),
+		},
 		parachain_staking: pendulum_runtime::ParachainStakingConfig {
 			stakers,
 			inflation_config,
@@ -965,7 +980,7 @@ fn pendulum_genesis(
 				Key::ExchangeRate(CurrencyId::XCM(0)),
 				Key::ExchangeRate(MAINNET_USDC_CURRENCY_ID),
 			],
-			_phantom: sp_std::marker::PhantomData::default()
+			_phantom: sp_std::marker::PhantomData::default(),
 		},
 		vault_registry: pendulum_runtime::VaultRegistryConfig {
 			minimum_collateral_vault: vec![(XCM(0), 0)],
@@ -999,7 +1014,10 @@ fn pendulum_genesis(
 			punishment_fee: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 		},
-		nomination: pendulum_runtime::NominationConfig { is_nomination_enabled: false, _phantom: sp_std::marker::PhantomData::default() },
+		nomination: pendulum_runtime::NominationConfig {
+			is_nomination_enabled: false,
+			_phantom: sp_std::marker::PhantomData::default(),
+		},
 		dia_oracle_module: pendulum_runtime::DiaOracleModuleConfig {
 			authorized_accounts: authorized_oracles,
 			supported_currencies: vec![
@@ -1012,8 +1030,8 @@ fn pendulum_genesis(
 			coin_infos_map: vec![],
 		},
 		token_allowance: Default::default(),
-		transaction_payment:  Default::default(),
-		treasury:  Default::default(),
+		transaction_payment: Default::default(),
+		treasury: Default::default(),
 		tokens: Default::default(),
 		treasury_buyout_extension: Default::default(),
 	}

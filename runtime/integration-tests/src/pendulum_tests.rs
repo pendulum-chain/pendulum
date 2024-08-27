@@ -1,21 +1,26 @@
-use crate::{mock::{ USDT_ASSET_ID, assets_metadata_for_registry_pendulum},
-	sibling, test_macros::{
+use crate::{
+	mock::{assets_metadata_for_registry_pendulum, USDT_ASSET_ID},
+	sibling,
+	test_macros::{
 		moonbeam_transfers_token_and_handle_automation, parachain1_transfer_asset_to_parachain2,
 		parachain1_transfer_asset_to_parachain2_and_back,
 		parachain1_transfer_incorrect_asset_to_parachain2_should_fail,
 		transfer_10_relay_token_from_parachain_to_relay_chain,
 		transfer_20_relay_token_from_relay_chain_to_parachain,
 		transfer_native_token_from_parachain1_to_parachain2_and_back,
-	}, ASSETHUB_ID, PENDULUM_ID, SIBLING_ID};
+	},
+	ASSETHUB_ID, PENDULUM_ID, SIBLING_ID,
+};
 
-use frame_support::assert_ok;
+use crate::genesis::{genesis_gen, genesis_sibling};
+use frame_support::{assert_ok, traits::OnInitialize};
+use integration_tests_common::constants::{asset_hub_polkadot, polkadot};
 #[allow(unused_imports)]
 use pendulum_runtime::definitions::moonbeam::PARA_ID as MOONBEAM_PARA_ID;
 use xcm::latest::NetworkId;
-use xcm_emulator::{decl_test_networks, decl_test_relay_chains, decl_test_parachains, DefaultMessageProcessor};
-use crate::genesis::{genesis_gen, genesis_sibling};
-use integration_tests_common::constants::{polkadot, asset_hub_polkadot};
-use frame_support::traits::OnInitialize;
+use xcm_emulator::{
+	decl_test_networks, decl_test_parachains, decl_test_relay_chains, DefaultMessageProcessor,
+};
 
 // Native fee expected for each token according to the `fee_per_second` values defined in the mock
 

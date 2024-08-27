@@ -32,7 +32,8 @@ use sp_runtime::{
 	impl_opaque_keys,
 	testing::UintAuthorityId,
 	traits::{BlakeTwo256, ConstU32, ConvertInto, IdentityLookup, OpaqueKeys},
-	BuildStorage, Perbill, Perquintill,
+	Perbill, Perquintill,
+	BuildStorage
 };
 use sp_std::fmt::Debug;
 
@@ -72,7 +73,7 @@ impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
-	type Nonce = u64;
+	type Nonce  = u64;
 	type RuntimeCall = RuntimeCall;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
@@ -290,8 +291,7 @@ impl ExtBuilder {
 	}
 
 	pub(crate) fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::<Test>::default()
-			.build_storage()
+		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage()
 			.expect("Frame system builds valid default genesis config");
 
 		pallet_balances::GenesisConfig::<Test> { balances: self.balances.clone() }

@@ -1,11 +1,12 @@
 //! Runtime API definition for Parachain Staking.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+use scale_info::TypeInfo;
 use module_oracle_rpc_runtime_api::BalanceWrapper;
 use parity_scale_codec::{Codec, Decode, Encode, MaxEncodedLen};
-use scale_info::TypeInfo;
-use sp_arithmetic::per_things::Perquintill;
 use sp_std::fmt::Debug;
+use sp_arithmetic::per_things::Perquintill;
+
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};

@@ -162,10 +162,8 @@ parameter_types! {
 use pallet_contracts::migration::{v11, v12, v13, v14, v15};
 
 // Custom storage version bump
-use frame_support::{
-	pallet_prelude::StorageVersion,
-	traits::{GetStorageVersion, OnRuntimeUpgrade},
-};
+use frame_support::traits::{GetStorageVersion, OnRuntimeUpgrade};
+use frame_support::pallet_prelude::StorageVersion;
 
 pub struct CustomOnRuntimeUpgrade;
 impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
@@ -197,7 +195,10 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(CustomOnRuntimeUpgrade, pallet_contracts::migration::Migration<Runtime>),
+	(
+		CustomOnRuntimeUpgrade,
+		pallet_contracts::migration::Migration<Runtime>,
+	),
 >;
 
 pub struct ConvertPrice;
@@ -1024,13 +1025,7 @@ impl pallet_contracts::Config for Runtime {
 	type CodeHashLockupDepositPercent = CodeHashLockupDepositPercent;
 	type MaxDelegateDependencies = MaxDelegateDependencies;
 	type RuntimeHoldReason = RuntimeHoldReason;
-	type Migrations = (
-		v11::Migration<Self>,
-		v12::Migration<Runtime, Balances>,
-		v13::Migration<Self>,
-		v14::Migration<Self, Balances>,
-		v15::Migration<Self>,
-	);
+	type Migrations = (v11::Migration<Self>, v12::Migration<Runtime, Balances>,  v13::Migration<Self>, v14::Migration<Self, Balances>,  v15::Migration<Self> );
 	type Debug = ();
 	type Environment = ();
 }
@@ -1965,15 +1960,15 @@ impl_runtime_apis! {
 		) -> pallet_contracts_primitives::ContractExecResult<Balance, EventRecord> {
 			let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
 			Contracts::bare_call(
-				origin,
-				dest,
-				value,
-				gas_limit,
-				storage_deposit_limit,
-				input_data,
-				pallet_contracts::DebugInfo::UnsafeDebug,
-				pallet_contracts::CollectEvents::UnsafeCollect,
-				pallet_contracts::Determinism::Enforced,
+			    origin,
+                dest,
+                value,
+                gas_limit,
+                storage_deposit_limit,
+                input_data,
+                pallet_contracts::DebugInfo::UnsafeDebug,
+                pallet_contracts::CollectEvents::UnsafeCollect,
+                pallet_contracts::Determinism::Enforced,
 			)
 		}
 
@@ -1990,14 +1985,14 @@ impl_runtime_apis! {
 			let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
 			Contracts::bare_instantiate(
 				origin,
-				value,
-				gas_limit,
-				storage_deposit_limit,
-				code,
-				data,
-				salt,
-				pallet_contracts::DebugInfo::UnsafeDebug,
-				pallet_contracts::CollectEvents::UnsafeCollect,
+                value,
+                gas_limit,
+                storage_deposit_limit,
+                code,
+                data,
+                salt,
+                pallet_contracts::DebugInfo::UnsafeDebug,
+                pallet_contracts::CollectEvents::UnsafeCollect,
 			)
 		}
 

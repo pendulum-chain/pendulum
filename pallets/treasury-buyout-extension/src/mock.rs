@@ -9,10 +9,7 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 use sp_arithmetic::{FixedPointNumber, FixedU128, Permill};
 use sp_core::H256;
-use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, One, Zero},
-	BuildStorage, DispatchError,
-};
+use sp_runtime::{traits::{BlakeTwo256, IdentityLookup, One, Zero}, DispatchError, BuildStorage};
 use sp_std::fmt::Debug;
 use spacewalk_primitives::DecimalsLookup;
 

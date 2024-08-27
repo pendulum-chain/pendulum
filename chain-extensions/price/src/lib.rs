@@ -8,13 +8,13 @@ use frame_support::{
 	pallet_prelude::{Get, PhantomData},
 	DefaultNoBound,
 };
+use sp_tracing::{error, trace};
+use scale_info::prelude::vec::Vec;
 use pallet_contracts::chain_extension::{
 	ChainExtension, Environment, Ext, InitState, RetVal, SysConfig,
 };
-use scale_info::prelude::vec::Vec;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::DispatchError;
-use sp_tracing::{error, trace};
 use sp_weights::Weight;
 
 // Enum that handles all supported function id options for this chain extension module

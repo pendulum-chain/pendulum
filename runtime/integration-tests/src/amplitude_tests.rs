@@ -1,5 +1,4 @@
-use crate::{
-	mock::{assets_metadata_for_registry_amplitude, USDT_ASSET_ID},
+use crate::{mock::{ USDT_ASSET_ID, assets_metadata_for_registry_amplitude},
 	sibling,
 	test_macros::{
 		parachain1_transfer_asset_to_parachain2, parachain1_transfer_asset_to_parachain2_and_back,
@@ -11,22 +10,22 @@ use crate::{
 	AMPLITUDE_ID, ASSETHUB_ID, SIBLING_ID,
 };
 
-use asset_hub_kusama_runtime;
 use frame_support::assert_ok;
-use integration_tests_common::constants::{asset_hub_kusama, kusama};
+use asset_hub_kusama_runtime;
+use integration_tests_common::{
+	constants::{kusama, asset_hub_kusama},
+};
 
 use crate::genesis::{genesis_gen, genesis_sibling};
-use frame_support::traits::OnInitialize;
 use xcm::latest::NetworkId;
-use xcm_emulator::{
-	decl_test_networks, decl_test_parachains, decl_test_relay_chains, DefaultMessageProcessor,
-};
+use xcm_emulator::{decl_test_networks, decl_test_parachains, decl_test_relay_chains, DefaultMessageProcessor};
+use frame_support::traits::OnInitialize;
+
 
 // Native fee expected for each token according to the `fee_per_second` values defined in the mock
 const NATIVE_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = 4000000000;
 const BASE_FEE_WHEN_TRANSFER_NON_NATIVE_ASSET: polkadot_core_primitives::Balance = 5000000000;
-const KSM_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
-	BASE_FEE_WHEN_TRANSFER_NON_NATIVE_ASSET / 20;
+const KSM_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance = BASE_FEE_WHEN_TRANSFER_NON_NATIVE_ASSET/ 20;
 const USDT_FEE_WHEN_TRANSFER_TO_PARACHAIN: polkadot_core_primitives::Balance =
 	BASE_FEE_WHEN_TRANSFER_NON_NATIVE_ASSET / 10;
 
@@ -131,6 +130,7 @@ fn transfer_ksm_from_kusama_to_amplitude() {
 		KSM_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }
+
 
 #[test]
 fn transfer_ksm_from_amplitude_to_kusama() {

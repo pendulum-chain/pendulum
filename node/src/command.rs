@@ -142,6 +142,7 @@ impl SubstrateCli for Cli {
 			None => ChainIdentity::from_json_file(id)?.load_chain_spec_from_json_file(id)?,
 		})
 	}
+
 }
 
 impl SubstrateCli for RelayChainCli {
@@ -178,6 +179,7 @@ impl SubstrateCli for RelayChainCli {
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 		polkadot_cli::Cli::from_iter([RelayChainCli::executable_name()].iter()).load_spec(id)
 	}
+
 }
 
 macro_rules! construct_sync_run {
@@ -312,10 +314,9 @@ pub fn run() -> Result<()> {
 				cmd.run(config, polkadot_config)
 			})
 		},
-		Some(Subcommand::ExportGenesisState(cmd)) =>
-			construct_async_run!(|components, cli, cmd, config| {
-				Ok(async move { cmd.run(&*config.chain_spec, &*components.client) })
-			}),
+		Some(Subcommand::ExportGenesisState(cmd)) => construct_async_run!(|components, cli, cmd, config| {
+                Ok(async move { cmd.run(&*config.chain_spec, &*components.client) })
+            }),
 		Some(Subcommand::ExportGenesisWasm(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|_config| {
@@ -329,16 +330,12 @@ pub fn run() -> Result<()> {
 					let runner = cli.create_runner(cmd)?;
 
 					match runner.config().chain_spec.identify() {
-						ChainIdentity::Amplitude => runner.sync_run(|config| {
-							cmd.run::<Block, <AmplitudeRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions>(config)
-						}),
-						ChainIdentity::Foucoco =>
-							runner.sync_run(|config| {
-								cmd.run::<Block, <FoucocoRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions>(config)
-							}),
-						ChainIdentity::Pendulum => runner.sync_run(|config| {
-							cmd.run::<Block, <PendulumRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions>(config)
-						}),
+						ChainIdentity::Amplitude => runner
+							.sync_run(|config| cmd.run::<Block, <AmplitudeRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions>(config)),
+						ChainIdentity::Foucoco => runner
+							.sync_run(|config| cmd.run::<Block, <FoucocoRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions>(config)),
+						ChainIdentity::Pendulum => runner
+							.sync_run(|config| cmd.run::<Block, <PendulumRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions>(config)),
 						ChainIdentity::FoucocoStandalone => unimplemented!(),
 					}
 				} else {

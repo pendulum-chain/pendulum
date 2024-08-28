@@ -33,6 +33,7 @@ pub mod redeem;
 pub mod replace;
 pub mod stellar_relay;
 pub mod vault_registry;
+pub mod dia_oracle;
 
 pub use block_weights::constants::BlockExecutionWeight;
 pub use extrinsic_weights::constants::ExtrinsicBaseWeight;

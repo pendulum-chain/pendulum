@@ -134,7 +134,7 @@ dependencies = [
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
  "currency",
- "dia-oracle",
+ "dia-oracle 0.1.0 (git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v1.1.0-fix)",
  "dia-oracle-runtime-api",
  "fee",
  "frame-benchmarking",
@@ -3457,11 +3457,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "dia-oracle"
+version = "0.1.0"
+source = "git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v1.1.0-fix#68b8557231f616b64efe74adac9cc84f0ccc7152"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "dia-oracle-runtime-api"
 version = "0.1.0"
-source = "git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v1.1.0#b98aa3436f3a94d78904357923a98a35affe3677"
+source = "git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v1.1.0-fix#68b8557231f616b64efe74adac9cc84f0ccc7152"
 dependencies = [
- "dia-oracle",
+ "dia-oracle 0.1.0 (git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v1.1.0-fix)",
  "frame-support",
  "sp-api",
  "sp-runtime",
@@ -4234,7 +4252,7 @@ dependencies = [
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
  "currency",
- "dia-oracle",
+ "dia-oracle 0.1.0 (git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v1.1.0-fix)",
  "dia-oracle-runtime-api",
  "fee",
  "frame-benchmarking",
@@ -7393,7 +7411,7 @@ version = "1.0.10"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=d74009bf1d8c27fbd1f314c4fe486cd230e8b73f#d74009bf1d8c27fbd1f314c4fe486cd230e8b73f"
 dependencies = [
  "currency",
- "dia-oracle",
+ "dia-oracle 0.1.0 (git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v1.1.0)",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -9430,7 +9448,7 @@ dependencies = [
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
  "currency",
- "dia-oracle",
+ "dia-oracle 0.1.0 (git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v1.1.0-fix)",
  "dia-oracle-runtime-api",
  "fee",
  "frame-benchmarking",
@@ -11061,7 +11079,7 @@ name = "price-chain-extension"
 version = "0.1.0"
 dependencies = [
  "chain-extension-common",
- "dia-oracle",
+ "dia-oracle 0.1.0 (git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v1.1.0-fix)",
  "frame-support",
  "frame-system",
  "log",
@@ -11936,7 +11954,7 @@ name = "runtime-common"
 version = "0.1.0"
 dependencies = [
  "cumulus-primitives-core",
- "dia-oracle",
+ "dia-oracle 0.1.0 (git+https://github.com/pendulum-chain/oracle-pallet?branch=polkadot-v1.1.0-fix)",
  "frame-benchmarking",
  "frame-support",
  "frame-system",

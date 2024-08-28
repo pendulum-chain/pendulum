@@ -1065,7 +1065,7 @@ impl dia_oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
 	type AuthorityId = dia_oracle::crypto::DiaAuthId;
-	type WeightInfo = dia_oracle::weights::DiaWeightInfo<Runtime>;
+	type WeightInfo = weights::dia_oracle::SubstrateWeight<Runtime>;
 }
 
 impl frame_system::offchain::SigningTypes for Runtime {
@@ -1555,6 +1555,8 @@ mod benches {
 
 		[orml_currencies_allowance_extension, TokenAllowance]
 		[treasury_buyout_extension, TreasuryBuyoutExtension]
+
+		[dia_oracle, DiaOracleModule]
 	);
 }
 
@@ -1819,15 +1821,11 @@ impl_runtime_apis! {
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use baseline::Pallet as BaselineBench;
 
-			#[allow(non_local_definitions)]
 			impl frame_system_benchmarking::Config for Runtime {}
-			#[allow(non_local_definitions)]
 			impl baseline::Config for Runtime {}
-			#[allow(non_local_definitions)]
 			impl runtime_common::benchmarking::orml_asset_registry::Config for Runtime {}
 
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
-			#[allow(non_local_definitions)]
 			impl cumulus_pallet_session_benchmarking::Config for Runtime {}
 
 			let whitelist: Vec<TrackedStorageKey> = vec![

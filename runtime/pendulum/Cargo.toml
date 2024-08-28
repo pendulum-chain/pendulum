@@ -111,8 +111,8 @@ parachain-staking = { path = "../../pallets/parachain-staking", default-features
 orml-currencies-allowance-extension = { path = "../../pallets/orml-currencies-allowance-extension", default-features = false }
 
 # DIA
-dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v1.1.0" }
-dia-oracle-runtime-api = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v1.1.0" }
+dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v1.1.0-fix" }
+dia-oracle-runtime-api = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v1.1.0-fix" }
 
 # Pendulum Pallets
 vesting-manager = { path = "../../pallets/vesting-manager", default-features = false }
@@ -279,6 +279,7 @@ runtime-benchmarks = [
     "parachain-staking/runtime-benchmarks",
     "orml-currencies-allowance-extension/runtime-benchmarks",
     "treasury-buyout-extension/runtime-benchmarks",
+    "dia-oracle/runtime-benchmarks"
 ]
 
 try-runtime = [

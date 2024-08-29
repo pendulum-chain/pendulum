@@ -34,7 +34,7 @@ orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 vesting-manager = { path = "../../pallets/vesting-manager", default-features = false }
 
 # DIA
-dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v1.1.0-fix" }
+dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v1.1.0" }
 
 
 [features]

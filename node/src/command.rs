@@ -430,7 +430,6 @@ async fn start_node(
 	let parachain_account =
 		AccountIdConversion::<polkadot_primitives::v5::AccountId>::into_account_truncating(&id);
 
-	//let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
 	let state_version = config.chain_spec.identify().get_runtime_version().state_version();
 	let block: Block =
 		generate_genesis_block(&*config.chain_spec, state_version).map_err(|e| format!("{e:?}"))?;

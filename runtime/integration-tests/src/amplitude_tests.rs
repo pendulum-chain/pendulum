@@ -144,7 +144,6 @@ fn transfer_ksm_from_amplitude_to_kusama() {
 		KSM_FEE_WHEN_TRANSFER_TO_PARACHAIN
 	);
 }
-//
 #[test]
 fn assethub_transfer_incorrect_asset_to_amplitude_should_fail() {
 	parachain1_transfer_incorrect_asset_to_parachain2_should_fail!(

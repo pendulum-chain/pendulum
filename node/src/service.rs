@@ -436,7 +436,6 @@ where
 	.map_err(|e| sc_service::Error::Application(Box::new(e)))?;
 	let block_announce_validator = RequireSecondedInBlockAnnounce::new(relay_chain_interface.clone(), id);
 
-	let _force_authoring = parachain_config.force_authoring;
 	let validator = parachain_config.role.is_authority();
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
 	let transaction_pool = params.transaction_pool.clone();
@@ -706,7 +705,6 @@ where
 		client.clone(),
 	);
 
-	let _relay_chain_interface_move = relay_chain_interface.clone();
 	let params = BasicAuraParams {
 		proposer,
 		create_inherent_data_providers: move |_, ()| async move { Ok(()) },

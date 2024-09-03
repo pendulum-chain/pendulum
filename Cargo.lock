@@ -7398,7 +7398,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "once_cell",
- "orml-oracle 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v1.1.0)",
+ "orml-oracle 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0)",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -7458,7 +7458,7 @@ dependencies = [
 [[package]]
 name = "orml-asset-registry"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7479,12 +7479,12 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
 dependencies = [
  "frame-support",
  "frame-system",
  "orml-traits",
- "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v1.1.0)",
+ "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -7518,12 +7518,12 @@ dependencies = [
 [[package]]
 name = "orml-oracle"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
 dependencies = [
  "frame-support",
  "frame-system",
  "orml-traits",
- "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v1.1.0)",
+ "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -7629,7 +7629,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -7659,7 +7659,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7673,7 +7673,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm-support"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
 dependencies = [
  "frame-support",
  "orml-traits",
@@ -7687,7 +7687,7 @@ dependencies = [
 [[package]]
 name = "orml-xtokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",

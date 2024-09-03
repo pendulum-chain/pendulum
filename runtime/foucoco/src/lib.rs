@@ -182,7 +182,7 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
 			writes += 1;
 		}
 		// not really a heavy operation
-		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(4, writes)
+		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(2, writes)
 	}
 }
 /// Executive: handles dispatch to the various modules.

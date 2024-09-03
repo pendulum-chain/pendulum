@@ -1,7 +1,7 @@
 use crate::*;
 // Substrate
 use sp_core::storage::Storage;
-
+pub const SAFE_XCM_VERSION: u32 = 3;
 // Cumulus
 use integration_tests_common::constants::{accounts, collators};
 
@@ -14,7 +14,7 @@ macro_rules! genesis_gen {
 		use integration_tests_common::constants::{accounts, collators};
 		use spacewalk_primitives::CurrencyId;
 		use $runtime::BuildStorage;
-		pub const SAFE_XCM_VERSION: u32 = 3;
+		use crate::genesis::SAFE_XCM_VERSION;
 
 		let token_balances = accounts::init_balances()
 			.iter()
@@ -81,6 +81,7 @@ macro_rules! genesis_gen {
 
 pub fn genesis_sibling(para_id: u32) -> Storage {
 	use sibling::BuildStorage;
+	use crate::genesis::SAFE_XCM_VERSION;
 
 	let token_balances = accounts::init_balances()
 		.iter()

@@ -1,7 +1,7 @@
 #![allow(clippy::default_constructed_unit_structs)]
 
 use cumulus_primitives_core::ParaId;
-use frame_benchmarking::__private::sp_std;
+use sp_core::sp_std;
 use runtime_common::{AccountId, AuraId, Balance, BlockNumber, Signature, UNIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;

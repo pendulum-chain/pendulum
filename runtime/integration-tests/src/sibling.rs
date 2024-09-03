@@ -18,14 +18,13 @@ use polkadot_runtime_common::MAXIMUM_BLOCK_WEIGHT;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
-use sp_debug_derive::RuntimeDebug;
 use sp_runtime::{traits::{BlakeTwo256, Convert, IdentityLookup, Zero, MaybeEquivalence}, AccountId32, generic, impl_opaque_keys, Perquintill, Permill};
 use xcm::v3::prelude::*;
 use xcm_emulator::{
 	Weight,
 };
 use cumulus_pallet_parachain_system::{self, RelayNumberStrictlyIncreases};
-use sp_runtime::traits::ConvertInto;
+use sp_runtime::{traits::ConvertInto, RuntimeDebug};
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute, WeightTrader},
 	Assets, XcmExecutor,

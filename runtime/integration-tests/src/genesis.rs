@@ -7,8 +7,6 @@ use integration_tests_common::{
     constants::{accounts, collators},
 };
 
-pub const SAFE_XCM_VERSION: u32 = 3;
-
 use crate::mock::units;
 
 

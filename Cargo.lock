@@ -12006,7 +12006,6 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-core",
- "sp-debug-derive",
  "sp-io",
  "sp-runtime",
  "sp-std",

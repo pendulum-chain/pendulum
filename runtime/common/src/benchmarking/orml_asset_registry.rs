@@ -20,8 +20,8 @@ pub trait Config:
 #[benchmarks]
 pub mod benchmarks {
 	use super::{Config, Pallet, *};
-	use orml_asset_registry::Call;
 	use crate::asset_registry::StringLimit;
+	use orml_asset_registry::Call;
 
 	fn longest_vec<T: sp_core::Get<u32>>() -> BoundedVec<u8, T> {
 		// there is no fixed upperbound, but all actions are root-only so an assumed upperbound of 128 will do
@@ -34,7 +34,7 @@ pub mod benchmarks {
 		MultiLocation::new(1, X8(key, key, key, key, key, key, key, key))
 	}
 
-	fn get_asset_metadata<T :sp_core::Get<u32>>() -> AssetMetadata<u128, CustomMetadata, T> {
+	fn get_asset_metadata<T: sp_core::Get<u32>>() -> AssetMetadata<u128, CustomMetadata, T> {
 		AssetMetadata::<u128, CustomMetadata, T> {
 			decimals: 12,
 			name: longest_vec::<T>(),
@@ -83,10 +83,7 @@ pub mod benchmarks {
 			Some(1234),
 			Some(Some(location.into())),
 			Some(CustomMetadata {
-				dia_keys: DiaKeys {
-					blockchain: longest_vec(),
-					symbol: longest_vec(),
-				},
+				dia_keys: DiaKeys { blockchain: longest_vec(), symbol: longest_vec() },
 				fee_per_second: 123,
 			}),
 		);

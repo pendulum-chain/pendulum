@@ -1,13 +1,11 @@
-use crate::{definitions::asset_hub};
+use crate::definitions::asset_hub;
 use amplitude_runtime::CurrencyId as AmplitudeCurrencyId;
-use pendulum_runtime::CurrencyId as PendulumCurrencyId;
-use polkadot_core_primitives::Balance;
 use codec::Encode;
 use frame_support::BoundedVec;
+use pendulum_runtime::{definitions::moonbeam, CurrencyId as PendulumCurrencyId};
+use polkadot_core_primitives::Balance;
 use runtime_common::asset_registry::{CustomMetadata, DiaKeys, StringLimit};
 use xcm::{v3::MultiLocation, VersionedMultiLocation};
-use pendulum_runtime::definitions::moonbeam;
-
 
 pub const UNIT: Balance = 1_000_000_000_000;
 pub const TEN_UNITS: Balance = 10_000_000_000_000;
@@ -45,7 +43,9 @@ pub fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u
 			PendulumCurrencyId::XCM(1),
 			orml_asset_registry::AssetMetadata {
 				decimals: 12u32,
-				name: BoundedVec::<u8, StringLimit>::truncate_from("USDT Assethub".as_bytes().to_vec()),
+				name: BoundedVec::<u8, StringLimit>::truncate_from(
+					"USDT Assethub".as_bytes().to_vec(),
+				),
 				symbol: BoundedVec::<u8, StringLimit>::truncate_from("USDT".as_bytes().to_vec()),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(asset_hub::USDT_location())),
@@ -81,7 +81,9 @@ pub fn assets_metadata_for_registry_pendulum() -> Vec<(PendulumCurrencyId, Vec<u
 			PendulumCurrencyId::XCM(6),
 			orml_asset_registry::AssetMetadata {
 				decimals: 12u32,
-				name: BoundedVec::<u8, StringLimit>::truncate_from("Moonbeam BRZ".as_bytes().to_vec()),
+				name: BoundedVec::<u8, StringLimit>::truncate_from(
+					"Moonbeam BRZ".as_bytes().to_vec(),
+				),
 				symbol: BoundedVec::<u8, StringLimit>::truncate_from("BRZ".as_bytes().to_vec()),
 				existential_deposit: 1_000u128,
 				location: Some(xcm::VersionedMultiLocation::V3(moonbeam::BRZ_location())),
@@ -125,7 +127,9 @@ pub fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec
 			AmplitudeCurrencyId::XCM(1),
 			orml_asset_registry::AssetMetadata {
 				decimals: 12u32,
-				name: BoundedVec::<u8, StringLimit>::truncate_from("USDT Assethub".as_bytes().to_vec()),
+				name: BoundedVec::<u8, StringLimit>::truncate_from(
+					"USDT Assethub".as_bytes().to_vec(),
+				),
 				symbol: BoundedVec::<u8, StringLimit>::truncate_from("USDT".as_bytes().to_vec()),
 				existential_deposit: 1_000u128,
 				location: Some(VersionedMultiLocation::V3(asset_hub::USDT_location())),
@@ -159,4 +163,3 @@ pub fn assets_metadata_for_registry_amplitude() -> Vec<(AmplitudeCurrencyId, Vec
 		),
 	]
 }
-

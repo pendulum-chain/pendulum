@@ -2,7 +2,7 @@
 use crate::{
 	mock::*,
 	types::{Amount, CurrencyIdOf},
-	BuyoutLimit, Buyouts, Config, Error, PriceGetter, ValidityError, DecimalsLookup,
+	BuyoutLimit, Buyouts, Config, DecimalsLookup, Error, PriceGetter, ValidityError,
 };
 use frame_support::{assert_err, assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
@@ -37,7 +37,7 @@ fn buyout_using_dot_given_exchange_amount_in_dot_succeeds() {
 
 		assert_eq!(initial_user_native_balance, USERS_INITIAL_NATIVE_BALANCE);
 		assert_eq!(initial_treasury_native_balance, TREASURY_INITIAL_BALANCE);
-		
+
 		// DOT has 10 decimals
 		let exchange_amount = 100_0000000000;
 		assert_ok!(crate::Pallet::<Test>::buyout(
@@ -137,7 +137,8 @@ fn buyout_using_dot_given_buyout_amount_in_native_succeeds() {
 			exchange_asset_price,
 			<DecimalsLookupImpl as DecimalsLookup>::decimals(native_currency_id),
 			<DecimalsLookupImpl as DecimalsLookup>::decimals(dot_currency_id),
-		).expect("This is mocked so it should not fail");
+		)
+		.expect("This is mocked so it should not fail");
 
 		let final_user_dot_balance = get_free_balance(dot_currency_id, &user);
 		let final_user_native_balance = get_free_balance(native_currency_id, &user);

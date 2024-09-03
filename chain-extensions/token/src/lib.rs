@@ -7,8 +7,6 @@ use frame_support::{
 	pallet_prelude::{Decode, Get, PhantomData},
 	DefaultNoBound,
 };
-use sp_tracing::{error, trace};
-use sp_weights::Weight;
 use orml_currencies::WeightInfo;
 use orml_currencies_allowance_extension::{
 	default_weights::WeightInfo as AllowanceWeightInfo, Config as AllowanceConfig,
@@ -19,6 +17,8 @@ use pallet_contracts::chain_extension::{
 };
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::DispatchError;
+use sp_tracing::{error, trace};
+use sp_weights::Weight;
 use spacewalk_primitives::CurrencyId;
 
 pub(crate) type BalanceOfForChainExt<T> =

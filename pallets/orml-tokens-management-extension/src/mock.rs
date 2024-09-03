@@ -11,7 +11,7 @@ use orml_traits::parameter_type_with_key;
 use sp_core::{ConstU128, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
-	BuildStorage
+	BuildStorage,
 };
 type Block = frame_system::mocking::MockBlock<Test>;
 

@@ -21,7 +21,10 @@ use xcm_builder::{
 	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
-use xcm_executor::{traits::{ShouldExecute, Properties}, XcmExecutor};
+use xcm_executor::{
+	traits::{Properties, ShouldExecute},
+	XcmExecutor,
+};
 
 use runtime_common::{asset_registry::FixedConversionRateProvider, CurrencyIdConvert};
 

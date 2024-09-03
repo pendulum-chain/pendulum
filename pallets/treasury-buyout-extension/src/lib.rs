@@ -30,17 +30,15 @@ use frame_support::{
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_arithmetic::traits::{CheckedAdd, CheckedMul, CheckedDiv, Saturating};
+use sp_arithmetic::traits::{CheckedAdd, CheckedDiv, CheckedMul, Saturating};
 use sp_runtime::{
 	traits::{DispatchInfoOf, One, SignedExtension, UniqueSaturatedInto, Zero},
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
 	},
-	ArithmeticError, FixedPointNumber, FixedU128,
-	DispatchError,
+	ArithmeticError, DispatchError, FixedPointNumber, FixedU128,
 };
-use sp_std::{fmt::Debug, marker::PhantomData, vec::Vec};
-use sp_std::vec;
+use sp_std::{fmt::Debug, marker::PhantomData, vec, vec::Vec};
 use spacewalk_primitives::DecimalsLookup;
 
 #[frame_support::pallet]

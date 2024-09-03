@@ -155,11 +155,11 @@ pub mod pallet {
 	use pallet_balances::{BalanceLock, Locks};
 	use pallet_session::ShouldEndSession;
 	use scale_info::TypeInfo;
+	use sp_arithmetic::per_things::Perquintill;
 	use sp_runtime::{
 		traits::{Convert, One, SaturatedConversion, Saturating, StaticLookup, Zero},
 		Permill,
 	};
-	use sp_arithmetic::per_things::Perquintill;
 	use sp_staking::SessionIndex;
 	use sp_std::prelude::*;
 
@@ -893,7 +893,10 @@ pub mod pallet {
 		/// Emits `BlocksPerRoundSet`.
 		#[pallet::call_index(3)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::set_blocks_per_round())]
-		pub fn set_blocks_per_round(origin: OriginFor<T>, new: BlockNumberFor<T>) -> DispatchResult {
+		pub fn set_blocks_per_round(
+			origin: OriginFor<T>,
+			new: BlockNumberFor<T>,
+		) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(new >= T::MinBlocksPerRound::get(), Error::<T>::CannotSetBelowMin);
 

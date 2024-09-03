@@ -9,10 +9,8 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::Get;
 use sp_runtime::{traits::PhantomData, BoundedVec, DispatchError};
-use sp_std::fmt::Debug;
-use sp_std::vec::Vec;
-use spacewalk_primitives::oracle::Key;
-use spacewalk_primitives::CurrencyId;
+use sp_std::{fmt::Debug, vec::Vec};
+use spacewalk_primitives::{oracle::Key, CurrencyId};
 use xcm::opaque::v3::MultiLocation;
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
@@ -40,7 +38,9 @@ pub struct DiaKeys<T: Get<u32> + TypeInfo + Clone + Eq + Debug + Send + Sync> {
 )]
 pub struct CustomAssetProcessor;
 
-impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata, StringLimit>> for CustomAssetProcessor {
+impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata, StringLimit>>
+	for CustomAssetProcessor
+{
 	fn pre_register(
 		id: Option<CurrencyId>,
 		metadata: AssetMetadata<Balance, CustomMetadata, StringLimit>,

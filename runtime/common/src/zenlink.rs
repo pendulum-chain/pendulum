@@ -42,24 +42,18 @@ pub fn zenlink_id_to_currency_id(
 		(1, LOCAL) => Some(CurrencyId::XCM(symbol)),
 		(2, LOCAL) => match symbol {
 			0 => Some(CurrencyId::Stellar(Asset::StellarNative)),
-			1 => {
-				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"USDC", issuer: USDC_ISSUER }))
-			},
-			2 => {
-				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"TZS\0", issuer: TZS_ISSUER }))
-			},
-			3 => {
-				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"BRL\0", issuer: BRL_ISSUER }))
-			},
-			4 => {
-				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"EURC", issuer: EURC_ISSUER }))
-			},
-			5 => {
-				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"AUDD", issuer: AUDD_ISSUER }))
-			},
-			6 => {
-				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"NGNC", issuer: NGNC_ISSUER }))
-			},
+			1 =>
+				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"USDC", issuer: USDC_ISSUER })),
+			2 =>
+				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"TZS\0", issuer: TZS_ISSUER })),
+			3 =>
+				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"BRL\0", issuer: BRL_ISSUER })),
+			4 =>
+				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"EURC", issuer: EURC_ISSUER })),
+			5 =>
+				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"AUDD", issuer: AUDD_ISSUER })),
+			6 =>
+				Some(CurrencyId::Stellar(Asset::AlphaNum4 { code: *b"NGNC", issuer: NGNC_ISSUER })),
 			_ => None,
 		},
 		(3, LOCAL) => {
@@ -81,9 +75,8 @@ pub fn currency_id_to_zenlink_id(
 ) -> Option<ZenlinkAssetId> {
 	let disc = discriminant(&currency_id) as u64;
 	match currency_id {
-		CurrencyId::Native => {
-			Some(ZenlinkAssetId { chain_id: parachain_id, asset_type: NATIVE, asset_index: 0 })
-		},
+		CurrencyId::Native =>
+			Some(ZenlinkAssetId { chain_id: parachain_id, asset_type: NATIVE, asset_index: 0 }),
 		CurrencyId::XCM(token_id) => Some(ZenlinkAssetId {
 			chain_id: parachain_id,
 			asset_type: LOCAL,
@@ -110,11 +103,11 @@ pub fn currency_id_to_zenlink_id(
 			})
 		},
 		CurrencyId::ZenlinkLPToken(token1_id, token1_type, token2_id, token2_type) => {
-			let index = (disc << 8)
-				+ ((token1_id as u64) << 16)
-				+ ((token1_type as u64) << 24)
-				+ ((token2_id as u64) << 32)
-				+ ((token2_type as u64) << 40);
+			let index = (disc << 8) +
+				((token1_id as u64) << 16) +
+				((token1_type as u64) << 24) +
+				((token2_id as u64) << 32) +
+				((token2_type as u64) << 40);
 			Some(ZenlinkAssetId { chain_id: parachain_id, asset_type: LOCAL, asset_index: index })
 		},
 		CurrencyId::Token(_) => None,

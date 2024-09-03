@@ -3,18 +3,20 @@
 // std
 use std::{sync::Arc, time::Duration};
 
-use cumulus_client_cli::{RelayChainMode,CollatorOptions};
+use cumulus_client_cli::{CollatorOptions, RelayChainMode};
 // Local Runtime Types
 use runtime_common::{opaque::Block, AccountId, Balance, Index as Nonce};
 
 // Cumulus Imports
-use cumulus_client_consensus_aura::{collators::basic::{Params as BasicAuraParams, self as basic_aura}};
-use cumulus_client_consensus_common::{
-	ParachainBlockImport as TParachainBlockImport,
+use cumulus_client_collator::service::CollatorService;
+use cumulus_client_consensus_aura::collators::basic::{
+	self as basic_aura, Params as BasicAuraParams,
 };
+use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
+use cumulus_client_consensus_proposer::Proposer;
 use cumulus_client_network::RequireSecondedInBlockAnnounce;
 use cumulus_client_service::{
-	prepare_node_config, start_relay_chain_tasks, StartRelayChainTasksParams, DARecoveryProfile
+	prepare_node_config, start_relay_chain_tasks, DARecoveryProfile, StartRelayChainTasksParams,
 };
 use cumulus_primitives_core::{relay_chain::Hash, ParaId};
 use cumulus_primitives_parachain_inherent::{
@@ -23,8 +25,6 @@ use cumulus_primitives_parachain_inherent::{
 use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
 use cumulus_relay_chain_interface::{RelayChainInterface, RelayChainResult};
 use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node_with_rpc;
-use cumulus_client_consensus_proposer::Proposer;
-use cumulus_client_collator::service::CollatorService;
 
 // Substrate Imports
 use sc_executor::{
@@ -44,11 +44,11 @@ use sp_keystore::KeystorePtr;
 use sp_runtime::traits::BlakeTwo256;
 use substrate_prometheus_endpoint::Registry;
 
-use polkadot_service::{CollatorPair, Handle};
-use sc_consensus::{import_queue::ImportQueueService, ImportQueue};
 use crate::rpc::{
 	create_full_amplitude, create_full_foucoco, create_full_pendulum, FullDeps, ResultRpcExtension,
 };
+use polkadot_service::{CollatorPair, Handle};
+use sc_consensus::{import_queue::ImportQueueService, ImportQueue};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 
 use sc_client_api::Backend;
@@ -134,7 +134,6 @@ impl sc_executor::NativeExecutionDispatch for FoucocoRuntimeExecutor {
 pub struct PendulumRuntimeExecutor;
 
 impl sc_executor::NativeExecutionDispatch for PendulumRuntimeExecutor {
-
 	#[cfg(feature = "runtime-benchmarks")]
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 	#[cfg(not(feature = "runtime-benchmarks"))]
@@ -299,7 +298,9 @@ async fn setup_common_services<RuntimeApi, Executor>(
 	parachain_config: Configuration,
 	params: ResultNewPartial<RuntimeApi, Executor>,
 	create_full_rpc: fn(deps: FullDepsOf<RuntimeApi, Executor>) -> ResultRpcExtension,
-	block_announce_validator: Option<RequireSecondedInBlockAnnounce<Block, Arc<dyn RelayChainInterface>>>,
+	block_announce_validator: Option<
+		RequireSecondedInBlockAnnounce<Block, Arc<dyn RelayChainInterface>>,
+	>,
 ) -> Result<
 	(
 		NetworkStarter,
@@ -371,8 +372,8 @@ where
 				enable_http_requests: true,
 				custom_extensions: |_| vec![],
 			})
-				.run(client.clone(), task_manager.spawn_handle())
-				.boxed(),
+			.run(client.clone(), task_manager.spawn_handle())
+			.boxed(),
 		);
 	}
 
@@ -434,7 +435,8 @@ where
 	)
 	.await
 	.map_err(|e| sc_service::Error::Application(Box::new(e)))?;
-	let block_announce_validator = RequireSecondedInBlockAnnounce::new(relay_chain_interface.clone(), id);
+	let block_announce_validator =
+		RequireSecondedInBlockAnnounce::new(relay_chain_interface.clone(), id);
 
 	let validator = parachain_config.role.is_authority();
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
@@ -514,7 +516,6 @@ where
 			collator_key.clone().expect("Command line arguments do not allow this. qed"),
 			announce_block.clone(),
 		)?;
-
 	}
 
 	start_network.start_network();
@@ -716,7 +717,7 @@ where
 		sync_oracle,
 		keystore,
 		slot_duration,
-		authoring_duration:Duration::from_millis(500),
+		authoring_duration: Duration::from_millis(500),
 		relay_chain_slot_duration,
 		para_id: id,
 		overseer_handle,

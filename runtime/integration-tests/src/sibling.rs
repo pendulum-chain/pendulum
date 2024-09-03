@@ -3,6 +3,7 @@
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use core::marker::PhantomData;
+use cumulus_pallet_parachain_system::{self, RelayNumberStrictlyIncreases};
 use frame_support::{
 	match_types, parameter_types,
 	traits::{ConstU32, ContainsPair, Everything, Nothing, ProcessMessageError},
@@ -18,18 +19,21 @@ use polkadot_runtime_common::MAXIMUM_BLOCK_WEIGHT;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
-use sp_runtime::{traits::{BlakeTwo256, Convert, IdentityLookup, Zero, MaybeEquivalence}, AccountId32, generic, impl_opaque_keys, Perquintill, Permill};
-use xcm::v3::prelude::*;
-use xcm_emulator::{
-	Weight,
+use sp_runtime::{
+	generic, impl_opaque_keys,
+	traits::{BlakeTwo256, Convert, ConvertInto, IdentityLookup, MaybeEquivalence, Zero},
+	AccountId32, Permill, Perquintill, RuntimeDebug,
 };
-use cumulus_pallet_parachain_system::{self, RelayNumberStrictlyIncreases};
-use sp_runtime::{traits::ConvertInto, RuntimeDebug};
+use xcm::v3::prelude::*;
+use xcm_emulator::Weight;
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute, WeightTrader},
 	Assets, XcmExecutor,
 };
 
+use crate::{definitions::asset_hub, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
+use pendulum_runtime::definitions::moonbeam::BRZ_location;
+use runtime_common::AuraId;
 use xcm::latest::Weight as XCMWeight;
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
@@ -38,9 +42,6 @@ use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation,
 };
 use xcm_executor::traits::Properties;
-use crate::{definitions::asset_hub, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
-use pendulum_runtime::definitions::moonbeam::BRZ_location;
-use runtime_common::AuraId;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -53,7 +54,8 @@ pub const MILLISECS_PER_BLOCK: u64 = 12000;
 pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 
 // Time is measured by number of blocks.
-pub const MINUTES: runtime_common::BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as runtime_common::BlockNumber);
+pub const MINUTES: runtime_common::BlockNumber =
+	60_000 / (MILLISECS_PER_BLOCK as runtime_common::BlockNumber);
 pub const HOURS: runtime_common::BlockNumber = MINUTES * 60;
 pub const DAYS: runtime_common::BlockNumber = HOURS * 24;
 pub const BLOCKS_PER_YEAR: runtime_common::BlockNumber = DAYS * 36525 / 100;
@@ -189,9 +191,7 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 }
 
 // Required this now for FungiblesAdapter.
-impl MaybeEquivalence<MultiLocation, CurrencyId>
-for CurrencyIdConvert
-{
+impl MaybeEquivalence<MultiLocation, CurrencyId> for CurrencyIdConvert {
 	fn convert(id: &MultiLocation) -> Option<CurrencyId> {
 		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(*id)
 	}
@@ -327,7 +327,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 		if matches!(origin, MultiLocation { parents: 1, interior: Here }) &&
 			instructions.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
 		{
-			println!{"Unexpected ReserveAssetDeposited from the relay chain"};
+			println! {"Unexpected ReserveAssetDeposited from the relay chain"};
 		}
 		// Permit everything else
 		Ok(())
@@ -431,7 +431,6 @@ impl orml_xtokens::Config for Runtime {
 	type UniversalLocation = UniversalLocation;
 }
 
-
 parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
 	pub const ProposalBondMinimum: Balance = 10 * UNIT;
@@ -441,11 +440,9 @@ parameter_types! {
 	pub const MaxApprovals: u32 = 100;
 }
 
-type TreasuryApproveOrigin =
-	EnsureRoot<runtime_common::AccountId>;
+type TreasuryApproveOrigin = EnsureRoot<runtime_common::AccountId>;
 
-type TreasuryRejectOrigin =
-	EnsureRoot<runtime_common::AccountId>;
+type TreasuryRejectOrigin = EnsureRoot<runtime_common::AccountId>;
 
 impl pallet_treasury::Config for Runtime {
 	type PalletId = TreasuryPalletId;
@@ -480,7 +477,6 @@ impl cumulus_pallet_xcm::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -511,7 +507,6 @@ frame_support::construct_runtime!(
 
 	}
 );
-
 
 pub type Balance = u128;
 pub type BlockNumber = u32;
@@ -760,7 +755,12 @@ impl WeightTrader for AllTokensAreCreatedEqualToWeight {
 		Self(MultiLocation::parent())
 	}
 
-	fn buy_weight(&mut self, weight: Weight, payment: Assets, _context: &XcmContext) -> Result<Assets, XcmError> {
+	fn buy_weight(
+		&mut self,
+		weight: Weight,
+		payment: Assets,
+		_context: &XcmContext,
+	) -> Result<Assets, XcmError> {
 		let asset_id = payment.fungible.iter().next().expect("Payment must be something; qed").0;
 		let required = MultiAsset { id: *asset_id, fun: Fungible(weight.ref_time() as u128) };
 

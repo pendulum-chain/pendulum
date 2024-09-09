@@ -2,11 +2,8 @@
 #![cfg_attr(test, feature(proc_macro_hygiene))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(test)]
-extern crate mocktopus;
 
-#[cfg(test)]
-use mocktopus::macros::mockable;
+
 use sp_std::{convert::TryInto, prelude::*, vec};
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -326,7 +323,6 @@ pub mod pallet {
 	}
 }
 
-#[cfg_attr(test, mockable)]
 impl<T: Config> Pallet<T> {}
 
 pub trait CurrencyIdCheck {

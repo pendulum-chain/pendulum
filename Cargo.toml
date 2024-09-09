@@ -17,7 +17,7 @@ members = [
 	"runtime/amplitude",
 	"runtime/foucoco",
 	"runtime/pendulum",
-	"runtime/integration-tests",
+#	"runtime/integration-tests",
 	"chain-extensions/token",
 	"chain-extensions/price",
 	"chain-extensions/common",

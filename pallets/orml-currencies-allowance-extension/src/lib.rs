@@ -2,13 +2,9 @@
 #![cfg_attr(test, feature(proc_macro_hygiene))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(test)]
-extern crate mocktopus;
 
 use frame_support::{dispatch::DispatchResult, ensure};
 
-#[cfg(test)]
-use mocktopus::macros::mockable;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::*;
 use sp_std::{convert::TryInto, prelude::*, vec};
@@ -245,7 +241,6 @@ pub mod pallet {
 	forgetting_references,
 	forgetting_copy_types
 )]
-#[cfg_attr(test, mockable)]
 impl<T: Config> Pallet<T> {
 	// Check the amount approved to be spent by an owner to a delegate
 	pub fn is_allowed_currency(asset: CurrencyOf<T>) -> bool {

@@ -46,6 +46,13 @@ jobs:
           command: test
           args: --release --features runtime-benchmarks try-runtime
 
+      - name: Test For runtime benchmarks
+        uses: actions-rs/cargo@v1
+        with:
+          toolchain: nightly-2024-05-30
+          command: test
+          args: --all --release --features runtime-benchmarks try-runtime
+
       - name: Clippy -- Main
         uses: actions-rs/cargo@v1
         with:

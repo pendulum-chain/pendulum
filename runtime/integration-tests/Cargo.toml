@@ -86,7 +86,9 @@ std = [
 
 try-runtime = [
     "kusama-runtime/try-runtime",
-    "polkadot-runtime-parachains/try-runtime"
+    "polkadot-runtime-parachains/try-runtime",
+    "amplitude-runtime/try-runtime",
+    "pendulum-runtime/try-runtime",
 ]
 
 runtime-benchmarks = [
@@ -94,5 +96,5 @@ runtime-benchmarks = [
     "polkadot-parachain/runtime-benchmarks",
     "integration-tests-common/runtime-benchmarks",
     "amplitude-runtime/runtime-benchmarks",
-    "pendulum-runtime/runtime-benchmarks"
+    "pendulum-runtime/runtime-benchmarks",
 ]

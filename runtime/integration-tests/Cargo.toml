@@ -87,6 +87,7 @@ std = [
 try-runtime = [
     "kusama-runtime/try-runtime",
     "polkadot-runtime-parachains/try-runtime"
+]
 
 runtime-benchmarks = [
     "kusama-runtime/runtime-benchmarks",

@@ -446,7 +446,7 @@ dependencies = [
 [[package]]
 name = "ark-secret-scalar"
 version = "0.0.2"
-source = "git+https://github.com/w3f//ring-vrf?rev=3ddc20?rev=3ddc20#3ddc2051066c4b3f0eadd0ba5700df12500d9754"
+source = "git+https://github.com/w3f//ring-vrf?rev=3ddc20#3ddc2051066c4b3f0eadd0ba5700df12500d9754"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -494,7 +494,7 @@ dependencies = [
 [[package]]
 name = "ark-transcript"
 version = "0.0.2"
-source = "git+https://github.com/w3f//ring-vrf?rev=3ddc20?rev=3ddc20#3ddc2051066c4b3f0eadd0ba5700df12500d9754"
+source = "git+https://github.com/w3f//ring-vrf?rev=3ddc20#3ddc2051066c4b3f0eadd0ba5700df12500d9754"
 dependencies = [
  "ark-ff",
  "ark-serialize",
@@ -1059,7 +1059,7 @@ dependencies = [
 [[package]]
 name = "bandersnatch_vrfs"
 version = "0.0.4"
-source = "git+https://github.com/w3f//ring-vrf?rev=3ddc20?rev=3ddc20#3ddc2051066c4b3f0eadd0ba5700df12500d9754"
+source = "git+https://github.com/w3f//ring-vrf?rev=3ddc20#3ddc2051066c4b3f0eadd0ba5700df12500d9754"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -3560,7 +3560,7 @@ dependencies = [
 [[package]]
 name = "dleq_vrf"
 version = "0.0.2"
-source = "git+https://github.com/w3f//ring-vrf?rev=3ddc20?rev=3ddc20#3ddc2051066c4b3f0eadd0ba5700df12500d9754"
+source = "git+https://github.com/w3f//ring-vrf?rev=3ddc20#3ddc2051066c4b3f0eadd0ba5700df12500d9754"
 dependencies = [
  "ark-ec",
  "ark-ff",

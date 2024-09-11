@@ -13,6 +13,8 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::*;
 use sp_std::{convert::TryInto, prelude::*, vec};
 
+pub use default_weights::WeightInfo;
+
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 

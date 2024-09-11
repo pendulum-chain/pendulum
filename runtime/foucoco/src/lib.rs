@@ -871,7 +871,7 @@ impl orml_asset_registry::Config for Runtime {
 	type AuthorityOrigin = asset_registry::AssetAuthority;
 	type AssetProcessor = asset_registry::CustomAssetProcessor;
 	type Balance = Balance;
-	type WeightInfo = weights::orml_asset_registry::WeightInfo<Runtime>;
+	type WeightInfo = weights::orml_asset_registry::SubstrateWeight<Runtime>;
 	type StringLimit = StringLimit;
 }
 

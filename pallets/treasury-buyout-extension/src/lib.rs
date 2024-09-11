@@ -16,9 +16,10 @@ mod tests;
 mod types;
 
 use crate::{
-	default_weights::WeightInfo,
 	types::{AccountIdOf, Amount, BalanceOf, CurrencyIdOf},
 };
+
+pub use crate::default_weights::WeightInfo;
 use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::DispatchResult,

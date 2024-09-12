@@ -2,8 +2,9 @@ name: Test Code
 
 on:
   pull_request:
-    branches:
-      - main
+    types:
+      - opened
+      - synchronized
   push:
     branches:
       - main

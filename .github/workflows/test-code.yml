@@ -2,10 +2,6 @@ name: Test Code
 
 on:
   pull_request:
-    types:
-      - opened
-      - synchronized
-      - edited
   push:
     branches:
       - main

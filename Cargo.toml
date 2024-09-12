@@ -34,5 +34,6 @@ orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-l
 ### orml packages { version = "0.4.1-dev" }
 ### zenlink packages  { version = "*" }
 
-[patch."https://github.com/w3f/ring-vrf"]
-bandersnatch_vrfs = { git = "https://github.com/w3f//ring-vrf", version = "0.0.4", rev = "3ddc20" }
+# probable patch for nightly
+#[patch."https://github.com/w3f/ring-vrf"]
+#bandersnatch_vrfs = { git = "https://github.com/w3f//ring-vrf", version = "0.0.4", rev = "3ddc20" }

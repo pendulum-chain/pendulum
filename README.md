@@ -3,12 +3,8 @@
 Pendulum chain by SatoshiPay. More information about Pendulum can be found [here](https://docs.pendulumchain.org/).
 
 ### How to Run Tests
-
-[`mocktopus`](https://docs.rs/mocktopus/latest/mocktopus/) is nightly-only lib, and is used in testing.  
-So to run the tests, override the toolchain with nightly; minimum version is `nightly-2024-05-30`.
-
 ```
-cargo +nightly test
+cargo test
 ```
 
 ### How to Build

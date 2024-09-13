@@ -32,7 +32,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all --release --features runtime-benchmarks try-runtime
+          args: --release --features=runtime-benchmarks,try-runtime
 
       - name: Clippy -- Main
         uses: actions-rs/cargo@v1

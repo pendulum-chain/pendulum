@@ -8,7 +8,7 @@ on:
 
 jobs:
   test-code:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       # Make sure CI fails on all warnings, including Clippy lints
       RUSTFLAGS: "-Dwarnings"

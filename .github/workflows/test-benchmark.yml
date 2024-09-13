@@ -1,0 +1,29 @@
+name: Test Code
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-code:
+    runs-on: ubuntu-latest
+    env:
+      # Make sure CI fails on all warnings, including Clippy lints
+      RUSTFLAGS: "-Dwarnings"
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/shared
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Test For runtime benchmarks
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --features=runtime-benchmarks,try-runtime

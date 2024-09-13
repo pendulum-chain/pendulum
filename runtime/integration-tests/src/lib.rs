@@ -1,3 +1,5 @@
+#![cfg(all(test, not(any(feature = "try-runtime", feature = "runtime-benchmarks"))))]
+
 #[cfg(test)]
 mod mock;
 

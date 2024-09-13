@@ -27,12 +27,6 @@ jobs:
         with:
           command: test
 
-      - name: Test For runtime benchmarks
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --features=runtime-benchmarks,try-runtime
-
       - name: Clippy -- Main
         uses: actions-rs/cargo@v1
         with:

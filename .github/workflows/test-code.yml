@@ -21,8 +21,8 @@ jobs:
           tool-cache: false
           large-packages: false
 
+      - uses: ./.github/actions/shared
       - uses: actions/checkout@v3
-#      - uses: ./.github/actions/shared
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1

@@ -21,6 +21,8 @@ jobs:
           tool-cache: false
           large-packages: false
 
+      - uses: actions/checkout@v3
+
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
         with:

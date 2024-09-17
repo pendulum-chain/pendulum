@@ -32,12 +32,17 @@ runs:
         tool-cache: false
         large-packages: false
 
-    - name: Install package
+    # Steps taken from https://github.com/actions/runner-images/issues/7192#issuecomment-1446766800
+    - name: Disable Phase Updates
+      shell: bash
       run: |
         echo 'APT::Get::Always-Include-Phased-Updates "false";' | sudo tee /etc/apt/apt.conf.d/99-phased-updates
-        sudo apt-get update && sudo apt-get upgrade -y
-        sudo apt-get install -y protobuf-compiler libprotobuf-dev
+
+    - name: Update, Upgrade, and Install Protobuf
       shell: bash
+      run: |
+          sudo apt-get update && sudo apt-get upgrade -y
+          sudo apt-get install -y protobuf-compiler libprotobuf-dev
 
     # Steps taken from https://github.com/actions/cache/blob/master/examples.md#rust---cargo
     - name: Cache cargo registry

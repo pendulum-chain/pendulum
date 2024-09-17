@@ -14,15 +14,11 @@ jobs:
       RUSTFLAGS: "-Dwarnings"
 
     steps:
-      # Free GitHub Actions Environment Disk Space
-      - name: Maximize Build Space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          large-packages: false
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: ./.github/actions/shared
-      - uses: actions/checkout@v3
+      - name: Free up Space and Installation
+        uses: ./.github/actions/shared
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1

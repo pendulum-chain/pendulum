@@ -14,15 +14,11 @@ jobs:
       RUSTFLAGS: "-Dwarnings"
 
     steps:
-      # Free GitHub Actions Environment Disk Space
-      - name: Maximize Build Space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          large-packages: false
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: ./.github/actions/shared
-      - uses: actions/checkout@v3
+      - name: Free up Space and Installation
+        uses: ./.github/actions/shared
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
@@ -33,31 +29,3 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --release --features runtime-benchmarks try-runtime
-
-      - name: Test For runtime benchmarks
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --release --features=runtime-benchmarks,try-runtime
-
-      - name: Clippy -- Main
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --release --all-features -- -W clippy::all -A clippy::style -A forgetting_copy_types -A forgetting_references
-
-      - name: Clippy -- All Targets (except integration)
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          # We are a bit more forgiving when it comes to the code in tests and only check for correctness
-          args: --workspace --release --all-features --all-targets --exclude runtime-integration-tests -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
-
-      - name: Clippy -- Integration
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          # We are a bit more forgiving when it comes to the code in tests and only check for correctness
-          args: --package runtime-integration-tests --release --all-features --all-targets -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
-    

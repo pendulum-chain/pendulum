@@ -406,6 +406,9 @@ impl pallet_xcm::Config for Runtime {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
+
+	#[cfg(feature = "runtime-benchmarks")]
+	type ReachableDest = ();
 }
 
 parameter_type_with_key! {

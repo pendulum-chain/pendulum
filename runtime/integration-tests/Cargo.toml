@@ -81,4 +81,20 @@ amplitude-runtime = { path = "../amplitude" }
 default = ["std"]
 std = [
     "codec/std",
+    "xcm-builder/std"
+]
+
+try-runtime = [
+    "kusama-runtime/try-runtime",
+    "polkadot-runtime-parachains/try-runtime",
+    "amplitude-runtime/try-runtime",
+    "pendulum-runtime/try-runtime",
+]
+
+runtime-benchmarks = [
+    "kusama-runtime/runtime-benchmarks",
+    "polkadot-parachain/runtime-benchmarks",
+    "integration-tests-common/runtime-benchmarks",
+    "amplitude-runtime/runtime-benchmarks",
+    "pendulum-runtime/runtime-benchmarks",
 ]

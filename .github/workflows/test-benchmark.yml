@@ -1,4 +1,4 @@
-name: Test Code
+name: Test Benchmark
 
 on:
   pull_request:
@@ -25,7 +25,8 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Test
+      - name: Test For runtime benchmarks
         uses: actions-rs/cargo@v1
         with:
           command: test
+          args: --features=runtime-benchmarks,try-runtime

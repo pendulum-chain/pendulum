@@ -4,9 +4,7 @@
 use chain_extension_common::{ChainExtensionOutcome, ChainExtensionTokenError};
 use codec::Encode;
 use frame_support::{
-	dispatch::Weight,
 	pallet_prelude::{Decode, Get, PhantomData},
-	sp_tracing::{error, trace},
 	DefaultNoBound,
 };
 use orml_currencies::WeightInfo;
@@ -19,6 +17,8 @@ use pallet_contracts::chain_extension::{
 };
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::DispatchError;
+use sp_tracing::{error, trace};
+use sp_weights::Weight;
 use spacewalk_primitives::CurrencyId;
 
 pub(crate) type BalanceOfForChainExt<T> =
@@ -218,7 +218,7 @@ where
 		"Calling transfer() sending {:?} {:?}, from {:?} to {:?}",
 		amount,
 		currency_id,
-		env.ext().caller(),
+		env.ext().caller().account_id(),
 		recipient
 	);
 
@@ -228,7 +228,7 @@ where
 
 	<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
 		currency_id,
-		env.ext().caller(),
+		env.ext().caller().account_id()?,
 		&recipient,
 		amount,
 	)?;
@@ -310,7 +310,7 @@ where
 		spender,
 		amount,
 		currency_id,
-		env.ext().caller(),
+		env.ext().caller().account_id()?,
 	);
 
 	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
@@ -319,7 +319,7 @@ where
 
 	orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
 		currency_id,
-		env.ext().caller(),
+		env.ext().caller().account_id()?,
 		&spender,
 		amount,
 	)?;
@@ -357,7 +357,7 @@ where
 
 	trace!(
 		"Calling transfer_from() for caller {:?}, sending {:?} {:?}, from {:?} to {:?}",
-		env.ext().caller(),
+		env.ext().caller().account_id()?,
 		amount,
 		currency_id,
 		owner,
@@ -371,7 +371,7 @@ where
 	orml_currencies_allowance_extension::Pallet::<T>::do_transfer_approved(
 		currency_id,
 		&owner,
-		env.ext().caller(),
+		env.ext().caller().account_id()?,
 		&recipient,
 		amount,
 	)?;

@@ -1,9 +1,10 @@
 use core::marker::PhantomData;
 
 use frame_support::{
-	log, match_types, parameter_types,
+	match_types, parameter_types,
 	traits::{ContainsPair, Everything, Nothing, ProcessMessageError},
 };
+use log;
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
 	location::{RelativeReserveProvider, Reserve},
@@ -20,7 +21,10 @@ use xcm_builder::{
 	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
-use xcm_executor::{traits::ShouldExecute, XcmExecutor};
+use xcm_executor::{
+	traits::{Properties, ShouldExecute},
+	XcmExecutor,
+};
 
 use runtime_common::{asset_registry::FixedConversionRateProvider, CurrencyIdConvert};
 
@@ -133,11 +137,11 @@ where
 	fn should_execute<RuntimeCall>(
 		origin: &MultiLocation,
 		instructions: &mut [Instruction<RuntimeCall>],
-		max_weight: XCMWeight,
-		weight_credit: &mut XCMWeight,
+		max_weight: Weight,
+		properties: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
-		Deny::should_execute(origin, instructions, max_weight, weight_credit)?;
-		Allow::should_execute(origin, instructions, max_weight, weight_credit)
+		Deny::should_execute(origin, instructions, max_weight, properties)?;
+		Allow::should_execute(origin, instructions, max_weight, properties)
 	}
 }
 
@@ -147,8 +151,8 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	fn should_execute<RuntimeCall>(
 		origin: &MultiLocation,
 		instructions: &mut [Instruction<RuntimeCall>],
-		_max_weight: XCMWeight,
-		_weight_credit: &mut XCMWeight,
+		_max_weight: Weight,
+		_weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
 		if instructions.iter().any(|inst| {
 			matches!(
@@ -230,6 +234,7 @@ impl xcm_executor::Config for XcmConfig {
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;
+	type Aliasers = ();
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -268,10 +273,12 @@ impl pallet_xcm::Config for Runtime {
 	type TrustedLockers = ();
 	type SovereignAccountOf = LocationToAccountId;
 	type MaxLockers = ConstU32<8>;
-	type WeightInfo = crate::weights::pallet_xcm::WeightInfo<Runtime>;
+	type WeightInfo = crate::weights::pallet_xcm::SubstrateWeight<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 #[cfg(feature = "runtime-benchmarks")]

@@ -142,6 +142,7 @@ pub mod pallet {
 	pub use crate::inflation::{InflationInfo, RewardRate, StakingInfo};
 
 	use frame_support::{
+		assert_ok,
 		pallet_prelude::*,
 		storage::bounded_btree_map::BoundedBTreeMap,
 		traits::{
@@ -150,17 +151,14 @@ pub mod pallet {
 		},
 		BoundedVec,
 	};
-
-	#[cfg(feature = "std")]
-	use frame_support::assert_ok;
-
 	use frame_system::pallet_prelude::*;
 	use pallet_balances::{BalanceLock, Locks};
 	use pallet_session::ShouldEndSession;
 	use scale_info::TypeInfo;
+	use sp_arithmetic::per_things::Perquintill;
 	use sp_runtime::{
 		traits::{Convert, One, SaturatedConversion, Saturating, StaticLookup, Zero},
-		Permill, Perquintill,
+		Permill,
 	};
 	use sp_staking::SessionIndex;
 	use sp_std::prelude::*;
@@ -220,17 +218,17 @@ pub mod pallet {
 
 		/// Minimum number of blocks validation rounds can last.
 		#[pallet::constant]
-		type MinBlocksPerRound: Get<Self::BlockNumber>;
+		type MinBlocksPerRound: Get<BlockNumberFor<Self>>;
 
 		/// Default number of blocks validation rounds last, as set in the
 		/// genesis configuration.
 		#[pallet::constant]
-		type DefaultBlocksPerRound: Get<Self::BlockNumber>;
+		type DefaultBlocksPerRound: Get<BlockNumberFor<Self>>;
 		/// Number of blocks for which unstaked balance will still be locked
 		/// before it can be unlocked by actively calling the extrinsic
 		/// `unlock_unstaked`.
 		#[pallet::constant]
-		type StakeDuration: Get<Self::BlockNumber>;
+		type StakeDuration: Get<BlockNumberFor<Self>>;
 		/// Number of rounds a collator has to stay active after submitting a
 		/// request to leave the set of collator candidates.
 		#[pallet::constant]
@@ -297,7 +295,7 @@ pub mod pallet {
 		/// block number exceeds this start, the beneficiary will receive the
 		/// configured reward in each block.
 		#[pallet::constant]
-		type NetworkRewardStart: Get<<Self as frame_system::Config>::BlockNumber>;
+		type NetworkRewardStart: Get<BlockNumberFor<Self>>;
 
 		/// The rate in percent for the network rewards which are based on the
 		/// maximum number of collators and the maximum amount a collator can
@@ -311,7 +309,7 @@ pub mod pallet {
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 
-		const BLOCKS_PER_YEAR: Self::BlockNumber;
+		const BLOCKS_PER_YEAR: BlockNumberFor<Self>;
 	}
 
 	#[pallet::error]
@@ -413,7 +411,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// A new staking round has started.
 		/// \[block number, round number\]
-		NewRound(T::BlockNumber, SessionIndex),
+		NewRound(BlockNumberFor<T>, SessionIndex),
 		/// A new account has joined the set of top candidates.
 		/// \[account\]
 		EnteredTopCandidates(T::AccountId),
@@ -493,12 +491,12 @@ pub mod pallet {
 		/// The length in blocks for future validation rounds has changed.
 		/// \[round number, first block in the current round, old value, new
 		/// value\]
-		BlocksPerRoundSet(SessionIndex, T::BlockNumber, T::BlockNumber, T::BlockNumber),
+		BlocksPerRoundSet(SessionIndex, BlockNumberFor<T>, BlockNumberFor<T>, BlockNumberFor<T>),
 	}
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_initialize(now: T::BlockNumber) -> frame_support::weights::Weight {
+		fn on_initialize(now: BlockNumberFor<T>) -> frame_support::weights::Weight {
 			let mut post_weight = <T as Config>::WeightInfo::on_initialize_no_action();
 			let mut round = <Round<T>>::get();
 
@@ -531,7 +529,7 @@ pub mod pallet {
 	/// Current round number and next round scheduled transition.
 	#[pallet::storage]
 	#[pallet::getter(fn round)]
-	pub(crate) type Round<T: Config> = StorageValue<_, RoundInfo<T::BlockNumber>, ValueQuery>;
+	pub(crate) type Round<T: Config> = StorageValue<_, RoundInfo<BlockNumberFor<T>>, ValueQuery>;
 
 	/// Delegation information for the latest session in which a delegator
 	/// delegated.
@@ -613,7 +611,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::AccountId,
-		BoundedBTreeMap<T::BlockNumber, BalanceOf<T>, T::MaxUnstakeRequests>,
+		BoundedBTreeMap<BlockNumberFor<T>, BalanceOf<T>, T::MaxUnstakeRequests>,
 		ValueQuery,
 	>;
 
@@ -630,7 +628,7 @@ pub mod pallet {
 	/// many blocks.
 	#[pallet::storage]
 	#[pallet::getter(fn last_reward_reduction)]
-	pub(crate) type LastRewardReduction<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+	pub(crate) type LastRewardReduction<T: Config> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
 	/// The counter of accumulated rewards for an account.
 	///
@@ -675,7 +673,6 @@ pub mod pallet {
 		pub max_selected_candidates: u32,
 	}
 
-	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self {
@@ -688,7 +685,7 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			assert!(
 				self.inflation_config.is_valid(T::BLOCKS_PER_YEAR.saturated_into()),
@@ -725,7 +722,7 @@ pub mod pallet {
 			<Pallet<T>>::update_total_stake();
 
 			// Start Round 0 at Block 0
-			let round: RoundInfo<T::BlockNumber> =
+			let round: RoundInfo<BlockNumberFor<T>> =
 				RoundInfo::new(0u32, 0u32.into(), T::DefaultBlocksPerRound::get());
 			<Round<T>>::put(round);
 		}
@@ -896,7 +893,10 @@ pub mod pallet {
 		/// Emits `BlocksPerRoundSet`.
 		#[pallet::call_index(3)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::set_blocks_per_round())]
-		pub fn set_blocks_per_round(origin: OriginFor<T>, new: T::BlockNumber) -> DispatchResult {
+		pub fn set_blocks_per_round(
+			origin: OriginFor<T>,
+			new: BlockNumberFor<T>,
+		) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(new >= T::MinBlocksPerRound::get(), Error::<T>::CannotSetBelowMin);
 
@@ -1797,7 +1797,7 @@ pub mod pallet {
 			let c_reward_rate =
 				inflation.collator.reward_rate.annual * T::CollatorRewardRateDecay::get();
 			// delegator reward rate should be 6% in 2nd year and 0% afterwards
-			let d_reward_rate = if year == T::BlockNumber::one() {
+			let d_reward_rate = if year == (BlockNumberFor::<T>::one()) {
 				// Amplitude: this value differs from the original
 				Perquintill::from_percent(7)
 			} else {
@@ -2585,7 +2585,7 @@ pub mod pallet {
 		}
 	}
 
-	impl<T> pallet_authorship::EventHandler<T::AccountId, T::BlockNumber> for Pallet<T>
+	impl<T> pallet_authorship::EventHandler<T::AccountId, BlockNumberFor<T>> for Pallet<T>
 	where
 		T: Config + pallet_authorship::Config + pallet_session::Config,
 	{
@@ -2648,8 +2648,8 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> ShouldEndSession<T::BlockNumber> for Pallet<T> {
-		fn should_end_session(now: T::BlockNumber) -> bool {
+	impl<T: Config> ShouldEndSession<BlockNumberFor<T>> for Pallet<T> {
+		fn should_end_session(now: BlockNumberFor<T>) -> bool {
 			frame_system::Pallet::<T>::register_extra_weight_unchecked(
 				T::DbWeight::get().reads(2),
 				DispatchClass::Mandatory,
@@ -2676,12 +2676,12 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> EstimateNextSessionRotation<T::BlockNumber> for Pallet<T> {
-		fn average_session_length() -> T::BlockNumber {
+	impl<T: Config> EstimateNextSessionRotation<BlockNumberFor<T>> for Pallet<T> {
+		fn average_session_length() -> BlockNumberFor<T> {
 			<Round<T>>::get().length
 		}
 
-		fn estimate_current_session_progress(now: T::BlockNumber) -> (Option<Permill>, Weight) {
+		fn estimate_current_session_progress(now: BlockNumberFor<T>) -> (Option<Permill>, Weight) {
 			let round = <Round<T>>::get();
 			let passed_blocks = now.saturating_sub(round.first);
 
@@ -2693,8 +2693,8 @@ pub mod pallet {
 		}
 
 		fn estimate_next_session_rotation(
-			_now: T::BlockNumber,
-		) -> (Option<T::BlockNumber>, Weight) {
+			_now: BlockNumberFor<T>,
+		) -> (Option<BlockNumberFor<T>>, Weight) {
 			let round = <Round<T>>::get();
 
 			(

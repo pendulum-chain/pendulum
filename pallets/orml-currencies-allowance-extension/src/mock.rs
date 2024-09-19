@@ -7,31 +7,26 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
+	BuildStorage,
 };
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-		Tokens: orml_tokens::{Pallet, Storage, Config<T>, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-		Currencies: orml_currencies::{Pallet, Call},
-		TokenAllowance: token_allowance::{Pallet, Storage, Call, Event<T>},
+	pub enum Test {
+		System: frame_system,
+		Tokens: orml_tokens,
+		Balances: pallet_balances,
+		Currencies: orml_currencies,
+		TokenAllowance: token_allowance,
 	}
 );
 
 pub type AccountId = u64;
 pub type Balance = u128;
 pub type BlockNumber = u64;
-pub type Index = u64;
+pub type Nonce = u64;
 pub type Amount = i64;
 pub type CurrencyId = u64;
 
@@ -40,19 +35,18 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 42;
 }
 impl frame_system::Config for Test {
+	type Block = Block;
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = Index;
-	type BlockNumber = BlockNumber;
+	type Nonce = Nonce;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = TestEvent;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
@@ -128,7 +122,7 @@ impl pallet_balances::Config for Test {
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
 	type MaxHolds = ConstU32<1>;
-	type HoldIdentifier = RuntimeHoldReason;
+	type RuntimeHoldReason = RuntimeHoldReason;
 }
 
 impl orml_currencies::Config for Test {
@@ -148,7 +142,7 @@ pub struct ExtBuilder;
 
 impl ExtBuilder {
 	pub fn build() -> sp_io::TestExternalities {
-		let storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+		let storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
 		sp_io::TestExternalities::from(storage)
 	}

@@ -13,6 +13,8 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::*;
 use sp_std::{convert::TryInto, prelude::*, vec};
 
+pub use default_weights::WeightInfo;
+
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
@@ -107,7 +109,6 @@ pub mod pallet {
 		pub allowed_currencies: Vec<CurrencyOf<T>>,
 	}
 
-	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self { allowed_currencies: vec![] }
@@ -115,7 +116,7 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			for i in &self.allowed_currencies.clone() {
 				AllowedCurrencies::<T>::insert(i, ());
@@ -238,7 +239,12 @@ pub mod pallet {
 	}
 }
 
-#[allow(clippy::forget_non_drop, clippy::swap_ptr_to_ref, forgetting_references, forgetting_copy_types)]
+#[allow(
+	clippy::forget_non_drop,
+	clippy::swap_ptr_to_ref,
+	forgetting_references,
+	forgetting_copy_types
+)]
 #[cfg_attr(test, mockable)]
 impl<T: Config> Pallet<T> {
 	// Check the amount approved to be spent by an owner to a delegate

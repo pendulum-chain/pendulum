@@ -1,9 +1,10 @@
 //! Runtime API definition for Parachain Staking.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-use frame_support::{scale_info::TypeInfo, sp_runtime::Perquintill};
 use module_oracle_rpc_runtime_api::BalanceWrapper;
 use parity_scale_codec::{Codec, Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
+use sp_arithmetic::per_things::Perquintill;
 use sp_std::fmt::Debug;
 
 #[cfg(feature = "std")]

@@ -1,10 +1,8 @@
-use std::net::SocketAddr;
-
 use codec::Encode;
 use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
-use log::{info, trace};
+use log::info;
 use runtime_common::opaque::Block;
 use sc_chain_spec::GenericChainSpec;
 use sc_cli::{
@@ -18,11 +16,7 @@ use sc_service::{
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 
-#[cfg(feature = "try-runtime")]
-use try_runtime_cli::block_building_info::substrate_info;
-
-#[cfg(feature = "try-runtime")]
-use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
+use sc_executor::NativeExecutionDispatch;
 
 use crate::{
 	chain_spec::{self, ParachainExtensions},
@@ -31,11 +25,6 @@ use crate::{
 		new_partial, AmplitudeRuntimeExecutor, FoucocoRuntimeExecutor, PendulumRuntimeExecutor,
 	},
 };
-
-#[cfg(feature = "try-runtime")]
-/// The time internavel for block production on our chain in milliseconds (12
-/// seconds to millis)
-const BLOCK_TIME_MILLIS: u64 = 12 * 1_000;
 
 #[derive(PartialEq, Eq)]
 enum ChainIdentity {
@@ -153,10 +142,6 @@ impl SubstrateCli for Cli {
 			None => ChainIdentity::from_json_file(id)?.load_chain_spec_from_json_file(id)?,
 		})
 	}
-
-	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		spec.identify().get_runtime_version()
-	}
 }
 
 impl SubstrateCli for RelayChainCli {
@@ -192,10 +177,6 @@ impl SubstrateCli for RelayChainCli {
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 		polkadot_cli::Cli::from_iter([RelayChainCli::executable_name()].iter()).load_spec(id)
-	}
-
-	fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		polkadot_cli::Cli::native_runtime_version(chain_spec)
 	}
 }
 
@@ -331,14 +312,10 @@ pub fn run() -> Result<()> {
 				cmd.run(config, polkadot_config)
 			})
 		},
-		Some(Subcommand::ExportGenesisState(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.sync_run(|_config| {
-				let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
-				let state_version = Cli::native_runtime_version(&spec).state_version();
-				cmd.run::<Block>(&*spec, state_version)
-			})
-		},
+		Some(Subcommand::ExportGenesisState(cmd)) =>
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(async move { cmd.run(&*config.chain_spec, &*components.client) })
+			}),
 		Some(Subcommand::ExportGenesisWasm(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|_config| {
@@ -352,12 +329,16 @@ pub fn run() -> Result<()> {
 					let runner = cli.create_runner(cmd)?;
 
 					match runner.config().chain_spec.identify() {
-						ChainIdentity::Amplitude => runner
-							.sync_run(|config| cmd.run::<Block, AmplitudeRuntimeExecutor>(config)),
-						ChainIdentity::Foucoco => runner
-							.sync_run(|config| cmd.run::<Block, FoucocoRuntimeExecutor>(config)),
-						ChainIdentity::Pendulum => runner
-							.sync_run(|config| cmd.run::<Block, PendulumRuntimeExecutor>(config)),
+						ChainIdentity::Amplitude => runner.sync_run(|config| {
+							cmd.run::<Block, <AmplitudeRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions>(config)
+						}),
+						ChainIdentity::Foucoco =>
+							runner.sync_run(|config| {
+								cmd.run::<Block, <FoucocoRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions>(config)
+							}),
+						ChainIdentity::Pendulum => runner.sync_run(|config| {
+							cmd.run::<Block, <PendulumRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions>(config)
+						}),
 						ChainIdentity::FoucocoStandalone => unimplemented!(),
 					}
 				} else {
@@ -393,41 +374,11 @@ pub fn run() -> Result<()> {
 			_ => Err("Benchmarking sub-command unsupported".into()),
 		},
 		#[cfg(feature = "try-runtime")]
-		Some(Subcommand::TryRuntime(cmd)) => {
-			if cfg!(feature = "try-runtime") {
-				let runner = cli.create_runner(cmd)?;
-
-				// grab the task manager.
-				let registry = &runner.config().prometheus_config.as_ref().map(|cfg| &cfg.registry);
-				let task_manager =
-					sc_service::TaskManager::new(runner.config().tokio_handle.clone(), *registry)
-						.map_err(|e| format!("Error: {:?}", e))?;
-
-				match runner.config().chain_spec.identify() {
-					ChainIdentity::Amplitude => runner.async_run(|_config| {
-						Ok((cmd.run::<Block, ExtendedHostFunctions<
-							sp_io::SubstrateHostFunctions,
-							<AmplitudeRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
-						>, _>(Some(substrate_info(BLOCK_TIME_MILLIS))), task_manager))
-					}),
-					ChainIdentity::Foucoco => runner.async_run(|_config| {
-						Ok((cmd.run::<Block, ExtendedHostFunctions<
-							sp_io::SubstrateHostFunctions,
-							<FoucocoRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
-						>, _>(Some(substrate_info(BLOCK_TIME_MILLIS))), task_manager))
-					}),
-					ChainIdentity::Pendulum => runner.async_run(|_config| {
-						Ok((cmd.run::<Block, ExtendedHostFunctions<
-							sp_io::SubstrateHostFunctions,
-							<PendulumRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
-						>, _>(Some(substrate_info(BLOCK_TIME_MILLIS))), task_manager))
-					}),
-					ChainIdentity::FoucocoStandalone => unimplemented!(),
-				}
-			} else {
-				Err("Try-runtime must be enabled by `--features try-runtime`.".into())
-			}
-		},
+		Some(Subcommand::TryRuntime(_cmd)) => Err("The `try-runtime` subcommand has been migrated to a \
+			standalone CLI (https://github.com/paritytech/try-runtime-cli). It is no longer \
+			being maintained here and will be removed entirely some time after January 2024. \
+			Please remove this subcommand from your runtime and use the standalone CLI."
+			.into()),
 
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
@@ -480,9 +431,9 @@ async fn start_node(
 	let id = ParaId::from(para_id);
 
 	let parachain_account =
-		AccountIdConversion::<polkadot_primitives::v4::AccountId>::into_account_truncating(&id);
+		AccountIdConversion::<polkadot_primitives::v5::AccountId>::into_account_truncating(&id);
 
-	let state_version = Cli::native_runtime_version(&config.chain_spec).state_version();
+	let state_version = config.chain_spec.identify().get_runtime_version().state_version();
 	let block: Block =
 		generate_genesis_block(&*config.chain_spec, state_version).map_err(|e| format!("{e:?}"))?;
 	let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
@@ -496,10 +447,6 @@ async fn start_node(
 	info!("Parachain Account: {}", parachain_account);
 	info!("Parachain genesis state: {}", genesis_state);
 	info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
-
-	if !collator_options.relay_chain_rpc_urls.is_empty() && cli.relay_chain_args.is_empty() {
-		trace!("Detected relay chain node arguments together with --relay-chain-rpc-url. This command starts a minimal Polkadot node that only uses a network-related subset of all relay chain CLI options.");
-	}
 
 	match config.chain_spec.identify() {
 		ChainIdentity::Amplitude => {
@@ -554,14 +501,6 @@ impl DefaultConfigurationValues for RelayChainCli {
 		30334
 	}
 
-	fn rpc_ws_listen_port() -> u16 {
-		9945
-	}
-
-	fn rpc_http_listen_port() -> u16 {
-		9934
-	}
-
 	fn prometheus_listen_port() -> u16 {
 		9616
 	}
@@ -589,18 +528,6 @@ impl CliConfiguration<Self> for RelayChainCli {
 			.shared_params()
 			.base_path()?
 			.or_else(|| self.base_path.clone().map(Into::into)))
-	}
-
-	fn rpc_http(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
-		self.base.base.rpc_http(default_listen_port)
-	}
-
-	fn rpc_ipc(&self) -> Result<Option<String>> {
-		self.base.base.rpc_ipc()
-	}
-
-	fn rpc_ws(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
-		self.base.base.rpc_ws(default_listen_port)
 	}
 
 	fn prometheus_config(
@@ -644,10 +571,6 @@ impl CliConfiguration<Self> for RelayChainCli {
 
 	fn rpc_methods(&self) -> Result<sc_service::config::RpcMethods> {
 		self.base.base.rpc_methods()
-	}
-
-	fn rpc_ws_max_connections(&self) -> Result<Option<usize>> {
-		self.base.base.rpc_ws_max_connections()
 	}
 
 	fn rpc_cors(&self, is_dev: bool) -> Result<Option<Vec<String>>> {

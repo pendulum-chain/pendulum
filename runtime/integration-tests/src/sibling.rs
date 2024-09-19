@@ -3,8 +3,9 @@
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use core::marker::PhantomData;
+use cumulus_pallet_parachain_system::{self, RelayNumberStrictlyIncreases};
 use frame_support::{
-	log, match_types, parameter_types,
+	match_types, parameter_types,
 	traits::{ConstU32, ContainsPair, Everything, Nothing, ProcessMessageError},
 };
 use frame_system::EnsureRoot;
@@ -18,22 +19,21 @@ use polkadot_runtime_common::MAXIMUM_BLOCK_WEIGHT;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
-use sp_debug_derive::RuntimeDebug;
 use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, Convert, IdentityLookup, Zero},
-	AccountId32,
+	generic, impl_opaque_keys,
+	traits::{BlakeTwo256, Convert, ConvertInto, IdentityLookup, MaybeEquivalence, Zero},
+	AccountId32, Permill, Perquintill, RuntimeDebug,
 };
 use xcm::v3::prelude::*;
-use xcm_emulator::{
-	cumulus_pallet_parachain_system::{self, RelayNumberStrictlyIncreases},
-	Weight,
-};
+use xcm_emulator::Weight;
 use xcm_executor::{
 	traits::{JustTry, ShouldExecute, WeightTrader},
 	Assets, XcmExecutor,
 };
 
+use crate::{definitions::asset_hub, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
+use pendulum_runtime::definitions::moonbeam::BRZ_location;
+use runtime_common::AuraId;
 use xcm::latest::Weight as XCMWeight;
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, ConvertedConcreteId, EnsureXcmOrigin,
@@ -41,15 +41,31 @@ use xcm_builder::{
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation,
 };
+use xcm_executor::traits::Properties;
 
-use crate::{definitions::asset_hub, AMPLITUDE_ID, ASSETHUB_ID, PENDULUM_ID};
+#[cfg(any(feature = "std", test))]
+pub use sp_runtime::BuildStorage;
 
-use pendulum_runtime::definitions::moonbeam::BRZ_location;
+pub const UNIT: runtime_common::Balance = 1_000_000_000_000;
+pub const MILLISECS_PER_BLOCK: u64 = 12000;
+
+// NOTE: Currently it is not possible to change the slot duration after the chain has started.
+//       Attempting to do so will brick block production.
+pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
+
+// Time is measured by number of blocks.
+pub const MINUTES: runtime_common::BlockNumber =
+	60_000 / (MILLISECS_PER_BLOCK as runtime_common::BlockNumber);
+pub const HOURS: runtime_common::BlockNumber = MINUTES * 60;
+pub const DAYS: runtime_common::BlockNumber = HOURS * 24;
+pub const BLOCKS_PER_YEAR: runtime_common::BlockNumber = DAYS * 36525 / 100;
 
 const XCM_ASSET_RELAY_DOT: u8 = 0;
 const XCM_ASSET_ASSETHUB_USDT: u8 = 1;
 
 pub type AccountId = AccountId32;
+
+pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -167,20 +183,20 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(a: MultiAsset) -> Option<CurrencyId> {
 		if let MultiAsset { id: AssetId::Concrete(id), fun: _ } = a {
-			Self::convert(id)
+			<Self as Convert<MultiLocation, Option<CurrencyId>>>::convert(id)
 		} else {
 			None
 		}
 	}
 }
 
-/// Convert an incoming `MultiLocation` into a `CurrencyId` if possible.
-/// Here we need to know the canonical representation of all the tokens we handle in order to
-/// correctly convert their `MultiLocation` representation into our internal `CurrencyId` type.
-impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for CurrencyIdConvert {
-	fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
-		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(location)
-			.ok_or(location)
+// Required this now for FungiblesAdapter.
+impl MaybeEquivalence<MultiLocation, CurrencyId> for CurrencyIdConvert {
+	fn convert(id: &MultiLocation) -> Option<CurrencyId> {
+		<CurrencyIdConvert as Convert<MultiLocation, Option<CurrencyId>>>::convert(*id)
+	}
+	fn convert_back(what: &CurrencyId) -> Option<MultiLocation> {
+		<CurrencyIdConvert as Convert<CurrencyId, Option<MultiLocation>>>::convert(*what)
 	}
 }
 
@@ -273,8 +289,8 @@ where
 	fn should_execute<RuntimeCall>(
 		origin: &MultiLocation,
 		instructions: &mut [Instruction<RuntimeCall>],
-		max_weight: XCMWeight,
-		weight_credit: &mut XCMWeight,
+		max_weight: Weight,
+		weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
 		Deny::should_execute(origin, instructions, max_weight, weight_credit)?;
 		Allow::should_execute(origin, instructions, max_weight, weight_credit)
@@ -288,8 +304,8 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 	fn should_execute<RuntimeCall>(
 		origin: &MultiLocation,
 		instructions: &mut [Instruction<RuntimeCall>],
-		_max_weight: XCMWeight,
-		_weight_credit: &mut XCMWeight,
+		_max_weight: Weight,
+		_weight_credit: &mut Properties,
 	) -> Result<(), ProcessMessageError> {
 		if instructions.iter().any(|inst| {
 			matches!(
@@ -311,10 +327,7 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 		if matches!(origin, MultiLocation { parents: 1, interior: Here }) &&
 			instructions.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
 		{
-			log::trace!(
-				target: "xcm::barriers",
-				"Unexpected ReserveAssetDeposited from the relay chain",
-			);
+			println! {"Unexpected ReserveAssetDeposited from the relay chain"};
 		}
 		// Permit everything else
 		Ok(())
@@ -350,6 +363,7 @@ impl xcm_executor::Config for XcmConfig {
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;
+	type Aliasers = ();
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -389,14 +403,9 @@ impl pallet_xcm::Config for Runtime {
 	type SovereignAccountOf = LocationToAccountId;
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
 }
 
 parameter_type_with_key! {
@@ -422,6 +431,37 @@ impl orml_xtokens::Config for Runtime {
 	type UniversalLocation = UniversalLocation;
 }
 
+parameter_types! {
+	pub const ProposalBond: Permill = Permill::from_percent(5);
+	pub const ProposalBondMinimum: Balance = 10 * UNIT;
+	pub const SpendPeriod: BlockNumber = 7 * DAYS;
+	pub const Burn: Permill = Permill::from_percent(0);
+	pub const TreasuryPalletId: frame_support::PalletId = frame_support::PalletId(*b"py/trsry");
+	pub const MaxApprovals: u32 = 100;
+}
+
+type TreasuryApproveOrigin = EnsureRoot<runtime_common::AccountId>;
+
+type TreasuryRejectOrigin = EnsureRoot<runtime_common::AccountId>;
+
+impl pallet_treasury::Config for Runtime {
+	type PalletId = TreasuryPalletId;
+	type Currency = Balances;
+	type ApproveOrigin = TreasuryApproveOrigin;
+	type RejectOrigin = TreasuryRejectOrigin;
+	type RuntimeEvent = RuntimeEvent;
+	type OnSlash = Treasury;
+	type ProposalBond = ProposalBond;
+	type ProposalBondMinimum = ProposalBondMinimum;
+	type ProposalBondMaximum = ();
+	type SpendPeriod = SpendPeriod;
+	type Burn = Burn;
+	type BurnDestination = ();
+	type SpendFunds = ();
+	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+	type MaxApprovals = MaxApprovals;
+	type SpendOrigin = frame_support::traits::NeverEnsureOrigin<u128>;
+}
 pub struct AccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
@@ -437,59 +477,59 @@ impl cumulus_pallet_xcm::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
-}
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
-type Block = frame_system::mocking::MockBlock<Runtime>;
+pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
+	pub enum Runtime
 	{
-		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-		Tokens: orml_tokens::{Pallet, Storage, Config<T>, Event<T>},
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+		System: frame_system,
+		Tokens: orml_tokens,
+		Timestamp: pallet_timestamp,
+		XTokens: orml_xtokens,
+		Balances: pallet_balances,
 		PolkadotXcm: pallet_xcm,
-		ParachainSystem: cumulus_pallet_parachain_system::{
-			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
-		},
-		ParachainInfo: parachain_info::{Pallet, Storage, Config},
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>},
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin},
+		ParachainSystem: cumulus_pallet_parachain_system,
+		ParachainInfo: parachain_info,
+		XcmpQueue: cumulus_pallet_xcmp_queue,
+		DmpQueue: cumulus_pallet_dmp_queue,
+		CumulusXcm: cumulus_pallet_xcm,
+
+		Treasury: pallet_treasury,
+
+		Aura: pallet_aura = 33,
+		Session: pallet_session = 32,
+		ParachainStaking: parachain_staking = 35,
+		Authorship: pallet_authorship = 30,
+		AuraExt: cumulus_pallet_aura_ext = 34,
+
+
 	}
 );
 
 pub type Balance = u128;
-pub type BlockNumber = u64;
-pub type Index = u64;
+pub type BlockNumber = u32;
+pub type Index = u32;
 pub type Amount = i64;
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
+	pub const BlockHashCount: u32 = 250;
 	pub const SS58Prefix: u8 = 42;
 }
 impl frame_system::Config for Runtime {
+	type Block = Block;
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = Index;
-	type BlockNumber = BlockNumber;
+	type Nonce = Index;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
@@ -561,7 +601,7 @@ impl pallet_balances::Config for Runtime {
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
 	type MaxHolds = ConstU32<1>;
-	type HoldIdentifier = RuntimeHoldReason;
+	type RuntimeHoldReason = RuntimeHoldReason;
 }
 
 parameter_types! {
@@ -579,9 +619,9 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
+	#[cfg(feature = "std")]
+	type ConsensusHook = cumulus_pallet_parachain_system::consensus_hook::ExpectParentIncluded;
 }
-
-impl parachain_info::Config for Runtime {}
 
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -601,6 +641,110 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 }
 
+parameter_types! {
+	// as per documentation, typical value for this is false "unless this pallet is being augmented by another pallet"
+	// https://github.com/paritytech/polkadot-sdk/blob/release-polkadot-v1.1.0/substrate/frame/aura/src/lib.rs#L111
+	pub const AllowMultipleBlocksPerSlot: bool = false;
+	pub const MaxAuthorities: u32 = 200;
+}
+
+impl pallet_aura::Config for Runtime {
+	type AuthorityId = AuraId;
+	type DisabledValidators = ();
+	type MaxAuthorities = MaxAuthorities;
+	type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
+}
+
+parameter_types! {
+	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
+}
+
+impl pallet_timestamp::Config for Runtime {
+	/// A timestamp: milliseconds since the unix epoch.
+	type Moment = u64;
+	type OnTimestampSet = ();
+	type MinimumPeriod = MinimumPeriod;
+	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const Offset: u32 = 0;
+}
+
+impl pallet_authorship::Config for Runtime {
+	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
+	type EventHandler = ParachainStaking;
+}
+
+impl_opaque_keys! {
+	pub struct SessionKeys {
+		pub aura: Aura,
+	}
+}
+
+parameter_types! {
+	pub const MinBlocksPerRound: BlockNumber = HOURS;
+	pub const DefaultBlocksPerRound: BlockNumber = 2 * HOURS;
+	pub const StakeDuration: BlockNumber = 7 * DAYS;
+	pub const ExitQueueDelay: u32 = 2;
+	pub const MinCollators: u32 = 8;
+	pub const MinRequiredCollators: u32 = 2;
+	pub const MaxDelegationsPerRound: u32 = 1;
+	#[derive(Debug, Eq, PartialEq)]
+	pub const MaxDelegatorsPerCollator: u32 = 40;
+	pub const MinCollatorStake: Balance = 5_000 * UNIT;
+	pub const MinDelegatorStake: Balance = 10 * UNIT;
+	#[derive(Debug, Eq, PartialEq)]
+	pub const MaxCollatorCandidates: u32 = 40;
+	pub const MaxUnstakeRequests: u32 = 10;
+	pub const NetworkRewardStart: BlockNumber = BlockNumber::MAX;
+	pub const NetworkRewardRate: Perquintill = Perquintill::from_percent(0);
+	pub const CollatorRewardRateDecay: Perquintill = Perquintill::from_parts(936_879_853_200_000_000u64);
+}
+
+impl parachain_staking::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type CurrencyBalance = runtime_common::Balance;
+
+	type MinBlocksPerRound = MinBlocksPerRound;
+	type DefaultBlocksPerRound = DefaultBlocksPerRound;
+	type StakeDuration = StakeDuration;
+	type ExitQueueDelay = ExitQueueDelay;
+	type MinCollators = MinCollators;
+	type MinRequiredCollators = MinRequiredCollators;
+	type MaxDelegationsPerRound = MaxDelegationsPerRound;
+	type MaxDelegatorsPerCollator = MaxDelegatorsPerCollator;
+	type MinCollatorStake = MinCollatorStake;
+	type MinCollatorCandidateStake = MinCollatorStake;
+	type MaxTopCandidates = MaxCollatorCandidates;
+	type MinDelegatorStake = MinDelegatorStake;
+	type MaxUnstakeRequests = MaxUnstakeRequests;
+	type NetworkRewardRate = NetworkRewardRate;
+	type NetworkRewardStart = NetworkRewardStart;
+	type NetworkRewardBeneficiary = Treasury;
+	type CollatorRewardRateDecay = CollatorRewardRateDecay;
+	type WeightInfo = parachain_staking::default_weights::SubstrateWeight<Runtime>;
+
+	const BLOCKS_PER_YEAR: runtime_common::BlockNumber = BLOCKS_PER_YEAR;
+}
+
+impl pallet_session::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type ValidatorId = <Self as frame_system::Config>::AccountId;
+	type ValidatorIdOf = ConvertInto;
+	type ShouldEndSession = ParachainStaking;
+	type NextSessionRotation = ParachainStaking;
+	type SessionManager = ParachainStaking;
+	type SessionHandler = <SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
+	type Keys = SessionKeys;
+	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
+}
+
+impl parachain_info::Config for Runtime {}
+
+impl cumulus_pallet_aura_ext::Config for Runtime {}
+
 /// A trader who believes all tokens are created equal to "weight" of any chain,
 /// which is not true, but good enough to mock the fee payment of XCM execution.
 ///
@@ -611,7 +755,12 @@ impl WeightTrader for AllTokensAreCreatedEqualToWeight {
 		Self(MultiLocation::parent())
 	}
 
-	fn buy_weight(&mut self, weight: Weight, payment: Assets) -> Result<Assets, XcmError> {
+	fn buy_weight(
+		&mut self,
+		weight: Weight,
+		payment: Assets,
+		_context: &XcmContext,
+	) -> Result<Assets, XcmError> {
 		let asset_id = payment.fungible.iter().next().expect("Payment must be something; qed").0;
 		let required = MultiAsset { id: *asset_id, fun: Fungible(weight.ref_time() as u128) };
 
@@ -623,7 +772,7 @@ impl WeightTrader for AllTokensAreCreatedEqualToWeight {
 		Ok(unused)
 	}
 
-	fn refund_weight(&mut self, weight: Weight) -> Option<MultiAsset> {
+	fn refund_weight(&mut self, weight: Weight, _context: &XcmContext) -> Option<MultiAsset> {
 		if weight.is_zero() {
 			None
 		} else {

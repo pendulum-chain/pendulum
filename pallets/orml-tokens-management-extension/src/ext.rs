@@ -2,7 +2,7 @@
 use mocktopus::macros::mockable;
 
 #[cfg_attr(test, mockable)]
-pub(crate) mod orml_tokens {
+pub(crate) mod orml_currencies_ext {
 	use crate::types::{AccountIdOf, BalanceOf, CurrencyOf};
 	use frame_support::traits::BalanceStatus;
 	use orml_traits::{MultiCurrency, MultiReservableCurrency};

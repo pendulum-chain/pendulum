@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
-#![recursion_limit = "256"]
+// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 512.
+#![recursion_limit = "512"]
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
@@ -42,7 +42,7 @@ use spacewalk_primitives::{
 	UnsignedFixedPoint, UnsignedInner,
 };
 
-#[cfg(any(feature = "runtime-benchmarks", feature = "testing-utils"))]
+#[cfg(any(feature = "runtime-benchmarks"))]
 use oracle::testing_utils::MockDataFeeder;
 
 use sp_std::{fmt::Debug, marker::PhantomData, prelude::*};
@@ -71,14 +71,14 @@ use frame_system::{
 };
 
 use runtime_common::{
-	asset_registry, opaque, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
+	asset_registry, AccountId, Amount, AuraId, Balance, BlockNumber, Hash, Index, PoolId,
 	ProxyType, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 
-use dia_oracle::DiaOracle;
 pub use dia_oracle::dia::AssetId;
+use dia_oracle::DiaOracle;
 pub use issue::{Event as IssueEvent, IssueRequest};
 pub use nomination::Event as NominationEvent;
 use oracle::dia::DiaOracleAdapter;
@@ -93,8 +93,6 @@ use module_oracle_rpc_runtime_api::BalanceWrapper;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::{currency::MutationHooks, parameter_type_with_key};
 
-const CONTRACTS_DEBUG_OUTPUT: bool = true;
-
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
@@ -103,6 +101,7 @@ use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
+use runtime_common::asset_registry::StringLimit;
 // XCM Imports
 use xcm_executor::XcmExecutor;
 
@@ -140,6 +139,11 @@ pub type SignedExtra = (
 	treasury_buyout_extension::CheckBuyout<Runtime>,
 );
 
+type EventRecord = frame_system::EventRecord<
+	<Runtime as frame_system::Config>::RuntimeEvent,
+	<Runtime as frame_system::Config>::Hash,
+>;
+
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
 	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
@@ -153,38 +157,35 @@ parameter_types! {
 	pub const InactiveAccounts: Vec<AccountId> = Vec::new();
 }
 
-use crate::sp_api_hidden_includes_construct_runtime::hidden_include::dispatch::GetStorageVersion;
-use frame_support::pallet_prelude::StorageVersion;
+// To be removed after contracts migrations executes.
+use pallet_contracts::migration::{v11, v12, v13, v14, v15};
+
+// Custom storage version bump
+use frame_support::{
+	pallet_prelude::StorageVersion,
+	traits::{GetStorageVersion, OnRuntimeUpgrade},
+};
 
 pub struct CustomOnRuntimeUpgrade;
-impl frame_support::traits::OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
+impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
 		log::info!("Custom on-runtime-upgrade function");
 
 		let mut writes = 0;
 		// WARNING: manually setting the storage version
-		if Contracts::on_chain_storage_version() == 0 {
-			log::info!("Upgrading pallet contract's storage version to 10");
-			StorageVersion::new(10).put::<Contracts>();
+		if ParachainStaking::on_chain_storage_version() == 0 {
+			log::info!("Upgrading parachain staking storage version to 7");
+			StorageVersion::new(7).put::<ParachainStaking>();
 			writes += 1;
 		}
-		if Scheduler::on_chain_storage_version() == 3 {
-			log::info!("Upgrading pallet scheduler's storage version to 4");
-			StorageVersion::new(4).put::<Scheduler>();
-			writes += 1;
-		}
-		if PolkadotXcm::on_chain_storage_version() == 0 {
-			log::info!("Upgrading pallet xcm's storage version to 1");
-			StorageVersion::new(1).put::<PolkadotXcm>();
-			writes += 1;
-		}
-		if AssetRegistry::on_chain_storage_version() == 0 {
-			log::info!("Upgrading pallet asset registry's storage version to 2");
-			StorageVersion::new(2).put::<AssetRegistry>();
+
+		if Bounties::on_chain_storage_version() == 0 {
+			log::info!("Upgrading bounties storage version to 4");
+			StorageVersion::new(4).put::<Bounties>();
 			writes += 1;
 		}
 		// not really a heavy operation
-		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(4, writes)
+		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(2, writes)
 	}
 }
 
@@ -195,11 +196,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(
-		CustomOnRuntimeUpgrade,
-		pallet_balances::migration::MigrateManyToTrackInactive<Runtime, InactiveAccounts>,
-		pallet_transaction_payment::migrations::v1::ForceSetVersionToV2<Runtime>,
-	),
+	(CustomOnRuntimeUpgrade, pallet_contracts::migration::Migration<Runtime>),
 >;
 
 pub struct ConvertPrice;
@@ -258,7 +255,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("pendulum"),
 	impl_name: create_runtime_str!("pendulum"),
 	authoring_version: 1,
-	spec_version: 17,
+	spec_version: 18,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 10,
@@ -338,51 +335,54 @@ impl Contains<RuntimeCall> for BaseFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		match call {
 			// These modules are all allowed to be called by transactions:
-			RuntimeCall::Bounties(_)
-			| RuntimeCall::ChildBounties(_)
-			| RuntimeCall::ClientsInfo(_)
-			| RuntimeCall::Treasury(_)
-			| RuntimeCall::Tokens(_)
-			| RuntimeCall::Currencies(_)
-			| RuntimeCall::ParachainStaking(_)
-			| RuntimeCall::Democracy(_)
-			| RuntimeCall::Council(_)
-			| RuntimeCall::TechnicalCommittee(_)
-			| RuntimeCall::System(_)
-			| RuntimeCall::Scheduler(_)
-			| RuntimeCall::Preimage(_)
-			| RuntimeCall::Timestamp(_)
-			| RuntimeCall::Balances(_)
-			| RuntimeCall::Session(_)
-			| RuntimeCall::ParachainSystem(_)
-			| RuntimeCall::XcmpQueue(_)
-			| RuntimeCall::PolkadotXcm(_)
-			| RuntimeCall::DmpQueue(_)
-			| RuntimeCall::Utility(_)
-			| RuntimeCall::Vesting(_)
-			| RuntimeCall::XTokens(_)
-			| RuntimeCall::Multisig(_)
-			| RuntimeCall::Identity(_)
-			| RuntimeCall::Contracts(_)
-			| RuntimeCall::ZenlinkProtocol(_)
-			| RuntimeCall::DiaOracleModule(_)
-			| RuntimeCall::VestingManager(_)
-			| RuntimeCall::TokenAllowance(_)
-			| RuntimeCall::AssetRegistry(_)
-			| RuntimeCall::Fee(_)
-			| RuntimeCall::Issue(_)
-			| RuntimeCall::Nomination(_)
-			| RuntimeCall::Oracle(_)
-			| RuntimeCall::Redeem(_)
-			| RuntimeCall::Replace(_)
-			| RuntimeCall::Security(_)
-			| RuntimeCall::StellarRelay(_)
-			| RuntimeCall::VaultRegistry(_)
-			| RuntimeCall::PooledVaultRewards(_)
-			| RuntimeCall::RewardDistribution(_)
-			| RuntimeCall::Farming(_)
-			| RuntimeCall::Proxy(_)
-			| RuntimeCall::TreasuryBuyoutExtension(_) => true,
+			RuntimeCall::Bounties(_) |
+			RuntimeCall::ChildBounties(_) |
+			RuntimeCall::ClientsInfo(_) |
+			RuntimeCall::Treasury(_) |
+			RuntimeCall::Tokens(_) |
+			RuntimeCall::Currencies(_) |
+			RuntimeCall::ParachainStaking(_) |
+			RuntimeCall::Democracy(_) |
+			RuntimeCall::Council(_) |
+			RuntimeCall::TechnicalCommittee(_) |
+			RuntimeCall::System(_) |
+			RuntimeCall::Scheduler(_) |
+			RuntimeCall::Preimage(_) |
+			RuntimeCall::Timestamp(_) |
+			RuntimeCall::Balances(_) |
+			RuntimeCall::Session(_) |
+			RuntimeCall::ParachainSystem(_) |
+			RuntimeCall::XcmpQueue(_) |
+			RuntimeCall::PolkadotXcm(_) |
+			RuntimeCall::DmpQueue(_) |
+			RuntimeCall::Utility(_) |
+			RuntimeCall::Vesting(_) |
+			RuntimeCall::XTokens(_) |
+			RuntimeCall::Multisig(_) |
+			RuntimeCall::Identity(_) |
+			RuntimeCall::Contracts(_) |
+			RuntimeCall::ZenlinkProtocol(_) |
+			RuntimeCall::DiaOracleModule(_) |
+			RuntimeCall::VestingManager(_) |
+			RuntimeCall::TokenAllowance(_) |
+			RuntimeCall::AssetRegistry(_) |
+			RuntimeCall::Fee(_) |
+			RuntimeCall::Issue(_) |
+			RuntimeCall::Nomination(_) |
+			RuntimeCall::Oracle(_) |
+			RuntimeCall::Redeem(_) |
+			RuntimeCall::Replace(_) |
+			RuntimeCall::Security(_) |
+			RuntimeCall::StellarRelay(_) |
+			RuntimeCall::VaultRegistry(_) |
+			RuntimeCall::PooledVaultRewards(_) |
+			RuntimeCall::RewardDistribution(_) |
+			RuntimeCall::Farming(_) |
+			RuntimeCall::Proxy(_) |
+			RuntimeCall::TreasuryBuyoutExtension(_) |
+			RuntimeCall::ParachainInfo(_) |
+			RuntimeCall::CumulusXcm(_) |
+			RuntimeCall::VaultStaking(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -392,22 +392,20 @@ impl Contains<RuntimeCall> for BaseFilter {
 // Configure FRAME pallets to include in runtime.
 
 impl frame_system::Config for Runtime {
+	/// The Block type used by the runtime. This is used by construct_runtime to retrieve the extrinsics or other block specific data as needed.
+	type Block = Block;
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
 	/// The aggregated dispatch type that is available for extrinsics.
 	type RuntimeCall = RuntimeCall;
 	/// The lookup mechanism to get account ID from whatever is passed in dispatchers.
 	type Lookup = AccountIdLookup<AccountId, ()>;
-	/// The index type for storing how many extrinsics an account has signed.
-	type Index = Index;
-	/// The index type for blocks.
-	type BlockNumber = BlockNumber;
+	/// This stores the number of previous transactions associated with a sender account.
+	type Nonce = Index;
 	/// The type for hashing blocks and tries.
 	type Hash = Hash;
 	/// The hashing algorithm used.
 	type Hashing = BlakeTwo256;
-	/// The header type.
-	type Header = generic::Header<BlockNumber, BlakeTwo256>;
 	/// The ubiquitous event type.
 	type RuntimeEvent = RuntimeEvent;
 	/// The ubiquitous origin type.
@@ -503,7 +501,7 @@ impl pallet_balances::Config for Runtime {
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
 	type MaxHolds = ConstU32<1>;
-	type HoldIdentifier = RuntimeHoldReason;
+	type RuntimeHoldReason = RuntimeHoldReason;
 }
 
 parameter_types! {
@@ -551,6 +549,8 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
+	#[cfg(feature = "std")]
+	type ConsensusHook = cumulus_pallet_parachain_system::consensus_hook::ExpectParentIncluded;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -592,10 +592,16 @@ impl pallet_session::Config for Runtime {
 	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+	// as per documentation, typical value for this is false "unless this pallet is being augmented by another pallet"
+	// https://github.com/paritytech/polkadot-sdk/blob/release-polkadot-v1.1.0/substrate/frame/aura/src/lib.rs#L111
+	pub const AllowMultipleBlocksPerSlot: bool = false;
+}
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 	type DisabledValidators = ();
 	type MaxAuthorities = MaxAuthorities;
+	type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
 }
 
 parameter_types! {
@@ -886,7 +892,8 @@ impl orml_asset_registry::Config for Runtime {
 	type AuthorityOrigin = asset_registry::AssetAuthority;
 	type AssetProcessor = asset_registry::CustomAssetProcessor;
 	type Balance = Balance;
-	type WeightInfo = weights::orml_asset_registry::WeightInfo<Runtime>;
+	type WeightInfo = weights::orml_asset_registry::SubstrateWeight<Runtime>;
+	type StringLimit = StringLimit;
 }
 
 parameter_types! {
@@ -985,10 +992,11 @@ const fn deposit(items: u32, bytes: u32) -> Balance {
 
 parameter_types! {
 	pub const DepositPerItem: Balance = deposit(1, 0);
-	pub const DepositPerByte: Balance = deposit(0, 1);
-	// Fallback value if storage deposit limit not set by the user
-	pub const DefaultDepositLimit: Balance = deposit(1024, 1024 * 1024);
+    pub const DepositPerByte: Balance = deposit(0, 1);
+    pub const DefaultDepositLimit: Balance = deposit(1024, 1024 * 1024);
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
+	pub const CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
+	pub const MaxDelegateDependencies: u32 = 32;
 }
 
 impl pallet_contracts::Config for Runtime {
@@ -1012,6 +1020,18 @@ impl pallet_contracts::Config for Runtime {
 	type UnsafeUnstableInterface = ConstBool<true>;
 	type MaxDebugBufferLen = ConstU32<{ 2 * 1024 * 1024 }>;
 	type DefaultDepositLimit = DefaultDepositLimit;
+	type CodeHashLockupDepositPercent = CodeHashLockupDepositPercent;
+	type MaxDelegateDependencies = MaxDelegateDependencies;
+	type RuntimeHoldReason = RuntimeHoldReason;
+	type Migrations = (
+		v11::Migration<Self>,
+		v12::Migration<Runtime, Balances>,
+		v13::Migration<Self>,
+		v14::Migration<Self, Balances>,
+		v15::Migration<Self>,
+	);
+	type Debug = ();
+	type Environment = ();
 }
 
 impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
@@ -1049,7 +1069,7 @@ impl dia_oracle::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
 	type AuthorityId = dia_oracle::crypto::DiaAuthId;
-	type WeightInfo = dia_oracle::weights::DiaWeightInfo<Runtime>;
+	type WeightInfo = weights::dia_oracle::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1065,7 +1085,7 @@ impl farming::Config for Runtime {
 	type CurrencyId = CurrencyId;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureRoot<AccountId>;
-	type WeightInfo = farming::weights::BifrostWeight<Runtime>;
+	type WeightInfo = ();
 	type TreasuryAccount = PendulumTreasuryAccount;
 	type Keeper = FarmingKeeperPalletId;
 	type RewardIssuer = FarmingRewardIssuerPalletId;
@@ -1182,7 +1202,7 @@ pub struct DataFeederBenchmark<K, V, A>(PhantomData<(K, V, A)>);
 
 #[cfg(feature = "runtime-benchmarks")]
 impl<K, V, A> orml_traits::DataFeeder<K, V, A> for DataFeederBenchmark<K, V, A> {
-	fn feed_value(_who: A, _key: K, _value: V) -> sp_runtime::DispatchResult {
+	fn feed_value(_who: Option<A>, _key: K, _value: V) -> sp_runtime::DispatchResult {
 		Ok(())
 	}
 }
@@ -1429,89 +1449,84 @@ impl treasury_buyout_extension::Config for Runtime {
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = opaque::Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
+	pub enum Runtime
 	{
 		// System support stuff.
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-		ParachainSystem: cumulus_pallet_parachain_system::{
-			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
-		} = 1,
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 2,
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 3,
+		System: frame_system = 0,
+		ParachainSystem: cumulus_pallet_parachain_system = 1,
+		Timestamp: pallet_timestamp = 2,
+		ParachainInfo: parachain_info = 3,
 
 		// Monetary stuff.
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
+		Balances: pallet_balances = 10,
+		TransactionPayment: pallet_transaction_payment = 11,
 
 		// Governance
-		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 13,
-		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Config<T>, Origin<T>, Event<T>} = 14,
-		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Config<T>, Origin<T>,  Event<T>} = 15,
-		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 16,
-		Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 17,
-		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 18,
-		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>} = 19,
-		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 20,
-		ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 21,
-		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 22,
+		Democracy: pallet_democracy= 13,
+		Council: pallet_collective::<Instance1> = 14,
+		TechnicalCommittee: pallet_collective::<Instance2> = 15,
+		Scheduler: pallet_scheduler = 16,
+		Preimage: pallet_preimage = 17,
+		Multisig: pallet_multisig = 18,
+		Treasury: pallet_treasury = 19,
+		Bounties: pallet_bounties = 20,
+		ChildBounties: pallet_child_bounties = 21,
+		Proxy: pallet_proxy = 22,
 
 		// Consensus support.
 		// The following order MUST NOT be changed: Aura -> Session -> Staking -> Authorship -> AuraExt
 		// Dependencies: AuraExt on Aura, Authorship and Session on ParachainStaking
-		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 33,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 32,
-		ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
-		Authorship: pallet_authorship::{Pallet, Storage} = 30,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 34,
+		Aura: pallet_aura = 33,
+		Session: pallet_session = 32,
+		ParachainStaking: parachain_staking = 35,
+		Authorship: pallet_authorship = 30,
+		AuraExt: cumulus_pallet_aura_ext = 34,
 
 		// XCM helpers.
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 41,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 42,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
+		XcmpQueue: cumulus_pallet_xcmp_queue = 40,
+		PolkadotXcm: pallet_xcm = 41,
+		CumulusXcm: cumulus_pallet_xcm = 42,
+		DmpQueue: cumulus_pallet_dmp_queue = 43,
 
 		// Amendments
-		Vesting: pallet_vesting::{Pallet, Call, Config<T>, Storage, Event<T>} = 50,
-		Utility: pallet_utility::{Pallet, Call, Event} = 51,
-		Currencies: orml_currencies::{Pallet, Call, Storage} = 52,
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 53,
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 54,
-		Identity: pallet_identity::{Pallet, Storage, Call, Event<T>} = 55,
-		Contracts: pallet_contracts::{Pallet, Storage, Call, Event<T>} = 56,
-		RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 57,
-		DiaOracleModule: dia_oracle::{Pallet, Config<T>, Storage, Call, Event<T>} = 58,
+		Vesting: pallet_vesting = 50,
+		Utility: pallet_utility = 51,
+		Currencies: orml_currencies = 52,
+		Tokens: orml_tokens = 53,
+		XTokens: orml_xtokens = 54,
+		Identity: pallet_identity = 55,
+		Contracts: pallet_contracts = 56,
+		RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip = 57,
+		DiaOracleModule: dia_oracle = 58,
 
 		// Zenlink
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 59,
 
 		// Spacewalk pallets
-		Currency: currency::{Pallet} = 60,
-		Fee: fee::{Pallet, Call, Config<T>, Storage} = 61,
-		Issue: issue::{Pallet, Call, Config<T>, Storage, Event<T>} = 62,
-		Nomination: nomination::{Pallet, Call, Config, Storage, Event<T>} = 63,
-		Oracle: oracle::{Pallet, Call, Config, Storage, Event<T>} = 64,
-		Redeem: redeem::{Pallet, Call, Config<T>, Storage, Event<T>} = 65,
-		Replace: replace::{Pallet, Call, Config<T>, Storage, Event<T>} = 66,
-		Security: security::{Pallet, Call, Config, Storage, Event<T>} = 67,
-		StellarRelay: stellar_relay::{Pallet, Call, Config<T>, Storage, Event<T>} = 68,
-		VaultRegistry: vault_registry::{Pallet, Call, Config<T>, Storage, Event<T>, ValidateUnsigned} = 69,
-		PooledVaultRewards: pooled_rewards::{Pallet, Call, Storage, Event<T>} = 70,
-		VaultStaking: staking::{Pallet, Storage, Event<T>} = 71,
-		ClientsInfo: clients_info::{Pallet, Call, Storage, Event<T>} = 72,
-		RewardDistribution: reward_distribution::{Pallet, Call, Storage, Event<T>} = 73,
+		Currency: currency = 60,
+		Fee: fee = 61,
+		Issue: issue = 62,
+		Nomination: nomination = 63,
+		Oracle: oracle = 64,
+		Redeem: redeem = 65,
+		Replace: replace = 66,
+		Security: security = 67,
+		StellarRelay: stellar_relay = 68,
+		VaultRegistry: vault_registry = 69,
+		PooledVaultRewards: pooled_rewards = 70,
+		VaultStaking: staking = 71,
+		ClientsInfo: clients_info = 72,
+		RewardDistribution: reward_distribution = 73,
 
-		TokenAllowance: orml_currencies_allowance_extension::{Pallet, Storage, Call, Event<T>} = 80,
-		TreasuryBuyoutExtension: treasury_buyout_extension::{Pallet, Storage, Call, Event<T>} = 82,
+		TokenAllowance: orml_currencies_allowance_extension = 80,
+		TreasuryBuyoutExtension: treasury_buyout_extension = 82,
 
 		//Farming
-		Farming: farming::{Pallet, Call, Storage, Event<T>} = 90,
+		Farming: farming = 90,
 		// Asset Metadata
-		AssetRegistry: orml_asset_registry::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
+		AssetRegistry: orml_asset_registry = 91,
 
-		VestingManager: vesting_manager::{Pallet, Call, Event<T>} = 100
+		VestingManager: vesting_manager = 100
 	}
 );
 
@@ -1545,6 +1560,8 @@ mod benches {
 
 		[orml_currencies_allowance_extension, TokenAllowance]
 		[treasury_buyout_extension, TreasuryBuyoutExtension]
+
+		[dia_oracle, DiaOracleModule]
 	);
 }
 
@@ -1682,11 +1699,11 @@ impl_runtime_apis! {
 
 
 	impl dia_oracle_runtime_api::DiaOracleApi<Block> for Runtime{
-		fn get_value(blockchain: frame_support::sp_std::vec::Vec<u8>, symbol: frame_support::sp_std::vec::Vec<u8>)-> Result<dia_oracle_runtime_api::PriceInfo, sp_runtime::DispatchError>{
+		fn get_value(blockchain: sp_std::vec::Vec<u8>, symbol: sp_std::vec::Vec<u8>)-> Result<dia_oracle_runtime_api::PriceInfo, sp_runtime::DispatchError>{
 			DiaOracleModule::get_value(blockchain, symbol)
 		}
 
-		fn get_coin_info(blockchain: frame_support::sp_std::vec::Vec<u8>, symbol: frame_support::sp_std::vec::Vec<u8>)-> Result<dia_oracle_runtime_api::CoinInfo,sp_runtime::DispatchError>{
+		fn get_coin_info(blockchain: sp_std::vec::Vec<u8>, symbol: sp_std::vec::Vec<u8>)-> Result<dia_oracle_runtime_api::CoinInfo,sp_runtime::DispatchError>{
 			DiaOracleModule::get_coin_info(blockchain, symbol)
 		}
 	}
@@ -1804,8 +1821,8 @@ impl_runtime_apis! {
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch, TrackedStorageKey};
-
+			use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch};
+			use sp_storage::TrackedStorageKey;
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use baseline::Pallet as BaselineBench;
 
@@ -1935,7 +1952,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl pallet_contracts::ContractsApi<Block, AccountId, Balance, BlockNumber, Hash>
+	impl pallet_contracts::ContractsApi<Block, AccountId, Balance, BlockNumber, Hash, EventRecord>
 		for Runtime
 	{
 		fn call(
@@ -1945,7 +1962,7 @@ impl_runtime_apis! {
 			gas_limit: Option<Weight>,
 			storage_deposit_limit: Option<Balance>,
 			input_data: Vec<u8>,
-		) -> pallet_contracts_primitives::ContractExecResult<Balance> {
+		) -> pallet_contracts_primitives::ContractExecResult<Balance, EventRecord> {
 			let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
 			Contracts::bare_call(
 				origin,
@@ -1954,7 +1971,8 @@ impl_runtime_apis! {
 				gas_limit,
 				storage_deposit_limit,
 				input_data,
-				CONTRACTS_DEBUG_OUTPUT,
+				pallet_contracts::DebugInfo::UnsafeDebug,
+				pallet_contracts::CollectEvents::UnsafeCollect,
 				pallet_contracts::Determinism::Enforced,
 			)
 		}
@@ -1967,7 +1985,7 @@ impl_runtime_apis! {
 			code: pallet_contracts_primitives::Code<Hash>,
 			data: Vec<u8>,
 			salt: Vec<u8>,
-		) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
+		) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance, EventRecord>
 		{
 			let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
 			Contracts::bare_instantiate(
@@ -1978,7 +1996,8 @@ impl_runtime_apis! {
 				code,
 				data,
 				salt,
-				CONTRACTS_DEBUG_OUTPUT
+				pallet_contracts::DebugInfo::UnsafeDebug,
+				pallet_contracts::CollectEvents::UnsafeCollect,
 			)
 		}
 
@@ -2022,6 +2041,7 @@ impl_runtime_apis! {
 #[allow(dead_code)]
 struct CheckInherents;
 
+#[allow(deprecated)]
 impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
 	fn check_inherents(
 		block: &Block,

@@ -5,17 +5,17 @@ use chain_extension_common::{Blockchain, ChainExtensionOutcome, Symbol, ToTrimme
 use codec::Encode;
 use dia_oracle::{CoinInfo as DiaCoinInfo, DiaOracle};
 use frame_support::{
-	dispatch::Weight,
-	inherent::Vec,
 	pallet_prelude::{Get, PhantomData},
-	sp_tracing::{error, trace},
 	DefaultNoBound,
 };
 use pallet_contracts::chain_extension::{
 	ChainExtension, Environment, Ext, InitState, RetVal, SysConfig,
 };
+use scale_info::prelude::vec::Vec;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::DispatchError;
+use sp_tracing::{error, trace};
+use sp_weights::Weight;
 
 // Enum that handles all supported function id options for this chain extension module
 #[derive(Debug)]

@@ -12,6 +12,7 @@ use orml_traits::{
 use sp_runtime::traits::Get;
 use sp_std::prelude::*;
 
+use sp_runtime::Saturating;
 const AMOUNT_MINTED: u32 = 2000000000;
 const AMOUNT_BURNED: u32 = 1000000000;
 
@@ -22,11 +23,11 @@ fn get_test_currency<T: Config>() -> CurrencyOf<T> {
 // mint some tokens to the account
 fn set_up_account<T: Config>(account: &AccountIdOf<T>) {
 	let token_currency_id = get_test_currency::<T>();
-
+    let deposit_amount = <T as crate::Config>::AssetDeposit::get();
 	assert_ok!(<orml_currencies::Pallet<T> as MultiCurrency<AccountIdOf<T>>>::deposit(
 		token_currency_id,
 		&account,
-		<T as crate::Config>::AssetDeposit::get()
+		deposit_amount.saturating_mul(deposit_amount)
 	));
 }
 

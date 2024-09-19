@@ -5,22 +5,24 @@ name = "module-pallet-staking-rpc-runtime-api"
 version = "1.0.0"
 
 [dependencies]
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
+frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 parity-scale-codec = { version = "3.1.5", default-features = false, features = ["derive"] }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8b41e633321e472288e8fb635a4fc3cde9236d54" }
-serde = { version = "1.0.142", default-features = false, optional = true, features = ["derive"] }
+module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "580dd307ede65f90f17df6731645b678f3596e0f" }
+serde = { version = "1.0.142", default-features = false, features = ["derive"] }
+sp-arithmetic =  { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 
 [features]
 default = ["std"]
 std = [
-    "serde",
+    "serde/std",
     "frame-support/std",
     "scale-info/std",
     "sp-api/std",
     "sp-std/std",
     "parity-scale-codec/std",
     "module-oracle-rpc-runtime-api/std",
+    "sp-arithmetic/std"
 ]

@@ -25,21 +25,13 @@ members = [
 # need this because of bifrost farming dependency in runtime
 # bifrost farming uses different orml-traits for orml-currencies
 [patch."https://github.com/open-web3-stack/open-runtime-module-library"]
-orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.42" }
+orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v1.1.0" }
+orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v1.1.0" }
+##
+### need this because of bifrost farming dependency in runtime
+### bifrost uses :
+### orml packages { version = "0.4.1-dev" }
+### zenlink packages  { version = "*" }
 
-# need this because of bifrost farming dependency in runtime
-# bifrost uses :
-# orml packages { version = "0.4.1-dev" }
-# zenlink packages  { version = "*" }
-[patch.crates-io]
-orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.42" }
-orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.42" }
-orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v0.9.42" }
-zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", branch = "polkadot-v0.9.42" }
-zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", branch = "polkadot-v0.9.42" }
-
-
-[patch.'https://github.com/paritytech/substrate']
-pallet-vesting = { git = "https://github.com/pendulum-chain/patch-pallet-vesting-transaction-storage", branch = "polkadot-v0.9.42" }
-pallet-transaction-payment = { git = "https://github.com/pendulum-chain/patch-pallet-vesting-transaction-storage", branch = "polkadot-v0.9.42" }
-
+[patch."https://github.com/w3f/ring-vrf"]
+bandersnatch_vrfs = { git = "https://github.com/w3f//ring-vrf", version = "0.0.4", rev = "3ddc20" }

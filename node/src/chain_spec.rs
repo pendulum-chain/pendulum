@@ -1,3 +1,7 @@
+#![allow(clippy::default_constructed_unit_structs)]
+
+use crate::constants::{amplitude, foucoco, pendulum};
+use core::default::Default;
 use cumulus_primitives_core::ParaId;
 use runtime_common::{AccountId, AuraId, Balance, BlockNumber, Signature, UNIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -5,7 +9,7 @@ use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{
 	crypto::{Ss58Codec, UncheckedInto},
-	sr25519, Pair, Public,
+	sp_std, sr25519, Pair, Public,
 };
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
@@ -13,23 +17,21 @@ use sp_runtime::{
 };
 use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
 
-use crate::constants::{amplitude, foucoco, pendulum};
-
 const MAINNET_USDC_CURRENCY_ID: CurrencyId = pendulum_runtime::GetWrappedCurrencyId::get();
 const TESTNET_USDC_CURRENCY_ID: CurrencyId = amplitude_runtime::GetWrappedCurrencyId::get();
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type AmplitudeChainSpec =
-	sc_service::GenericChainSpec<amplitude_runtime::GenesisConfig, ParachainExtensions>;
+	sc_service::GenericChainSpec<amplitude_runtime::RuntimeGenesisConfig, ParachainExtensions>;
 
 pub type FoucocoChainSpec =
-	sc_service::GenericChainSpec<foucoco_runtime::GenesisConfig, ParachainExtensions>;
+	sc_service::GenericChainSpec<foucoco_runtime::RuntimeGenesisConfig, ParachainExtensions>;
 
 pub type PendulumChainSpec =
-	sc_service::GenericChainSpec<pendulum_runtime::GenesisConfig, ParachainExtensions>;
+	sc_service::GenericChainSpec<pendulum_runtime::RuntimeGenesisConfig, ParachainExtensions>;
 
 /// The default XCM version to set in genesis config.
-const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
+const SAFE_XCM_VERSION: u32 = staging_xcm::prelude::XCM_VERSION;
 
 pub fn create_pendulum_multisig_account(id: &str) -> AccountId {
 	let mut signatories: Vec<_> = pendulum::SUDO_SIGNATORIES
@@ -251,25 +253,25 @@ pub fn foucoco_standalone_config() -> FoucocoChainSpec {
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
 
-	let sudo_account = get_account_id_from_seed::<sr25519::Public>("Alice"); 
+	let sudo_account = get_account_id_from_seed::<sr25519::Public>("Alice");
 
 	let offchain_worker_price_feeder =
 		AccountId::from_ss58check(foucoco::OFF_CHAIN_WORKER_ADDRESS).unwrap();
 
 	let allowed_currencies = vec![
-			CurrencyId::Native,
-			CurrencyId::XCM(0),
-			CurrencyId::XCM(1),
-			CurrencyId::XCM(2),
-			CurrencyId::XCM(3),
-			CurrencyId::XCM(4),
-			CurrencyId::XCM(5),
-			CurrencyId::XCM(6),
-			CurrencyId::XCM(7),
-			CurrencyId::XCM(8),
-			CurrencyId::XCM(9),
-			CurrencyId::XCM(10),
-		];
+		CurrencyId::Native,
+		CurrencyId::XCM(0),
+		CurrencyId::XCM(1),
+		CurrencyId::XCM(2),
+		CurrencyId::XCM(3),
+		CurrencyId::XCM(4),
+		CurrencyId::XCM(5),
+		CurrencyId::XCM(6),
+		CurrencyId::XCM(7),
+		CurrencyId::XCM(8),
+		CurrencyId::XCM(9),
+		CurrencyId::XCM(10),
+	];
 
 	FoucocoChainSpec::from_genesis(
 		// Name
@@ -446,7 +448,7 @@ fn amplitude_genesis(
 	sudo_account: AccountId,
 	id: ParaId,
 	start_shutdown: bool,
-) -> amplitude_runtime::GenesisConfig {
+) -> amplitude_runtime::RuntimeGenesisConfig {
 	let mut balances: Vec<_> = signatories
 		.iter()
 		.cloned()
@@ -488,15 +490,20 @@ fn amplitude_genesis(
 		Perquintill::from_percent(9),
 	);
 
-	amplitude_runtime::GenesisConfig {
+	amplitude_runtime::RuntimeGenesisConfig {
 		asset_registry: Default::default(),
 		system: amplitude_runtime::SystemConfig {
 			code: amplitude_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
+			#[allow(clippy::wrong_self_convention)]
+			_config: sp_std::marker::PhantomData::default(),
 		},
 		balances: amplitude_runtime::BalancesConfig { balances },
-		parachain_info: amplitude_runtime::ParachainInfoConfig { parachain_id: id },
+		parachain_info: amplitude_runtime::ParachainInfoConfig {
+			parachain_id: id,
+			_config: sp_std::marker::PhantomData::default(),
+		},
 		parachain_staking: amplitude_runtime::ParachainStakingConfig {
 			stakers,
 			inflation_config,
@@ -522,6 +529,7 @@ fn amplitude_genesis(
 		parachain_system: Default::default(),
 		polkadot_xcm: amplitude_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
+			_config: sp_std::marker::PhantomData::default(),
 		},
 		council: amplitude_runtime::CouncilConfig {
 			members: signatories.clone(),
@@ -564,6 +572,7 @@ fn amplitude_genesis(
 			} else {
 				amplitude_runtime::StatusCode::Error
 			},
+			_phantom: sp_std::marker::PhantomData::default(),
 		},
 		oracle: amplitude_runtime::OracleConfig {
 			max_delay: u32::MAX,
@@ -572,6 +581,7 @@ fn amplitude_genesis(
 				Key::ExchangeRate(CurrencyId::XCM(0)),
 				Key::ExchangeRate(MAINNET_USDC_CURRENCY_ID),
 			],
+			_phantom: sp_std::marker::PhantomData::default(),
 		},
 		vault_registry: amplitude_runtime::VaultRegistryConfig {
 			minimum_collateral_vault: vec![(XCM(0), 0)],
@@ -605,7 +615,10 @@ fn amplitude_genesis(
 			punishment_fee: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 		},
-		nomination: amplitude_runtime::NominationConfig { is_nomination_enabled: false },
+		nomination: amplitude_runtime::NominationConfig {
+			is_nomination_enabled: false,
+			_phantom: sp_std::marker::PhantomData::default(),
+		},
 		dia_oracle_module: amplitude_runtime::DiaOracleModuleConfig {
 			authorized_accounts: authorized_oracles,
 			supported_currencies: vec![
@@ -617,6 +630,12 @@ fn amplitude_genesis(
 			batching_api: b"https://dia-00.pendulumchain.tech/currencies".to_vec(),
 			coin_infos_map: vec![],
 		},
+		token_allowance: Default::default(),
+		transaction_payment: Default::default(),
+		treasury: Default::default(),
+		treasury_buyout_extension: Default::default(),
+		vesting: Default::default(),
+		zenlink_protocol: Default::default(),
 	}
 }
 
@@ -628,7 +647,7 @@ fn foucoco_genesis(
 	id: ParaId,
 	start_shutdown: bool,
 	allowed_currencies: Vec<CurrencyId>,
-) -> foucoco_runtime::GenesisConfig {
+) -> foucoco_runtime::RuntimeGenesisConfig {
 	fn get_vault_currency_pair(
 		collateral: CurrencyId,
 		wrapped: CurrencyId,
@@ -680,15 +699,19 @@ fn foucoco_genesis(
 		Perquintill::from_percent(9),
 	);
 
-	foucoco_runtime::GenesisConfig {
+	foucoco_runtime::RuntimeGenesisConfig {
 		asset_registry: Default::default(),
 		system: foucoco_runtime::SystemConfig {
 			code: foucoco_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
+			_config: sp_std::marker::PhantomData::default(),
 		},
 		balances: foucoco_runtime::BalancesConfig { balances },
-		parachain_info: foucoco_runtime::ParachainInfoConfig { parachain_id: id },
+		parachain_info: foucoco_runtime::ParachainInfoConfig {
+			parachain_id: id,
+			_config: sp_std::marker::PhantomData::default(),
+		},
 		parachain_staking: foucoco_runtime::ParachainStakingConfig {
 			stakers,
 			inflation_config,
@@ -714,6 +737,7 @@ fn foucoco_genesis(
 		parachain_system: Default::default(),
 		polkadot_xcm: foucoco_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
+			_config: sp_std::marker::PhantomData::default(),
 		},
 		council: foucoco_runtime::CouncilConfig {
 			members: signatories.clone(),
@@ -757,6 +781,7 @@ fn foucoco_genesis(
 			} else {
 				foucoco_runtime::StatusCode::Error
 			},
+			_phantom: sp_std::marker::PhantomData::default(),
 		},
 		oracle: foucoco_runtime::OracleConfig {
 			max_delay: 604_800_000, // 7 days
@@ -766,6 +791,7 @@ fn foucoco_genesis(
 				Key::ExchangeRate(CurrencyId::Stellar(Asset::StellarNative)),
 				Key::ExchangeRate(TESTNET_USDC_CURRENCY_ID),
 			],
+			_phantom: sp_std::marker::PhantomData::default(),
 		},
 		vault_registry: foucoco_runtime::VaultRegistryConfig {
 			minimum_collateral_vault: vec![(XCM(0), 0)],
@@ -810,7 +836,10 @@ fn foucoco_genesis(
 			punishment_fee: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 		},
-		nomination: foucoco_runtime::NominationConfig { is_nomination_enabled: false },
+		nomination: foucoco_runtime::NominationConfig {
+			is_nomination_enabled: false,
+			_phantom: sp_std::marker::PhantomData::default(),
+		},
 		dia_oracle_module: foucoco_runtime::DiaOracleModuleConfig {
 			authorized_accounts: authorized_oracles,
 			supported_currencies: vec![
@@ -823,6 +852,11 @@ fn foucoco_genesis(
 			coin_infos_map: vec![],
 		},
 		token_allowance: foucoco_runtime::TokenAllowanceConfig { allowed_currencies },
+		transaction_payment: Default::default(),
+		treasury: Default::default(),
+		treasury_buyout_extension: Default::default(),
+		vesting: Default::default(),
+		zenlink_protocol: Default::default(),
 	}
 }
 
@@ -834,7 +868,7 @@ fn pendulum_genesis(
 	sudo_account: AccountId,
 	id: ParaId,
 	start_shutdown: bool,
-) -> pendulum_runtime::GenesisConfig {
+) -> pendulum_runtime::RuntimeGenesisConfig {
 	let mut genesis_issuance = pendulum::TOTAL_INITIAL_ISSUANCE;
 	for balance in balances.clone() {
 		genesis_issuance -= balance.1;
@@ -861,15 +895,19 @@ fn pendulum_genesis(
 		.map(|address| AccountId::from_ss58check(address).unwrap())
 		.collect();
 
-	pendulum_runtime::GenesisConfig {
+	pendulum_runtime::RuntimeGenesisConfig {
 		asset_registry: Default::default(),
 		system: pendulum_runtime::SystemConfig {
 			code: pendulum_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
+			_config: sp_std::marker::PhantomData::default(),
 		},
 		balances: pendulum_runtime::BalancesConfig { balances },
-		parachain_info: pendulum_runtime::ParachainInfoConfig { parachain_id: id },
+		parachain_info: pendulum_runtime::ParachainInfoConfig {
+			parachain_id: id,
+			_config: sp_std::marker::PhantomData::default(),
+		},
 		parachain_staking: pendulum_runtime::ParachainStakingConfig {
 			stakers,
 			inflation_config,
@@ -895,6 +933,7 @@ fn pendulum_genesis(
 		parachain_system: Default::default(),
 		polkadot_xcm: pendulum_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
+			_config: sp_std::marker::PhantomData::default(),
 		},
 		council: pendulum_runtime::CouncilConfig { members: council.clone(), ..Default::default() },
 		democracy: Default::default(),
@@ -931,6 +970,7 @@ fn pendulum_genesis(
 			} else {
 				pendulum_runtime::StatusCode::Error
 			},
+			_phantom: sp_std::marker::PhantomData::default(),
 		},
 		oracle: pendulum_runtime::OracleConfig {
 			max_delay: u32::MAX,
@@ -939,6 +979,7 @@ fn pendulum_genesis(
 				Key::ExchangeRate(CurrencyId::XCM(0)),
 				Key::ExchangeRate(MAINNET_USDC_CURRENCY_ID),
 			],
+			_phantom: sp_std::marker::PhantomData::default(),
 		},
 		vault_registry: pendulum_runtime::VaultRegistryConfig {
 			minimum_collateral_vault: vec![(XCM(0), 0)],
@@ -972,7 +1013,10 @@ fn pendulum_genesis(
 			punishment_fee: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 			replace_griefing_collateral: FixedU128::checked_from_rational(1, 10).unwrap(), // 10%
 		},
-		nomination: pendulum_runtime::NominationConfig { is_nomination_enabled: false },
+		nomination: pendulum_runtime::NominationConfig {
+			is_nomination_enabled: false,
+			_phantom: sp_std::marker::PhantomData::default(),
+		},
 		dia_oracle_module: pendulum_runtime::DiaOracleModuleConfig {
 			authorized_accounts: authorized_oracles,
 			supported_currencies: vec![
@@ -984,5 +1028,10 @@ fn pendulum_genesis(
 			batching_api: b"https://dia-00.pendulumchain.tech/currencies".to_vec(),
 			coin_infos_map: vec![],
 		},
+		token_allowance: Default::default(),
+		transaction_payment: Default::default(),
+		treasury: Default::default(),
+		tokens: Default::default(),
+		treasury_buyout_extension: Default::default(),
 	}
 }

@@ -16,12 +16,13 @@ mod tests;
 mod types;
 
 use crate::{
-	default_weights::WeightInfo,
 	types::{AccountIdOf, Amount, BalanceOf, CurrencyIdOf},
 };
+
+pub use crate::default_weights::WeightInfo;
 use codec::{Decode, Encode};
 use frame_support::{
-	dispatch::{DispatchError, DispatchResult},
+	dispatch::DispatchResult,
 	ensure,
 	sp_runtime::SaturatedConversion,
 	traits::{Get, IsSubType},
@@ -29,15 +30,15 @@ use frame_support::{
 };
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_arithmetic::traits::{CheckedAdd, CheckedMul, CheckedDiv, Saturating};
+use sp_arithmetic::traits::{CheckedAdd, CheckedDiv, CheckedMul, Saturating};
 use sp_runtime::{
 	traits::{DispatchInfoOf, One, SignedExtension, UniqueSaturatedInto, Zero},
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
 	},
-	ArithmeticError, FixedPointNumber, FixedU128,
+	ArithmeticError, DispatchError, FixedPointNumber, FixedU128,
 };
-use sp_std::{fmt::Debug, marker::PhantomData, vec::Vec};
+use sp_std::{fmt::Debug, marker::PhantomData, vec, vec::Vec};
 use spacewalk_primitives::DecimalsLookup;
 
 #[frame_support::pallet]
@@ -158,7 +159,6 @@ pub mod pallet {
 		pub allowed_currencies: Vec<CurrencyIdOf<T>>,
 	}
 
-	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self { allowed_currencies: vec![] }
@@ -166,7 +166,7 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			for i in &self.allowed_currencies.clone() {
 				AllowedCurrencies::<T>::insert(i, ());

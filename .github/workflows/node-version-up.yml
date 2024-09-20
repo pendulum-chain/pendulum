@@ -32,7 +32,7 @@ jobs:
         id: new-version
         run: |
           cd node
-          echo "version=$(cargo metadata --format-version=1 --no-deps | jq '.packages[0].version')" >> "$GITHUB_OUTPUT"
+          echo "version=$(cargo metadata --format-version=1 --no-deps | jq '.packages[0].version' | tr -d '"')" >> "$GITHUB_OUTPUT"
           cd ..
       - name: Create Release Branch for version ${{ steps.new-version.outputs.version }}
         id: branch-name
@@ -56,7 +56,8 @@ jobs:
         uses: thomaseizinger/create-pull-request@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          title: "release: upgrade node to ${{ steps.new-version.outputs.version }}"
+          title: "release: upgrade node to v${{ steps.new-version.outputs.version }}"
+          body: ${{ steps.new-version.outputs.version }}
           head: ${{ steps.branch-name.outputs.branch_name }}
           base: main
           reviewers: "ebma, TorstenStueber, bogdanS98, gianfra-t, b-yap"

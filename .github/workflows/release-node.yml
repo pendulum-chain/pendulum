@@ -1,0 +1,31 @@
+# This action triggers a GitLab CI job that generates the release notes
+name: Node Release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - 'main'
+
+jobs:
+  release_check:
+#    This job will only run if:
+#     * the pull request is closed and merged to main branch;
+#     * the pull request has the "release:" and "node" in its title
+    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.title, 'release:') && contains(github.event.pull_request.title, 'node')  }}
+    name: Need new release
+    strategy:
+      fail-fast: true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: trigger gitlab
+        uses: eic/trigger-gitlab-ci@v3
+        with:
+          url: https://gitlab.com
+          project_id:
+          token: ${{ secrets.GITLABAPI }}
+          ref_name: main
+          variables: |
+            version= ${{ github.event.pull_request.body }}

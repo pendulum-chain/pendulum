@@ -118,7 +118,7 @@ checksum = "4436e0292ab1bb631b42973c61205e704475fe8126af845c8d923c0996328127"
 
 [[package]]
 name = "amplitude-runtime"
-version = "0.1.0"
+version = "1.1.0"
 dependencies = [
  "bifrost-farming",
  "bifrost-farming-rpc-runtime-api",
@@ -2044,7 +2044,7 @@ dependencies = [
 
 [[package]]
 name = "chain-extension-common"
-version = "0.1.0"
+version = "1.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4218,7 +4218,7 @@ dependencies = [
 
 [[package]]
 name = "foucoco-runtime"
-version = "0.1.0"
+version = "1.1.0"
 dependencies = [
  "bifrost-farming",
  "bifrost-farming-rpc-runtime-api",
@@ -6888,7 +6888,7 @@ dependencies = [
 
 [[package]]
 name = "module-pallet-staking-rpc"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "jsonrpsee",
  "module-oracle-rpc-runtime-api",
@@ -6901,7 +6901,7 @@ dependencies = [
 
 [[package]]
 name = "module-pallet-staking-rpc-runtime-api"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "frame-support",
  "module-oracle-rpc-runtime-api",
@@ -7495,7 +7495,7 @@ dependencies = [
 
 [[package]]
 name = "orml-currencies-allowance-extension"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7570,7 +7570,7 @@ dependencies = [
 
 [[package]]
 name = "orml-tokens-management-extension"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -9069,7 +9069,7 @@ dependencies = [
 
 [[package]]
 name = "parachain-staking"
-version = "1.7.2"
+version = "1.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -9330,7 +9330,7 @@ dependencies = [
 
 [[package]]
 name = "pendulum-node"
-version = "0.1.0"
+version = "1.1.0"
 dependencies = [
  "amplitude-runtime",
  "bifrost-farming-rpc",
@@ -9414,7 +9414,7 @@ dependencies = [
 
 [[package]]
 name = "pendulum-runtime"
-version = "0.1.0"
+version = "1.1.0"
 dependencies = [
  "bifrost-farming",
  "bifrost-farming-rpc-runtime-api",
@@ -11058,7 +11058,7 @@ dependencies = [
 
 [[package]]
 name = "price-chain-extension"
-version = "0.1.0"
+version = "1.1.0"
 dependencies = [
  "chain-extension-common",
  "dia-oracle",
@@ -11933,7 +11933,7 @@ dependencies = [
 
 [[package]]
 name = "runtime-common"
-version = "0.1.0"
+version = "1.1.0"
 dependencies = [
  "cumulus-primitives-core",
  "dia-oracle",
@@ -11959,7 +11959,7 @@ dependencies = [
 
 [[package]]
 name = "runtime-integration-tests"
-version = "0.1.0"
+version = "1.1.0"
 dependencies = [
  "amplitude-runtime",
  "asset-hub-kusama-runtime",
@@ -15528,7 +15528,7 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "token-chain-extension"
-version = "0.1.0"
+version = "1.1.0"
 dependencies = [
  "chain-extension-common",
  "frame-support",
@@ -15858,7 +15858,7 @@ dependencies = [
 
 [[package]]
 name = "treasury-buyout-extension"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -16173,7 +16173,7 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "vesting-manager"
-version = "0.0.1"
+version = "1.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

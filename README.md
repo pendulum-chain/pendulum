@@ -16,7 +16,7 @@ cargo +nightly test
 To build the project, execute
 
 ```
-cargo build --release
+cargo build --release --features metadata-hash
 ```
 
 A successful build will create a binary under `./target/release/pendulum-node`.

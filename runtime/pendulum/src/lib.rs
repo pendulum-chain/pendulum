@@ -137,6 +137,7 @@ pub type SignedExtra = (
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 	treasury_buyout_extension::CheckBuyout<Runtime>,
+	frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 );
 
 type EventRecord = frame_system::EventRecord<
@@ -1134,6 +1135,7 @@ where
 			frame_system::CheckWeight::<Runtime>::new(),
 			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
 			treasury_buyout_extension::CheckBuyout::<Runtime>::new(),
+			frame_metadata_hash_extension::CheckMetadataHash::new(true),
 		);
 
 		let raw_payload = SignedPayload::new(call, extra).ok()?;

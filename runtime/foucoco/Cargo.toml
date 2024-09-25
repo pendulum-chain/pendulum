@@ -56,6 +56,7 @@ module-pallet-staking-rpc-runtime-api = { path = "../../pallets/parachain-stakin
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, optional = true, branch = "release-polkadot-v1.1.0" }
 frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
+frame-metadata-hash-extension = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 frame-system-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, optional = true, branch = "release-polkadot-v1.1.0" }
@@ -166,6 +167,7 @@ std = [
     "dia-oracle/std",
     'dia-oracle-runtime-api/std',
     "frame-executive/std",
+    "frame-metadata-hash-extension/std",
     "frame-support/std",
     "frame-system-rpc-runtime-api/std",
     "frame-system/std",
@@ -342,3 +344,5 @@ try-runtime = [
     "bifrost-farming/try-runtime",
     "zenlink-protocol/try-runtime",
 ]
+
+metadata-hash = ["substrate-wasm-builder/metadata-hash"]

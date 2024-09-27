@@ -1,0 +1,186 @@
+name: Version Up
+
+on:
+  workflow_dispatch:
+    inputs:
+      versioning:
+        type: choice
+        description: "choose versioning:"
+        required: true
+        options:
+          - major
+          - minor
+          - patch
+          - release
+          - rc
+          - beta
+          - alpha
+        default: "patch"
+      packages:
+        type: choice
+        description: "Version up the node only; other packages(except node), or ALL"
+        required: true
+        options:
+          - node
+          - others
+          - all
+        default: others
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    name: bump version
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup User
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+      - name: install cargo-edit
+        run: |
+          cargo install cargo-edit
+
+      - name: ${{ github.event.inputs.versioning }} version up for all
+        if: github.event.inputs.packages == 'all'
+        continue-on-error: false
+        run: |
+          cargo set-version --bump ${{ github.event.inputs.versioning }} &> changes.txt
+          cat changes.txt
+
+      - name: ${{ github.event.inputs.versioning }} version up for all except the node
+        if: github.event.inputs.packages == 'others'
+        continue-on-error: false
+        run: |
+          cargo set-version --bump ${{ github.event.inputs.versioning }} --exclude pendulum-node &> changes.txt
+          cat changes.txt
+
+      - name: ${{ github.event.inputs.versioning }} version up for node
+        if: github.event.inputs.packages == 'node'
+        continue-on-error: false
+        run: |
+          cargo set-version --bump ${{ github.event.inputs.versioning }} --package pendulum-node &> changes.txt
+          cat changes.txt
+
+      - name: "Read file contents"
+        id: read_file
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: ./changes.txt
+
+      - name: Set Chosen Package
+        id: set-pkg
+        run: |
+          if [ ${{ github.event.inputs.packages }} == 'all' ]; then
+            echo "name=all" >> "$GITHUB_OUTPUT"
+          elif [ ${{ github.event.inputs.packages }} == 'node' ]; then
+            echo "name=node" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=all-except-node" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Put current date into a variable
+        id: date-now
+        uses: Kaven-Universe/github-action-current-date-time@v1
+        with:
+          format: "yyyy-MM-dd"
+
+      - name: Create Release Branch
+        id: new-branch
+        run: |
+          name=${{ steps.set-pkg.outputs.name }}
+          now="${{ steps.date-now.outputs.day }}-${{ steps.date-now.outputs.month }}-${{ steps.date-now.outputs.year }}"
+          vers=${{ github.event.inputs.versioning }}
+          
+          branch_name="release/$vers-version-up-$name-$now"
+          echo "name=${branch_name}" >> "$GITHUB_OUTPUT"
+          
+          git checkout -b ${branch_name}
+          git push --set-upstream origin ${branch_name}
+
+      #  todo: make this simpler.
+      #  from https://github.com/0xdbe/0xdbe.github.io/blob/main/_posts/2024-04-04-GitHub-SignCommitWorkflow.md
+      - name: Commit New Changes to New Branch (all)
+        if: github.event.inputs.packages == 'all'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.new-branch.outputs.name }}
+        run: |
+          gh api graphql \
+          -F githubRepository=${{ github.repository }} \
+          -F branchName=${{ env.BRANCH }} \
+          -F expectedHeadOid=$(git rev-parse HEAD) \
+          -F commitMessage="$(cat changes.txt)" \
+          -F files[][path]="chain-extensions/common/Cargo.toml" -F files[][contents]=$(base64 -w0 chain-extensions/common/Cargo.toml) \
+          -F files[][path]="chain-extensions/price/Cargo.toml" -F files[][contents]=$(base64 -w0 chain-extensions/price/Cargo.toml) \
+          -F files[][path]="chain-extensions/token/Cargo.toml" -F files[][contents]=$(base64 -w0 chain-extensions/token/Cargo.toml) \
+          -F files[][path]="node/Cargo.toml" -F files[][contents]=$(base64 -w0 node/Cargo.toml) \
+          -F files[][path]="pallets/orml-currencies-allowance-extension/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/orml-currencies-allowance-extension/Cargo.toml) \
+          -F files[][path]="pallets/orml-tokens-management-extension/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/orml-tokens-management-extension/Cargo.toml) \
+          -F files[][path]="pallets/parachain-staking/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/parachain-staking/Cargo.toml) \
+          -F files[][path]="pallets/parachain-staking/rpc/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/parachain-staking/rpc/Cargo.toml) \
+          -F files[][path]="pallets/parachain-staking/rpc/runtime-api/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/parachain-staking/rpc/runtime-api/Cargo.toml) \
+          -F files[][path]="pallets/treasury-buyout-extension/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/treasury-buyout-extension/Cargo.toml) \
+          -F files[][path]="pallets/vesting-manager/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/vesting-manager/Cargo.toml) \
+          -F files[][path]="runtime/amplitude/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/amplitude/Cargo.toml) \
+          -F files[][path]="runtime/common/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/common/Cargo.toml) \
+          -F files[][path]="runtime/foucoco/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/foucoco/Cargo.toml) \
+          -F files[][path]="runtime/integration-tests/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/integration-tests/Cargo.toml) \
+          -F files[][path]="runtime/pendulum/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/pendulum/Cargo.toml) \
+          -F 'query=@.github/api/createCommitOnBranch.gql'
+
+      - name: Commit New Changes to New Branch (all except Node)
+        if: github.event.inputs.packages == 'others'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.new-branch.outputs.name }}
+        run: |
+          gh api graphql \
+          -F githubRepository=${{ github.repository }} \
+          -F branchName=${{ env.BRANCH }} \
+          -F expectedHeadOid=$(git rev-parse HEAD) \
+          -F commitMessage="$(cat changes.txt)" \
+          -F files[][path]="chain-extensions/common/Cargo.toml" -F files[][contents]=$(base64 -w0 chain-extensions/common/Cargo.toml) \
+          -F files[][path]="chain-extensions/price/Cargo.toml" -F files[][contents]=$(base64 -w0 chain-extensions/price/Cargo.toml) \
+          -F files[][path]="chain-extensions/token/Cargo.toml" -F files[][contents]=$(base64 -w0 chain-extensions/token/Cargo.toml) \
+          -F files[][path]="pallets/orml-currencies-allowance-extension/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/orml-currencies-allowance-extension/Cargo.toml) \
+          -F files[][path]="pallets/orml-tokens-management-extension/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/orml-tokens-management-extension/Cargo.toml) \
+          -F files[][path]="pallets/parachain-staking/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/parachain-staking/Cargo.toml) \
+          -F files[][path]="pallets/parachain-staking/rpc/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/parachain-staking/rpc/Cargo.toml) \
+          -F files[][path]="pallets/parachain-staking/rpc/runtime-api/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/parachain-staking/rpc/runtime-api/Cargo.toml) \
+          -F files[][path]="pallets/treasury-buyout-extension/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/treasury-buyout-extension/Cargo.toml) \
+          -F files[][path]="pallets/vesting-manager/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/vesting-manager/Cargo.toml) \
+          -F files[][path]="runtime/amplitude/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/amplitude/Cargo.toml) \
+          -F files[][path]="runtime/common/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/common/Cargo.toml) \
+          -F files[][path]="runtime/foucoco/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/foucoco/Cargo.toml) \
+          -F files[][path]="runtime/integration-tests/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/integration-tests/Cargo.toml) \
+          -F files[][path]="runtime/pendulum/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/pendulum/Cargo.toml) \
+          -F 'query=@.github/api/createCommitOnBranch.gql'
+
+      - name: Commit New Changes to New Branch (node)
+        if: github.event.inputs.packages == 'node'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.new-branch.outputs.name }}
+        run: |
+          gh api graphql \
+          -F githubRepository=${{ github.repository }} \
+          -F branchName=${{ env.BRANCH }} \
+          -F expectedHeadOid=$(git rev-parse HEAD) \
+          -F commitMessage="$(cat changes.txt)" \
+          -F files[][path]="node/Cargo.toml" -F files[][contents]=$(base64 -w0 node/Cargo.toml) \
+          -F 'query=@.github/api/createCommitOnBranch.gql'
+
+      - name: Create Pull Request
+        uses: thomaseizinger/create-pull-request@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          title: "release: ${{ github.event.inputs.versioning }} version up ${{ steps.set-pkg.outputs.name }}"
+          body: "${{ steps.read_file.outputs.content }}"
+          head: ${{ steps.new-branch.outputs.name }}
+          base: main
+          reviewers: "ebma, TorstenStueber, bogdanS98, gianfra-t, b-yap"

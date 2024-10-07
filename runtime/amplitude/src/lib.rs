@@ -256,7 +256,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 18,
+	spec_version: 19,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 13,
@@ -336,54 +336,54 @@ impl Contains<RuntimeCall> for BaseFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		match call {
 			// These modules are all allowed to be called by transactions:
-			RuntimeCall::Bounties(_) |
-			RuntimeCall::ChildBounties(_) |
-			RuntimeCall::ClientsInfo(_) |
-			RuntimeCall::Treasury(_) |
-			RuntimeCall::Tokens(_) |
-			RuntimeCall::Currencies(_) |
-			RuntimeCall::ParachainStaking(_) |
-			RuntimeCall::Democracy(_) |
-			RuntimeCall::Council(_) |
-			RuntimeCall::TechnicalCommittee(_) |
-			RuntimeCall::System(_) |
-			RuntimeCall::Scheduler(_) |
-			RuntimeCall::Preimage(_) |
-			RuntimeCall::Timestamp(_) |
-			RuntimeCall::Balances(_) |
-			RuntimeCall::Session(_) |
-			RuntimeCall::ParachainSystem(_) |
-			RuntimeCall::XcmpQueue(_) |
-			RuntimeCall::PolkadotXcm(_) |
-			RuntimeCall::DmpQueue(_) |
-			RuntimeCall::Utility(_) |
-			RuntimeCall::Vesting(_) |
-			RuntimeCall::XTokens(_) |
-			RuntimeCall::Multisig(_) |
-			RuntimeCall::Identity(_) |
-			RuntimeCall::Contracts(_) |
-			RuntimeCall::ZenlinkProtocol(_) |
-			RuntimeCall::VestingManager(_) |
-			RuntimeCall::DiaOracleModule(_) |
-			RuntimeCall::Fee(_) |
-			RuntimeCall::Issue(_) |
-			RuntimeCall::Nomination(_) |
-			RuntimeCall::Oracle(_) |
-			RuntimeCall::Redeem(_) |
-			RuntimeCall::Replace(_) |
-			RuntimeCall::Security(_) |
-			RuntimeCall::StellarRelay(_) |
-			RuntimeCall::VaultRegistry(_) |
-			RuntimeCall::PooledVaultRewards(_) |
-			RuntimeCall::Farming(_) |
-			RuntimeCall::TokenAllowance(_) |
-			RuntimeCall::AssetRegistry(_) |
-			RuntimeCall::Proxy(_) |
-			RuntimeCall::TreasuryBuyoutExtension(_) |
-			RuntimeCall::RewardDistribution(_) |
-			RuntimeCall::ParachainInfo(_) |
-			RuntimeCall::CumulusXcm(_) |
-			RuntimeCall::VaultStaking(_) => true,
+			RuntimeCall::Bounties(_)
+			| RuntimeCall::ChildBounties(_)
+			| RuntimeCall::ClientsInfo(_)
+			| RuntimeCall::Treasury(_)
+			| RuntimeCall::Tokens(_)
+			| RuntimeCall::Currencies(_)
+			| RuntimeCall::ParachainStaking(_)
+			| RuntimeCall::Democracy(_)
+			| RuntimeCall::Council(_)
+			| RuntimeCall::TechnicalCommittee(_)
+			| RuntimeCall::System(_)
+			| RuntimeCall::Scheduler(_)
+			| RuntimeCall::Preimage(_)
+			| RuntimeCall::Timestamp(_)
+			| RuntimeCall::Balances(_)
+			| RuntimeCall::Session(_)
+			| RuntimeCall::ParachainSystem(_)
+			| RuntimeCall::XcmpQueue(_)
+			| RuntimeCall::PolkadotXcm(_)
+			| RuntimeCall::DmpQueue(_)
+			| RuntimeCall::Utility(_)
+			| RuntimeCall::Vesting(_)
+			| RuntimeCall::XTokens(_)
+			| RuntimeCall::Multisig(_)
+			| RuntimeCall::Identity(_)
+			| RuntimeCall::Contracts(_)
+			| RuntimeCall::ZenlinkProtocol(_)
+			| RuntimeCall::VestingManager(_)
+			| RuntimeCall::DiaOracleModule(_)
+			| RuntimeCall::Fee(_)
+			| RuntimeCall::Issue(_)
+			| RuntimeCall::Nomination(_)
+			| RuntimeCall::Oracle(_)
+			| RuntimeCall::Redeem(_)
+			| RuntimeCall::Replace(_)
+			| RuntimeCall::Security(_)
+			| RuntimeCall::StellarRelay(_)
+			| RuntimeCall::VaultRegistry(_)
+			| RuntimeCall::PooledVaultRewards(_)
+			| RuntimeCall::Farming(_)
+			| RuntimeCall::TokenAllowance(_)
+			| RuntimeCall::AssetRegistry(_)
+			| RuntimeCall::Proxy(_)
+			| RuntimeCall::TreasuryBuyoutExtension(_)
+			| RuntimeCall::RewardDistribution(_)
+			| RuntimeCall::ParachainInfo(_)
+			| RuntimeCall::CumulusXcm(_)
+			| RuntimeCall::VaultStaking(_) => true,
 			// All pallets are allowed, but exhaustive match is defensive
 			// in the case of adding new pallets.
 		}
@@ -993,8 +993,8 @@ const fn deposit(items: u32, bytes: u32) -> Balance {
 
 parameter_types! {
 	pub const DepositPerItem: Balance = deposit(1, 0);
-    pub const DepositPerByte: Balance = deposit(0, 1);
-    pub const DefaultDepositLimit: Balance = deposit(1024, 1024 * 1024);
+	pub const DepositPerByte: Balance = deposit(0, 1);
+	pub const DefaultDepositLimit: Balance = deposit(1024, 1024 * 1024);
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 	pub const CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
 	pub const MaxDelegateDependencies: u32 = 32;

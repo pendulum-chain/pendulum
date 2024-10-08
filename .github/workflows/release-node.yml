@@ -13,7 +13,7 @@ jobs:
 #    This job will only run if:
 #     * the pull request is closed and merged to main branch;
 #     * the pull request has the "release:" and "node" in its title
-    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.title, 'release:') && contains(github.event.pull_request.title, 'node')  }}
+    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.title, 'release node:') }}
     name: Need new release
     strategy:
       fail-fast: true

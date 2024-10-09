@@ -16,9 +16,9 @@ on:
           - alpha
       specific_version:
         type: string
-        description: "specific version to bump to"
+        description: "Specific version to bump to. If specified, the versioning input will be ignored"
       packages-all:
-        description: "Check if you want ALL packages to be updated. Else, only pendulum-node"
+        description: "Check if ALL packages will be updated. Else, only pendulum-node"
         required: false
         type: boolean
         default: true
@@ -38,8 +38,9 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
 
+      # Install cargo-edit if specific version is NOT provided
       - name: install cargo-edit
-        if: github.event.inputs.specific_version != ''
+        if: github.event.inputs.specific_version == ''
         run: |
           cargo install cargo-edit
 
@@ -154,6 +155,7 @@ jobs:
 
       - name: Prepare Pull Request title and labels
         id: pr-title-labels
+        # if all packages are updated, then add all labels
         run: |
           if ${{ github.event.inputs.packages-all }} == 'true'; then
             echo "label=release-node,release-amplitude,release-pendulum" >> "$GITHUB_OUTPUT"

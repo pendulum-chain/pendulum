@@ -39,13 +39,14 @@ jobs:
           git config user.email github-actions@github.com
 
       - name: install cargo-edit
+        if: github.event.inputs.specific_version != ''
         run: |
           cargo install cargo-edit
 
       - name: Check For Specific Version
         if: github.event.inputs.specific_version != ''
         run: |
-          bash .github/scripts/specific_version_up ${{ github.event.inputs.specific_version }}
+          bash .github/scripts/package_version_up ${{ github.event.inputs.specific_version }}
           if ${{ github.event.inputs.packages-all }} == 'true'; then 
             echo "Upgrading crates to ${{ github.event.inputs.specific_version }}" &> changes.txt
           else
@@ -67,7 +68,7 @@ jobs:
           cat changes.txt
 
       - name: "Read file contents"
-        id: read_file
+        id: read-file
         uses: juliangruber/read-file-action@v1
         with:
           path: ./changes.txt
@@ -151,24 +152,28 @@ jobs:
           -F files[][path]="node/Cargo.toml" -F files[][contents]=$(base64 -w0 node/Cargo.toml) \
           -F 'query=@.github/api/createCommitOnBranch.gql'
 
-      - name: Create Pull Request for Specific Version
-        if: github.event.inputs.specific_version != ''
-        uses: thomaseizinger/create-pull-request@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          title: "release: Force version up ${{ steps.set-pkg.outputs.name }}"
-          body: "${{ steps.read_file.outputs.content }}"
-          head: ${{ steps.new-branch.outputs.name }}
-          base: main
-          reviewers: "pendulum-chain/devs"
+      - name: Prepare Pull Request title and labels
+        id: pr-title-labels
+        run: |
+          if ${{ github.event.inputs.packages-all }} == 'true'; then
+            echo "label=release-node,release-amplitude,release-pendulum" >> "$GITHUB_OUTPUT"
+          else
+            echo "label=release-node" >> "$GITHUB_OUTPUT"
+          fi
+          
+          if ${{ github.event.inputs.specific_version }} == ''; then
+            echo "title=release: ${{ github.event.inputs.versioning }} version up ${{ steps.set-pkg.outputs.name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "title=release: Force version up ${{ steps.set-pkg.outputs.name }}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Create Pull Request
-        if: github.event.inputs.specific_version == ''
         uses: thomaseizinger/create-pull-request@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          title: "release: ${{ github.event.inputs.versioning }} version up ${{ steps.set-pkg.outputs.name }}"
-          body: "${{ steps.read_file.outputs.content }}"
+          title: ${{ steps.pr-title-labels.outputs.title }}
+          body: ${{ steps.read-file.outputs.content }}
           head: ${{ steps.new-branch.outputs.name }}
           base: main
           reviewers: "pendulum-chain/devs"
+          labels: ${{ steps.pr-title-labels.outputs.label }}

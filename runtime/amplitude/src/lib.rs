@@ -158,37 +158,11 @@ parameter_types! {
 	pub const InactiveAccounts: Vec<AccountId> = Vec::new();
 }
 
-// TODO remove contract migrations after update
-use pallet_contracts::migration::{v11, v12, v13, v14, v15};
-
 // Custom storage version bump
 use frame_support::{
 	pallet_prelude::StorageVersion,
 	traits::{GetStorageVersion, OnRuntimeUpgrade},
 };
-
-pub struct CustomOnRuntimeUpgrade;
-impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
-	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		log::info!("Custom on-runtime-upgrade function");
-
-		let mut writes = 0;
-		// WARNING: manually setting the storage version
-		if ParachainStaking::on_chain_storage_version() == 0 {
-			log::info!("Upgrading parachain staking storage version to 7");
-			StorageVersion::new(7).put::<ParachainStaking>();
-			writes += 1;
-		}
-
-		if Bounties::on_chain_storage_version() == 0 {
-			log::info!("Upgrading bounties storage version to 4");
-			StorageVersion::new(4).put::<Bounties>();
-			writes += 1;
-		}
-		// not really a heavy operation
-		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(2, writes)
-	}
-}
 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
@@ -196,8 +170,7 @@ pub type Executive = frame_executive::Executive<
 	Block,
 	frame_system::ChainContext<Runtime>,
 	Runtime,
-	AllPalletsWithSystem,
-	(CustomOnRuntimeUpgrade, pallet_contracts::migration::Migration<Runtime>),
+	AllPalletsWithSystem
 >;
 
 pub struct ConvertPrice;
@@ -1024,13 +997,7 @@ impl pallet_contracts::Config for Runtime {
 	type CodeHashLockupDepositPercent = CodeHashLockupDepositPercent;
 	type MaxDelegateDependencies = MaxDelegateDependencies;
 	type RuntimeHoldReason = RuntimeHoldReason;
-	type Migrations = (
-		v11::Migration<Self>,
-		v12::Migration<Runtime, Balances>,
-		v13::Migration<Self>,
-		v14::Migration<Self, Balances>,
-		v15::Migration<Self>,
-	);
+	type Migrations = ();
 	type Debug = ();
 	type Environment = ();
 }

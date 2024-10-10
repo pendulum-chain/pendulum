@@ -153,16 +153,9 @@ jobs:
           -F files[][path]="node/Cargo.toml" -F files[][contents]=$(base64 -w0 node/Cargo.toml) \
           -F 'query=@.github/api/createCommitOnBranch.gql'
 
-      - name: Prepare Pull Request title and labels
-        id: pr-title-labels
-        # if all packages are updated, then add all labels
+      - name: Prepare Pull Request title
+        id: pr-title
         run: |
-          if ${{ github.event.inputs.packages-all }} == 'true'; then
-            echo "label=release-node,release-amplitude,release-pendulum" >> "$GITHUB_OUTPUT"
-          else
-            echo "label=release-node" >> "$GITHUB_OUTPUT"
-          fi
-          
           if ${{ github.event.inputs.specific_version }} == ''; then
             echo "title=release: ${{ github.event.inputs.versioning }} version up ${{ steps.set-pkg.outputs.name }}" >> "$GITHUB_OUTPUT"
           else
@@ -173,9 +166,9 @@ jobs:
         uses: thomaseizinger/create-pull-request@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          title: ${{ steps.pr-title-labels.outputs.title }}
+          title: ${{ steps.pr-title.outputs.title }}
           body: ${{ steps.read-file.outputs.content }}
           head: ${{ steps.new-branch.outputs.name }}
           base: main
           reviewers: "pendulum-chain/devs"
-          labels: ${{ steps.pr-title-labels.outputs.label }}
+          labels: release-node

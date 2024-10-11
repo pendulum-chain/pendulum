@@ -15564,6 +15564,7 @@ dependencies = [
  "orml-currencies-allowance-extension",
  "orml-tokens",
  "orml-traits",
+ "pallet-balances",
  "pallet-contracts",
  "parity-scale-codec",
  "sp-core",

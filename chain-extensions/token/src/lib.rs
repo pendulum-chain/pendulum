@@ -183,7 +183,6 @@ where
 	let balance_encoded: Vec<u8> = if currency_id == T::GetNativeCurrencyId::get() {
 		<pallet_balances::Pallet<T> as fungible::Inspect<T::AccountId>>::reducible_balance(&account_id, Preservation::Preserve, Fortitude::Polite).encode()
 	} else {
-
 		<orml_tokens::Pallet<T> as fungibles::Inspect<T::AccountId>>::reducible_balance(currency_id, &account_id, Preservation::Preserve, Fortitude::Polite).encode()
 	};
 

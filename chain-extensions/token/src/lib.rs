@@ -17,6 +17,7 @@ use pallet_contracts::chain_extension::{
 	ChainExtension, Environment, Ext, InitState, RetVal, SysConfig,
 };
 use sp_core::crypto::UncheckedFrom;
+use sp_std::vec::Vec;
 use sp_runtime::DispatchError;
 use sp_tracing::{error, trace};
 use sp_weights::Weight;

@@ -3,20 +3,19 @@ default_command = "../polkadot/target/release/polkadot"
 default_args = [ "-lparachain=debug" ]
 chain = "rococo-local"
 
-  [[relaychain.nodes]]
-  name = "alice"
-  validator = true
+[[relaychain.nodes]]
+name = "alice"
+validator = true
 
-  [[relaychain.nodes]]
-  name = "bob"
-  validator = true
+[[relaychain.nodes]]
+name = "bob"
+validator = true
 
 [[parachains]]
 id = 1000
 cumulus_based = true
 chain = "foucoco" # "pendulum"/"amplitude"/"dev"/"local"
 
-  [parachains.collator]
-  name = "alice"
-  command = "../pendulum/target/release/pendulum-node"
-  
+[parachains.collator]
+name = "alice"
+command = "../pendulum/target/release/pendulum-node"

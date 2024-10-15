@@ -21,6 +21,7 @@ sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", default-featu
 sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 sp-tracing = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 sp-weights = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
+pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 pallet-contracts = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 
 # Open Runtime Module Library
@@ -56,4 +57,5 @@ std = [
     "spacewalk-primitives/std",
     "chain-extension-common/std",
     "sp-std/std",
+    "pallet-balances/std"
 ]

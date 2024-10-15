@@ -157,9 +157,10 @@ jobs:
         id: pr-title
         run: |
           if ${{ github.event.inputs.specific_version }} == ''; then
-            echo "title=release: ${{ github.event.inputs.versioning }} version up ${{ steps.set-pkg.outputs.name }}" >> "$GITHUB_OUTPUT"
+            echo "title=release: Bump ${{ steps.set-pkg.outputs.name }} crate version/s to ${{ github.event.inputs.versioning }}" >> "$GITHUB_OUTPUT"
           else
-            echo "title=release: Force version up ${{ steps.set-pkg.outputs.name }}" >> "$GITHUB_OUTPUT"
+            vers=$( cargo metadata --format-version=1 --no-deps | jq '.packages[] | select(.name == "pendulum-node") | .version' | tr -d '"' )
+            echo "title=release: Force bump ${{ steps.set-pkg.outputs.name }} version/s to $vers" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create Pull Request

@@ -158,12 +158,6 @@ parameter_types! {
 	pub const InactiveAccounts: Vec<AccountId> = Vec::new();
 }
 
-// Custom storage version bump
-use frame_support::{
-	pallet_prelude::StorageVersion,
-	traits::{GetStorageVersion, OnRuntimeUpgrade},
-};
-
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
 	Runtime,

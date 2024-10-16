@@ -158,12 +158,6 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, Si
 
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
-// Custom storage version bump
-use frame_support::{
-	pallet_prelude::StorageVersion,
-	traits::{GetStorageVersion, OnRuntimeUpgrade},
-};
-
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
 	Runtime,

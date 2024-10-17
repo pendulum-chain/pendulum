@@ -1,0 +1,175 @@
+name: Version Up
+
+on:
+  workflow_dispatch:
+    inputs:
+      versioning:
+        type: choice
+        description: "choose versioning:"
+        options:
+          - major
+          - minor
+          - patch
+          - release
+          - rc
+          - beta
+          - alpha
+      specific_version:
+        type: string
+        description: "Specific version to bump to. If specified, the versioning input will be ignored"
+      packages-all:
+        description: "Check if ALL packages will be updated. Else, only pendulum-node"
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    name: bump version
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup User
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+      # Install cargo-edit if specific version is NOT provided
+      - name: install cargo-edit
+        if: github.event.inputs.specific_version == ''
+        run: |
+          cargo install cargo-edit
+
+      - name: Check For Specific Version
+        if: github.event.inputs.specific_version != ''
+        run: |
+          bash .github/scripts/package_version_up ${{ github.event.inputs.specific_version }}
+          if ${{ github.event.inputs.packages-all }} == 'true'; then 
+            echo "Upgrading crates to ${{ github.event.inputs.specific_version }}" &> changes.txt
+          else
+            echo "Upgrading node to ${{ github.event.inputs.specific_version }}" &> changes.txt
+          fi
+
+      - name: ${{ github.event.inputs.versioning }} Version Up for all
+        if:  github.event.inputs.specific_version == '' && github.event.inputs.packages-all == 'true'
+        continue-on-error: false
+        run: |
+          cargo set-version --bump ${{ github.event.inputs.versioning }} &> changes.txt
+          cat changes.txt
+
+      - name: ${{ github.event.inputs.versioning }} Version Up for node
+        if: github.event.inputs.specific_version == '' && github.event.inputs.packages-all == 'false'
+        continue-on-error: false
+        run: |
+          cargo set-version --bump ${{ github.event.inputs.versioning }} --package pendulum-node &> changes.txt
+          cat changes.txt
+
+      - name: "Read file contents"
+        id: read-file
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: ./changes.txt
+
+      - name: Set Chosen Package
+        id: set-pkg
+        run: |
+          if [ ${{ github.event.inputs.packages-all }} == 'true' ]; then
+            echo "name=all" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=node" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Put current date into a variable
+        id: date-now
+        uses: Kaven-Universe/github-action-current-date-time@v1
+        with:
+          format: "yyyy-MM-dd"
+
+      - name: Create Release Branch
+        id: new-branch
+        run: |
+          name=${{ steps.set-pkg.outputs.name }}
+          now="${{ steps.date-now.outputs.day }}-${{ steps.date-now.outputs.month }}-${{ steps.date-now.outputs.year }}"
+          
+          if [ '${{ github.event.inputs.specific_version }}' != '' ]; then
+            echo "specific version: ${{ github.event.inputs.specific_version }}"
+            branch_name="release/version-up-to-${{ github.event.inputs.specific_version }}-$name-$now"
+          else
+            vers=${{ github.event.inputs.versioning }}
+            echo "versioning: ${{ github.event.inputs.versioning }}" 
+            branch_name="release/$vers-version-up-$name-$now"
+          fi
+          
+          echo "name=${branch_name}" >> "$GITHUB_OUTPUT"
+          
+          git checkout -b ${branch_name}
+          git push --set-upstream origin ${branch_name}
+
+      #     todo: make this simpler.
+      - name: Commit New Changes to New Branch (all)
+        if: github.event.inputs.packages-all == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.new-branch.outputs.name }}
+        run: |
+          gh api graphql \
+          -F githubRepository=${{ github.repository }} \
+          -F branchName=${{ env.BRANCH }} \
+          -F expectedHeadOid=$(git rev-parse HEAD) \
+          -F commitMessage="$(cat changes.txt)" \
+          -F files[][path]="chain-extensions/common/Cargo.toml" -F files[][contents]=$(base64 -w0 chain-extensions/common/Cargo.toml) \
+          -F files[][path]="chain-extensions/price/Cargo.toml" -F files[][contents]=$(base64 -w0 chain-extensions/price/Cargo.toml) \
+          -F files[][path]="chain-extensions/token/Cargo.toml" -F files[][contents]=$(base64 -w0 chain-extensions/token/Cargo.toml) \
+          -F files[][path]="node/Cargo.toml" -F files[][contents]=$(base64 -w0 node/Cargo.toml) \
+          -F files[][path]="pallets/orml-currencies-allowance-extension/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/orml-currencies-allowance-extension/Cargo.toml) \
+          -F files[][path]="pallets/orml-tokens-management-extension/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/orml-tokens-management-extension/Cargo.toml) \
+          -F files[][path]="pallets/parachain-staking/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/parachain-staking/Cargo.toml) \
+          -F files[][path]="pallets/parachain-staking/rpc/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/parachain-staking/rpc/Cargo.toml) \
+          -F files[][path]="pallets/parachain-staking/rpc/runtime-api/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/parachain-staking/rpc/runtime-api/Cargo.toml) \
+          -F files[][path]="pallets/treasury-buyout-extension/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/treasury-buyout-extension/Cargo.toml) \
+          -F files[][path]="pallets/vesting-manager/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/vesting-manager/Cargo.toml) \
+          -F files[][path]="runtime/amplitude/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/amplitude/Cargo.toml) \
+          -F files[][path]="runtime/common/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/common/Cargo.toml) \
+          -F files[][path]="runtime/foucoco/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/foucoco/Cargo.toml) \
+          -F files[][path]="runtime/integration-tests/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/integration-tests/Cargo.toml) \
+          -F files[][path]="runtime/pendulum/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/pendulum/Cargo.toml) \
+          -F 'query=@.github/api/createCommitOnBranch.gql'
+
+      - name: Commit New Changes to New Branch (node)
+        if: github.event.inputs.packages-all == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.new-branch.outputs.name }}
+        run: |
+          gh api graphql \
+          -F githubRepository=${{ github.repository }} \
+          -F branchName=${{ env.BRANCH }} \
+          -F expectedHeadOid=$(git rev-parse HEAD) \
+          -F commitMessage="$(cat changes.txt)" \
+          -F files[][path]="node/Cargo.toml" -F files[][contents]=$(base64 -w0 node/Cargo.toml) \
+          -F 'query=@.github/api/createCommitOnBranch.gql'
+
+      - name: Prepare Pull Request title
+        id: pr-title
+        run: |
+          if ${{ github.event.inputs.specific_version }} == ''; then
+            echo "title=release: Bump ${{ steps.set-pkg.outputs.name }} crate version/s to ${{ github.event.inputs.versioning }}" >> "$GITHUB_OUTPUT"
+          else
+            vers=$( cargo metadata --format-version=1 --no-deps | jq '.packages[] | select(.name == "pendulum-node") | .version' | tr -d '"' )
+            echo "title=release: Force bump ${{ steps.set-pkg.outputs.name }} version/s to $vers" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Pull Request
+        uses: thomaseizinger/create-pull-request@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          title: ${{ steps.pr-title.outputs.title }}
+          body: ${{ steps.read-file.outputs.content }}
+          head: ${{ steps.new-branch.outputs.name }}
+          base: main
+          reviewers: "pendulum-chain/devs"
+          labels: release-node

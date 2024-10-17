@@ -1,0 +1,35 @@
+# This action triggers a GitLab CI job that generates the release notes
+name: Node Release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - 'main'
+
+jobs:
+  release_check:
+#    This job will only run if:
+#     * the pull request is closed and merged to main branch;
+#     * the pull request has the label "release-node"
+    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release-node')  }}
+    name: Need new release
+    strategy:
+      fail-fast: true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Get Node Version
+        id: get-version
+        run: |
+          vers=$( cargo metadata --format-version=1 --no-deps | jq '.packages[] | select(.name == "pendulum-node") | .version' | tr -d '"' )
+          echo "version=${vers}" >> "$GITHUB_OUTPUT"
+
+      - name: trigger gitlab
+        run: |
+          ls ${{ github.workspace }}
+          curl -X POST -F "token=${{ secrets.GITLAB_TRIGGER }}" -F "ref=development" -F "variables[PREPCOMPILE]=Y" -F "variables[COMPILE]=Y" -F "variables[COMPILEMOONBEAM]=N" -F "variables[DOCKER]=Y" -F "variables[DOCKERAMP]=Y" -F "variables[DEBIAN]=Y"  -F "variables[TEMPUPLOAD]=Y" -F "variables[DOWNUPLOAD]=Y" -F "variables[PRODUPLOAD]=Y" -F "variables[VERSION]=${{ steps.get-version.outputs.version }}" https://gitlab.com/api/v4/projects/${{ secrets.PROJECT_ID }}/trigger/pipeline

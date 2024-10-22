@@ -47,7 +47,7 @@ jobs:
       - name: Check For Specific Version
         if: github.event.inputs.specific_version != ''
         run: |
-          bash .github/scripts/package_version_up ${{ github.event.inputs.specific_version }}
+          bash .github/scripts/package_version_up.sh ${{ github.event.inputs.specific_version }}
           if ${{ github.event.inputs.packages-all }} == 'true'; then 
             echo "Upgrading crates to ${{ github.event.inputs.specific_version }}" &> changes.txt
           else
@@ -55,7 +55,7 @@ jobs:
           fi
 
       - name: ${{ github.event.inputs.versioning }} Version Up for all
-        if:  github.event.inputs.specific_version == '' && github.event.inputs.packages-all == 'true'
+        if: github.event.inputs.specific_version == '' && github.event.inputs.packages-all == 'true'
         continue-on-error: false
         run: |
           cargo set-version --bump ${{ github.event.inputs.versioning }} &> changes.txt

@@ -157,7 +157,8 @@ where
 	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
-		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
+	+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
+		+ pallet_balances::Config
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
 	Tokens: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,

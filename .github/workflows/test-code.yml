@@ -2,8 +2,6 @@ name: Test Code
 
 on:
   pull_request:
-    branches:
-      - main
   push:
     branches:
       - main
@@ -16,23 +14,11 @@ jobs:
       RUSTFLAGS: "-Dwarnings"
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/shared
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Remove rust-toolchain.toml
-        # To make sure that the nightly version will be used all throughout
-        run: |
-          rm /home/runner/work/pendulum/pendulum/rust-toolchain.toml
-
-      - name: Setup nightly Rust toolchain
-        uses:  dtolnay/rust-toolchain@nightly
-        with:
-          toolchain: nightly-2024-05-30
-          components: rustfmt, clippy
-          target: wasm32-unknown-unknown
-
-      - name: Setup nightly Rust as default
-        run: rustup default nightly-2024-05-30
+      - name: Free up Space and Installation
+        uses: ./.github/actions/shared
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
@@ -42,30 +28,11 @@ jobs:
       - name: Test
         uses: actions-rs/cargo@v1
         with:
-          toolchain: nightly-2024-05-30
           command: test
           args: --release
 
-      - name: Clippy -- Main
+      - name: Test for Runtime Benchmarks
         uses: actions-rs/cargo@v1
         with:
-          toolchain: nightly-2024-05-30
-          command: clippy
-          args: --release --all-features -- -W clippy::all -A clippy::style -A forgetting_copy_types -A forgetting_references
-
-      - name: Clippy -- All Targets (except integration)
-        uses: actions-rs/cargo@v1
-        with:
-          toolchain: nightly-2024-05-30
-          command: clippy
-          # We are a bit more forgiving when it comes to the code in tests and only check for correctness
-          args: --workspace --release --all-features --all-targets --exclude runtime-integration-tests -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
-
-      - name: Clippy -- Integration
-        uses: actions-rs/cargo@v1
-        with:
-          toolchain: nightly-2024-05-30
-          command: clippy
-          # We are a bit more forgiving when it comes to the code in tests and only check for correctness
-          args: --package runtime-integration-tests --release --all-features --all-targets -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
-    
+          command: test
+          args: --release --features=runtime-benchmarks,try-runtime

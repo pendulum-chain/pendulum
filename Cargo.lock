@@ -431,6 +431,19 @@ dependencies = [
 
 [[package]]
 name = "ark-scale"
+version = "0.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "49b08346a3e38e2be792ef53ee168623c9244d968ff00cd70fb9932f6fe36393"
+dependencies = [
+ "ark-ec",
+ "ark-ff",
+ "ark-serialize",
+ "ark-std",
+ "parity-scale-codec",
+]
+
+[[package]]
+name = "ark-scale"
 version = "0.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51bd73bb6ddb72630987d37fa963e99196896c0d0ea81b7c894567e74a2f83af"
@@ -446,7 +459,7 @@ dependencies = [
 [[package]]
 name = "ark-secret-scalar"
 version = "0.0.2"
-source = "git+https://github.com/w3f//ring-vrf?rev=3ddc20#3ddc2051066c4b3f0eadd0ba5700df12500d9754"
+source = "git+https://github.com/w3f/ring-vrf?rev=3119f51#3119f51b54b69308abfb0671f6176cb125ae1bf1"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -494,7 +507,7 @@ dependencies = [
 [[package]]
 name = "ark-transcript"
 version = "0.0.2"
-source = "git+https://github.com/w3f//ring-vrf?rev=3ddc20#3ddc2051066c4b3f0eadd0ba5700df12500d9754"
+source = "git+https://github.com/w3f/ring-vrf?rev=3119f51#3119f51b54b69308abfb0671f6176cb125ae1bf1"
 dependencies = [
  "ark-ff",
  "ark-serialize",
@@ -676,6 +689,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "hex-literal 0.4.1",
  "log",
  "pallet-asset-tx-payment",
  "pallet-assets",
@@ -745,6 +759,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "hex-literal 0.4.1",
  "log",
  "pallet-asset-conversion",
  "pallet-asset-conversion-tx-payment",
@@ -1058,13 +1073,14 @@ dependencies = [
 
 [[package]]
 name = "bandersnatch_vrfs"
-version = "0.0.4"
-source = "git+https://github.com/w3f//ring-vrf?rev=3ddc20#3ddc2051066c4b3f0eadd0ba5700df12500d9754"
+version = "0.0.1"
+source = "git+https://github.com/w3f/ring-vrf?rev=3119f51#3119f51b54b69308abfb0671f6176cb125ae1bf1"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
  "ark-ed-on-bls12-381-bandersnatch",
  "ark-ff",
+ "ark-scale 0.0.11",
  "ark-serialize",
  "ark-std",
  "dleq_vrf",
@@ -2284,7 +2300,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/burdges/ring-proof?branch=patch-1#05a756076cb20f981a52afea3a620168de49f95f"
+source = "git+https://github.com/w3f/ring-proof?rev=0e948f3#0e948f3c28cbacecdd3020403c4841c0eb339213"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -2293,7 +2309,6 @@ dependencies = [
  "ark-std",
  "fflonk",
  "merlin 3.0.0",
- "rand_chacha 0.3.1",
 ]
 
 [[package]]
@@ -3560,11 +3575,11 @@ dependencies = [
 [[package]]
 name = "dleq_vrf"
 version = "0.0.2"
-source = "git+https://github.com/w3f//ring-vrf?rev=3ddc20#3ddc2051066c4b3f0eadd0ba5700df12500d9754"
+source = "git+https://github.com/w3f/ring-vrf?rev=3119f51#3119f51b54b69308abfb0671f6176cb125ae1bf1"
 dependencies = [
  "ark-ec",
  "ark-ff",
- "ark-scale",
+ "ark-scale 0.0.10",
  "ark-secret-scalar",
  "ark-serialize",
  "ark-std",
@@ -6831,26 +6846,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mocktopus"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e4f0d5a1621fea252541cf67533c4b9c32ee892d790768f4ad48f1063059537"
-dependencies = [
- "mocktopus_macros",
-]
-
-[[package]]
-name = "mocktopus_macros"
-version = "0.7.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3048ef3680533a27f9f8e7d6a0bce44dc61e4895ea0f42709337fa1c8616fefe"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "module-issue-rpc"
 version = "1.0.10"
 source = "git+https://github.com/pendulum-chain/spacewalk?rev=580dd307ede65f90f17df6731645b678f3596e0f#580dd307ede65f90f17df6731645b678f3596e0f"
@@ -7474,7 +7469,7 @@ dependencies = [
 [[package]]
 name = "orml-asset-registry"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#2778a86fb12a1a61ca8ea9348f68b3c974f786e0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7495,7 +7490,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#2778a86fb12a1a61ca8ea9348f68b3c974f786e0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7516,7 +7511,6 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "mocktopus",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -7534,7 +7528,7 @@ dependencies = [
 [[package]]
 name = "orml-oracle"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#2778a86fb12a1a61ca8ea9348f68b3c974f786e0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7591,7 +7585,6 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "mocktopus",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -7645,7 +7638,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#2778a86fb12a1a61ca8ea9348f68b3c974f786e0"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -7675,7 +7668,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#2778a86fb12a1a61ca8ea9348f68b3c974f786e0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7689,7 +7682,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm-support"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#2778a86fb12a1a61ca8ea9348f68b3c974f786e0"
 dependencies = [
  "frame-support",
  "orml-traits",
@@ -7703,7 +7696,7 @@ dependencies = [
 [[package]]
 name = "orml-xtokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#981d707437a22d881b993f9e902d27b163ad8bca"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v1.1.0#2778a86fb12a1a61ca8ea9348f68b3c974f786e0"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -7727,6 +7720,7 @@ name = "pallet-alliance"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
 dependencies = [
+ "array-bytes",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -9562,6 +9556,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "hex-literal 0.4.1",
  "log",
  "pallet-asset-tx-payment",
  "pallet-assets",
@@ -11746,14 +11741,13 @@ dependencies = [
 [[package]]
 name = "ring"
 version = "0.1.0"
-source = "git+https://github.com/burdges/ring-proof?branch=patch-1#05a756076cb20f981a52afea3a620168de49f95f"
+source = "git+https://github.com/w3f/ring-proof?rev=0e948f3#0e948f3c28cbacecdd3020403c4841c0eb339213"
 dependencies = [
  "ark-ec",
  "ark-ff",
  "ark-poly",
  "ark-serialize",
  "ark-std",
- "blake2",
  "common",
  "fflonk",
  "merlin 3.0.0",
@@ -15890,7 +15884,6 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "mocktopus",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -16034,7 +16027,7 @@ checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
  "cfg-if",
  "digest 0.10.7",
- "rand 0.7.3",
+ "rand 0.8.5",
  "static_assertions",
 ]
 

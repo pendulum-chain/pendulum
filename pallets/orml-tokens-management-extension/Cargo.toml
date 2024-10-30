@@ -26,7 +26,6 @@ orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 
 
 [dev-dependencies]
-mocktopus = "0.8.0"
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }

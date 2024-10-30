@@ -1,7 +1,4 @@
-#[cfg(test)]
-use mocktopus::macros::mockable;
 
-#[cfg_attr(test, mockable)]
 pub(crate) mod orml_currencies_ext {
 	use crate::types::{AccountIdOf, BalanceOf, CurrencyOf};
 	use frame_support::traits::BalanceStatus;

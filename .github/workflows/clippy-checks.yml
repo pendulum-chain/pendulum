@@ -1,0 +1,38 @@
+name: Clippy Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  clippy-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Free up Space and Installation
+        uses: ./.github/actions/shared
+
+      - name: Clippy -- Main
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --release --all-features -- -W clippy::all -A clippy::style -A forgetting_copy_types -A forgetting_references
+
+      - name: Clippy -- All Targets (except integration)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          # We are a bit more forgiving when it comes to the code in tests and only check for correctness
+          args: --release --workspace --all-features --all-targets --exclude runtime-integration-tests -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
+
+      - name: Clippy -- Integration
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          # We are a bit more forgiving when it comes to the code in tests and only check for correctness
+          args: --release --package runtime-integration-tests --all-features --all-targets -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
+

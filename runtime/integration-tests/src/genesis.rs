@@ -81,7 +81,6 @@ macro_rules! genesis_gen {
 
 pub fn genesis_sibling(para_id: u32) -> Storage {
 	use sibling::BuildStorage;
-	use crate::genesis::SAFE_XCM_VERSION;
 
 	let token_balances = accounts::init_balances()
 		.iter()

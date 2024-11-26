@@ -69,7 +69,6 @@ pallet-bounties = { git = "https://github.com/paritytech/polkadot-sdk", default-
 pallet-child-bounties = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 pallet-collective = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 pallet-contracts = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-pallet-contracts-primitives = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 pallet-democracy = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 pallet-identity = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 pallet-multisig = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
@@ -185,7 +184,6 @@ std = [
     "pallet-child-bounties/std",
     "pallet-collective/std",
     "pallet-contracts/std",
-    "pallet-contracts-primitives/std",
     "pallet-democracy/std",
     "pallet-identity/std",
     "pallet-multisig/std",

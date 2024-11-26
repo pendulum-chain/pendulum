@@ -91,8 +91,8 @@ cumulus-relay-chain-rpc-interface = { git = "https://github.com/paritytech/polka
 cumulus-relay-chain-minimal-node = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 
 #bifrost
-bifrost-farming-rpc = { git = "https://github.com/bifrost-finance/bifrost", rev = "46ba3689c2fe1011cce0d752cb479e0e522e2e76" }
-bifrost-farming-rpc-runtime-api = { git = "https://github.com/bifrost-finance/bifrost", rev = "46ba3689c2fe1011cce0d752cb479e0e522e2e76" }
+bifrost-farming-rpc = { git = "https://github.com/bifrost-finance/bifrost", rev = "a25ea5dc89bd1f1d7640874471034343306f6e7c" }
+bifrost-farming-rpc-runtime-api = { git = "https://github.com/bifrost-finance/bifrost", rev = "a25ea5dc89bd1f1d7640874471034343306f6e7c" }
 
 zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0" }
 zenlink-protocol-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0" }

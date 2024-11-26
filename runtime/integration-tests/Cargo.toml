@@ -36,7 +36,7 @@ polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", 
 
 xcm-emulator = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 xcm-simulator = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
-integration-tests-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
+emulated-integration-tests-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 
 pallet-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 pallet-authorship = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
@@ -93,7 +93,7 @@ try-runtime = [
 runtime-benchmarks = [
     "kusama-runtime/runtime-benchmarks",
     "polkadot-parachain/runtime-benchmarks",
-    "integration-tests-common/runtime-benchmarks",
+    "emulated-integration-tests-common/runtime-benchmarks",
     "amplitude-runtime/runtime-benchmarks",
     "pendulum-runtime/runtime-benchmarks",
 ]

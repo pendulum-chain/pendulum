@@ -137,7 +137,7 @@ cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/polkadot-sdk"
 cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 cumulus-primitives-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 cumulus-primitives-utility = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
-parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+staging-parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 
 # Zenlink
 zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.6.0" }
@@ -207,7 +207,7 @@ std = [
     "pallet-utility/std",
     "pallet-vesting/std",
     "pallet-xcm/std",
-    "parachain-info/std",
+    "staging-parachain-info/std",
     "polkadot-runtime-common/std",
     "runtime-common/std",
     "sp-api/std",
@@ -294,7 +294,7 @@ try-runtime = [
     "frame-executive/try-runtime",
     "frame-try-runtime",
     "frame-system/try-runtime",
-    "parachain-info/try-runtime",
+    "staging-parachain-info/try-runtime",
     "pallet-timestamp/try-runtime",
     "pallet-aura/try-runtime",
     "pallet-authorship/try-runtime",

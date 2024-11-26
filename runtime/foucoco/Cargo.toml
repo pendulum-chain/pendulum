@@ -134,7 +134,7 @@ cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/polkadot-sdk"
 cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 cumulus-primitives-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 cumulus-primitives-utility = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+staging-parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 
 #orml
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v1.1.0" }
@@ -200,7 +200,7 @@ std = [
     "pallet-utility/std",
     "pallet-vesting/std",
     "pallet-xcm/std",
-    "parachain-info/std",
+    "staging-parachain-info/std",
     "parachain-staking/std",
     "orml-currencies-allowance-extension/std",
     "orml-tokens-management-extension/std",
@@ -288,7 +288,7 @@ try-runtime = [
     "frame-executive/try-runtime",
     "frame-try-runtime",
     "frame-system/try-runtime",
-    "parachain-info/try-runtime",
+    "staging-parachain-info/try-runtime",
     "pallet-timestamp/try-runtime",
     "pallet-aura/try-runtime",
     "pallet-authorship/try-runtime",

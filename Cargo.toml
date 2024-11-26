@@ -7,27 +7,27 @@ inherits = "release"
 [workspace]
 resolver = "2"
 members = [
-	"node",
-	"pallets/parachain-staking",
-	"pallets/vesting-manager",
-	"pallets/orml-currencies-allowance-extension",
-	"pallets/orml-tokens-management-extension",
-	"pallets/treasury-buyout-extension",
-	"runtime/common",
-	"runtime/amplitude",
-	"runtime/foucoco",
-	"runtime/pendulum",
-	"runtime/integration-tests",
-	"chain-extensions/token",
-	"chain-extensions/price",
-	"chain-extensions/common",
+    "node",
+    "pallets/parachain-staking",
+    "pallets/vesting-manager",
+    "pallets/orml-currencies-allowance-extension",
+    "pallets/orml-tokens-management-extension",
+    "pallets/treasury-buyout-extension",
+    "runtime/common",
+    "runtime/amplitude",
+    "runtime/foucoco",
+    "runtime/pendulum",
+    "runtime/integration-tests",
+    "chain-extensions/token",
+    "chain-extensions/price",
+    "chain-extensions/common",
 ]
 
 # need this because of bifrost farming dependency in runtime
 # bifrost farming uses different orml-traits for orml-currencies
 [patch."https://github.com/open-web3-stack/open-runtime-module-library"]
-orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v1.1.0" }
-orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v1.1.0" }
+orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v1.6.0" }
+orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v1.6.0" }
 ##
 ### need this because of bifrost farming dependency in runtime
 ### bifrost uses :

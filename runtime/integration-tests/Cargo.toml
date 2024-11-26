@@ -56,10 +56,7 @@ pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch 
 
 asset-hub-rococo-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 asset-hub-westend-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
-polkadot-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
-polkadot-runtime-constants = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
-
-kusama-runtime = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-kusama-runtime", branch = "release-polkadot-v1.6.0" }
+rococo-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 
 orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0" }
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0" }
@@ -84,16 +81,14 @@ std = [
 ]
 
 try-runtime = [
-    "kusama-runtime/try-runtime",
-    "polkadot-runtime-parachains/try-runtime",
+    "rococo-runtime/try-runtime",
     "amplitude-runtime/try-runtime",
     "pendulum-runtime/try-runtime",
 ]
 
 runtime-benchmarks = [
-    "kusama-runtime/runtime-benchmarks",
+    "rococo-runtime/runtime-benchmarks",
     "polkadot-parachain/runtime-benchmarks",
-    "emulated-integration-tests-common/runtime-benchmarks",
     "amplitude-runtime/runtime-benchmarks",
     "pendulum-runtime/runtime-benchmarks",
 ]

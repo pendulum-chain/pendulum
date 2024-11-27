@@ -19,9 +19,9 @@ sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release
 
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false, optional = true }
 
-orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v1.6.0" }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v1.6.0" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v1.6.0" }
+orml-currencies = { git = "https://github.com/pendulum-chain/open-runtime-module-library", default-features = false, branch = "polkadot-v1.6.0" }
+orml-traits = { git = "https://github.com/pendulum-chain/open-runtime-module-library", default-features = false, branch = "polkadot-v1.6.0" }
+orml-tokens = { git = "https://github.com/pendulum-chain/open-runtime-module-library", default-features = false, branch = "polkadot-v1.6.0" }
 
 
 

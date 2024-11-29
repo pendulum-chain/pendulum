@@ -24,7 +24,7 @@ impl<WrappedTransactor: TransactAsset, AutomationPalletConfigT: AutomationPallet
 	fn deposit_asset(
 		asset: &MultiAsset,
 		location: &MultiLocation,
-		_context: &XcmContext,
+		_context: Option<&XcmContext>,
 	) -> Result {
 		if let (Some(amount_deposited), Some(asset_data)) = (
 			AutomationPalletConfigT::matches_asset(asset),

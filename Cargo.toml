@@ -23,13 +23,48 @@ members = [
     "chain-extensions/common",
 ]
 
+[workspace.dependencies]
+
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+log = { version = "0.4.22",  default-features = false }
+scale-info = { version = "2.1.1", default-features = false }
+
+# Substrate
+frame-system = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+frame-support = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+pallet-contracts = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+sp-tracing = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+sp-weights = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+sp-std = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+
+
+# Spacewalk
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "c32f9ca6055fb2f22d5ea526611e042105b9728c" }
+
+
+# Orml dependencies
+orml-currencies = { package = "orml-currencies", git = "https://github.com/pendulum-chain/open-runtime-module-library.git", default-features = false, branch = "polkadot-v1.6.0" }
+orml-tokens = { package = "orml-tokens", git = "https://github.com/pendulum-chain/open-runtime-module-library.git", default-features = false, branch = "polkadot-v1.6.0" }
+orml-traits = { package = "orml-traits", git = "https://github.com/pendulum-chain/open-runtime-module-library.git", default-features = false, branch = "polkadot-v1.6.0" }
+orml-oracle = { package = "orml-oracle", git = "https://github.com/pendulum-chain/open-runtime-module-library.git", default-features = false, branch = "polkadot-v1.6.0" }
+
+# DIA
+dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v1.6.0" }
+
+# TODO do we still need to do this at 1.6.0?
 # need this because of bifrost farming dependency in runtime
 # bifrost farming uses different orml-traits for orml-currencies
-[patch."https://github.com/open-web3-stack/open-runtime-module-library"]
-#orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v1.6.0" }
-#orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", branch = "polkadot-v1.6.0" }
+[patch."https://github.com/pendulum-chain/open-runtime-module-library.git"]
+#orml-traits = { git = "https://github.com/pendulum-chain//open-runtime-module-library.git", branch = "polkadot-v1.6.0" }
+#orml-tokens = { git = "https://github.com/pendulum-chain//open-runtime-module-library.git", branch = "polkadot-v1.6.0" }
 ##
 ### need this because of bifrost farming dependency in runtime
 ### bifrost uses :
 ### orml packages { version = "0.4.1-dev" }
 ### zenlink packages  { version = "*" }
+
+[patch.crates-io]
+quote = { git  = "https://github.com/dtolnay/quote.git", rev = "5d4880c4255b5c7f5ea0a9ac3cf9f985c418a1e7" }

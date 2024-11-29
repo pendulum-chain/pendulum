@@ -32,9 +32,9 @@ orml-asset-registry = { git = "https://github.com/pendulum-chain/open-runtime-mo
 orml-xcm-support = { git = "https://github.com/pendulum-chain/open-runtime-module-library", default-features = false, branch = "polkadot-v1.6.0" }
 
 dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v1.6.0" }
-zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.6.0" }
+zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.4.0" }
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "8875c79945f09dbc0e3fa52e6f143d211000fdbe" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "c32f9ca6055fb2f22d5ea526611e042105b9728c" }
 treasury-buyout-extension = { path = "../../pallets/treasury-buyout-extension", default-features = false }
 
 [features]

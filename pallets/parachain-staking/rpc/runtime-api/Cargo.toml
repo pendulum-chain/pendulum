@@ -5,14 +5,14 @@ name = "module-pallet-staking-rpc-runtime-api"
 version = "1.1.0"
 
 [dependencies]
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
-sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
-sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
-parity-scale-codec = { version = "3.1.5", default-features = false, features = ["derive"] }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "c32f9ca6055fb2f22d5ea526611e042105b9728c" }
-serde = { version = "1.0.142", default-features = false, features = ["derive"] }
-sp-arithmetic = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+frame-support = { workspace = true }
+sp-api = { workspace = true }
+sp-std = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
+module-oracle-rpc-runtime-api = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+sp-arithmetic = { workspace = true }
 
 [features]
 default = ["std"]

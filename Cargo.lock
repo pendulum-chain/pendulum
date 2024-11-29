@@ -18579,8 +18579,3 @@ dependencies = [
  "cc",
  "pkg-config",
 ]
-
-[[patch.unused]]
-name = "quote"
-version = "1.0.36"
-source = "git+https://github.com/dtolnay/quote.git?rev=5d4880c4255b5c7f5ea0a9ac3cf9f985c418a1e7#5d4880c4255b5c7f5ea0a9ac3cf9f985c418a1e7"

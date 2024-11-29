@@ -11,30 +11,30 @@ edition = "2021"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-paste = "1.0.14"
-parity-scale-codec = { version = "3.1.5", default-features = false, features = ["derive"] }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+paste.workspace = true
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
 
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false, optional = true }
-frame-system = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-sp-std = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-sp-consensus-aura = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+frame-support = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+frame-system = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+sp-consensus-aura = { workspace = true }
+sp-core = { workspace = true }
+cumulus-primitives-core = { workspace = true }
 
-xcm = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm", default-features = false, branch = "release-polkadot-v1.6.0" }
-xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm-executor", default-features = false, branch = "release-polkadot-v1.6.0" }
+xcm = { workspace = true }
+xcm-executor = { workspace = true }
 
-orml-traits = { git = "https://github.com/pendulum-chain/open-runtime-module-library", default-features = false, branch = "polkadot-v1.6.0" }
-orml-asset-registry = { git = "https://github.com/pendulum-chain/open-runtime-module-library", default-features = false, branch = "polkadot-v1.6.0" }
-orml-xcm-support = { git = "https://github.com/pendulum-chain/open-runtime-module-library", default-features = false, branch = "polkadot-v1.6.0" }
+orml-traits = { workspace = true }
+orml-asset-registry = { workspace = true }
+orml-xcm-support = { workspace = true }
 
-dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v1.6.0" }
-zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.4.0" }
+dia-oracle = { workspace = true }
+zenlink-protocol = { workspace = true }
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "c32f9ca6055fb2f22d5ea526611e042105b9728c" }
+spacewalk-primitives = { workspace = true }
 treasury-buyout-extension = { path = "../../pallets/treasury-buyout-extension", default-features = false }
 
 [features]

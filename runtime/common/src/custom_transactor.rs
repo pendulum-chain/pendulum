@@ -1,7 +1,7 @@
 use sp_std::{marker::PhantomData, result};
 
 use xcm::v3::{prelude::*, Error as XcmError, MultiAsset, MultiLocation, Result};
-use xcm_executor::{traits::TransactAsset, Assets};
+use staging_xcm_executor::{traits::TransactAsset, Assets};
 
 pub struct AssetData {
 	pub length: u8,

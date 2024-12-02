@@ -138,12 +138,12 @@ cumulus-primitives-utility = { git = "https://github.com/paritytech/polkadot-sdk
 staging-parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 
 # Zenlink
-zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.4.0" }
-zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.4.0" }
+zenlink-protocol = { git = "https://github.com/gianfra-t/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.6.0" }
+zenlink-protocol-runtime-api = { git = "https://github.com/gianfra-t/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.6.0" }
 
 #Bifrost
-bifrost-farming = { git = "https://github.com/bifrost-finance/bifrost", default-features = false, rev = "3ea2174037109766f5085e34b89ee9eef49a2dd7" }
-bifrost-farming-rpc-runtime-api = { git = "https://github.com/bifrost-finance/bifrost", default-features = false, rev = "3ea2174037109766f5085e34b89ee9eef49a2dd7" }
+bifrost-farming = { git = "https://github.com/gianfra-t/bifrost", default-features = false, branch = "polkadot-v1.6.0" }
+bifrost-farming-rpc-runtime-api = { git = "https://github.com/gianfra-t/bifrost", default-features = false, branch = "polkadot-v1.6.0" }
 
 [features]
 default = [

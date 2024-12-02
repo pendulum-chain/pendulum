@@ -270,3 +270,26 @@ impl<
 		}
 	}
 }
+
+use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
+use sp_runtime::traits::BlockNumberProvider;
+
+/// Convert a sibling `ParaId` to an `AggregateMessageOrigin`.
+pub struct ParaIdToSibling;
+impl Convert<ParaId, AggregateMessageOrigin> for ParaIdToSibling {
+	fn convert(para_id: ParaId) -> AggregateMessageOrigin {
+		AggregateMessageOrigin::Sibling(para_id)
+	}
+}
+
+pub struct RelayChainBlockNumberProvider<T>(PhantomData<T>);
+
+impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider for RelayChainBlockNumberProvider<T> {
+	type BlockNumber = BlockNumber;
+
+	fn current_block_number() -> Self::BlockNumber {
+		cumulus_pallet_parachain_system::Pallet::<T>::validation_data()
+			.map(|d| d.relay_parent_number)
+			.unwrap_or_default()
+	}
+}

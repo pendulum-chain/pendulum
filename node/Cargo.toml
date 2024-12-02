@@ -91,12 +91,12 @@ cumulus-relay-chain-rpc-interface = { git = "https://github.com/paritytech/polka
 cumulus-relay-chain-minimal-node = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 
 #bifrost
-bifrost-farming-rpc = { git = "https://github.com/bifrost-finance/bifrost", rev = "3ea2174037109766f5085e34b89ee9eef49a2dd7" }
-bifrost-farming-rpc-runtime-api = { git = "https://github.com/bifrost-finance/bifrost", rev = "3ea2174037109766f5085e34b89ee9eef49a2dd7" }
+bifrost-farming-rpc = { git = "https://github.com/gianfra-t/bifrost", branch = "polkadot-v1.6.0" }
+bifrost-farming-rpc-runtime-api = { git = "https://github.com/gianfra-t/bifrost", branch = "polkadot-v1.6.0" }
 
-zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.4.0" }
-zenlink-protocol-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.4.0" }
-zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.4.0" }
+zenlink-protocol = { git = "https://github.com/gianfra-t/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0" }
+zenlink-protocol-rpc = { git = "https://github.com/gianfra-t/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0" }
+zenlink-protocol-runtime-api = { git = "https://github.com/gianfra-t/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0" }
 futures = "0.3.30"
 
 [build-dependencies]

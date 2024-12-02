@@ -22,10 +22,13 @@ sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 sp-consensus-aura = { workspace = true }
 sp-core = { workspace = true }
+
+cumulus-pallet-parachain-system = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 
+
 xcm = { workspace = true }
-xcm-executor = { workspace = true }
+staging-xcm-executor = { workspace = true }
 
 orml-traits = { workspace = true }
 orml-asset-registry = { workspace = true }
@@ -53,7 +56,7 @@ std = [
     "sp-consensus-aura/std",
     "sp-core/std",
     "xcm/std",
-    "xcm-executor/std",
+    "staging-xcm-executor/std",
     "orml-traits/std",
     "dia-oracle/std",
     "orml-asset-registry/std",

@@ -182,11 +182,13 @@ dependencies = [
  "pallet-democracy",
  "pallet-identity",
  "pallet-insecure-randomness-collective-flip",
+ "pallet-message-queue",
  "pallet-multisig",
  "pallet-preimage",
  "pallet-proxy",
  "pallet-scheduler",
  "pallet-session",
+ "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
@@ -195,6 +197,7 @@ dependencies = [
  "pallet-vesting",
  "pallet-xcm",
  "parachain-staking",
+ "parachains-common",
  "parity-scale-codec",
  "paste",
  "polkadot-parachain-primitives",
@@ -7459,7 +7462,7 @@ dependencies = [
 [[package]]
 name = "orml-asset-registry"
 version = "0.7.0"
-source = "git+https://github.com/pendulum-chain/open-runtime-module-library?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
+source = "git+https://github.com/pendulum-chain/open-runtime-module-library.git?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7481,12 +7484,12 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.7.0"
-source = "git+https://github.com/pendulum-chain/open-runtime-module-library?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
+source = "git+https://github.com/pendulum-chain/open-runtime-module-library.git?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
 dependencies = [
  "frame-support",
  "frame-system",
  "orml-traits",
- "orml-utilities 0.7.0 (git+https://github.com/pendulum-chain/open-runtime-module-library?branch=polkadot-v1.6.0)",
+ "orml-utilities 0.7.0 (git+https://github.com/pendulum-chain/open-runtime-module-library.git?branch=polkadot-v1.6.0)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -7519,12 +7522,12 @@ dependencies = [
 [[package]]
 name = "orml-oracle"
 version = "0.7.0"
-source = "git+https://github.com/pendulum-chain/open-runtime-module-library?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
+source = "git+https://github.com/pendulum-chain/open-runtime-module-library.git?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
 dependencies = [
  "frame-support",
  "frame-system",
  "orml-traits",
- "orml-utilities 0.7.0 (git+https://github.com/pendulum-chain/open-runtime-module-library?branch=polkadot-v1.6.0)",
+ "orml-utilities 0.7.0 (git+https://github.com/pendulum-chain/open-runtime-module-library.git?branch=polkadot-v1.6.0)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -7611,7 +7614,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.7.0"
-source = "git+https://github.com/pendulum-chain/open-runtime-module-library?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
+source = "git+https://github.com/pendulum-chain/open-runtime-module-library.git?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -7626,7 +7629,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm"
 version = "0.7.0"
-source = "git+https://github.com/pendulum-chain/open-runtime-module-library?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
+source = "git+https://github.com/pendulum-chain/open-runtime-module-library.git?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7640,7 +7643,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm-support"
 version = "0.7.0"
-source = "git+https://github.com/pendulum-chain/open-runtime-module-library?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
+source = "git+https://github.com/pendulum-chain/open-runtime-module-library.git?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
 dependencies = [
  "frame-support",
  "orml-traits",
@@ -7654,7 +7657,7 @@ dependencies = [
 [[package]]
 name = "orml-xtokens"
 version = "0.7.0"
-source = "git+https://github.com/pendulum-chain/open-runtime-module-library?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
+source = "git+https://github.com/pendulum-chain/open-runtime-module-library.git?branch=polkadot-v1.6.0#8d89db82cefb9003ebfe01d863aba9aecfc65873"
 dependencies = [
  "frame-support",
  "frame-system",

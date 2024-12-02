@@ -106,6 +106,7 @@ orml-currencies = { workspace = true }
 orml-traits = { workspace = true }
 orml-tokens = { workspace = true }
 orml-xcm-support = { workspace = true }
+orml-xtokens = { workspace = true }
 
 # KILT
 parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
@@ -138,8 +139,7 @@ cumulus-primitives-timestamp = { workspace = true }
 cumulus-primitives-utility = { workspace = true }
 parachain-info = { workspace = true }
 parachains-common = {  workspace = true }
-#orml
-orml-xtokens = { workspace = true }
+
 
 zenlink-protocol = { workspace = true }
 zenlink-protocol-runtime-api = { workspace = true }

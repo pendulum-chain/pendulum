@@ -256,4 +256,14 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for SubstrateWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(9_u64))
 			.saturating_add(T::DbWeight::get().writes(4_u64))
 	}
+
+	fn transfer_assets() -> Weight {
+		Weight::zero()
+	}
+	fn new_query() -> Weight {
+		Weight::zero()
+	}
+	fn take_response() -> Weight {
+		Weight::zero()
+	}
 }

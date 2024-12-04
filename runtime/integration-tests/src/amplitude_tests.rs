@@ -37,7 +37,6 @@ decl_test_relay_chains! {
 		on_init = (),
 		runtime = kusama_runtime,
 		core = {
-			MessageProcessor: DefaultMessageProcessor<Kusama>,
 			SovereignAccountOf: kusama_runtime::xcm_config::SovereignAccountOf,
 		},
 		pallets = {
@@ -57,7 +56,6 @@ decl_test_parachains! {
 		runtime = asset_hub_kusama_runtime,
 		core = {
 			XcmpMessageHandler: asset_hub_kusama_runtime::XcmpQueue,
-			DmpMessageHandler: asset_hub_kusama_runtime::DmpQueue,
 			LocationToAccountId: asset_hub_kusama_runtime::xcm_config::LocationToAccountId,
 			ParachainInfo: asset_hub_kusama_runtime::ParachainInfo,
 		},

@@ -40,7 +40,6 @@ decl_test_relay_chains! {
 		on_init = (),
 		runtime = polkadot_runtime,
 		core = {
-			MessageProcessor: DefaultMessageProcessor<Polkadot>,
 			SovereignAccountOf: polkadot_runtime::xcm_config::SovereignAccountOf,
 		},
 		pallets = {
@@ -60,7 +59,6 @@ decl_test_parachains! {
 		runtime = asset_hub_polkadot_runtime,
 		core = {
 			XcmpMessageHandler: asset_hub_polkadot_runtime::XcmpQueue,
-			DmpMessageHandler: asset_hub_polkadot_runtime::DmpQueue,
 			LocationToAccountId: asset_hub_polkadot_runtime::xcm_config::LocationToAccountId,
 			ParachainInfo: asset_hub_polkadot_runtime::ParachainInfo,
 		},

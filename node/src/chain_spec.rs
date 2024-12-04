@@ -3,6 +3,8 @@
 use crate::constants::{amplitude, foucoco, pendulum};
 use core::default::Default;
 use cumulus_primitives_core::ParaId;
+use jsonrpsee::core::__reexports::serde_json;
+use jsonrpsee::core::__reexports::serde_json::{Map, Value};
 use runtime_common::{AccountId, AuraId, Balance, BlockNumber, Signature, UNIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
@@ -93,6 +95,14 @@ pub fn get_pendulum_session_keys(keys: AuraId) -> pendulum_runtime::SessionKeys 
 	pendulum_runtime::SessionKeys { aura: keys }
 }
 
+fn get_amplitude_properties() -> Map<String, Value> {
+	let mut properties = Map::new();
+	properties.insert("tokenSymbol".into(), "AMPE".into());
+	properties.insert("tokenDecimals".into(), amplitude::TOKEN_DECIMALS.into());
+	properties.insert("ss58Format".into(), amplitude_runtime::SS58Prefix::get().into());
+	properties
+}
+
 pub fn amplitude_config() -> AmplitudeChainSpec {
 	sp_core::crypto::set_default_ss58_version(amplitude_runtime::SS58Prefix::get().into());
 
@@ -118,49 +128,31 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 		3,
 	);
 
-	AmplitudeChainSpec::from_genesis(
-		// Name
-		"Amplitude",
-		// ID
-		"amplitude",
-		ChainType::Live,
-		move || {
-			amplitude_genesis(
-				// initial collators.
-				invulnerables.clone(),
-				signatories.clone(),
-				vec![sudo_account.clone()],
-				sudo_account.clone(),
-				amplitude::PARACHAIN_ID.into(),
-				false,
-			)
-		},
-		// Bootnodes
-		Vec::new(),
-		// Telemetry
-		None,
-		// Protocol ID
-		Some("amplitude"),
-		// Fork ID
-		None,
-		// Properties
-		Some(properties),
-		// Extensions
+	AmplitudeChainSpec::builder(
+		amplitude_runtime::WASM_BINARY
+			.expect("WASM binary was not built, please build it!"),
 		ParachainExtensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
 			para_id: amplitude::PARACHAIN_ID,
-		},
-	)
+		}
+	).with_name("Amplitude")
+	.with_id("amplitude")
+	.with_chain_type(ChainType::Live)
+	.with_properties(get_amplitude_properties())
+	.with_genesis_config_patch(amplitude_genesis(
+		// initial collators.
+		invulnerables.clone(),
+		signatories.clone(),
+		vec![sudo_account.clone()],
+		sudo_account.clone(),
+		amplitude::PARACHAIN_ID.into(),
+		false,
+	))
+	.build()
 }
 
 pub fn foucoco_config() -> FoucocoChainSpec {
 	sp_core::crypto::set_default_ss58_version(foucoco_runtime::SS58Prefix::get().into());
-
-	// Give your base currency a unit name and decimal places
-	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "AMPE".into());
-	properties.insert("tokenDecimals".into(), foucoco::TOKEN_DECIMALS.into());
-	properties.insert("ss58Format".into(), foucoco_runtime::SS58Prefix::get().into());
 
 	let mut signatories: Vec<_> = foucoco::INITIAL_SUDO_SIGNATORIES
 		.iter()
@@ -179,40 +171,28 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 	let offchain_worker_price_feeder =
 		AccountId::from_ss58check(foucoco::OFF_CHAIN_WORKER_ADDRESS).unwrap();
 
-	FoucocoChainSpec::from_genesis(
-		// Name
-		"Foucoco",
-		// ID
-		"foucoco",
-		ChainType::Live,
-		move || {
-			foucoco_genesis(
-				// initial collators.
-				invulnerables.clone(),
-				signatories.clone(),
-				vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
-				sudo_account.clone(),
-				foucoco::PARACHAIN_ID.into(),
-				false,
-				vec![],
-			)
-		},
-		// Bootnodes
-		Vec::new(),
-		// Telemetry
-		None,
-		// Protocol ID
-		Some("foucoco"),
-		// Fork ID
-		None,
-		// Properties
-		Some(properties),
-		// Extensions
+	FoucocoChainSpec::builder(
+		foucoco_runtime::WASM_BINARY
+			.expect("WASM binary was not built, please build it!"),
 		ParachainExtensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
 			para_id: foucoco::PARACHAIN_ID,
-		},
-	)
+		}
+	).with_name("Foucoco")
+		.with_id("foucoco")
+		.with_chain_type(ChainType::Live)
+		.with_properties(get_amplitude_properties())// Same properties as Amplitude chain.
+		.with_genesis_config_patch(foucoco_genesis(
+			// initial collators.
+			invulnerables.clone(),
+			signatories.clone(),
+			vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
+			sudo_account.clone(),
+			foucoco::PARACHAIN_ID.into(),
+			false,
+			vec![],
+		))
+		.build()
 }
 
 pub fn foucoco_standalone_config() -> FoucocoChainSpec {
@@ -273,52 +253,43 @@ pub fn foucoco_standalone_config() -> FoucocoChainSpec {
 		CurrencyId::XCM(10),
 	];
 
-	FoucocoChainSpec::from_genesis(
-		// Name
-		"Foucoco-Standalone",
-		// ID
-		"foucoco-standalone",
-		ChainType::Development,
-		move || {
-			let allowed_currencies_clone = allowed_currencies.clone();
-			foucoco_genesis(
-				// initial collators.
-				invulnerables.clone(),
-				signatories.clone(),
-				vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
-				sudo_account.clone(),
-				foucoco::PARACHAIN_ID.into(),
-				false,
-				allowed_currencies_clone,
-			)
-		},
-		// Bootnodes
-		Vec::new(),
-		// Telemetry
-		None,
-		// Protocol ID
-		Some("foucoco"),
-		// Fork ID
-		None,
-		// Properties
-		Some(properties),
-		// Extensions
+	FoucocoChainSpec::builder(
+		foucoco_runtime::WASM_BINARY
+			.expect("WASM binary was not built, please build it!"),
 		ParachainExtensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
 			para_id: foucoco::PARACHAIN_ID,
-		},
-	)
+		}
+	).with_name("Foucoco-Standalone")
+		.with_id("foucoco-standalone")
+		.with_chain_type(ChainType::Live)
+		.with_properties(get_amplitude_properties())
+		.with_genesis_config_patch(foucoco_genesis(
+			// initial collators.
+			invulnerables.clone(),
+			signatories.clone(),
+			vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
+			sudo_account.clone(),
+			foucoco::PARACHAIN_ID.into(),
+			false,
+			allowed_currencies.clone(),
+		))
+		.build()
 }
+
+fn get_pendulum_properties() -> Map<String, Value> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "PEN".into());
+	properties.insert("tokenDecimals".into(), pendulum::TOKEN_DECIMALS.into());
+	properties.insert("ss58Format".into(), pendulum_runtime::SS58Prefix::get().into());
+	properties
+}
+
 
 pub fn pendulum_config() -> PendulumChainSpec {
 	// Give your base currency a unit name and decimal places
 
 	sp_core::crypto::set_default_ss58_version(pendulum_runtime::SS58Prefix::get().into());
-
-	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "PEN".into());
-	properties.insert("tokenDecimals".into(), pendulum::TOKEN_DECIMALS.into());
-	properties.insert("ss58Format".into(), pendulum_runtime::SS58Prefix::get().into());
 
 	let multisig_genesis = create_pendulum_multisig_account(pendulum::MULTISIG_ID_GENESIS);
 	let multisig_cl_reserves = create_pendulum_multisig_account(pendulum::MULTISIG_ID_CL_RESERVES);
@@ -399,40 +370,28 @@ pub fn pendulum_config() -> PendulumChainSpec {
 		balances.push((account_id, pendulum::INITIAL_ISSUANCE_PER_SIGNATORY));
 	}
 
-	PendulumChainSpec::from_genesis(
-		// Name
-		"Pendulum",
-		// ID
-		"pendulum",
-		ChainType::Live,
-		move || {
-			pendulum_genesis(
-				// initial collators.
-				collators.clone(),
-				balances.clone(),
-				vesting_schedules.clone(),
-				vec![],
-				multisig_genesis.clone(),
-				pendulum::PARACHAIN_ID.into(),
-				false,
-			)
-		},
-		// Bootnodes
-		Vec::new(),
-		// Telemetry
-		None,
-		// Protocol ID
-		Some("pendulum"),
-		// Fork ID
-		None,
-		// Properties
-		Some(properties),
-		// Extensions
+    PendulumChainSpec::builder(
+        pendulum_runtime::WASM_BINARY
+            .expect("WASM binary was not built, please build it!"),
 		ParachainExtensions {
 			relay_chain: "polkadot".into(), // You MUST set this to the correct network!
 			para_id: pendulum::PARACHAIN_ID,
-		},
-	)
+		}
+    ).with_name("Pendulum")
+        .with_id("pendulum")
+        .with_chain_type(ChainType::Live)
+        .with_properties(get_pendulum_properties())
+        .with_genesis_config_patch(pendulum_genesis(
+			// initial collators.
+			collators.clone(),
+			balances.clone(),
+			vesting_schedules.clone(),
+			vec![],
+			multisig_genesis.clone(),
+			pendulum::PARACHAIN_ID.into(),
+			false,
+		))
+        .build()
 }
 
 fn default_pair(currency_id: CurrencyId, is_public_network: bool) -> VaultCurrencyPair<CurrencyId> {
@@ -448,7 +407,7 @@ fn amplitude_genesis(
 	sudo_account: AccountId,
 	id: ParaId,
 	start_shutdown: bool,
-) -> amplitude_runtime::RuntimeGenesisConfig {
+) -> serde_json::Value {
 	let mut balances: Vec<_> = signatories
 		.iter()
 		.cloned()
@@ -490,12 +449,9 @@ fn amplitude_genesis(
 		Perquintill::from_percent(9),
 	);
 
-	amplitude_runtime::RuntimeGenesisConfig {
+	let genesis_config = amplitude_runtime::RuntimeGenesisConfig {
 		asset_registry: Default::default(),
 		system: amplitude_runtime::SystemConfig {
-			code: amplitude_runtime::WASM_BINARY
-				.expect("WASM binary was not build, please build it!")
-				.to_vec(),
 			#[allow(clippy::wrong_self_convention)]
 			_config: sp_std::marker::PhantomData::default(),
 		},
@@ -636,7 +592,9 @@ fn amplitude_genesis(
 		treasury_buyout_extension: Default::default(),
 		vesting: Default::default(),
 		zenlink_protocol: Default::default(),
-	}
+	};
+
+	serde_json::to_value(genesis_config).expect("Serialization of genesis config should work")
 }
 
 fn foucoco_genesis(
@@ -647,7 +605,7 @@ fn foucoco_genesis(
 	id: ParaId,
 	start_shutdown: bool,
 	allowed_currencies: Vec<CurrencyId>,
-) -> foucoco_runtime::RuntimeGenesisConfig {
+) -> serde_json::Value {
 	fn get_vault_currency_pair(
 		collateral: CurrencyId,
 		wrapped: CurrencyId,
@@ -699,12 +657,9 @@ fn foucoco_genesis(
 		Perquintill::from_percent(9),
 	);
 
-	foucoco_runtime::RuntimeGenesisConfig {
+	let genesis_config = foucoco_runtime::RuntimeGenesisConfig {
 		asset_registry: Default::default(),
 		system: foucoco_runtime::SystemConfig {
-			code: foucoco_runtime::WASM_BINARY
-				.expect("WASM binary was not build, please build it!")
-				.to_vec(),
 			_config: sp_std::marker::PhantomData::default(),
 		},
 		balances: foucoco_runtime::BalancesConfig { balances },
@@ -857,7 +812,9 @@ fn foucoco_genesis(
 		treasury_buyout_extension: Default::default(),
 		vesting: Default::default(),
 		zenlink_protocol: Default::default(),
-	}
+	};
+
+	serde_json::to_value(genesis_config).expect("Serialization of genesis config should work")
 }
 
 fn pendulum_genesis(
@@ -868,7 +825,7 @@ fn pendulum_genesis(
 	sudo_account: AccountId,
 	id: ParaId,
 	start_shutdown: bool,
-) -> pendulum_runtime::RuntimeGenesisConfig {
+) -> serde_json::Value {
 	let mut genesis_issuance = pendulum::TOTAL_INITIAL_ISSUANCE;
 	for balance in balances.clone() {
 		genesis_issuance -= balance.1;
@@ -895,12 +852,9 @@ fn pendulum_genesis(
 		.map(|address| AccountId::from_ss58check(address).unwrap())
 		.collect();
 
-	pendulum_runtime::RuntimeGenesisConfig {
+	let genesis_config = pendulum_runtime::RuntimeGenesisConfig {
 		asset_registry: Default::default(),
 		system: pendulum_runtime::SystemConfig {
-			code: pendulum_runtime::WASM_BINARY
-				.expect("WASM binary was not build, please build it!")
-				.to_vec(),
 			_config: sp_std::marker::PhantomData::default(),
 		},
 		balances: pendulum_runtime::BalancesConfig { balances },
@@ -1033,5 +987,8 @@ fn pendulum_genesis(
 		treasury: Default::default(),
 		tokens: Default::default(),
 		treasury_buyout_extension: Default::default(),
-	}
+	};
+
+	serde_json::to_value(genesis_config).expect("Serialization of genesis config should work")
+
 }

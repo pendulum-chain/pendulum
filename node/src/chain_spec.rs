@@ -3,8 +3,7 @@
 use crate::constants::{amplitude, foucoco, pendulum};
 use core::default::Default;
 use cumulus_primitives_core::ParaId;
-use jsonrpsee::core::__reexports::serde_json;
-use jsonrpsee::core::__reexports::serde_json::{Map, Value};
+use serde_json::{Map, Value};
 use runtime_common::{AccountId, AuraId, Balance, BlockNumber, Signature, UNIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
@@ -309,19 +308,19 @@ pub fn pendulum_config() -> PendulumChainSpec {
 
 	for pendulum::Allocation { address, amount } in pendulum::ALLOCATIONS_10_24 {
 		let account_id = AccountId::from_ss58check(address).unwrap();
-		balances.push((account_id.clone(), amount * UNIT));
-		vesting_schedules.push((account_id, 0, blocks_per_year * 2, amount * UNIT / 10))
+		balances.push((account_id.clone(), amount ));
+		vesting_schedules.push((account_id, 0, blocks_per_year * 2, amount  / 10))
 	}
 
 	for pendulum::Allocation { address, amount } in pendulum::ALLOCATIONS_12_36 {
 		let account_id = AccountId::from_ss58check(address).unwrap();
-		balances.push((account_id.clone(), amount * UNIT));
-		vesting_schedules.push((account_id.clone(), blocks_per_year, 1, amount * UNIT * 2 / 3));
+		balances.push((account_id.clone(), amount ));
+		vesting_schedules.push((account_id.clone(), blocks_per_year, 1, amount * 2 / 3));
 		vesting_schedules.push((
 			account_id,
 			blocks_per_year,
 			blocks_per_year * 2,
-			amount * UNIT / 3,
+			amount  / 3,
 		));
 	}
 
@@ -408,7 +407,7 @@ fn amplitude_genesis(
 	id: ParaId,
 	start_shutdown: bool,
 ) -> serde_json::Value {
-	let mut balances: Vec<_> = signatories
+	let balances: Vec<_> = signatories
 		.iter()
 		.cloned()
 		.map(|k| (k, amplitude::INITIAL_ISSUANCE_PER_SIGNATORY))
@@ -420,18 +419,8 @@ fn amplitude_genesis(
 		)
 		.collect();
 
-	balances.push((
-		sudo_account,
-		amplitude::INITIAL_ISSUANCE
-			.saturating_sub(
-				amplitude::INITIAL_ISSUANCE_PER_SIGNATORY
-					.saturating_mul(balances.len().try_into().unwrap()),
-			)
-			.saturating_sub(
-				amplitude::INITIAL_COLLATOR_STAKING
-					.saturating_mul(invulnerables.len().try_into().unwrap()),
-			),
-	));
+	let mut safe_balances = limit_balance_for_serialization(balances);
+	safe_balances.push((sudo_account.clone(), MAX_SAFE_INTEGER_JSON - 1));
 
 	let token_balances = vec![];
 
@@ -455,7 +444,7 @@ fn amplitude_genesis(
 			#[allow(clippy::wrong_self_convention)]
 			_config: sp_std::marker::PhantomData::default(),
 		},
-		balances: amplitude_runtime::BalancesConfig { balances },
+		balances: amplitude_runtime::BalancesConfig { balances: safe_balances },
 		parachain_info: amplitude_runtime::ParachainInfoConfig {
 			parachain_id: id,
 			_config: sp_std::marker::PhantomData::default(),
@@ -613,7 +602,7 @@ fn foucoco_genesis(
 		VaultCurrencyPair { collateral, wrapped }
 	}
 
-	let mut balances: Vec<_> = signatories
+	let balances: Vec<_> = signatories
 		.iter()
 		.cloned()
 		.map(|k| (k, foucoco::INITIAL_ISSUANCE_PER_SIGNATORY))
@@ -625,20 +614,10 @@ fn foucoco_genesis(
 		)
 		.collect();
 
-	balances.push((
-		sudo_account.clone(),
-		foucoco::INITIAL_ISSUANCE
-			.saturating_sub(
-				foucoco::INITIAL_ISSUANCE_PER_SIGNATORY
-					.saturating_mul(balances.len().try_into().unwrap()),
-			)
-			.saturating_sub(
-				foucoco::INITIAL_COLLATOR_STAKING
-					.saturating_mul(invulnerables.len().try_into().unwrap()),
-			),
-	));
+	let mut safe_balances = limit_balance_for_serialization(balances);
+	safe_balances.push((sudo_account.clone(), MAX_SAFE_INTEGER_JSON - 1));
 
-	let token_balances = balances
+	let token_balances = safe_balances
 		.iter()
 		.flat_map(|k| vec![(k.0.clone(), XCM(0), u128::pow(10, 18))])
 		.collect();
@@ -662,7 +641,7 @@ fn foucoco_genesis(
 		system: foucoco_runtime::SystemConfig {
 			_config: sp_std::marker::PhantomData::default(),
 		},
-		balances: foucoco_runtime::BalancesConfig { balances },
+		balances: foucoco_runtime::BalancesConfig { balances: safe_balances },
 		parachain_info: foucoco_runtime::ParachainInfoConfig {
 			parachain_id: id,
 			_config: sp_std::marker::PhantomData::default(),
@@ -817,21 +796,18 @@ fn foucoco_genesis(
 	serde_json::to_value(genesis_config).expect("Serialization of genesis config should work")
 }
 
+const MAX_SAFE_INTEGER_JSON: u128 = 1 << 53;
 fn pendulum_genesis(
 	collators: Vec<AccountId>,
-	mut balances: Vec<(AccountId, Balance)>,
+	balances: Vec<(AccountId, Balance)>,
 	vesting_schedules: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	authorized_oracles: Vec<AccountId>,
 	sudo_account: AccountId,
 	id: ParaId,
 	start_shutdown: bool,
 ) -> serde_json::Value {
-	let mut genesis_issuance = pendulum::TOTAL_INITIAL_ISSUANCE;
-	for balance in balances.clone() {
-		genesis_issuance -= balance.1;
-	}
-
-	balances.push((sudo_account, genesis_issuance));
+	let mut safe_balances = limit_balance_for_serialization(balances);
+	safe_balances.push((sudo_account, MAX_SAFE_INTEGER_JSON - 1));
 
 	let stakers: Vec<_> = collators
 		.iter()
@@ -857,7 +833,7 @@ fn pendulum_genesis(
 		system: pendulum_runtime::SystemConfig {
 			_config: sp_std::marker::PhantomData::default(),
 		},
-		balances: pendulum_runtime::BalancesConfig { balances },
+		balances: pendulum_runtime::BalancesConfig { balances: safe_balances },
 		parachain_info: pendulum_runtime::ParachainInfoConfig {
 			parachain_id: id,
 			_config: sp_std::marker::PhantomData::default(),
@@ -989,6 +965,25 @@ fn pendulum_genesis(
 		treasury_buyout_extension: Default::default(),
 	};
 
+	println!{"{:?}", genesis_config.balances.balances};
 	serde_json::to_value(genesis_config).expect("Serialization of genesis config should work")
 
+}
+
+fn limit_balance_for_serialization( balances: Vec<(AccountId, Balance)> ) -> Vec<(AccountId,Balance)> {
+	balances.into_iter().map(|balance| {
+		if balance.1 >= MAX_SAFE_INTEGER_JSON {
+			return (balance.0, MAX_SAFE_INTEGER_JSON - 1 )
+		}
+		balance
+	}).collect::<Vec<(AccountId, Balance)>>()
+
+}
+
+// These tests are useful to verify the conversion of the ChainSpec struct to the serialized json.
+#[test]
+fn test_genesis_serialization() {
+	pendulum_config();
+	foucoco_config();
+	amplitude_config();
 }

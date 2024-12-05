@@ -213,7 +213,7 @@ dependencies = [
  "sp-offchain",
  "sp-runtime",
  "sp-session",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-storage 13.0.0",
  "sp-transaction-pool",
  "sp-version",
@@ -332,7 +332,7 @@ dependencies = [
  "proc-macro-error",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -555,7 +555,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62945a2f7e6de02a31fe400aa489f0e0f5b2502e69f95f853adb82a96c7a6b60"
 dependencies = [
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -581,7 +581,7 @@ dependencies = [
  "num-traits",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -698,7 +698,7 @@ checksum = "213888f660fddcca0d257e88e54ac05bca01885f258ccdf695bafd77031bb69d"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -993,7 +993,7 @@ checksum = "c6fa2087f2753a7da8cc1c0dbfcf89579dd57458e36769de5ac750b4671737ca"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -1129,7 +1129,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -1157,7 +1157,7 @@ dependencies = [
  "bifrost-primitives",
  "parity-scale-codec",
  "sp-api",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -1173,7 +1173,7 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
  "staging-xcm-executor",
  "zenlink-protocol",
@@ -1196,7 +1196,7 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
 ]
 
@@ -1236,7 +1236,7 @@ dependencies = [
  "regex",
  "rustc-hash",
  "shlex",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -1750,7 +1750,7 @@ dependencies = [
  "heck 0.5.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -1812,7 +1812,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/w3f/ring-proof#395095e6f5aa4e50cd8cd6ef9f3a2e045fb27a35"
+source = "git+https://github.com/w3f/ring-proof#1eedf08d97effe1921f4aa2e926575088b068e2b"
 dependencies = [
  "ark-ec 0.5.0",
  "ark-ff 0.5.0",
@@ -2331,7 +2331,7 @@ dependencies = [
  "sp-inherents",
  "sp-runtime",
  "sp-state-machine",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-storage 13.0.0",
  "sp-trie",
  "tracing",
@@ -2412,7 +2412,7 @@ dependencies = [
  "sp-application-crypto",
  "sp-consensus-aura",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -2429,7 +2429,7 @@ dependencies = [
  "scale-info",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
 ]
 
@@ -2460,7 +2460,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-state-machine",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-trie",
  "sp-version",
  "staging-xcm",
@@ -2475,7 +2475,7 @@ dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -2489,7 +2489,7 @@ dependencies = [
  "pallet-session",
  "parity-scale-codec",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -2504,7 +2504,7 @@ dependencies = [
  "scale-info",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
 ]
 
@@ -2528,7 +2528,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
  "staging-xcm-executor",
 ]
@@ -2544,7 +2544,7 @@ dependencies = [
  "sp-api",
  "sp-consensus-aura",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -2559,7 +2559,7 @@ dependencies = [
  "scale-info",
  "sp-api",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-trie",
  "staging-xcm",
 ]
@@ -2575,7 +2575,7 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-inherents",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-trie",
 ]
 
@@ -2598,7 +2598,7 @@ dependencies = [
  "futures",
  "parity-scale-codec",
  "sp-inherents",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-timestamp",
 ]
 
@@ -2616,7 +2616,7 @@ dependencies = [
  "polkadot-runtime-parachains",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
@@ -2754,7 +2754,7 @@ dependencies = [
  "polkadot-primitives",
  "sp-runtime",
  "sp-state-machine",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-trie",
 ]
 
@@ -2770,7 +2770,7 @@ dependencies = [
  "orml-traits",
  "parity-scale-codec",
  "scale-info",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
 ]
 
@@ -2812,7 +2812,7 @@ checksum = "f46882e17999c6cc590af592290432be3bce0428cb0d5f8b6715e4dc7b383eb3"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -2852,7 +2852,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "scratch",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -2869,7 +2869,7 @@ checksum = "928bc249a7e3cd554fd2e8e08a426e9670c50bbfc9a621653cfa9accc9641783"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -2996,7 +2996,7 @@ checksum = "d65d7ce8132b7c0e54497a4d9a55a1c2a0912a0d786cf894472ba818fba45762"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -3027,7 +3027,7 @@ dependencies = [
  "serde_json",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -3039,7 +3039,7 @@ dependencies = [
  "frame-support",
  "sp-api",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -3128,7 +3128,7 @@ checksum = "487585f4d0c6655fe74905e2504d8ad6908e4db67f744eb140876906c2f3175d"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -3168,7 +3168,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "regex",
- "syn 2.0.89",
+ "syn 2.0.90",
  "termcolor",
  "toml 0.8.15",
  "walkdir",
@@ -3296,7 +3296,7 @@ dependencies = [
  "enum-ordinalize",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -3359,7 +3359,7 @@ checksum = "0d28318a75d4aead5c4db25382e8ef717932d0346600cacae6357eb5941bc5ff"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -3379,7 +3379,7 @@ checksum = "5c785274071b1b420972453b306eeca06acf4633829db4223b58a2a8c5953bc4"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -3390,7 +3390,7 @@ checksum = "6fd000fd6988e73bbe993ea3db9b1aa64906ab88766d654973924340c8cddb42"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -3519,7 +3519,7 @@ dependencies = [
  "prettier-please",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -3599,7 +3599,7 @@ dependencies = [
  "scale-info",
  "security",
  "sp-arithmetic",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
  "staking",
 ]
@@ -3616,14 +3616,14 @@ dependencies = [
 
 [[package]]
 name = "fflonk"
-version = "0.1.1"
-source = "git+https://github.com/w3f/fflonk#eda051ea3b80042e844a3ebd17c2f60536e6ee3f"
+version = "0.1.0"
+source = "git+https://github.com/w3f/fflonk#1e854f35e9a65d08b11a86291405cdc95baa0a35"
 dependencies = [
- "ark-ec 0.5.0",
- "ark-ff 0.5.0",
- "ark-poly 0.5.0",
- "ark-serialize 0.5.0",
- "ark-std 0.5.0",
+ "ark-ec 0.4.2",
+ "ark-ff 0.4.2",
+ "ark-poly 0.4.2",
+ "ark-serialize 0.4.2",
+ "ark-std 0.4.0",
  "merlin",
 ]
 
@@ -3830,7 +3830,7 @@ dependencies = [
  "sp-offchain",
  "sp-runtime",
  "sp-session",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-storage 13.0.0",
  "sp-transaction-pool",
  "sp-version",
@@ -3875,7 +3875,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-runtime-interface 17.0.0",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-storage 13.0.0",
  "static_assertions",
 ]
@@ -3936,7 +3936,7 @@ dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -3953,7 +3953,7 @@ dependencies = [
  "sp-core",
  "sp-npos-elections",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -3970,7 +3970,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-tracing 10.0.0",
 ]
 
@@ -4056,7 +4056,7 @@ dependencies = [
  "sp-runtime",
  "sp-staking",
  "sp-state-machine",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-tracing 10.0.0",
  "sp-weights",
  "static_assertions",
@@ -4079,7 +4079,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "sp-core-hashing",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -4091,7 +4091,7 @@ dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -4101,7 +4101,7 @@ source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -4119,7 +4119,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-version",
  "sp-weights",
 ]
@@ -4136,7 +4136,7 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -4157,7 +4157,7 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -4280,7 +4280,7 @@ checksum = "87750cf4b7a4c0625b1529e4c543c2182106e4dedc60a2a6455e00d212c489ac"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -5109,7 +5109,7 @@ dependencies = [
  "scale-info",
  "security",
  "sp-core",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
  "stellar-relay",
  "vault-registry",
@@ -6055,7 +6055,7 @@ dependencies = [
  "macro_magic_core",
  "macro_magic_macros",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -6069,7 +6069,7 @@ dependencies = [
  "macro_magic_core_macros",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -6080,7 +6080,7 @@ checksum = "b02abfe41815b5bd98dbd4260173db2c116dda171dc0fe7838cb206333b83308"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -6091,7 +6091,7 @@ checksum = "73ea28ee64b88876bf45277ed9a5817c1817df061a74f2b988971a12570e5869"
 dependencies = [
  "macro_magic_core",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -6353,7 +6353,7 @@ dependencies = [
  "frame-support",
  "parity-scale-codec",
  "sp-api",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -6380,7 +6380,7 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-api",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
 ]
 
@@ -6408,7 +6408,7 @@ dependencies = [
  "serde",
  "sp-api",
  "sp-arithmetic",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -6432,7 +6432,7 @@ dependencies = [
  "frame-support",
  "parity-scale-codec",
  "sp-api",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -6456,7 +6456,7 @@ dependencies = [
  "frame-support",
  "parity-scale-codec",
  "sp-api",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -6482,7 +6482,7 @@ dependencies = [
  "module-oracle-rpc-runtime-api",
  "parity-scale-codec",
  "sp-api",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -6609,7 +6609,7 @@ dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
  "synstructure 0.13.1",
 ]
 
@@ -6796,7 +6796,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "security",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
  "staking",
  "vault-registry",
@@ -6976,7 +6976,7 @@ dependencies = [
  "scale-info",
  "security",
  "sp-arithmetic",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
  "spin 0.9.8",
 ]
@@ -7039,7 +7039,7 @@ dependencies = [
  "serde",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
@@ -7059,7 +7059,7 @@ dependencies = [
  "serde",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7080,7 +7080,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7098,7 +7098,7 @@ dependencies = [
  "sp-application-crypto",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7115,7 +7115,7 @@ dependencies = [
  "serde",
  "sp-arithmetic",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7136,7 +7136,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
 ]
 
@@ -7156,7 +7156,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
 ]
 
@@ -7172,7 +7172,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7187,7 +7187,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7199,7 +7199,7 @@ dependencies = [
  "orml-traits",
  "parity-scale-codec",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
  "staging-xcm-executor",
 ]
@@ -7220,7 +7220,7 @@ dependencies = [
  "serde",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
  "staging-xcm-executor",
 ]
@@ -7243,7 +7243,7 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7261,7 +7261,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7277,7 +7277,7 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7294,7 +7294,7 @@ dependencies = [
  "sp-application-crypto",
  "sp-consensus-aura",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7310,7 +7310,7 @@ dependencies = [
  "sp-application-crypto",
  "sp-authority-discovery",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7324,7 +7324,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7348,7 +7348,7 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7369,7 +7369,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-tracing 10.0.0",
 ]
 
@@ -7385,7 +7385,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7405,7 +7405,7 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7430,7 +7430,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-state-machine",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7448,7 +7448,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7465,7 +7465,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7484,7 +7484,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7503,7 +7503,7 @@ dependencies = [
  "scale-info",
  "sp-runtime",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7520,7 +7520,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7547,7 +7547,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
  "staging-xcm-builder",
  "wasm-instrument 0.4.0",
@@ -7561,7 +7561,7 @@ source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -7590,7 +7590,7 @@ dependencies = [
  "serde",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7608,7 +7608,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7630,7 +7630,7 @@ dependencies = [
  "sp-io",
  "sp-npos-elections",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "strum 0.24.1",
 ]
 
@@ -7645,7 +7645,7 @@ dependencies = [
  "parity-scale-codec",
  "sp-npos-elections",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7664,7 +7664,7 @@ dependencies = [
  "sp-npos-elections",
  "sp-runtime",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7683,7 +7683,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7706,7 +7706,7 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7723,7 +7723,7 @@ dependencies = [
  "scale-info",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7743,7 +7743,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7760,7 +7760,7 @@ dependencies = [
  "sp-io",
  "sp-keyring",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7774,7 +7774,7 @@ dependencies = [
  "safe-mix",
  "scale-info",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7791,7 +7791,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7810,7 +7810,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-weights",
 ]
 
@@ -7829,7 +7829,7 @@ dependencies = [
  "sp-io",
  "sp-mmr-primitives",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7845,7 +7845,7 @@ dependencies = [
  "scale-info",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7861,7 +7861,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7879,7 +7879,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-tracing 10.0.0",
 ]
 
@@ -7900,7 +7900,7 @@ dependencies = [
  "sp-runtime",
  "sp-runtime-interface 17.0.0",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7911,7 +7911,7 @@ dependencies = [
  "pallet-nomination-pools",
  "parity-scale-codec",
  "sp-api",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7928,7 +7928,7 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7952,7 +7952,7 @@ dependencies = [
  "scale-info",
  "sp-runtime",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7969,7 +7969,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -7984,7 +7984,7 @@ dependencies = [
  "scale-info",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8002,7 +8002,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8017,7 +8017,7 @@ dependencies = [
  "scale-info",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8036,7 +8036,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8051,7 +8051,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8068,7 +8068,7 @@ dependencies = [
  "scale-info",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-weights",
 ]
 
@@ -8090,7 +8090,7 @@ dependencies = [
  "sp-session",
  "sp-staking",
  "sp-state-machine",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-trie",
 ]
 
@@ -8108,7 +8108,7 @@ dependencies = [
  "rand",
  "sp-runtime",
  "sp-session",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8126,7 +8126,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8149,7 +8149,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8160,7 +8160,7 @@ dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -8196,7 +8196,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8212,7 +8212,7 @@ dependencies = [
  "scale-info",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8230,7 +8230,7 @@ dependencies = [
  "sp-inherents",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-storage 13.0.0",
  "sp-timestamp",
 ]
@@ -8251,7 +8251,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8267,7 +8267,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8314,7 +8314,7 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8330,7 +8330,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8345,7 +8345,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8360,7 +8360,7 @@ dependencies = [
  "scale-info",
  "sp-api",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8380,7 +8380,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
@@ -8399,7 +8399,7 @@ dependencies = [
  "scale-info",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
@@ -8430,7 +8430,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -8461,7 +8461,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-parachain-info",
  "staging-xcm",
  "staging-xcm-builder",
@@ -8812,7 +8812,7 @@ dependencies = [
  "sp-offchain",
  "sp-runtime",
  "sp-session",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-storage 13.0.0",
  "sp-transaction-pool",
  "sp-version",
@@ -8869,7 +8869,7 @@ dependencies = [
  "pest_meta",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -8910,7 +8910,7 @@ checksum = "2f38a4412a78282e09a2cf38d195ea5420d15ba0602cb375210efbc877243965"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -9105,7 +9105,7 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -9701,7 +9701,7 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-weights",
 ]
 
@@ -9728,7 +9728,7 @@ dependencies = [
  "sp-keystore",
  "sp-runtime",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -9809,7 +9809,7 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
@@ -9825,7 +9825,7 @@ dependencies = [
  "frame-benchmarking",
  "parity-scale-codec",
  "polkadot-primitives",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-tracing 10.0.0",
 ]
 
@@ -9872,7 +9872,7 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
  "staging-xcm-executor",
  "static_assertions",
@@ -10036,9 +10036,9 @@ checksum = "fecd2caacfc4a7ee34243758dd7348859e6dec73f5e5df059890f5742ee46f0e"
 
 [[package]]
 name = "polkavm-common"
-version = "0.9.0"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d9428a5cfcc85c5d7b9fc4b6a18c4b802d0173d768182a51cc7751640f08b92"
+checksum = "8f0dbafef4ab6ceecb4982ac3b550df430ef4f9fdbf07c108b7d4f91a0682fce"
 
 [[package]]
 name = "polkavm-derive"
@@ -10047,14 +10047,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db65a500d4adf574893c726ae365e37e4fbb7f2cbd403f6eaa1b665457456adc"
 dependencies = [
  "polkavm-derive-impl 0.4.0",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
 name = "polkavm-derive"
-version = "0.9.1"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae8c4bea6f3e11cd89bb18bcdddac10bd9a24015399bd1c485ad68a985a19606"
+checksum = "206caf322dfc02144510ad8360ff2051e5072f0874dcab3b410f78cdd52d0ebb"
 dependencies = [
  "polkavm-derive-impl-macro",
 ]
@@ -10068,29 +10068,29 @@ dependencies = [
  "polkavm-common 0.4.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
 name = "polkavm-derive-impl"
-version = "0.9.0"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c4fdfc49717fb9a196e74a5d28e0bc764eb394a2c803eb11133a31ac996c60c"
+checksum = "42565aed4adbc4034612d0b17dea8db3681fb1bd1aed040d6edc5455a9f478a1"
 dependencies = [
- "polkavm-common 0.9.0",
+ "polkavm-common 0.17.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
 name = "polkavm-derive-impl-macro"
-version = "0.9.0"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ba81f7b5faac81e528eb6158a6f3c9e0bb1008e0ffa19653bc8dea925ecb429"
+checksum = "86d9838e95241b0bce4fe269cdd4af96464160505840ed5a8ac8536119ba19e2"
 dependencies = [
- "polkavm-derive-impl 0.9.0",
- "syn 2.0.89",
+ "polkavm-derive-impl 0.17.0",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -10157,7 +10157,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-arithmetic",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
 ]
 
@@ -10216,7 +10216,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22020dfcf177fcc7bf5deaf7440af371400c67c0de14c399938d8ed4fb4645d3"
 dependencies = [
  "proc-macro2",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -10236,7 +10236,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f12335488a2f3b0a83b14edad48dca9879ce89b2edd10e80237e4e852dd645e"
 dependencies = [
  "proc-macro2",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -10370,7 +10370,7 @@ checksum = "834da187cfe638ae8abb0203f0b33e5ccdb02a28e7199f2f47b3e2754f50edca"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -10416,7 +10416,7 @@ checksum = "440f724eba9f6996b75d63681b0a92b06947f1457076d503a4d2e2c8f56442b8"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -10679,7 +10679,7 @@ dependencies = [
  "scale-info",
  "security",
  "sp-core",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
  "stellar-relay",
  "vault-registry",
@@ -10753,7 +10753,7 @@ checksum = "bcc303e793d3734489387d205e9b186fac9c6cfacedd98cbb2e8a5943595f3e6"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -10832,7 +10832,7 @@ dependencies = [
  "scale-info",
  "security",
  "sp-core",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
  "stellar-relay",
  "vault-registry",
@@ -10865,7 +10865,7 @@ dependencies = [
  "scale-info",
  "security",
  "sp-arithmetic",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
  "staking",
 ]
@@ -10883,7 +10883,7 @@ dependencies = [
 [[package]]
 name = "ring"
 version = "0.1.0"
-source = "git+https://github.com/w3f/ring-proof#395095e6f5aa4e50cd8cd6ef9f3a2e045fb27a35"
+source = "git+https://github.com/w3f/ring-proof#1eedf08d97effe1921f4aa2e926575088b068e2b"
 dependencies = [
  "ark-ec 0.5.0",
  "ark-ff 0.5.0",
@@ -11031,7 +11031,7 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-storage 13.0.0",
  "sp-transaction-pool",
  "sp-version",
@@ -11113,7 +11113,7 @@ dependencies = [
  "sp-consensus-aura",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
  "staging-xcm",
  "staging-xcm-executor",
@@ -11433,7 +11433,7 @@ dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -12377,7 +12377,7 @@ dependencies = [
  "serde_json",
  "sp-core",
  "sp-io",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -12437,7 +12437,7 @@ dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -12733,7 +12733,7 @@ dependencies = [
  "serde",
  "sha2 0.10.8",
  "sp-core",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -12824,17 +12824,16 @@ checksum = "ad1e866f866923f252f05c889987993144fb74e722403468a4ebd70c3cd756c0"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
 name = "serde_json"
-version = "1.0.133"
+version = "1.0.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7fceb2473b9166b2294ef05efcb65a3db80803f0b03ef86a5fc88a2b85ee377"
+checksum = "455182ea6142b14f93f4bc5320a2b31c1f266b66a4a5c858b013302a5d8cbfc3"
 dependencies = [
  "itoa",
- "memchr",
  "ryu",
  "serde",
 ]
@@ -13000,7 +12999,7 @@ dependencies = [
  "parity-scale-codec",
  "paste",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -13209,7 +13208,7 @@ dependencies = [
  "sp-metadata-ir",
  "sp-runtime",
  "sp-state-machine",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-trie",
  "sp-version",
  "thiserror",
@@ -13226,7 +13225,7 @@ dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -13239,7 +13238,7 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-io",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -13252,7 +13251,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-std 8.0.0",
+ "sp-std",
  "static_assertions",
 ]
 
@@ -13284,7 +13283,7 @@ dependencies = [
  "sp-api",
  "sp-application-crypto",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -13295,7 +13294,7 @@ dependencies = [
  "sp-api",
  "sp-inherents",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -13344,7 +13343,7 @@ dependencies = [
  "sp-consensus-slots",
  "sp-inherents",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-timestamp",
 ]
 
@@ -13363,7 +13362,7 @@ dependencies = [
  "sp-core",
  "sp-inherents",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-timestamp",
 ]
 
@@ -13382,7 +13381,7 @@ dependencies = [
  "sp-io",
  "sp-mmr-primitives",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "strum 0.24.1",
 ]
 
@@ -13401,7 +13400,7 @@ dependencies = [
  "sp-core",
  "sp-keystore",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -13412,7 +13411,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-timestamp",
 ]
 
@@ -13452,7 +13451,7 @@ dependencies = [
  "sp-debug-derive 8.0.0",
  "sp-externalities 0.19.0",
  "sp-runtime-interface 17.0.0",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-storage 13.0.0",
  "ss58-registry",
  "substrate-bip39",
@@ -13482,13 +13481,13 @@ source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot
 dependencies = [
  "quote",
  "sp-core-hashing",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
 name = "sp-crypto-ec-utils"
 version = "0.10.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#2779043b0f667b75062cdc085e8052190b78cb20"
+source = "git+https://github.com/paritytech/polkadot-sdk#f31c70aad4f90168824871c3c094008f3120b333"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-377-ext",
@@ -13521,17 +13520,17 @@ source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
 name = "sp-debug-derive"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#2779043b0f667b75062cdc085e8052190b78cb20"
+source = "git+https://github.com/paritytech/polkadot-sdk#f31c70aad4f90168824871c3c094008f3120b333"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -13541,14 +13540,14 @@ source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot
 dependencies = [
  "environmental",
  "parity-scale-codec",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-storage 13.0.0",
 ]
 
 [[package]]
 name = "sp-externalities"
 version = "0.25.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#2779043b0f667b75062cdc085e8052190b78cb20"
+source = "git+https://github.com/paritytech/polkadot-sdk#f31c70aad4f90168824871c3c094008f3120b333"
 dependencies = [
  "environmental",
  "parity-scale-codec",
@@ -13563,7 +13562,7 @@ dependencies = [
  "serde_json",
  "sp-api",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -13576,7 +13575,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "thiserror",
 ]
 
@@ -13597,7 +13596,7 @@ dependencies = [
  "sp-keystore",
  "sp-runtime-interface 17.0.0",
  "sp-state-machine",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-tracing 10.0.0",
  "sp-trie",
  "tracing",
@@ -13643,7 +13642,7 @@ dependencies = [
  "frame-metadata",
  "parity-scale-codec",
  "scale-info",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -13655,7 +13654,7 @@ dependencies = [
  "scale-info",
  "sp-api",
  "sp-application-crypto",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -13672,7 +13671,7 @@ dependencies = [
  "sp-core",
  "sp-debug-derive 8.0.0",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "thiserror",
 ]
 
@@ -13687,7 +13686,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -13740,7 +13739,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-core",
  "sp-io",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-weights",
 ]
 
@@ -13755,7 +13754,7 @@ dependencies = [
  "primitive-types 0.12.2",
  "sp-externalities 0.19.0",
  "sp-runtime-interface-proc-macro 11.0.0",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-storage 13.0.0",
  "sp-tracing 10.0.0",
  "sp-wasm-interface 14.0.0",
@@ -13765,16 +13764,16 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface"
 version = "24.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#2779043b0f667b75062cdc085e8052190b78cb20"
+source = "git+https://github.com/paritytech/polkadot-sdk#f31c70aad4f90168824871c3c094008f3120b333"
 dependencies = [
  "bytes",
  "impl-trait-for-tuples",
  "parity-scale-codec",
- "polkavm-derive 0.9.1",
+ "polkavm-derive 0.17.1",
  "primitive-types 0.13.1",
  "sp-externalities 0.25.0",
  "sp-runtime-interface-proc-macro 17.0.0",
- "sp-std 14.0.0",
+ "sp-std",
  "sp-storage 19.0.0",
  "sp-tracing 16.0.0",
  "sp-wasm-interface 20.0.0",
@@ -13791,20 +13790,20 @@ dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
 name = "sp-runtime-interface-proc-macro"
 version = "17.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#2779043b0f667b75062cdc085e8052190b78cb20"
+source = "git+https://github.com/paritytech/polkadot-sdk#f31c70aad4f90168824871c3c094008f3120b333"
 dependencies = [
  "Inflector",
  "expander 2.1.0",
  "proc-macro-crate 3.1.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -13819,7 +13818,7 @@ dependencies = [
  "sp-keystore",
  "sp-runtime",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -13833,7 +13832,7 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -13850,7 +13849,7 @@ dependencies = [
  "sp-core",
  "sp-externalities 0.19.0",
  "sp-panic-handler",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-trie",
  "thiserror",
  "tracing",
@@ -13876,7 +13875,7 @@ dependencies = [
  "sp-externalities 0.19.0",
  "sp-runtime",
  "sp-runtime-interface 17.0.0",
- "sp-std 8.0.0",
+ "sp-std",
  "thiserror",
  "x25519-dalek 2.0.1",
 ]
@@ -13885,11 +13884,6 @@ dependencies = [
 name = "sp-std"
 version = "8.0.0"
 source = "git+https://github.com/paritytech//polkadot-sdk?branch=release-polkadot-v1.6.0#f00a911c52c047db3119dedfddc86c332ff6626b"
-
-[[package]]
-name = "sp-std"
-version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#2779043b0f667b75062cdc085e8052190b78cb20"
 
 [[package]]
 name = "sp-storage"
@@ -13901,13 +13895,13 @@ dependencies = [
  "ref-cast",
  "serde",
  "sp-debug-derive 8.0.0",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
 name = "sp-storage"
 version = "19.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#2779043b0f667b75062cdc085e8052190b78cb20"
+source = "git+https://github.com/paritytech/polkadot-sdk#f31c70aad4f90168824871c3c094008f3120b333"
 dependencies = [
  "impl-serde 0.5.0",
  "parity-scale-codec",
@@ -13925,7 +13919,7 @@ dependencies = [
  "parity-scale-codec",
  "sp-inherents",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "thiserror",
 ]
 
@@ -13935,7 +13929,7 @@ version = "10.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.6.0#f00a911c52c047db3119dedfddc86c332ff6626b"
 dependencies = [
  "parity-scale-codec",
- "sp-std 8.0.0",
+ "sp-std",
  "tracing",
  "tracing-core",
  "tracing-subscriber 0.2.25",
@@ -13944,7 +13938,7 @@ dependencies = [
 [[package]]
 name = "sp-tracing"
 version = "16.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#2779043b0f667b75062cdc085e8052190b78cb20"
+source = "git+https://github.com/paritytech/polkadot-sdk#f31c70aad4f90168824871c3c094008f3120b333"
 dependencies = [
  "parity-scale-codec",
  "tracing",
@@ -13972,7 +13966,7 @@ dependencies = [
  "sp-core",
  "sp-inherents",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-trie",
 ]
 
@@ -13993,7 +13987,7 @@ dependencies = [
  "schnellru",
  "sp-core",
  "sp-externalities 0.19.0",
- "sp-std 8.0.0",
+ "sp-std",
  "thiserror",
  "tracing",
  "trie-db",
@@ -14012,7 +14006,7 @@ dependencies = [
  "serde",
  "sp-core-hashing-proc-macro",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-version-proc-macro",
  "thiserror",
 ]
@@ -14025,7 +14019,7 @@ dependencies = [
  "parity-scale-codec",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -14037,14 +14031,14 @@ dependencies = [
  "impl-trait-for-tuples",
  "log",
  "parity-scale-codec",
- "sp-std 8.0.0",
+ "sp-std",
  "wasmtime",
 ]
 
 [[package]]
 name = "sp-wasm-interface"
 version = "20.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#2779043b0f667b75062cdc085e8052190b78cb20"
+source = "git+https://github.com/paritytech/polkadot-sdk#f31c70aad4f90168824871c3c094008f3120b333"
 dependencies = [
  "anyhow",
  "impl-trait-for-tuples",
@@ -14064,7 +14058,7 @@ dependencies = [
  "smallvec",
  "sp-arithmetic",
  "sp-debug-derive 8.0.0",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -14081,7 +14075,7 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "substrate-stellar-sdk",
 ]
 
@@ -14153,7 +14147,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -14190,7 +14184,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-weights",
  "staging-xcm",
  "staging-xcm-executor",
@@ -14212,7 +14206,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-weights",
  "staging-xcm",
 ]
@@ -14229,7 +14223,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-arithmetic",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
 ]
 
@@ -14281,7 +14275,7 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-core",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
 ]
 
@@ -14348,7 +14342,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rustversion",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -14446,7 +14440,7 @@ dependencies = [
  "sodalite",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -14507,9 +14501,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.89"
+version = "2.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44d46482f1c1c87acd84dea20c1bf5ebff4c757009ed6bf19cfd36fb10e92c4e"
+checksum = "919d3b74a5dd0ccd15aeb8f93e7006bd9e14c295087c9896a110f490752bcf31"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -14536,7 +14530,7 @@ checksum = "c8af7666ab7b6390ab78131fb5b0fce11d6b7a6951602017c35fa82800708971"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -14635,7 +14629,7 @@ checksum = "e4c60d69f36615a077cc7663b9cb8e42275722d23e58a7fa3d2c7f2915d09d04"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -14646,7 +14640,7 @@ checksum = "46c3384250002a6d5af4d114f2845d37b57521033f30d5c3f46c4d70e1197533"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -14780,7 +14774,7 @@ dependencies = [
  "parity-scale-codec",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-tracing 10.0.0",
  "sp-weights",
  "spacewalk-primitives",
@@ -14813,7 +14807,7 @@ checksum = "5b8a1e28f2deaa14e508979454cb3a223b10b938b45af148bc0986de36f1923b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -14989,7 +14983,7 @@ checksum = "34704c8d6ebcbc939824180af020566b01a7c01f80641264eba0999f6c2b6be7"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -15032,7 +15026,7 @@ dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -15130,7 +15124,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
  "staging-xcm",
 ]
@@ -15416,7 +15410,7 @@ dependencies = [
  "security",
  "serde",
  "sp-core",
- "sp-std 8.0.0",
+ "sp-std",
  "spacewalk-primitives",
  "staking",
 ]
@@ -15447,7 +15441,7 @@ dependencies = [
  "serde",
  "sp-api",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
 ]
 
 [[package]]
@@ -15547,7 +15541,7 @@ dependencies = [
  "once_cell",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
  "wasm-bindgen-shared",
 ]
 
@@ -15581,7 +15575,7 @@ checksum = "e94f17b526d0a461a191c78ea52bbce64071ed5c04c9ffe424dcb38f74171bb7"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
@@ -16041,7 +16035,7 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-staking",
- "sp-std 8.0.0",
+ "sp-std",
  "sp-storage 13.0.0",
  "sp-transaction-pool",
  "sp-version",
@@ -16437,7 +16431,7 @@ dependencies = [
  "Inflector",
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -16481,7 +16475,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-core",
  "sp-runtime",
- "sp-std 8.0.0",
+ "sp-std",
  "staging-xcm",
 ]
 
@@ -16508,7 +16502,7 @@ source = "git+https://github.com/gianfra-t/Zenlink-DEX-Module?branch=release-pol
 dependencies = [
  "parity-scale-codec",
  "sp-api",
- "sp-std 8.0.0",
+ "sp-std",
  "zenlink-protocol",
 ]
 
@@ -16529,7 +16523,7 @@ checksum = "15e934569e47891f7d9411f1a451d947a60e000ab3bd24fbb970f000387d1b3b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -16549,7 +16543,7 @@ checksum = "ce36e65b0d2999d2aafac989fb249189a141aee1f53c612c1f37d72631959f69"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.89",
+ "syn 2.0.90",
 ]
 
 [[package]]

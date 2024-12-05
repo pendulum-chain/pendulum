@@ -53,3 +53,7 @@ runs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Add rust-src component
+      run: rustup component add rust-src
+      shell: bash

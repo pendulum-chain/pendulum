@@ -293,7 +293,7 @@ runtime-benchmarks = [
     "orml-currencies-allowance-extension/runtime-benchmarks",
     "treasury-buyout-extension/runtime-benchmarks",
     "dia-oracle/runtime-benchmarks",
-    "dia-oracle-runtime-api/runtime-benchmarks"
+    "dia-oracle-runtime-api/runtime-benchmarks",
 ]
 
 try-runtime = [

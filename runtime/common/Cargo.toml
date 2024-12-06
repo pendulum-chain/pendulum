@@ -78,5 +78,4 @@ runtime-benchmarks = [
     "treasury-buyout-extension/runtime-benchmarks",
     "dia-oracle/runtime-benchmarks",
     "staging-xcm-executor/runtime-benchmarks",
-    "zenlink-protocol/runtime-benchmarks",
 ]

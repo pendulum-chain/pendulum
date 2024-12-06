@@ -74,7 +74,7 @@ pub use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 
 use dia_oracle::DiaOracle;
 
-use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
+use xcm_config::{XcmOriginToTransactDispatchOrigin};
 
 use module_oracle_rpc_runtime_api::BalanceWrapper;
 use orml_currencies::BasicCurrencyAdapter;
@@ -165,7 +165,9 @@ pub type Executive = frame_executive::Executive<
 	Block,
 	frame_system::ChainContext<Runtime>,
 	Runtime,
-	AllPalletsWithSystem
+	AllPalletsWithSystem,
+	(cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
+	 pallet_identity::migration::v1::VersionUncheckedMigrateV0ToV1<Runtime, { u64::MAX }>)
 >;
 
 pub struct ConvertPrice;
@@ -471,7 +473,7 @@ impl pallet_balances::Config for Runtime {
 	type ReserveIdentifier = ReserveIdentifier;
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
-	type MaxHolds = ConstU32<1>;
+	type MaxHolds = ConstU32<2>;
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 }
@@ -1582,7 +1584,6 @@ mod benches {
 
 		// Other
 		[orml_asset_registry, runtime_common::benchmarking::orml_asset_registry::Pallet::<Runtime>]
-		[pallet_xcm, PolkadotXcm]
 
 		[orml_currencies_allowance_extension, TokenAllowance]
 		[treasury_buyout_extension, TreasuryBuyoutExtension]

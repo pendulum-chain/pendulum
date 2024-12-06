@@ -25,7 +25,6 @@ pub mod nomination;
 pub mod oracle;
 pub mod orml_asset_registry;
 pub mod orml_currencies_allowance_extension;
-pub mod pallet_xcm;
 pub mod parachain_staking;
 pub mod paritydb_weights;
 pub mod redeem;

@@ -43,6 +43,8 @@ use spacewalk_primitives::{
 	UnsignedFixedPoint, UnsignedInner,
 };
 
+use crate::xcm_config::XcmConfig;
+
 #[cfg(any(feature = "runtime-benchmarks"))]
 use oracle::testing_utils::MockDataFeeder;
 

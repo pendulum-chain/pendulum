@@ -69,6 +69,8 @@ use runtime_common::{
 	ProxyType, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
+use crate::xcm_config::XcmConfig;
+
 #[cfg(any(feature = "runtime-benchmarks"))]
 use oracle::testing_utils::MockDataFeeder;
 

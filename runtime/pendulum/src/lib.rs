@@ -43,6 +43,7 @@ use spacewalk_primitives::{
 	UnsignedFixedPoint, UnsignedInner,
 };
 
+#[cfg(not(feature = "runtime-benchmarks"))]
 use crate::xcm_config::XcmConfig;
 
 #[cfg(any(feature = "runtime-benchmarks"))]

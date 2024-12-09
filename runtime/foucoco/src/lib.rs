@@ -69,6 +69,7 @@ use runtime_common::{
 	ProxyType, ReserveIdentifier, Signature, EXISTENTIAL_DEPOSIT, MILLIUNIT, NANOUNIT, UNIT,
 };
 
+#[cfg(not(feature = "runtime-benchmarks"))]
 use crate::xcm_config::XcmConfig;
 
 #[cfg(any(feature = "runtime-benchmarks"))]

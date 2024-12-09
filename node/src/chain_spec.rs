@@ -16,6 +16,7 @@ use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	FixedPointNumber, FixedU128, Perquintill,
 };
+
 use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, VaultCurrencyPair};
 
 const MAINNET_USDC_CURRENCY_ID: CurrencyId = pendulum_runtime::GetWrappedCurrencyId::get();
@@ -478,12 +479,12 @@ fn amplitude_genesis(
 		},
 		council: amplitude_runtime::CouncilConfig {
 			members: signatories.clone(),
-			..Default::default()
+			phantom: Default::default(),
 		},
 		democracy: Default::default(),
 		technical_committee: amplitude_runtime::TechnicalCommitteeConfig {
 			members: signatories,
-			..Default::default()
+			phantom: sp_std::marker::PhantomData::default(),
 		},
 		tokens: amplitude_runtime::TokensConfig {
 			// Configure the initial token supply
@@ -945,7 +946,7 @@ fn pendulum_genesis(
 		},
 		nomination: pendulum_runtime::NominationConfig {
 			is_nomination_enabled: false,
-			_phantom: sp_std::marker::PhantomData::default(),
+			..Default::default()
 		},
 		dia_oracle_module: pendulum_runtime::DiaOracleModuleConfig {
 			authorized_accounts: authorized_oracles,
@@ -965,8 +966,22 @@ fn pendulum_genesis(
 		treasury_buyout_extension: Default::default(),
 	};
 
-	println!{"{:?}", genesis_config.balances.balances};
-	serde_json::to_value(genesis_config).expect("Serialization of genesis config should work")
+
+	let value = serde_json::to_value(genesis_config).expect("Serialization of genesis config should work");
+
+	// Serialize the genesis configuration
+	let serialized = serde_json::to_string(&value)
+		.expect("Serialization of JSON value should work");
+
+	let target_position: usize = 5090;
+	let context_range :usize= 15;
+
+	let start: usize = target_position.saturating_sub(context_range);
+	let end :usize= (target_position + context_range).min(serialized.len());
+
+	let context = &serialized[start..end];
+	println!("Context  5090:\n{}", context);
+	value
 
 }
 
@@ -984,6 +999,6 @@ fn limit_balance_for_serialization( balances: Vec<(AccountId, Balance)> ) -> Vec
 #[test]
 fn test_genesis_serialization() {
 	pendulum_config();
-	foucoco_config();
-	amplitude_config();
+	//foucoco_config();
+	//amplitude_config();
 }

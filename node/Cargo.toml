@@ -107,15 +107,31 @@ substrate-build-script-utils = {  workspace = true, default-features = true }
 [features]
 default = []
 runtime-benchmarks = [
-    "amplitude-runtime/runtime-benchmarks",
-    "foucoco-runtime/runtime-benchmarks",
-    "pendulum-runtime/runtime-benchmarks",
-    "runtime-common/runtime-benchmarks",
-    "polkadot-cli/runtime-benchmarks",
+	"amplitude-runtime/runtime-benchmarks",
+	"foucoco-runtime/runtime-benchmarks",
+	"pendulum-runtime/runtime-benchmarks",
+	"runtime-common/runtime-benchmarks",
+	"polkadot-cli/runtime-benchmarks",
+	"cumulus-primitives-core/runtime-benchmarks",
+	"frame-benchmarking/runtime-benchmarks",
+	"frame-benchmarking-cli/runtime-benchmarks",
+	"pallet-multisig/runtime-benchmarks",
+	"pallet-treasury/runtime-benchmarks",
+	"polkadot-primitives/runtime-benchmarks",
+	"polkadot-service/runtime-benchmarks",
+	"sc-service/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
+	"zenlink-protocol/runtime-benchmarks"
 ]
 try-runtime = [
-    "amplitude-runtime/try-runtime",
-    "foucoco-runtime/try-runtime",
-    "pendulum-runtime/try-runtime",
-    "try-runtime-cli/try-runtime"
+	"amplitude-runtime/try-runtime",
+	"foucoco-runtime/try-runtime",
+	"pendulum-runtime/try-runtime",
+	"try-runtime-cli/try-runtime",
+	"pallet-multisig/try-runtime",
+	"pallet-treasury/try-runtime",
+	"polkadot-cli/try-runtime",
+	"polkadot-service/try-runtime",
+	"sp-runtime/try-runtime",
+	"zenlink-protocol/try-runtime"
 ]

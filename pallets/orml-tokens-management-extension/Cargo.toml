@@ -34,30 +34,37 @@ spacewalk-primitives = { workspace = true}
 [features]
 default = ["std"]
 std = [
-    "serde/std",
-    "codec/std",
-    "sha2/std",
-    "sp-core/std",
-    "sp-std/std",
-    "sp-runtime/std",
-    "frame-support/std",
-    "frame-system/std",
-    "orml-currencies/std",
-    "orml-tokens/std",
-    "orml-traits/std",
-    "frame-benchmarking/std",
-    "spacewalk-primitives/std"
+	"serde/std",
+	"codec/std",
+	"sha2/std",
+	"sp-core/std",
+	"sp-std/std",
+	"sp-runtime/std",
+	"frame-support/std",
+	"frame-system/std",
+	"orml-currencies/std",
+	"orml-tokens/std",
+	"orml-traits/std",
+	"frame-benchmarking/std",
+	"spacewalk-primitives/std",
+	"scale-info/std",
+	"sp-io/std"
 ]
 
 runtime-benchmarks = [
-    "frame-benchmarking/runtime-benchmarks",
-    "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks",
+	"frame-benchmarking/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+	"orml-tokens/runtime-benchmarks",
+	"pallet-balances/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks"
 ]
 
 try-runtime = [
-    "frame-system/try-runtime",
-    "frame-support/try-runtime",
-    "orml-currencies/try-runtime",
-    "orml-tokens/try-runtime",
+	"frame-system/try-runtime",
+	"frame-support/try-runtime",
+	"orml-currencies/try-runtime",
+	"orml-tokens/try-runtime",
+	"pallet-balances/try-runtime",
+	"sp-runtime/try-runtime"
 ]

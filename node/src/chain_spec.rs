@@ -309,19 +309,19 @@ pub fn pendulum_config() -> PendulumChainSpec {
 
 	for pendulum::Allocation { address, amount } in pendulum::ALLOCATIONS_10_24 {
 		let account_id = AccountId::from_ss58check(address).unwrap();
-		balances.push((account_id.clone(), amount ));
-		vesting_schedules.push((account_id, 0, blocks_per_year * 2, amount  / 10))
+		balances.push((account_id.clone(), amount * UNIT));
+		vesting_schedules.push((account_id, 0, blocks_per_year * 2, amount * UNIT / 10))
 	}
 
 	for pendulum::Allocation { address, amount } in pendulum::ALLOCATIONS_12_36 {
 		let account_id = AccountId::from_ss58check(address).unwrap();
-		balances.push((account_id.clone(), amount ));
-		vesting_schedules.push((account_id.clone(), blocks_per_year, 1, amount * 2 / 3));
+		balances.push((account_id.clone(), amount * UNIT));
+		vesting_schedules.push((account_id.clone(), blocks_per_year, 1, amount * UNIT * 2 / 3));
 		vesting_schedules.push((
 			account_id,
 			blocks_per_year,
 			blocks_per_year * 2,
-			amount  / 3,
+			amount * UNIT / 3,
 		));
 	}
 
@@ -422,6 +422,7 @@ fn amplitude_genesis(
 
 	let mut safe_balances = limit_balance_for_serialization(balances);
 	safe_balances.push((sudo_account.clone(), MAX_SAFE_INTEGER_JSON - 1));
+
 
 	let token_balances = vec![];
 
@@ -966,23 +967,7 @@ fn pendulum_genesis(
 		treasury_buyout_extension: Default::default(),
 	};
 
-
-	let value = serde_json::to_value(genesis_config).expect("Serialization of genesis config should work");
-
-	// Serialize the genesis configuration
-	let serialized = serde_json::to_string(&value)
-		.expect("Serialization of JSON value should work");
-
-	let target_position: usize = 5090;
-	let context_range :usize= 15;
-
-	let start: usize = target_position.saturating_sub(context_range);
-	let end :usize= (target_position + context_range).min(serialized.len());
-
-	let context = &serialized[start..end];
-	println!("Context  5090:\n{}", context);
-	value
-
+	serde_json::to_value(genesis_config).expect("Serialization of genesis config should work")
 }
 
 fn limit_balance_for_serialization( balances: Vec<(AccountId, Balance)> ) -> Vec<(AccountId,Balance)> {

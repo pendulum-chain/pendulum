@@ -121,7 +121,6 @@ runtime-benchmarks = [
 	"polkadot-service/runtime-benchmarks",
 	"sc-service/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
-	"zenlink-protocol/runtime-benchmarks"
 ]
 try-runtime = [
 	"amplitude-runtime/try-runtime",

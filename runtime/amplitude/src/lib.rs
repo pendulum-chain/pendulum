@@ -74,7 +74,9 @@ pub use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 
 use dia_oracle::DiaOracle;
 
-use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
+use xcm_config::XcmOriginToTransactDispatchOrigin;
+#[cfg(not(feature = "runtime-benchmarks"))]
+use xcm_config::XcmConfig;
 
 use module_oracle_rpc_runtime_api::BalanceWrapper;
 use orml_currencies::BasicCurrencyAdapter;

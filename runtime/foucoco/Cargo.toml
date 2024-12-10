@@ -325,7 +325,6 @@ runtime-benchmarks = [
 	"reward-distribution/runtime-benchmarks",
 	"staging-xcm-executor/runtime-benchmarks",
 	"staking/runtime-benchmarks",
-	"zenlink-protocol/runtime-benchmarks"
 ]
 
 try-runtime = [

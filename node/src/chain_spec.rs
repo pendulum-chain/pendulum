@@ -4,7 +4,7 @@ use crate::constants::{amplitude, foucoco, pendulum};
 use core::default::Default;
 use cumulus_primitives_core::ParaId;
 use serde_json::{Map, Value};
-use runtime_common::{AccountId, AuraId, Balance, BlockNumber, Signature, UNIT};
+use runtime_common::{AccountId, AuraId, Balance, Signature, UNIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
@@ -301,28 +301,18 @@ pub fn pendulum_config() -> PendulumChainSpec {
 		.map(|ss58| AccountId::from_ss58check(ss58).unwrap())
 		.collect();
 
-	let mut vesting_schedules = vec![];
 	let mut balances = vec![];
-	let blocks_per_year = pendulum_runtime::BLOCKS_PER_YEAR;
 
 	let treasury = pallet_treasury::Pallet::<pendulum_runtime::Runtime>::account_id();
 
 	for pendulum::Allocation { address, amount } in pendulum::ALLOCATIONS_10_24 {
 		let account_id = AccountId::from_ss58check(address).unwrap();
 		balances.push((account_id.clone(), amount * UNIT));
-		vesting_schedules.push((account_id, 0, blocks_per_year * 2, amount * UNIT / 10))
 	}
 
 	for pendulum::Allocation { address, amount } in pendulum::ALLOCATIONS_12_36 {
 		let account_id = AccountId::from_ss58check(address).unwrap();
 		balances.push((account_id.clone(), amount * UNIT));
-		vesting_schedules.push((account_id.clone(), blocks_per_year, 1, amount * UNIT * 2 / 3));
-		vesting_schedules.push((
-			account_id,
-			blocks_per_year,
-			blocks_per_year * 2,
-			amount * UNIT / 3,
-		));
 	}
 
 	for collator in collators.clone() {
@@ -331,31 +321,12 @@ pub fn pendulum_config() -> PendulumChainSpec {
 	}
 
 	balances.push((multisig_cl_reserves.clone(), pendulum::CL_RESERVES_ALLOCATION));
-	vesting_schedules.push((multisig_cl_reserves, 0, blocks_per_year * 22 / 12, 0));
 
 	balances.push((multisig_incentives.clone(), pendulum::INCENTIVES_ALLOCATION));
-	vesting_schedules.push((
-		multisig_incentives,
-		0,
-		blocks_per_year * 3,
-		pendulum::INCENTIVES_ALLOCATION * 30 / 100,
-	));
 
 	balances.push((multisig_marketing.clone(), pendulum::MARKETING_ALLOCATION));
-	vesting_schedules.push((
-		multisig_marketing,
-		0,
-		blocks_per_year * 3,
-		pendulum::MARKETING_ALLOCATION * 10 / 100,
-	));
 
 	balances.push((treasury.clone(), pendulum::TREASURY_ALLOCATION));
-	vesting_schedules.push((
-		treasury,
-		0,
-		blocks_per_year * 3,
-		pendulum::TREASURY_ALLOCATION * 20 / 100,
-	));
 
 	let multisig_identifiers = [
 		pendulum::MULTISIG_ID_GENESIS,
@@ -385,7 +356,6 @@ pub fn pendulum_config() -> PendulumChainSpec {
 			// initial collators.
 			collators.clone(),
 			balances.clone(),
-			vesting_schedules.clone(),
 			vec![],
 			multisig_genesis.clone(),
 			pendulum::PARACHAIN_ID.into(),
@@ -420,7 +390,7 @@ fn amplitude_genesis(
 		)
 		.collect();
 
-	let mut safe_balances = limit_balance_for_serialization(balances);
+	let mut safe_balances = balances;
 	safe_balances.push((sudo_account.clone(), MAX_SAFE_INTEGER_JSON - 1));
 
 
@@ -616,7 +586,7 @@ fn foucoco_genesis(
 		)
 		.collect();
 
-	let mut safe_balances = limit_balance_for_serialization(balances);
+	let mut safe_balances = balances;
 	safe_balances.push((sudo_account.clone(), MAX_SAFE_INTEGER_JSON - 1));
 
 	let token_balances = safe_balances
@@ -802,7 +772,6 @@ const MAX_SAFE_INTEGER_JSON: u128 = 1 << 53;
 fn pendulum_genesis(
 	collators: Vec<AccountId>,
 	balances: Vec<(AccountId, Balance)>,
-	vesting_schedules: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	authorized_oracles: Vec<AccountId>,
 	sudo_account: AccountId,
 	id: ParaId,
@@ -873,7 +842,7 @@ fn pendulum_genesis(
 			members: council,
 			..Default::default()
 		},
-		vesting: pendulum_runtime::VestingConfig { vesting: vesting_schedules },
+		vesting: Default::default(),
 		issue: pendulum_runtime::IssueConfig {
 			issue_period: pendulum_runtime::DAYS,
 			issue_minimum_transfer_amount: 1_000_000_000,
@@ -977,13 +946,12 @@ fn limit_balance_for_serialization( balances: Vec<(AccountId, Balance)> ) -> Vec
 		}
 		balance
 	}).collect::<Vec<(AccountId, Balance)>>()
-
 }
 
 // These tests are useful to verify the conversion of the ChainSpec struct to the serialized json.
 #[test]
 fn test_genesis_serialization() {
 	pendulum_config();
-	//foucoco_config();
-	//amplitude_config();
+	foucoco_config();
+	amplitude_config();
 }

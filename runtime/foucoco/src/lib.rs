@@ -1092,7 +1092,7 @@ parameter_types! {
 	pub const MaxSubAccounts: u32 = 100;
 	pub const MaxAdditionalFields: u32 = 100;
 	pub const MaxRegistrars: u32 = 20;
-	pub const ByteDeposit: Balance = 1 * MILLIUNIT;
+	pub const ByteDeposit: Balance = MILLIUNIT;
 	pub const PendingUsernameExpiration: u32 = 100;
 }
 

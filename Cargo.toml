@@ -240,6 +240,7 @@ bifrost-farming-rpc-runtime-api = { git = "https://github.com/gianfra-t/bifrost"
 orml-traits = { git = "https://github.com/pendulum-chain//open-runtime-module-library.git", branch = "polkadot-v1.6.0" }
 orml-tokens = { git = "https://github.com/pendulum-chain//open-runtime-module-library.git", branch = "polkadot-v1.6.0" }
 
+
 [patch."https://github.com/paritytech/polkadot-sdk"]
 sp-std = { git = "https://github.com/paritytech//polkadot-sdk", branch = "release-polkadot-v1.6.0", package = "sp-std", version = "8.0.0" } # WHY NEED FOR THIS?
 

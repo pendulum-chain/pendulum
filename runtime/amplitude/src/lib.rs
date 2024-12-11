@@ -47,9 +47,9 @@ use frame_support::{
 	dispatch::DispatchClass,
 	parameter_types,
 	traits::{
-		fungible::Credit, ConstBool, ConstU32, Contains, Currency as FrameCurrency,
+		fungible::{HoldConsideration, Credit}, ConstBool, ConstU32, Contains, Currency as FrameCurrency,
 		EitherOfDiverse, EqualPrivilegeOnly, Imbalance, InstanceFilter, OnUnbalanced,
-		WithdrawReasons, tokens::{PayFromAccount,UnityAssetBalanceConversion},
+		WithdrawReasons, tokens::{PayFromAccount,UnityAssetBalanceConversion}, LinearStoragePrice
 
 	},
 	weights::{
@@ -719,6 +719,8 @@ parameter_types! {
 	pub const PreimageBaseDeposit: Balance = UNIT;
 	// One cent: $10,000 / MB
 	pub const PreimageByteDeposit: Balance = 10 * MILLIUNIT;
+	pub const PreimageHoldReason: RuntimeHoldReason =
+		RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
 }
 
 impl pallet_preimage::Config for Runtime {
@@ -726,7 +728,12 @@ impl pallet_preimage::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type ManagerOrigin = EnsureRoot<AccountId>;
-	type Consideration = ();
+	type Consideration = HoldConsideration<
+		AccountId,
+		Balances,
+		PreimageHoldReason,
+		LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
+	>;
 }
 
 parameter_types! {

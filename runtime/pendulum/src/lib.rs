@@ -85,6 +85,8 @@ pub use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 
 pub use dia_oracle::dia::AssetId;
 use dia_oracle::DiaOracle;
+use frame_support::traits::fungible::HoldConsideration;
+use frame_support::traits::LinearStoragePrice;
 pub use issue::{Event as IssueEvent, IssueRequest};
 pub use nomination::Event as NominationEvent;
 use oracle::dia::DiaOracleAdapter;
@@ -719,6 +721,8 @@ parameter_types! {
 	pub const PreimageBaseDeposit: Balance = UNIT;
 	// One cent: $10,000 / MB
 	pub const PreimageByteDeposit: Balance = 10 * MILLIUNIT;
+	pub const PreimageHoldReason: RuntimeHoldReason =
+		RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
 }
 
 impl pallet_preimage::Config for Runtime {
@@ -726,7 +730,12 @@ impl pallet_preimage::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type ManagerOrigin = EnsureRoot<AccountId>;
-	type Consideration = ();
+	type Consideration = HoldConsideration<
+		AccountId,
+		Balances,
+		PreimageHoldReason,
+		LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
+	>;
 }
 
 parameter_types! {

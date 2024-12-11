@@ -25,16 +25,17 @@ members = [
 
 [workspace.dependencies]
 cfg-if = "1.0.0"
-clap = { version = "4.0.17", default-features = false, features = ["derive"] }
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+clap = { version = "4.0.17", default-features = false }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 futures = { version = "0.3.30", default-features = false }
 hex-literal = { version = "0.3.4" }
 jsonrpsee = { version = "0.16.0", default-features = false}
 log = { version = "0.4.22",  default-features = false }
-parity-scale-codec = { version = "3.1.5", default-features = false, features = ["derive"] }
+parity-scale-codec = { version = "3.1.5", default-features = false }
 paste = { version = "1.0.14" , default-features = false }
 scale-info = { version = "2.0", default-features = false }
-serde = { version = "1.0.136", default-features = false, features = ["derive"] }
+serde = { version = "1.0.136", default-features = false }
+serde_derive = { version = "1.0.117" }
 serde_json = { version = "1.0.120", default-features = false }
 sha2 = { version = "0.8.2", default-features = false }
 smallvec = "1.9.0"
@@ -87,6 +88,7 @@ sp-io = { git = "https://github.com/paritytech/polkadot-sdk", default-features =
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 sp-tracing = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 sp-weights = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+sp-staking = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 sp-std = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 xcm = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm", default-features = false, branch = "release-polkadot-v1.6.0" }
 staging-xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
@@ -169,6 +171,7 @@ xcm-emulator = { git = "https://github.com/paritytech/polkadot-sdk", default-fea
 xcm-simulator = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 
 substrate-build-script-utils = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+substrate-wasm-builder = { git = "https://github.com/paritytech//polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 
 # Spacewalk
 module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
@@ -244,5 +247,4 @@ orml-tokens = { git = "https://github.com/pendulum-chain//open-runtime-module-li
 [patch."https://github.com/paritytech/polkadot-sdk"]
 sp-std = { git = "https://github.com/paritytech//polkadot-sdk", branch = "release-polkadot-v1.6.0", package = "sp-std", version = "8.0.0" } # WHY NEED FOR THIS?
 
-# also for integration tests
-#substrate-wasm-builder = { git = "https://github.com/paritytech//polkadot-sdk", branch = "release-polkadot-v1.6.0" }
+

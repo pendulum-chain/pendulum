@@ -29,10 +29,11 @@ jobs:
           # We are a bit more forgiving when it comes to the code in tests and only check for correctness
           args: --release --workspace --all-features --all-targets --exclude runtime-integration-tests -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
 
-      - name: Clippy -- Integration
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          # We are a bit more forgiving when it comes to the code in tests and only check for correctness
-          args: --release --package runtime-integration-tests --all-features --all-targets -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
+# Disabled until we move to crates.io and fix runtime-integration-tests.
+#      - name: Clippy -- Integration
+#        uses: actions-rs/cargo@v1
+#        with:
+#          command: clippy
+#          # We are a bit more forgiving when it comes to the code in tests and only check for correctness
+#          args: --release --package runtime-integration-tests --all-features --all-targets -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
 

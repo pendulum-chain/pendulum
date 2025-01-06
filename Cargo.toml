@@ -202,9 +202,9 @@ pooled-rewards = { git = "https://github.com/pendulum-chain/spacewalk", default-
 reward-distribution = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
 
 # Zenlink
-zenlink-protocol = { git = "https://github.com/gianfra-t/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.6.0" }
-zenlink-protocol-rpc = { git = "https://github.com/gianfra-t/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.6.0" }
-zenlink-protocol-runtime-api = { git = "https://github.com/gianfra-t/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.6.0" }
+zenlink-protocol = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.6.0" }
+zenlink-protocol-rpc = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.6.0" }
+zenlink-protocol-runtime-api = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.6.0" }
 
 
 # Orml dependencies
@@ -222,9 +222,9 @@ dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-
 dia-oracle-runtime-api = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v1.6.0" }
 
 # Bifrost
-bifrost-farming = { git = "https://github.com/gianfra-t/bifrost", default-features = false, branch = "polkadot-v1.6.0" }
-bifrost-farming-rpc = { git = "https://github.com/gianfra-t/bifrost", default-features = false, branch = "polkadot-v1.6.0" }
-bifrost-farming-rpc-runtime-api = { git = "https://github.com/gianfra-t/bifrost", default-features = false, branch = "polkadot-v1.6.0" }
+bifrost-farming = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "polkadot-v1.6.0" }
+bifrost-farming-rpc = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "polkadot-v1.6.0" }
+bifrost-farming-rpc-runtime-api = { git = "https://github.com/pendulum-chain/bifrost", default-features = false, branch = "polkadot-v1.6.0" }
 
 
 

@@ -229,7 +229,7 @@ dependencies = [
  "treasury-buyout-extension",
  "vault-registry",
  "vesting-manager",
- "zenlink-protocol",
+ "zenlink-protocol 0.4.4 (git+https://github.com/pendulum-chain/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0)",
  "zenlink-protocol-runtime-api",
 ]
 
@@ -1113,7 +1113,7 @@ dependencies = [
 [[package]]
 name = "bifrost-farming"
 version = "0.8.0"
-source = "git+https://github.com/gianfra-t/bifrost?branch=polkadot-v1.6.0#1a0e01765b64f6b8c871027d804b5fb15475585d"
+source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v1.6.0#1a0e01765b64f6b8c871027d804b5fb15475585d"
 dependencies = [
  "bifrost-primitives",
  "bifrost-ve-minting",
@@ -1135,7 +1135,7 @@ dependencies = [
 [[package]]
 name = "bifrost-farming-rpc"
 version = "0.8.0"
-source = "git+https://github.com/gianfra-t/bifrost?branch=polkadot-v1.6.0#1a0e01765b64f6b8c871027d804b5fb15475585d"
+source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v1.6.0#1a0e01765b64f6b8c871027d804b5fb15475585d"
 dependencies = [
  "bifrost-farming-rpc-runtime-api",
  "bifrost-primitives",
@@ -1152,7 +1152,7 @@ dependencies = [
 [[package]]
 name = "bifrost-farming-rpc-runtime-api"
 version = "0.8.0"
-source = "git+https://github.com/gianfra-t/bifrost?branch=polkadot-v1.6.0#1a0e01765b64f6b8c871027d804b5fb15475585d"
+source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v1.6.0#1a0e01765b64f6b8c871027d804b5fb15475585d"
 dependencies = [
  "bifrost-primitives",
  "parity-scale-codec",
@@ -1163,7 +1163,7 @@ dependencies = [
 [[package]]
 name = "bifrost-primitives"
 version = "0.8.0"
-source = "git+https://github.com/gianfra-t/bifrost?branch=polkadot-v1.6.0#1a0e01765b64f6b8c871027d804b5fb15475585d"
+source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v1.6.0#1a0e01765b64f6b8c871027d804b5fb15475585d"
 dependencies = [
  "bstringify",
  "frame-support",
@@ -1176,13 +1176,13 @@ dependencies = [
  "sp-std",
  "staging-xcm",
  "staging-xcm-executor",
- "zenlink-protocol",
+ "zenlink-protocol 0.4.4 (git+https://github.com/gianfra-t/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0)",
 ]
 
 [[package]]
 name = "bifrost-ve-minting"
 version = "0.8.0"
-source = "git+https://github.com/gianfra-t/bifrost?branch=polkadot-v1.6.0#1a0e01765b64f6b8c871027d804b5fb15475585d"
+source = "git+https://github.com/pendulum-chain/bifrost?branch=polkadot-v1.6.0#1a0e01765b64f6b8c871027d804b5fb15475585d"
 dependencies = [
  "bifrost-primitives",
  "cumulus-primitives-core",
@@ -3921,7 +3921,7 @@ dependencies = [
  "token-chain-extension",
  "treasury-buyout-extension",
  "vault-registry",
- "zenlink-protocol",
+ "zenlink-protocol 0.4.4 (git+https://github.com/pendulum-chain/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0)",
  "zenlink-protocol-runtime-api",
 ]
 
@@ -8926,7 +8926,7 @@ dependencies = [
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
  "try-runtime-cli",
- "zenlink-protocol",
+ "zenlink-protocol 0.4.4 (git+https://github.com/pendulum-chain/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0)",
  "zenlink-protocol-rpc",
  "zenlink-protocol-runtime-api",
 ]
@@ -9044,7 +9044,7 @@ dependencies = [
  "treasury-buyout-extension",
  "vault-registry",
  "vesting-manager",
- "zenlink-protocol",
+ "zenlink-protocol 0.4.4 (git+https://github.com/pendulum-chain/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0)",
  "zenlink-protocol-runtime-api",
 ]
 
@@ -11316,7 +11316,7 @@ dependencies = [
  "staging-xcm",
  "staging-xcm-executor",
  "treasury-buyout-extension",
- "zenlink-protocol",
+ "zenlink-protocol 0.4.4 (git+https://github.com/pendulum-chain/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0)",
 ]
 
 [[package]]
@@ -17250,9 +17250,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "zenlink-protocol"
+version = "0.4.4"
+source = "git+https://github.com/pendulum-chain/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0#5df18ddd43408f9219c33d5b70a3d1741ee505dc"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic 16.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.6.0)",
+ "sp-core 21.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.6.0)",
+ "sp-runtime 24.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.6.0)",
+ "sp-std",
+ "staging-xcm",
+]
+
+[[package]]
 name = "zenlink-protocol-rpc"
 version = "0.4.4"
-source = "git+https://github.com/gianfra-t/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0#5df18ddd43408f9219c33d5b70a3d1741ee505dc"
+source = "git+https://github.com/pendulum-chain/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0#5df18ddd43408f9219c33d5b70a3d1741ee505dc"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -17261,19 +17283,19 @@ dependencies = [
  "sp-blockchain",
  "sp-rpc",
  "sp-runtime 24.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.6.0)",
- "zenlink-protocol",
+ "zenlink-protocol 0.4.4 (git+https://github.com/pendulum-chain/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0)",
  "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.4"
-source = "git+https://github.com/gianfra-t/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0#5df18ddd43408f9219c33d5b70a3d1741ee505dc"
+source = "git+https://github.com/pendulum-chain/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0#5df18ddd43408f9219c33d5b70a3d1741ee505dc"
 dependencies = [
  "parity-scale-codec",
  "sp-api 4.0.0-dev (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.6.0)",
  "sp-std",
- "zenlink-protocol",
+ "zenlink-protocol 0.4.4 (git+https://github.com/pendulum-chain/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0)",
 ]
 
 [[package]]

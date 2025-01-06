@@ -912,7 +912,7 @@ parameter_types! {
 	pub const MinCollatorStake: Balance = 5_000 * UNIT;
 	pub const MinDelegatorStake: Balance = 10 * UNIT;
 	#[derive(Debug, Eq, PartialEq)]
-	pub const MaxTopCandidates: u32 = 50;
+	pub const MaxTopCandidates: u32 = 40;
 	pub const MaxUnstakeRequests: u32 = 10;
 	pub const NetworkRewardStart: BlockNumber = BlockNumber::MAX;
 	pub const NetworkRewardRate: Perquintill = Perquintill::from_percent(0);

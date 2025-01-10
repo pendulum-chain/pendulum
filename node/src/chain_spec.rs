@@ -22,6 +22,8 @@ use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, Vaul
 const MAINNET_USDC_CURRENCY_ID: CurrencyId = pendulum_runtime::GetWrappedCurrencyId::get();
 const TESTNET_USDC_CURRENCY_ID: CurrencyId = amplitude_runtime::GetWrappedCurrencyId::get();
 
+const MAX_SAFE_INTEGER_JSON: u128 = 1 << 53;
+
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type AmplitudeChainSpec =
 	sc_service::GenericChainSpec<amplitude_runtime::RuntimeGenesisConfig, ParachainExtensions>;
@@ -106,7 +108,6 @@ fn get_amplitude_properties() -> Map<String, Value> {
 pub fn amplitude_config() -> AmplitudeChainSpec {
 	sp_core::crypto::set_default_ss58_version(amplitude_runtime::SS58Prefix::get().into());
 
-	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "AMPE".into());
 	properties.insert("tokenDecimals".into(), amplitude::TOKEN_DECIMALS.into());
@@ -198,7 +199,6 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 pub fn foucoco_standalone_config() -> FoucocoChainSpec {
 	sp_core::crypto::set_default_ss58_version(foucoco_runtime::SS58Prefix::get().into());
 
-	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "AMPE".into());
 	properties.insert("tokenDecimals".into(), foucoco::TOKEN_DECIMALS.into());
@@ -287,7 +287,6 @@ fn get_pendulum_properties() -> Map<String, Value> {
 
 
 pub fn pendulum_config() -> PendulumChainSpec {
-	// Give your base currency a unit name and decimal places
 
 	sp_core::crypto::set_default_ss58_version(pendulum_runtime::SS58Prefix::get().into());
 
@@ -768,7 +767,6 @@ fn foucoco_genesis(
 	serde_json::to_value(genesis_config).expect("Serialization of genesis config should work")
 }
 
-const MAX_SAFE_INTEGER_JSON: u128 = 1 << 53;
 fn pendulum_genesis(
 	collators: Vec<AccountId>,
 	balances: Vec<(AccountId, Balance)>,

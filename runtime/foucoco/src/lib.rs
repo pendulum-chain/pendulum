@@ -1567,7 +1567,7 @@ construct_runtime!(
 		AssetRegistry: orml_asset_registry = 91,
 
 		// Addition pallet message queue
-		MessageQueue: pallet_message_queue = 92,
+		MessageQueue: pallet_message_queue = 110,
 
 	}
 );

@@ -560,7 +560,7 @@ parameter_types! {
 impl cumulus_pallet_dmp_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type DmpSink = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
-	type WeightInfo = ();
+	type WeightInfo = cumulus_pallet_dmp_queue::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -982,7 +982,7 @@ impl pallet_vesting::Config for Runtime {
 	type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
 	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 	const MAX_VESTING_SCHEDULES: u32 = 10;
-	type BlockNumberProvider = runtime_common::RelayChainBlockNumberProvider<Runtime>;
+	type BlockNumberProvider = System;
 }
 
 impl vesting_manager::Config for Runtime {
@@ -1043,7 +1043,7 @@ parameter_types! {
 	pub const MaxAdditionalFields: u32 = 100;
 	pub const MaxRegistrars: u32 = 20;
 	pub const ByteDeposit: Balance = MILLIUNIT;
-	pub const PendingUsernameExpiration: u32 = 100;
+	pub const PendingUsernameExpiration: u32 = 7 * DAYS;
 }
 
 type EnsureRootOrHalfCouncil = EitherOfDiverse<
@@ -1074,7 +1074,7 @@ impl pallet_identity::Config for Runtime {
 
 parameter_types! {
     pub MessageQueueServiceWeight: Weight =
-        Perbill::from_percent(25) * RuntimeBlockWeights::get().max_block;
+        Perbill::from_percent(20) * RuntimeBlockWeights::get().max_block;
 }
 
 use parachains_common::message_queue::NarrowOriginToSibling;

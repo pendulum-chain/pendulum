@@ -19,7 +19,7 @@ use cumulus_client_service::{
 	prepare_node_config, start_relay_chain_tasks, DARecoveryProfile, StartRelayChainTasksParams,
 };
 use cumulus_primitives_core::{relay_chain::Hash, ParaId};
-use cumulus_primitives_parachain_inherent::{
+use cumulus_client_parachain_inherent::{
 	MockValidationDataInherentDataProvider, MockXcmConfig,
 };
 use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
@@ -343,6 +343,7 @@ where
 					None => None,
 				}
 			},
+			block_relay: None,
 			warp_sync_params: None,
 		})?;
 
@@ -413,7 +414,7 @@ where
 		+ Sync
 		+ 'static,
 	RuntimeApi::RuntimeApi: ParachainRuntimeApiImpl,
-	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
+	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sc_client_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
 	let is_standalone = false;
@@ -583,7 +584,7 @@ where
 		+ Sync
 		+ 'static,
 	RuntimeApi::RuntimeApi: ParachainRuntimeApiImpl,
-	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
+	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sc_client_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
 	let parachain_config = prepare_node_config(parachain_config);
@@ -645,6 +646,7 @@ where
 					),
 					raw_downward_messages: vec![],
 					raw_horizontal_messages: vec![],
+					additional_key_values: None,
 				};
 				Ok((sp_timestamp::InherentDataProvider::from_system_time(), mocked_parachain))
 			}
@@ -685,7 +687,7 @@ where
 		+ Sync
 		+ 'static,
 	RuntimeApi::RuntimeApi: ParachainRuntimeApiImpl,
-	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
+	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sc_client_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
 	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
@@ -721,6 +723,7 @@ where
 		relay_chain_slot_duration,
 		para_id: id,
 		overseer_handle,
+		collation_request_receiver: None,
 	};
 
 	let fut =

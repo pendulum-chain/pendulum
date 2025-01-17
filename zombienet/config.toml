@@ -1,7 +1,10 @@
+[settings]
+timeout = 1000
+
 [relaychain]
 default_command = "../polkadot/target/release/polkadot"
 default_args = [ "-lparachain=debug" ]
-chain = "rococo-local"
+chain = "rococo-local" # DO NOT CHANGE NAME
 
 [[relaychain.nodes]]
 name = "alice"

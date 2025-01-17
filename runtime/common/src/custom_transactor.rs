@@ -1,7 +1,7 @@
 use sp_std::{marker::PhantomData, result};
 
 use xcm::v3::{prelude::*, Error as XcmError, MultiAsset, MultiLocation, Result};
-use xcm_executor::{traits::TransactAsset, Assets};
+use staging_xcm_executor::{traits::TransactAsset, Assets};
 
 pub struct AssetData {
 	pub length: u8,
@@ -24,7 +24,7 @@ impl<WrappedTransactor: TransactAsset, AutomationPalletConfigT: AutomationPallet
 	fn deposit_asset(
 		asset: &MultiAsset,
 		location: &MultiLocation,
-		_context: &XcmContext,
+		_context: Option<&XcmContext>,
 	) -> Result {
 		if let (Some(amount_deposited), Some(asset_data)) = (
 			AutomationPalletConfigT::matches_asset(asset),

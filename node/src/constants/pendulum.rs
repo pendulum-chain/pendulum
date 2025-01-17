@@ -1,7 +1,6 @@
 use runtime_common::{Balance, UNIT};
 
 pub const PARACHAIN_ID: u32 = 2094;
-pub const TOTAL_INITIAL_ISSUANCE: Balance = 160_000_000 * UNIT;
 
 pub const INITIAL_ISSUANCE_PER_SIGNATORY: Balance = 200 * UNIT;
 

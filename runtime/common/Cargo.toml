@@ -11,30 +11,32 @@ edition = "2021"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-paste = "1.0.14"
-parity-scale-codec = { version = "3.1.5", default-features = false, features = ["derive"] }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+paste.workspace = true
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
 
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false, optional = true }
-frame-system = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-sp-std = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-sp-consensus-aura = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.1.0" }
+frame-support = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+frame-system = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+sp-consensus-aura = { workspace = true }
+sp-core = { workspace = true }
 
-xcm = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm", default-features = false, branch = "release-polkadot-v1.1.0" }
-xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm-executor", default-features = false, branch = "release-polkadot-v1.1.0" }
+cumulus-pallet-parachain-system = { workspace = true }
+cumulus-primitives-core = { workspace = true }
 
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v1.1.0" }
-orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v1.1.0" }
-orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v1.1.0" }
+xcm = { workspace = true }
+staging-xcm-executor = { workspace = true }
 
-dia-oracle = { git = "https://github.com/pendulum-chain/oracle-pallet", default-features = false, branch = "polkadot-v1.1.0" }
-zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.1.0" }
+orml-traits = { workspace = true }
+orml-asset-registry = { workspace = true }
+orml-xcm-support = { workspace = true }
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "580dd307ede65f90f17df6731645b678f3596e0f" }
+dia-oracle = { workspace = true }
+zenlink-protocol = { workspace = true }
+
+spacewalk-primitives = { workspace = true }
 treasury-buyout-extension = { path = "../../pallets/treasury-buyout-extension", default-features = false }
 
 [features]
@@ -43,33 +45,39 @@ default = [
 ]
 
 std = [
-    "parity-scale-codec/std",
-    "scale-info/std",
-    "frame-benchmarking?/std",
-    "frame-support/std",
-    "frame-system/std",
-    "sp-runtime/std",
-    "sp-std/std",
-    "sp-consensus-aura/std",
-    "sp-core/std",
-    "xcm/std",
-    "xcm-executor/std",
-    "orml-traits/std",
-    "dia-oracle/std",
-    "orml-asset-registry/std",
-    "orml-xcm-support/std",
-    "zenlink-protocol/std",
-    "spacewalk-primitives/std",
-    "cumulus-primitives-core/std",
-    "treasury-buyout-extension/std",
+	"parity-scale-codec/std",
+	"scale-info/std",
+	"frame-benchmarking?/std",
+	"frame-support/std",
+	"frame-system/std",
+	"sp-runtime/std",
+	"sp-std/std",
+	"sp-consensus-aura/std",
+	"sp-core/std",
+	"xcm/std",
+	"staging-xcm-executor/std",
+	"orml-traits/std",
+	"dia-oracle/std",
+	"orml-asset-registry/std",
+	"orml-xcm-support/std",
+	"zenlink-protocol/std",
+	"spacewalk-primitives/std",
+	"cumulus-primitives-core/std",
+	"treasury-buyout-extension/std",
+	"cumulus-pallet-parachain-system/std"
 ]
 
 runtime-benchmarks = [
-    "frame-benchmarking",
-    "sp-runtime/runtime-benchmarks",
-    "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks",
-    "orml-asset-registry/runtime-benchmarks",
-    "treasury-buyout-extension/runtime-benchmarks",
-    "dia-oracle/runtime-benchmarks"
+	"frame-benchmarking",
+	"frame-support/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+	"orml-asset-registry/runtime-benchmarks",
+	"cumulus-pallet-parachain-system/runtime-benchmarks",
+	"cumulus-primitives-core/runtime-benchmarks",
+	"treasury-buyout-extension/runtime-benchmarks",
+	"dia-oracle/runtime-benchmarks",
+	"staging-xcm-executor/runtime-benchmarks",
+	"frame-benchmarking/runtime-benchmarks",
 ]

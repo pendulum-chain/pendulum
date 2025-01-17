@@ -270,3 +270,13 @@ impl<
 		}
 	}
 }
+
+use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
+
+/// Convert a sibling `ParaId` to an `AggregateMessageOrigin`.
+pub struct ParaIdToSibling;
+impl Convert<ParaId, AggregateMessageOrigin> for ParaIdToSibling {
+	fn convert(para_id: ParaId) -> AggregateMessageOrigin {
+		AggregateMessageOrigin::Sibling(para_id)
+	}
+}

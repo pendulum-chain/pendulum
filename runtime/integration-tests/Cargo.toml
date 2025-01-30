@@ -3,7 +3,7 @@ name = "runtime-integration-tests"
 description = "Pendulum runtime integration tests"
 authors = ["Pendulum"]
 edition = "2021"
-version = "1.1.0"
+version = "1.6.0"
 
 [dev-dependencies]
 codec = { workspace = true, default-features = true }

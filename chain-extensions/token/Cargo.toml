@@ -3,7 +3,7 @@ name = "token-chain-extension"
 description = "Chain extensions for tokens pallet"
 authors = ["Pendulum"]
 edition = "2021"
-version = "1.1.0"
+version = "1.6.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

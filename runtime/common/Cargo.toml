@@ -1,6 +1,6 @@
 [package]
 name = "runtime-common"
-version = "1.1.0"
+version = "1.6.0"
 authors = ["Pendulum"]
 description = "Pendulum runtime common"
 homepage = "https://pendulumchain.org"

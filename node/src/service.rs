@@ -2,7 +2,7 @@
 
 // std
 use std::{sync::Arc, time::Duration};
-
+use codec::Decode;
 use cumulus_client_cli::{CollatorOptions, RelayChainMode};
 // Local Runtime Types
 use runtime_common::{opaque::Block, AccountId, Balance, Index as Nonce};
@@ -34,14 +34,12 @@ use sc_network::NetworkBlock;
 use sc_network_sync::SyncingService;
 
 use sc_client_api::HeaderBackend;
-use sc_service::{
-	Configuration, NetworkStarter, PartialComponents, TFullBackend, TFullClient, TaskManager,
-};
+use sc_service::{Configuration, NetworkStarter, PartialComponents, TFullBackend, TFullClient, TaskManager, SpawnTaskHandle, WarpSyncParams};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_consensus_aura::{sr25519::AuthorityId, AuraApi};
 use sp_keystore::KeystorePtr;
-use sp_runtime::traits::BlakeTwo256;
+use sp_runtime::traits::{Block as BlockT, BlakeTwo256};
 use substrate_prometheus_endpoint::Registry;
 
 use crate::rpc::{
@@ -53,8 +51,9 @@ use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 
 use sc_client_api::Backend;
 
-use futures::FutureExt;
-
+use futures::{FutureExt, StreamExt, channel::oneshot};
+use polkadot_primitives::OccupiedCoreAssumption;
+use sc_network::config::SyncMode;
 pub use amplitude_runtime::RuntimeApi as AmplitudeRuntimeApi;
 pub use foucoco_runtime::RuntimeApi as FoucocoRuntimeApi;
 pub use pendulum_runtime::RuntimeApi as PendulumRuntimeApi;
@@ -99,6 +98,8 @@ pub trait ParachainRuntimeApiImpl:
 impl ParachainRuntimeApiImpl for amplitude_runtime::RuntimeApiImpl<Block, AmplitudeClient> {}
 impl ParachainRuntimeApiImpl for pendulum_runtime::RuntimeApiImpl<Block, PendulumClient> {}
 impl ParachainRuntimeApiImpl for foucoco_runtime::RuntimeApiImpl<Block, FoucocoClient> {}
+
+const LOG_TARGET_SYNC: &str = "sync::cumulus";
 
 /// Amplitude executor type.
 pub struct AmplitudeRuntimeExecutor;
@@ -301,6 +302,8 @@ async fn setup_common_services<RuntimeApi, Executor>(
 	block_announce_validator: Option<
 		RequireSecondedInBlockAnnounce<Block, Arc<dyn RelayChainInterface>>,
 	>,
+	id: Option<ParaId>,
+	relay_chain_interface: Option<Arc<dyn RelayChainInterface>>
 ) -> Result<
 	(
 		NetworkStarter,
@@ -328,6 +331,21 @@ where
 
 	let net_config = sc_network::config::FullNetworkConfiguration::new(&parachain_config.network);
 
+
+
+	let warp_sync_params = match parachain_config.network.sync_mode {
+		SyncMode::Warp if relay_chain_interface.is_some() => {
+			let relay_chain_interface = relay_chain_interface.clone().expect("already checked as Some");
+			let target_block = warp_sync_get::<Block, Arc<dyn RelayChainInterface>>(
+				id.ok_or(sc_service::Error::Other("para_id must be defined to enable warp sync".into()))?,
+				relay_chain_interface,
+				task_manager.spawn_handle().clone(),
+			);
+			Some(WarpSyncParams::WaitForTarget(target_block))
+		},
+		_ => None,
+	};
+
 	let (network, system_rpc_tx, tx_handler_controller, start_network, sync_service) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
 			config: &parachain_config,
@@ -344,7 +362,7 @@ where
 				}
 			},
 			block_relay: None,
-			warp_sync_params: None,
+			warp_sync_params,
 		})?;
 
 	let rpc_builder = {
@@ -456,6 +474,8 @@ where
 		params,
 		create_full_rpc,
 		Some(block_announce_validator),
+		Some(id),
+		Some(relay_chain_interface.clone())
 	)
 	.await?;
 
@@ -605,7 +625,7 @@ where
 		task_manager,
 		_block_import,
 		_import_queue_service,
-	) = setup_common_services(parachain_config, params, create_full_rpc, None).await?;
+	) = setup_common_services(parachain_config, params, create_full_rpc, None, None, None).await?;
 
 	let proposer_factory = sc_basic_authorship::ProposerFactory::new(
 		task_manager.spawn_handle(),
@@ -733,6 +753,88 @@ where
 
 	task_manager.spawn_essential_handle().spawn("aura", None, fut);
 	Ok(())
+}
+
+/// Creates a new background task to wait for the relay chain to sync up and retrieve the parachain header
+fn warp_sync_get<B, RCInterface>(
+	para_id: ParaId,
+	relay_chain_interface: RCInterface,
+	spawner: SpawnTaskHandle,
+) -> oneshot::Receiver<<B as BlockT>::Header>
+where
+	B: BlockT + 'static,
+	RCInterface: RelayChainInterface + 'static,
+{
+	let (sender, receiver) = oneshot::channel::<B::Header>();
+	spawner.spawn(
+		"cumulus-parachain-wait-for-target-block",
+		None,
+		async move {
+			log::debug!(
+				target: "cumulus-network",
+				"waiting for announce block in a background task...",
+			);
+
+			let _ = wait_for_target_block::<B, _>(sender, para_id, relay_chain_interface)
+				.await
+				.map_err(|e| {
+					log::error!(
+						target: LOG_TARGET_SYNC,
+						"Unable to determine parachain target block {:?}",
+						e
+					)
+				});
+		}
+			.boxed(),
+	);
+
+	receiver
+}
+
+/// Waits for the relay chain to have finished syncing and then gets the parachain header that corresponds to the last finalized relay chain block.
+async fn wait_for_target_block<B, RCInterface>(
+	sender: oneshot::Sender<<B as BlockT>::Header>,
+	para_id: ParaId,
+	relay_chain_interface: RCInterface,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+where
+	B: BlockT + 'static,
+	RCInterface: RelayChainInterface + Send + 'static,
+{
+	let mut imported_blocks = relay_chain_interface.import_notification_stream().await?.fuse();
+	while imported_blocks.next().await.is_some() {
+		let is_syncing = relay_chain_interface.is_major_syncing().await.map_err(|e| {
+			Box::<dyn std::error::Error + Send + Sync>::from(format!(
+				"Unable to determine sync status. {e}"
+			))
+		})?;
+
+		if !is_syncing {
+			let relay_chain_best_hash = relay_chain_interface
+				.finalized_block_hash()
+				.await
+				.map_err(|e| Box::new(e) as Box<_>)?;
+
+			let validation_data = relay_chain_interface
+				.persisted_validation_data(
+					relay_chain_best_hash,
+					para_id,
+					OccupiedCoreAssumption::TimedOut,
+				)
+				.await
+				.map_err(|e| format!("{e:?}"))?
+				.ok_or_else(|| "Could not find parachain head in relay chain")?;
+
+			let target_block = B::Header::decode(&mut &validation_data.parent_head.0[..])
+				.map_err(|e| format!("Failed to decode parachain head: {e}"))?;
+
+			log::debug!(target: LOG_TARGET_SYNC, "Target block reached {:?}", target_block);
+			let _ = sender.send(target_block);
+			return Ok(())
+		}
+	}
+
+	Err("Stopping following imported blocks. Could not determine parachain target block".into())
 }
 
 /// Start a parachain node.

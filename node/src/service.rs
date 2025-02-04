@@ -99,8 +99,6 @@ impl ParachainRuntimeApiImpl for amplitude_runtime::RuntimeApiImpl<Block, Amplit
 impl ParachainRuntimeApiImpl for pendulum_runtime::RuntimeApiImpl<Block, PendulumClient> {}
 impl ParachainRuntimeApiImpl for foucoco_runtime::RuntimeApiImpl<Block, FoucocoClient> {}
 
-const LOG_TARGET_SYNC: &str = "sync::cumulus";
-
 /// Amplitude executor type.
 pub struct AmplitudeRuntimeExecutor;
 
@@ -779,7 +777,7 @@ where
 				.await
 				.map_err(|e| {
 					log::error!(
-						target: LOG_TARGET_SYNC,
+						target: "sync::cumulus",
 						"Unable to determine parachain target block {:?}",
 						e
 					)
@@ -828,7 +826,7 @@ where
 			let target_block = B::Header::decode(&mut &validation_data.parent_head.0[..])
 				.map_err(|e| format!("Failed to decode parachain head: {e}"))?;
 
-			log::debug!(target: LOG_TARGET_SYNC, "Target block reached {:?}", target_block);
+			log::debug!(target: "sync::cumulus", "Target block reached {:?}", target_block);
 			let _ = sender.send(target_block);
 			return Ok(())
 		}

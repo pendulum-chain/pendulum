@@ -2,7 +2,7 @@
 authors = ["Pendulum"]
 edition = "2021"
 name = "module-pallet-staking-rpc"
-version = "1.6.0"
+version = "1.6.0-a"
 
 [dependencies]
 codec = { workspace = true, default-features = true }

@@ -3,7 +3,7 @@ authors = ["Pendulum"]
 description = "A pallet to manage vesting schedules"
 edition = "2021"
 name = "vesting-manager"
-version = "1.6.0"
+version = "1.6.0-a"
 
 [dependencies]
 log = { workspace = true }

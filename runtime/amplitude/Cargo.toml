@@ -6,7 +6,7 @@ edition = "2021"
 homepage = "https://pendulumchain.org"
 name = "amplitude-runtime"
 repository = "https://github.com/pendulum-chain/pendulum"
-version = "1.6.0"
+version = "1.6.0-a"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

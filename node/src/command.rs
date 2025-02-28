@@ -21,17 +21,13 @@ use sp_runtime::{
 	StateVersion,
 };
 
-use sc_executor::NativeExecutionDispatch;
-
-
 
 use crate::{
 	chain_spec::{self, ParachainExtensions},
 	cli::{Cli, RelayChainCli, Subcommand},
-	service::{
-		new_partial, AmplitudeRuntimeExecutor, FoucocoRuntimeExecutor, PendulumRuntimeExecutor,
-	},
+	service::new_partial,
 };
+use crate::service::ParachainHostFunctions;
 
 #[derive(PartialEq, Eq)]
 enum ChainIdentity {
@@ -195,24 +191,18 @@ macro_rules! construct_sync_run {
 		let is_standalone = false;
 		match runner.config().chain_spec.identify() {
 			ChainIdentity::Amplitude => runner.sync_run(|$config| {
-				let $components = new_partial::<
-					amplitude_runtime::RuntimeApi,
-					AmplitudeRuntimeExecutor,
-				>(&$config, is_standalone)?;
+				let $components = new_partial::<amplitude_runtime::RuntimeApi>(&$config, is_standalone)?;
 				$code
 			}),
 			ChainIdentity::Foucoco => runner.sync_run(|$config| {
-				let $components = new_partial::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(
+				let $components = new_partial::<foucoco_runtime::RuntimeApi>(
 					&$config,
 					is_standalone,
 				)?;
 				$code
 			}),
 			ChainIdentity::Pendulum => runner.sync_run(|$config| {
-				let $components = new_partial::<
-					pendulum_runtime::RuntimeApi,
-					PendulumRuntimeExecutor,
-				>(&$config, is_standalone)?;
+				let $components = new_partial::<pendulum_runtime::RuntimeApi>(&$config, is_standalone)?;
 				$code
 			}),
 			// Foucoco standalone is only supported
@@ -230,24 +220,18 @@ macro_rules! construct_generic_async_run {
 		let is_standalone = false;
 		match runner.config().chain_spec.identify() {
 			ChainIdentity::Amplitude => runner.async_run(|$config| {
-				let $components = new_partial::<
-					amplitude_runtime::RuntimeApi,
-					AmplitudeRuntimeExecutor,
-				>(&$config, is_standalone)?;
+				let $components = new_partial::<amplitude_runtime::RuntimeApi>(&$config, is_standalone)?;
 				$code
 			}),
 			ChainIdentity::Foucoco => runner.async_run(|$config| {
-				let $components = new_partial::<foucoco_runtime::RuntimeApi, FoucocoRuntimeExecutor>(
+				let $components = new_partial::<foucoco_runtime::RuntimeApi>(
 					&$config,
 					is_standalone,
 				)?;
 				$code
 			}),
 			ChainIdentity::Pendulum => runner.async_run(|$config| {
-				let $components = new_partial::<
-					pendulum_runtime::RuntimeApi,
-					PendulumRuntimeExecutor,
-				>(&$config, is_standalone)?;
+				let $components = new_partial::<pendulum_runtime::RuntimeApi>(&$config, is_standalone)?;
 				$code
 			}),
 			// Foucoco standalone is only supported
@@ -337,14 +321,14 @@ pub fn run() -> Result<()> {
 
 					match runner.config().chain_spec.identify() {
 						ChainIdentity::Amplitude => runner.sync_run(|config| {
-							cmd.run::<Block, <AmplitudeRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions>(config)
+							cmd.run::<Block, ParachainHostFunctions>(config)
 						}),
 						ChainIdentity::Foucoco =>
 							runner.sync_run(|config| {
-								cmd.run::<Block, <FoucocoRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions>(config)
+								cmd.run::<Block, ParachainHostFunctions>(config)
 							}),
 						ChainIdentity::Pendulum => runner.sync_run(|config| {
-							cmd.run::<Block, <PendulumRuntimeExecutor as NativeExecutionDispatch>::ExtendHostFunctions>(config)
+							cmd.run::<Block, ParachainHostFunctions>(config)
 						}),
 						ChainIdentity::FoucocoStandalone => unimplemented!(),
 					}

@@ -14,9 +14,7 @@ mod tests;
 
 mod types;
 
-use crate::{
-	types::{AccountIdOf, Amount, BalanceOf, CurrencyIdOf},
-};
+use crate::types::{AccountIdOf, Amount, BalanceOf, CurrencyIdOf};
 
 pub use crate::default_weights::WeightInfo;
 use codec::{Decode, Encode};
@@ -418,11 +416,11 @@ impl<T: Config> Pallet<T> {
 		// Start exchanging
 		// Check for same accounts
 		if who == treasury_account_id {
-			return Err(Error::<T>::BuyoutWithTreasuryAccount.into())
+			return Err(Error::<T>::BuyoutWithTreasuryAccount.into());
 		}
 		// Check for exchanging zero values
 		if exchange_amount.is_zero() && buyout_amount.is_zero() {
-			return Err(Error::<T>::LessThanMinBuyoutAmount.into())
+			return Err(Error::<T>::LessThanMinBuyoutAmount.into());
 		}
 
 		// Check both balances before transfer
@@ -430,10 +428,10 @@ impl<T: Config> Pallet<T> {
 		let treasury_balance = T::Currency::free_balance(basic_asset, &treasury_account_id);
 
 		if user_balance < exchange_amount {
-			return Err(Error::<T>::InsufficientAccountBalance.into())
+			return Err(Error::<T>::InsufficientAccountBalance.into());
 		}
 		if treasury_balance < buyout_amount {
-			return Err(Error::<T>::InsufficientTreasuryBalance.into())
+			return Err(Error::<T>::InsufficientTreasuryBalance.into());
 		}
 
 		// Transfer from user account to treasury then viceversa
@@ -469,7 +467,7 @@ impl<T: Config> Pallet<T> {
 		to_decimals: u32,
 	) -> Result<BalanceOf<T>, DispatchError> {
 		if from_amount.is_zero() {
-			return Ok(Zero::zero())
+			return Ok(Zero::zero());
 		}
 
 		let from_amount = FixedU128::from_inner(from_amount.saturated_into::<u128>());

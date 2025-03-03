@@ -54,7 +54,7 @@ where
 			zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into())
 		{
 			return TryInto::<AssetBalance>::try_into(Local::free_balance(currency_id, who))
-				.unwrap_or_default()
+				.unwrap_or_default();
 		}
 		AssetBalance::default()
 	}
@@ -64,7 +64,7 @@ where
 			zenlink_id_to_currency_id(asset_id, ParachainInfo::parachain_id().into())
 		{
 			return TryInto::<AssetBalance>::try_into(Local::total_issuance(currency_id))
-				.unwrap_or_default()
+				.unwrap_or_default();
 		}
 		AssetBalance::default()
 	}
@@ -111,7 +111,7 @@ where
 					.map_err(|_| DispatchError::Other("convert amount in local deposit"))?,
 			)?;
 		} else {
-			return Err(DispatchError::Other("unknown asset in local transfer"))
+			return Err(DispatchError::Other("unknown asset in local transfer"));
 		}
 
 		Ok(amount)
@@ -133,7 +133,7 @@ where
 					.map_err(|_| DispatchError::Other("convert amount in local withdraw"))?,
 			)?;
 		} else {
-			return Err(DispatchError::Other("unknown asset in local transfer"))
+			return Err(DispatchError::Other("unknown asset in local transfer"));
 		}
 
 		Ok(amount)

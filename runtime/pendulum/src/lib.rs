@@ -27,7 +27,7 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
-		IdentityLookup
+		IdentityLookup,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchError, FixedPointNumber, MultiAddress, Perbill, Permill,
@@ -56,13 +56,14 @@ use sp_version::RuntimeVersion;
 
 use frame_support::{
 	construct_runtime,
-	genesis_builder_helper::{build_config, create_default_config},
 	dispatch::DispatchClass,
+	genesis_builder_helper::{build_config, create_default_config},
 	parameter_types,
 	traits::{
-		fungible::Credit, ConstBool, ConstU32, Contains, Currency as FrameCurrency,
-		EitherOfDiverse, EqualPrivilegeOnly, Imbalance, InstanceFilter, OnUnbalanced,
-		WithdrawReasons, tokens::{PayFromAccount,UnityAssetBalanceConversion},
+		fungible::Credit,
+		tokens::{PayFromAccount, UnityAssetBalanceConversion},
+		ConstBool, ConstU32, Contains, Currency as FrameCurrency, EitherOfDiverse,
+		EqualPrivilegeOnly, Imbalance, InstanceFilter, OnUnbalanced, WithdrawReasons,
 	},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
@@ -95,7 +96,7 @@ pub use replace::{Event as ReplaceEvent, ReplaceRequest};
 pub use security::StatusCode;
 pub use stellar_relay::traits::{FieldLength, Organization, Validator};
 
-use xcm_config::{XcmOriginToTransactDispatchOrigin};
+use xcm_config::XcmOriginToTransactDispatchOrigin;
 
 use module_oracle_rpc_runtime_api::BalanceWrapper;
 use orml_currencies::BasicCurrencyAdapter;
@@ -171,8 +172,10 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
-	 pallet_identity::migration::v1::VersionUncheckedMigrateV0ToV1<Runtime, { u64::MAX }>)
+	(
+		cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
+		pallet_identity::migration::v1::VersionUncheckedMigrateV0ToV1<Runtime, { u64::MAX }>,
+	),
 >;
 
 pub struct ConvertPrice;
@@ -311,56 +314,56 @@ impl Contains<RuntimeCall> for BaseFilter {
 	fn contains(call: &RuntimeCall) -> bool {
 		match call {
 			// These modules are all allowed to be called by transactions:
-			RuntimeCall::Bounties(_) |
-			RuntimeCall::ChildBounties(_) |
-			RuntimeCall::ClientsInfo(_) |
-			RuntimeCall::Treasury(_) |
-			RuntimeCall::Tokens(_) |
-			RuntimeCall::Currencies(_) |
-			RuntimeCall::ParachainStaking(_) |
-			RuntimeCall::Democracy(_) |
-			RuntimeCall::Council(_) |
-			RuntimeCall::TechnicalCommittee(_) |
-			RuntimeCall::System(_) |
-			RuntimeCall::Scheduler(_) |
-			RuntimeCall::Preimage(_) |
-			RuntimeCall::Timestamp(_) |
-			RuntimeCall::Balances(_) |
-			RuntimeCall::Session(_) |
-			RuntimeCall::ParachainSystem(_) |
-			RuntimeCall::XcmpQueue(_) |
-			RuntimeCall::PolkadotXcm(_) |
-			RuntimeCall::DmpQueue(_) |
-			RuntimeCall::Utility(_) |
-			RuntimeCall::Vesting(_) |
-			RuntimeCall::XTokens(_) |
-			RuntimeCall::Multisig(_) |
-			RuntimeCall::Identity(_) |
-			RuntimeCall::Contracts(_) |
-			RuntimeCall::ZenlinkProtocol(_) |
-			RuntimeCall::DiaOracleModule(_) |
-			RuntimeCall::VestingManager(_) |
-			RuntimeCall::TokenAllowance(_) |
-			RuntimeCall::AssetRegistry(_) |
-			RuntimeCall::Fee(_) |
-			RuntimeCall::Issue(_) |
-			RuntimeCall::Nomination(_) |
-			RuntimeCall::Oracle(_) |
-			RuntimeCall::Redeem(_) |
-			RuntimeCall::Replace(_) |
-			RuntimeCall::Security(_) |
-			RuntimeCall::StellarRelay(_) |
-			RuntimeCall::VaultRegistry(_) |
-			RuntimeCall::PooledVaultRewards(_) |
-			RuntimeCall::RewardDistribution(_) |
-			RuntimeCall::Farming(_) |
-			RuntimeCall::Proxy(_) |
-			RuntimeCall::TreasuryBuyoutExtension(_) |
-			RuntimeCall::ParachainInfo(_) |
-			RuntimeCall::CumulusXcm(_) |
-			RuntimeCall::VaultStaking(_) |
-			RuntimeCall::MessageQueue(_) => true, // All pallets are allowed, but exhaustive match is defensive
-			// in the case of adding new pallets.
+			RuntimeCall::Bounties(_)
+			| RuntimeCall::ChildBounties(_)
+			| RuntimeCall::ClientsInfo(_)
+			| RuntimeCall::Treasury(_)
+			| RuntimeCall::Tokens(_)
+			| RuntimeCall::Currencies(_)
+			| RuntimeCall::ParachainStaking(_)
+			| RuntimeCall::Democracy(_)
+			| RuntimeCall::Council(_)
+			| RuntimeCall::TechnicalCommittee(_)
+			| RuntimeCall::System(_)
+			| RuntimeCall::Scheduler(_)
+			| RuntimeCall::Preimage(_)
+			| RuntimeCall::Timestamp(_)
+			| RuntimeCall::Balances(_)
+			| RuntimeCall::Session(_)
+			| RuntimeCall::ParachainSystem(_)
+			| RuntimeCall::XcmpQueue(_)
+			| RuntimeCall::PolkadotXcm(_)
+			| RuntimeCall::DmpQueue(_)
+			| RuntimeCall::Utility(_)
+			| RuntimeCall::Vesting(_)
+			| RuntimeCall::XTokens(_)
+			| RuntimeCall::Multisig(_)
+			| RuntimeCall::Identity(_)
+			| RuntimeCall::Contracts(_)
+			| RuntimeCall::ZenlinkProtocol(_)
+			| RuntimeCall::DiaOracleModule(_)
+			| RuntimeCall::VestingManager(_)
+			| RuntimeCall::TokenAllowance(_)
+			| RuntimeCall::AssetRegistry(_)
+			| RuntimeCall::Fee(_)
+			| RuntimeCall::Issue(_)
+			| RuntimeCall::Nomination(_)
+			| RuntimeCall::Oracle(_)
+			| RuntimeCall::Redeem(_)
+			| RuntimeCall::Replace(_)
+			| RuntimeCall::Security(_)
+			| RuntimeCall::StellarRelay(_)
+			| RuntimeCall::VaultRegistry(_)
+			| RuntimeCall::PooledVaultRewards(_)
+			| RuntimeCall::RewardDistribution(_)
+			| RuntimeCall::Farming(_)
+			| RuntimeCall::Proxy(_)
+			| RuntimeCall::TreasuryBuyoutExtension(_)
+			| RuntimeCall::ParachainInfo(_)
+			| RuntimeCall::CumulusXcm(_)
+			| RuntimeCall::VaultStaking(_)
+			| RuntimeCall::MessageQueue(_) => true, // All pallets are allowed, but exhaustive match is defensive
+			                                        // in the case of adding new pallets.
 		}
 	}
 }
@@ -542,7 +545,8 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type VersionWrapper = ();
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-	type PriceForSiblingDelivery = polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery<ParaId>;
+	type PriceForSiblingDelivery =
+		polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery<ParaId>;
 	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
 	type XcmpQueue = frame_support::traits::TransformOrigin<
 		MessageQueue,
@@ -996,8 +1000,8 @@ const fn deposit(items: u32, bytes: u32) -> Balance {
 
 parameter_types! {
 	pub const DepositPerItem: Balance = deposit(1, 0);
-    pub const DepositPerByte: Balance = deposit(0, 1);
-    pub const DefaultDepositLimit: Balance = deposit(1024, 1024 * 1024);
+	pub const DepositPerByte: Balance = deposit(0, 1);
+	pub const DefaultDepositLimit: Balance = deposit(1024, 1024 * 1024);
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 	pub const CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
 	pub const MaxDelegateDependencies: u32 = 32;
@@ -1073,8 +1077,8 @@ impl pallet_identity::Config for Runtime {
 }
 
 parameter_types! {
-    pub MessageQueueServiceWeight: Weight =
-        Perbill::from_percent(20) * RuntimeBlockWeights::get().max_block;
+	pub MessageQueueServiceWeight: Weight =
+		Perbill::from_percent(20) * RuntimeBlockWeights::get().max_block;
 }
 
 use parachains_common::message_queue::NarrowOriginToSibling;

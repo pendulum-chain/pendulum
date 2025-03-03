@@ -23,7 +23,7 @@ fn get_test_currency<T: Config>() -> CurrencyOf<T> {
 // mint some tokens to the account
 fn set_up_account<T: Config>(account: &AccountIdOf<T>) {
 	let token_currency_id = get_test_currency::<T>();
-    let deposit_amount = <T as crate::Config>::AssetDeposit::get();
+	let deposit_amount = <T as crate::Config>::AssetDeposit::get();
 	assert_ok!(<orml_currencies::Pallet<T> as MultiCurrency<AccountIdOf<T>>>::deposit(
 		token_currency_id,
 		&account,

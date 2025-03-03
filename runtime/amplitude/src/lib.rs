@@ -29,7 +29,7 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
-		IdentityLookup
+		IdentityLookup,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchError, FixedPointNumber, SaturatedConversion,
@@ -43,14 +43,15 @@ use sp_version::RuntimeVersion;
 
 use frame_support::{
 	construct_runtime,
-	genesis_builder_helper::{build_config, create_default_config},
 	dispatch::DispatchClass,
+	genesis_builder_helper::{build_config, create_default_config},
 	parameter_types,
 	traits::{
-		fungible::{HoldConsideration, Credit}, ConstBool, ConstU32, Contains, Currency as FrameCurrency,
-		EitherOfDiverse, EqualPrivilegeOnly, Imbalance, InstanceFilter, OnUnbalanced,
-		WithdrawReasons, tokens::{PayFromAccount,UnityAssetBalanceConversion}, LinearStoragePrice
-
+		fungible::{Credit, HoldConsideration},
+		tokens::{PayFromAccount, UnityAssetBalanceConversion},
+		ConstBool, ConstU32, Contains, Currency as FrameCurrency, EitherOfDiverse,
+		EqualPrivilegeOnly, Imbalance, InstanceFilter, LinearStoragePrice, OnUnbalanced,
+		WithdrawReasons,
 	},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
@@ -74,9 +75,9 @@ pub use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 
 use dia_oracle::DiaOracle;
 
-use xcm_config::XcmOriginToTransactDispatchOrigin;
 #[cfg(not(feature = "runtime-benchmarks"))]
 use xcm_config::XcmConfig;
+use xcm_config::XcmOriginToTransactDispatchOrigin;
 
 use module_oracle_rpc_runtime_api::BalanceWrapper;
 use orml_currencies::BasicCurrencyAdapter;
@@ -168,8 +169,10 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
-	 pallet_identity::migration::v1::VersionUncheckedMigrateV0ToV1<Runtime, { u64::MAX }>)
+	(
+		cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
+		pallet_identity::migration::v1::VersionUncheckedMigrateV0ToV1<Runtime, { u64::MAX }>,
+	),
 >;
 
 pub struct ConvertPrice;
@@ -540,7 +543,8 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type VersionWrapper = ();
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-	type PriceForSiblingDelivery = polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery<ParaId>;
+	type PriceForSiblingDelivery =
+		polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery<ParaId>;
 	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
 	type XcmpQueue = frame_support::traits::TransformOrigin<
 		MessageQueue,
@@ -549,7 +553,6 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 		runtime_common::ParaIdToSibling,
 	>;
 	type MaxInboundSuspended = ConstU32<1_000>;
-
 }
 parameter_types! {
 	pub const RelayOrigin: AggregateMessageOrigin = AggregateMessageOrigin::Parent;
@@ -1083,8 +1086,8 @@ impl frame_system::offchain::SigningTypes for Runtime {
 }
 
 parameter_types! {
-    pub MessageQueueServiceWeight: Weight =
-        Perbill::from_percent(20) * RuntimeBlockWeights::get().max_block;
+	pub MessageQueueServiceWeight: Weight =
+		Perbill::from_percent(20) * RuntimeBlockWeights::get().max_block;
 }
 
 use parachains_common::message_queue::NarrowOriginToSibling;
@@ -1109,8 +1112,6 @@ impl pallet_message_queue::Config for Runtime {
 	type Size = u32;
 	type WeightInfo = ();
 }
-
-
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
 where

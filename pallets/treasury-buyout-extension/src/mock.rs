@@ -157,7 +157,7 @@ impl PriceGetter<CurrencyId> for OracleMock {
 	{
 		// This simulates price fetching error for testing pre_dispatch validation but only for one specific supported asset
 		if currency_id == 2u64 {
-			return Err(DispatchError::Other("No price"))
+			return Err(DispatchError::Other("No price"));
 		}
 
 		let price: FixedNumber = FixedNumber::one()

@@ -15,19 +15,16 @@ use sc_service::{
 };
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::{
-	traits::{
-		AccountIdConversion, Block as BlockT, Hash as HashT, Header as HeaderT, Zero,
-	},
+	traits::{AccountIdConversion, Block as BlockT, Hash as HashT, Header as HeaderT, Zero},
 	StateVersion,
 };
 
-
+use crate::service::ParachainHostFunctions;
 use crate::{
 	chain_spec::{self, ParachainExtensions},
 	cli::{Cli, RelayChainCli, Subcommand},
 	service::new_partial,
 };
-use crate::service::ParachainHostFunctions;
 
 #[derive(PartialEq, Eq)]
 enum ChainIdentity {
@@ -80,14 +77,18 @@ impl ChainIdentity {
 		path: &str,
 	) -> std::result::Result<Box<dyn ChainSpec>, String> {
 		Ok(match self {
-			ChainIdentity::Amplitude =>
-				Box::new(chain_spec::AmplitudeChainSpec::from_json_file(path.into())?),
-			ChainIdentity::Foucoco =>
-				Box::new(chain_spec::FoucocoChainSpec::from_json_file(path.into())?),
-			ChainIdentity::FoucocoStandalone =>
-				Box::new(chain_spec::FoucocoChainSpec::from_json_file(path.into())?),
-			ChainIdentity::Pendulum =>
-				Box::new(chain_spec::PendulumChainSpec::from_json_file(path.into())?),
+			ChainIdentity::Amplitude => {
+				Box::new(chain_spec::AmplitudeChainSpec::from_json_file(path.into())?)
+			},
+			ChainIdentity::Foucoco => {
+				Box::new(chain_spec::FoucocoChainSpec::from_json_file(path.into())?)
+			},
+			ChainIdentity::FoucocoStandalone => {
+				Box::new(chain_spec::FoucocoChainSpec::from_json_file(path.into())?)
+			},
+			ChainIdentity::Pendulum => {
+				Box::new(chain_spec::PendulumChainSpec::from_json_file(path.into())?)
+			},
 		})
 	}
 }
@@ -191,18 +192,18 @@ macro_rules! construct_sync_run {
 		let is_standalone = false;
 		match runner.config().chain_spec.identify() {
 			ChainIdentity::Amplitude => runner.sync_run(|$config| {
-				let $components = new_partial::<amplitude_runtime::RuntimeApi>(&$config, is_standalone)?;
+				let $components =
+					new_partial::<amplitude_runtime::RuntimeApi>(&$config, is_standalone)?;
 				$code
 			}),
 			ChainIdentity::Foucoco => runner.sync_run(|$config| {
-				let $components = new_partial::<foucoco_runtime::RuntimeApi>(
-					&$config,
-					is_standalone,
-				)?;
+				let $components =
+					new_partial::<foucoco_runtime::RuntimeApi>(&$config, is_standalone)?;
 				$code
 			}),
 			ChainIdentity::Pendulum => runner.sync_run(|$config| {
-				let $components = new_partial::<pendulum_runtime::RuntimeApi>(&$config, is_standalone)?;
+				let $components =
+					new_partial::<pendulum_runtime::RuntimeApi>(&$config, is_standalone)?;
 				$code
 			}),
 			// Foucoco standalone is only supported
@@ -220,18 +221,18 @@ macro_rules! construct_generic_async_run {
 		let is_standalone = false;
 		match runner.config().chain_spec.identify() {
 			ChainIdentity::Amplitude => runner.async_run(|$config| {
-				let $components = new_partial::<amplitude_runtime::RuntimeApi>(&$config, is_standalone)?;
+				let $components =
+					new_partial::<amplitude_runtime::RuntimeApi>(&$config, is_standalone)?;
 				$code
 			}),
 			ChainIdentity::Foucoco => runner.async_run(|$config| {
-				let $components = new_partial::<foucoco_runtime::RuntimeApi>(
-					&$config,
-					is_standalone,
-				)?;
+				let $components =
+					new_partial::<foucoco_runtime::RuntimeApi>(&$config, is_standalone)?;
 				$code
 			}),
 			ChainIdentity::Pendulum => runner.async_run(|$config| {
-				let $components = new_partial::<pendulum_runtime::RuntimeApi>(&$config, is_standalone)?;
+				let $components =
+					new_partial::<pendulum_runtime::RuntimeApi>(&$config, is_standalone)?;
 				$code
 			}),
 			// Foucoco standalone is only supported
@@ -303,10 +304,11 @@ pub fn run() -> Result<()> {
 				cmd.run(config, polkadot_config)
 			})
 		},
-		Some(Subcommand::ExportGenesisState(cmd)) =>
+		Some(Subcommand::ExportGenesisState(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
 				Ok(async move { cmd.run(components.client) })
-			}),
+			})
+		},
 		Some(Subcommand::ExportGenesisWasm(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|_config| {
@@ -315,28 +317,25 @@ pub fn run() -> Result<()> {
 			})
 		},
 		Some(Subcommand::Benchmark(bench_cmd)) => match bench_cmd {
-			BenchmarkCmd::Pallet(cmd) =>
+			BenchmarkCmd::Pallet(cmd) => {
 				if cfg!(feature = "runtime-benchmarks") {
 					let runner = cli.create_runner(cmd)?;
 
 					match runner.config().chain_spec.identify() {
-						ChainIdentity::Amplitude => runner.sync_run(|config| {
-							cmd.run::<Block, ParachainHostFunctions>(config)
-						}),
-						ChainIdentity::Foucoco =>
-							runner.sync_run(|config| {
-								cmd.run::<Block, ParachainHostFunctions>(config)
-							}),
-						ChainIdentity::Pendulum => runner.sync_run(|config| {
-							cmd.run::<Block, ParachainHostFunctions>(config)
-						}),
+						ChainIdentity::Amplitude => runner
+							.sync_run(|config| cmd.run::<Block, ParachainHostFunctions>(config)),
+						ChainIdentity::Foucoco => runner
+							.sync_run(|config| cmd.run::<Block, ParachainHostFunctions>(config)),
+						ChainIdentity::Pendulum => runner
+							.sync_run(|config| cmd.run::<Block, ParachainHostFunctions>(config)),
 						ChainIdentity::FoucocoStandalone => unimplemented!(),
 					}
 				} else {
 					Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`."
 						.into())
-				},
+				}
+			},
 			BenchmarkCmd::Block(cmd) => {
 				construct_sync_run!(|components, cli, cmd, config| cmd.run(components.client))
 			},

@@ -16,7 +16,6 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use runtime_common::{asset_registry::FixedConversionRateProvider, CurrencyIdConvert};
 use sp_runtime::traits::Convert;
-use xcm::latest::{prelude::*, Weight as XCMWeight};
 use staging_xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds,
@@ -27,6 +26,7 @@ use staging_xcm_executor::{
 	traits::{Properties, ShouldExecute},
 	XcmExecutor,
 };
+use xcm::latest::{prelude::*, Weight as XCMWeight};
 
 use super::{
 	AccountId, AssetRegistry, Balance, Balances, Currencies, CurrencyId, FoucocoTreasuryAccount,
@@ -66,7 +66,7 @@ where
 	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
 		if let Some(ref reserve) = ReserveProvider::reserve(asset) {
 			if reserve == origin {
-				return true
+				return true;
 			}
 		}
 		false
@@ -155,19 +155,19 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 				InitiateReserveWithdraw {
 					reserve: MultiLocation { parents: 1, interior: Here },
 					..
-				} | DepositReserveAsset { dest: MultiLocation { parents: 1, interior: Here }, .. } |
-					TransferReserveAsset {
+				} | DepositReserveAsset { dest: MultiLocation { parents: 1, interior: Here }, .. }
+					| TransferReserveAsset {
 						dest: MultiLocation { parents: 1, interior: Here },
 						..
 					}
 			)
 		}) {
-			return Err(ProcessMessageError::Unsupported) // Deny
+			return Err(ProcessMessageError::Unsupported); // Deny
 		}
 
 		// allow reserve transfers to arrive from relay chain
-		if matches!(origin, MultiLocation { parents: 1, interior: Here }) &&
-			instructions.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
+		if matches!(origin, MultiLocation { parents: 1, interior: Here })
+			&& instructions.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
 		{
 			log::trace!(
 				target: "xcm::barriers",

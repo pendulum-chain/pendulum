@@ -1,7 +1,7 @@
 use sp_std::{marker::PhantomData, result};
 
-use xcm::v3::{prelude::*, Error as XcmError, MultiAsset, MultiLocation, Result};
 use staging_xcm_executor::{traits::TransactAsset, Assets};
+use xcm::v3::{prelude::*, Error as XcmError, MultiAsset, MultiLocation, Result};
 
 pub struct AssetData {
 	pub length: u8,
@@ -35,7 +35,7 @@ impl<WrappedTransactor: TransactAsset, AutomationPalletConfigT: AutomationPallet
 				asset_data.data,
 				amount_deposited,
 			)?;
-			return Ok(())
+			return Ok(());
 		}
 
 		WrappedTransactor::deposit_asset(asset, location, _context)

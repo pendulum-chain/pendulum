@@ -1,9 +1,9 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 // std
-use std::{sync::Arc, time::Duration};
 use codec::Decode;
 use cumulus_client_cli::{CollatorOptions, RelayChainMode};
+use std::{sync::Arc, time::Duration};
 // Local Runtime Types
 use runtime_common::{opaque::Block, AccountId, Balance, Index as Nonce};
 
@@ -15,13 +15,11 @@ use cumulus_client_consensus_aura::collators::basic::{
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
 use cumulus_client_network::RequireSecondedInBlockAnnounce;
+use cumulus_client_parachain_inherent::{MockValidationDataInherentDataProvider, MockXcmConfig};
 use cumulus_client_service::{
 	prepare_node_config, start_relay_chain_tasks, DARecoveryProfile, StartRelayChainTasksParams,
 };
 use cumulus_primitives_core::{relay_chain::Hash, ParaId};
-use cumulus_client_parachain_inherent::{
-	MockValidationDataInherentDataProvider, MockXcmConfig,
-};
 use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
 use cumulus_relay_chain_interface::{RelayChainInterface, RelayChainResult};
 use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node_with_rpc;
@@ -32,12 +30,15 @@ use sc_network::NetworkBlock;
 use sc_network_sync::SyncingService;
 
 use sc_client_api::HeaderBackend;
-use sc_service::{Configuration, NetworkStarter, PartialComponents, TFullBackend, TFullClient, TaskManager, SpawnTaskHandle, WarpSyncParams};
+use sc_service::{
+	Configuration, NetworkStarter, PartialComponents, SpawnTaskHandle, TFullBackend, TFullClient,
+	TaskManager, WarpSyncParams,
+};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_consensus_aura::{sr25519::AuthorityId, AuraApi};
 use sp_keystore::KeystorePtr;
-use sp_runtime::traits::{Block as BlockT, BlakeTwo256};
+use sp_runtime::traits::{BlakeTwo256, Block as BlockT};
 use substrate_prometheus_endpoint::Registry;
 
 use crate::rpc::{
@@ -49,24 +50,21 @@ use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 
 use sc_client_api::Backend;
 
-use futures::{FutureExt, StreamExt, channel::oneshot};
-use polkadot_primitives::OccupiedCoreAssumption;
-use sc_executor::sp_wasm_interface::ExtendedHostFunctions;
-use sc_network::config::SyncMode;
 pub use amplitude_runtime::RuntimeApi as AmplitudeRuntimeApi;
 pub use foucoco_runtime::RuntimeApi as FoucocoRuntimeApi;
+use futures::{channel::oneshot, FutureExt, StreamExt};
 pub use pendulum_runtime::RuntimeApi as PendulumRuntimeApi;
+use polkadot_primitives::OccupiedCoreAssumption;
+use sc_network::config::SyncMode;
 
 #[cfg(feature = "runtime-benchmarks")]
-pub type ParachainHostFunctions = (
-	frame_benchmarking::benchmarking::HostFunctions,
-);
-#[cfg(not(feature = "runtime-benchmarks"))]
-pub type ParachainHostFunctions = (
-	sp_io::SubstrateHostFunctions,
-);
+pub type ParachainHostFunctions =
+	(sp_io::SubstrateHostFunctions, frame_benchmarking::benchmarking::HostFunctions);
 
-pub type ParachainExecutor = WasmExecutor<ExtendedHostFunctions<sp_io::SubstrateHostFunctions, ParachainHostFunctions>>;
+#[cfg(not(feature = "runtime-benchmarks"))]
+pub type ParachainHostFunctions = sp_io::SubstrateHostFunctions;
+
+pub type ParachainExecutor = WasmExecutor<ParachainHostFunctions>;
 
 type ParachainBlockImport<RuntimeApi> = TParachainBlockImport<
 	Block,
@@ -74,10 +72,8 @@ type ParachainBlockImport<RuntimeApi> = TParachainBlockImport<
 	TFullBackend<Block>,
 >;
 
-type FullPool<RuntimeApi> = sc_transaction_pool::FullPool<
-	Block,
-	TFullClient<Block, RuntimeApi, ParachainExecutor>,
->;
+type FullPool<RuntimeApi> =
+	sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, ParachainExecutor>>;
 
 type DefaultImportQueue = sc_consensus::DefaultImportQueue<Block>;
 
@@ -102,14 +98,9 @@ impl ParachainRuntimeApiImpl for amplitude_runtime::RuntimeApiImpl<Block, Amplit
 impl ParachainRuntimeApiImpl for pendulum_runtime::RuntimeApiImpl<Block, PendulumClient> {}
 impl ParachainRuntimeApiImpl for foucoco_runtime::RuntimeApiImpl<Block, FoucocoClient> {}
 
-
-
-pub type AmplitudeClient =
-TFullClient<Block, AmplitudeRuntimeApi, ParachainExecutor>;
-pub type FoucocoClient =
-TFullClient<Block, FoucocoRuntimeApi, ParachainExecutor>;
-pub type PendulumClient =
-TFullClient<Block, PendulumRuntimeApi, ParachainExecutor>;
+pub type AmplitudeClient = TFullClient<Block, AmplitudeRuntimeApi, ParachainExecutor>;
+pub type FoucocoClient = TFullClient<Block, FoucocoRuntimeApi, ParachainExecutor>;
+pub type PendulumClient = TFullClient<Block, PendulumRuntimeApi, ParachainExecutor>;
 
 type ResultNewPartial<RuntimeApi> = PartialComponents<
 	TFullClient<Block, RuntimeApi, ParachainExecutor>,
@@ -200,7 +191,7 @@ where
 			transaction_pool,
 			select_chain: (),
 			other: (block_import, telemetry, telemetry_worker_handle),
-		})
+		});
 	}
 
 	let import_queue = build_import_queue(
@@ -246,10 +237,7 @@ async fn build_relay_chain_interface(
 
 type FullDepsOf<RuntimeApi> = FullDeps<
 	TFullClient<Block, RuntimeApi, ParachainExecutor>,
-	sc_transaction_pool::FullPool<
-		Block,
-		TFullClient<Block, RuntimeApi, ParachainExecutor>,
-	>,
+	sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, ParachainExecutor>>,
 >;
 
 // Define and start the services shared across the standalone implementation of the node and
@@ -262,7 +250,7 @@ async fn setup_common_services<RuntimeApi>(
 		RequireSecondedInBlockAnnounce<Block, Arc<dyn RelayChainInterface>>,
 	>,
 	id: Option<ParaId>,
-	relay_chain_interface: Option<Arc<dyn RelayChainInterface>>
+	relay_chain_interface: Option<Arc<dyn RelayChainInterface>>,
 ) -> Result<
 	(
 		NetworkStarter,
@@ -289,13 +277,14 @@ where
 
 	let net_config = sc_network::config::FullNetworkConfiguration::new(&parachain_config.network);
 
-
-
 	let warp_sync_params = match parachain_config.network.sync_mode {
 		SyncMode::Warp if relay_chain_interface.is_some() => {
-			let relay_chain_interface = relay_chain_interface.clone().expect("already checked as Some");
+			let relay_chain_interface =
+				relay_chain_interface.clone().expect("already checked as Some");
 			let target_block = warp_sync_get::<Block, Arc<dyn RelayChainInterface>>(
-				id.ok_or(sc_service::Error::Other("para_id must be defined to enable warp sync".into()))?,
+				id.ok_or(sc_service::Error::Other(
+					"para_id must be defined to enable warp sync".into(),
+				))?,
 				relay_chain_interface,
 				task_manager.spawn_handle().clone(),
 			);
@@ -314,8 +303,9 @@ where
 			import_queue: params.import_queue,
 			block_announce_validator_builder: {
 				match block_announce_validator {
-					Some(block_announce_validator_value) =>
-						Some(Box::new(|_| Box::new(block_announce_validator_value))),
+					Some(block_announce_validator_value) => {
+						Some(Box::new(|_| Box::new(block_announce_validator_value)))
+					},
 					None => None,
 				}
 			},
@@ -380,17 +370,15 @@ async fn start_node_impl<RuntimeApi>(
 	id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
 	create_full_rpc: fn(deps: FullDepsOf<RuntimeApi>) -> ResultRpcExtension,
-) -> sc_service::error::Result<(
-	TaskManager,
-	Arc<TFullClient<Block, RuntimeApi, ParachainExecutor>>,
-)>
+) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, ParachainExecutor>>)>
 where
 	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, ParachainExecutor>>
 		+ Send
 		+ Sync
 		+ 'static,
 	RuntimeApi::RuntimeApi: ParachainRuntimeApiImpl,
-	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sc_client_api::StateBackend<BlakeTwo256>,
+	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>:
+		sc_client_api::StateBackend<BlakeTwo256>,
 {
 	let is_standalone = false;
 	let mut parachain_config = prepare_node_config(parachain_config);
@@ -432,7 +420,7 @@ where
 		create_full_rpc,
 		Some(block_announce_validator),
 		Some(id),
-		Some(relay_chain_interface.clone())
+		Some(relay_chain_interface.clone()),
 	)
 	.await?;
 
@@ -550,17 +538,15 @@ where
 async fn start_standalone_node_impl<RuntimeApi>(
 	parachain_config: Configuration,
 	create_full_rpc: fn(deps: FullDepsOf<RuntimeApi>) -> ResultRpcExtension,
-) -> sc_service::error::Result<(
-	TaskManager,
-	Arc<TFullClient<Block, RuntimeApi, ParachainExecutor>>,
-)>
+) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, ParachainExecutor>>)>
 where
 	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, ParachainExecutor>>
 		+ Send
 		+ Sync
 		+ 'static,
 	RuntimeApi::RuntimeApi: ParachainRuntimeApiImpl,
-	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sc_client_api::StateBackend<BlakeTwo256>,
+	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>:
+		sc_client_api::StateBackend<BlakeTwo256>,
 {
 	let parachain_config = prepare_node_config(parachain_config);
 
@@ -662,7 +648,8 @@ where
 		+ Sync
 		+ 'static,
 	RuntimeApi::RuntimeApi: ParachainRuntimeApiImpl,
-	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sc_client_api::StateBackend<BlakeTwo256>,
+	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>:
+		sc_client_api::StateBackend<BlakeTwo256>,
 {
 	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
@@ -739,7 +726,7 @@ where
 					)
 				});
 		}
-			.boxed(),
+		.boxed(),
 	);
 
 	receiver
@@ -784,7 +771,7 @@ where
 
 			log::debug!(target: "sync::cumulus", "Target block reached {:?}", target_block);
 			let _ = sender.send(target_block);
-			return Ok(())
+			return Ok(());
 		}
 	}
 

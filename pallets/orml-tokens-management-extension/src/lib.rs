@@ -1,7 +1,6 @@
 #![deny(warnings)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-
 use sp_std::{convert::TryInto, prelude::*, vec};
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -231,7 +230,7 @@ pub mod pallet {
 				ensure!(origin == details.owner, Error::<T>::NoPermission);
 
 				if details.owner == new_owner {
-					return Ok(())
+					return Ok(());
 				}
 				details.owner = new_owner.clone();
 
@@ -270,7 +269,7 @@ pub mod pallet {
 				let details = maybe_details.as_mut().ok_or(Error::<T>::NotCreated)?;
 
 				if details.owner == new_owner {
-					return Ok(())
+					return Ok(());
 				}
 				ext::orml_currencies_ext::repatriate_reserve::<T>(
 					T::DepositCurrency::get(),

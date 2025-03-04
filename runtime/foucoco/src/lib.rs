@@ -313,7 +313,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			RuntimeCall::Bounties(_) |
 			RuntimeCall::ChildBounties(_) |
 			RuntimeCall::ClientsInfo(_) |
-			RuntimeCall::TreaSS58Prefixsury(_) |
+			RuntimeCall::Treasury(_) |
 			RuntimeCall::Tokens(_) |
 			RuntimeCall::Currencies(_) |
 			RuntimeCall::ParachainStaking(_) |
@@ -408,7 +408,7 @@ impl frame_system::Config for Runtime {
 	type BlockWeights = RuntimeBlockWeights;
 	/// The maximum length of a block (in bytes).
 	type BlockLength = RuntimeBlockLength;
-	/// Previous chain identifier prefix for address format: 57.
+	/// Previous chain identifier prefix for address format: 57. We now use the generic prefix `0`.
 	type SS58Prefix = SS58Prefix;
 	/// The action to take on a Runtime Upgrade
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;

@@ -68,11 +68,10 @@ To run the collator, execute:
 --name <ASSIGN_A_NAME> \
 --ws-port <P_WS_PORT> --port <P_PORT> --rpc-port <P_RPC_PORT> \
 --chain <P_SPEC_RAW.json> \
---execution=Native \
 -- \
 --port <R_PORT>\
 --chain <R_SPEC_RAW.json> \
---execution=wasm --sync fast --pruning archive
+--sync fast --pruning archive
 ```
 
 where:
@@ -97,11 +96,10 @@ An example for Amplitude will look like this:
 --name amplitude-collator-1 \
 --ws-port 9945 --port 30335 --rpc-port 9935 \
 --chain res/amplitude-spec-raw.json \
---execution=Native \
 -- \
 --port 30334 \
 --chain kusama.json \
---execution=wasm --sync fast --pruning archive
+--sync fast --pruning archive
 ```
 
 You can find the
@@ -122,7 +120,6 @@ the `--bootnode`. Here's an example:
 --ws-port 8844 \
 --enable-offchain-indexing TRUE \
 -- \
---execution wasm \
 --chain rococo-custom-2-raw.json \
 --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/<ALICE_NODE_ID> \
 --port 30343 \
@@ -153,7 +150,6 @@ runtimes `lib.rs` file.
 ```shell
 ./target/production/pendulum-node benchmark pallet \
     --chain pendulum \
-    --execution=wasm \
     --wasm-execution=compiled \
     --pallet "*" \
     --extrinsic "*" \
@@ -168,7 +164,6 @@ runtimes `lib.rs` file.
 ```shell
 ./target/production/pendulum-node benchmark pallet \
     --chain amplitude \
-    --execution=wasm \
     --wasm-execution=compiled \
     --pallet "*" \
     --extrinsic "*" \
@@ -183,7 +178,6 @@ runtimes `lib.rs` file.
 ```shell
 ./target/production/pendulum-node benchmark pallet \
     --chain foucoco \
-    --execution=wasm \
     --wasm-execution=compiled \
     --pallet "*" \
     --extrinsic "*" \

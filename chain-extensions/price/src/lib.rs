@@ -31,7 +31,7 @@ impl TryFrom<u16> for FuncId {
 			1200 => Self::GetCoinInfo,
 			_ => {
 				error!("Called an unregistered `func_id`: {:}", func_id);
-				return Err(DispatchError::Other("Unimplemented func_id"))
+				return Err(DispatchError::Other("Unimplemented func_id"));
 			},
 		};
 		Ok(id)
@@ -100,9 +100,9 @@ where
 	};
 
 	if let Err(_) = env.write(&result.encode(), false, None) {
-		return Ok(RetVal::Converging(ChainExtensionOutcome::WriteError.as_u32()))
+		return Ok(RetVal::Converging(ChainExtensionOutcome::WriteError.as_u32()));
 	};
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
 }
 
 /// CoinInfo is almost the same as Dia's CoinInfo, but with Encode, Decode, and TypeInfo which are necessary for contract to chain extension communication. Implements From<dia::CoinInfo> to make conversion.

@@ -14,7 +14,6 @@ use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdap
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::Convert;
-use xcm::latest::{prelude::*, Weight as XCMWeight};
 use staging_xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds,
@@ -25,6 +24,7 @@ use staging_xcm_executor::{
 	traits::{Properties, ShouldExecute},
 	XcmExecutor,
 };
+use xcm::latest::{prelude::*, Weight as XCMWeight};
 
 use runtime_common::{asset_registry::FixedConversionRateProvider, CurrencyIdConvert};
 
@@ -71,7 +71,7 @@ where
 	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
 		if let Some(ref reserve) = ReserveProvider::reserve(asset) {
 			if reserve == origin {
-				return true
+				return true;
 			}
 		}
 		false
@@ -160,19 +160,19 @@ impl ShouldExecute for DenyReserveTransferToRelayChain {
 				InitiateReserveWithdraw {
 					reserve: MultiLocation { parents: 1, interior: Here },
 					..
-				} | DepositReserveAsset { dest: MultiLocation { parents: 1, interior: Here }, .. } |
-					TransferReserveAsset {
+				} | DepositReserveAsset { dest: MultiLocation { parents: 1, interior: Here }, .. }
+					| TransferReserveAsset {
 						dest: MultiLocation { parents: 1, interior: Here },
 						..
 					}
 			)
 		}) {
-			return Err(ProcessMessageError::Unsupported) // Deny
+			return Err(ProcessMessageError::Unsupported); // Deny
 		}
 
 		// allow reserve transfers to arrive from relay chain
-		if matches!(origin, MultiLocation { parents: 1, interior: Here }) &&
-			instructions.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
+		if matches!(origin, MultiLocation { parents: 1, interior: Here })
+			&& instructions.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
 		{
 			log::trace!(
 				target: "xcm::barriers",
@@ -235,7 +235,6 @@ impl staging_xcm_executor::Config for XcmConfig {
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;
 	type Aliasers = ();
-
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.

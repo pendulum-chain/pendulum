@@ -147,15 +147,15 @@ impl InflationInfo {
 	/// Check whether the annual reward rate is approx. the per_block reward
 	/// rate multiplied with the number of blocks per year
 	pub fn is_valid(&self, blocks_per_year: u64) -> bool {
-		self.collator.reward_rate.annual >=
-			Perquintill::from_parts(
+		self.collator.reward_rate.annual
+			>= Perquintill::from_parts(
 				self.collator
 					.reward_rate
 					.per_block
 					.deconstruct()
 					.saturating_mul(blocks_per_year),
-			) && self.delegator.reward_rate.annual >=
-			Perquintill::from_parts(
+			) && self.delegator.reward_rate.annual
+			>= Perquintill::from_parts(
 				self.delegator
 					.reward_rate
 					.per_block
@@ -186,8 +186,8 @@ mod tests {
 		assert!(almost_equal(
 			rate * 10_000_000_000u128,
 			Perquintill::from_parts(
-				annual_to_per_block(<Test as Config>::BLOCKS_PER_YEAR, rate).deconstruct() *
-					<Test as Config>::BLOCKS_PER_YEAR
+				annual_to_per_block(<Test as Config>::BLOCKS_PER_YEAR, rate).deconstruct()
+					* <Test as Config>::BLOCKS_PER_YEAR
 			) * 10_000_000_000u128,
 			Perbill::from_perthousand(1)
 		));

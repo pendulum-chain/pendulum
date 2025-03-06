@@ -3,26 +3,26 @@
 
 use chain_extension_common::{ChainExtensionOutcome, ChainExtensionTokenError};
 use codec::Encode;
+use frame_support::traits::tokens::{fungible, fungibles, Fortitude, Preservation};
 use frame_support::{
 	pallet_prelude::{Decode, Get, PhantomData},
 	DefaultNoBound,
 };
-use frame_support::traits::tokens::{fungibles,fungible, Preservation, Fortitude};
 use orml_currencies::WeightInfo;
 use orml_currencies_allowance_extension::{
 	default_weights::WeightInfo as AllowanceWeightInfo, Config as AllowanceConfig,
 };
 use orml_traits::MultiCurrency;
+use pallet_balances;
 use pallet_contracts::chain_extension::{
 	ChainExtension, Environment, Ext, InitState, RetVal, SysConfig,
 };
 use sp_core::crypto::UncheckedFrom;
-use sp_std::vec::Vec;
 use sp_runtime::DispatchError;
+use sp_std::vec::Vec;
 use sp_tracing::{error, trace};
 use sp_weights::Weight;
-use spacewalk_primitives::{CurrencyId};
-use pallet_balances;
+use spacewalk_primitives::CurrencyId;
 pub(crate) type BalanceOfForChainExt<T> =
 	<<T as orml_currencies::Config>::MultiCurrency as orml_traits::MultiCurrency<
 		<T as frame_system::Config>::AccountId,
@@ -57,7 +57,7 @@ impl TryFrom<u16> for FuncId {
 			1106 => Self::TransferFrom,
 			_ => {
 				error!("Called an unregistered `func_id`: {:}", func_id);
-				return Err(DispatchError::Other("Unimplemented func_id"))
+				return Err(DispatchError::Other("Unimplemented func_id"));
 			},
 		};
 		Ok(id)
@@ -137,16 +137,16 @@ where
 	trace!("Calling totalSupply() for currency {:?}", currency_id);
 
 	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
-		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
+		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()));
 	}
 
 	let total_supply =
 		<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::total_issuance(currency_id);
 
 	if let Err(_) = env.write(&total_supply.encode(), false, None) {
-		return Ok(RetVal::Converging(ChainExtensionOutcome::WriteError.as_u32()))
+		return Ok(RetVal::Converging(ChainExtensionOutcome::WriteError.as_u32()));
 	};
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
 }
 
 fn balance_of<E, T, Tokens, AccountId>(
@@ -157,7 +157,7 @@ where
 	T: SysConfig
 		+ orml_tokens::Config<CurrencyId = CurrencyId>
 		+ pallet_contracts::Config
-	+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
+		+ orml_currencies::Config<MultiCurrency = Tokens, AccountId = AccountId>
 		+ pallet_balances::Config
 		+ orml_currencies_allowance_extension::Config,
 	E: Ext<T = T>,
@@ -178,19 +178,30 @@ where
 	trace!("Calling balanceOf() for currency {:?} and account {:?}", currency_id, account_id);
 
 	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
-		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
+		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()));
 	}
 
 	let balance_encoded: Vec<u8> = if currency_id == T::GetNativeCurrencyId::get() {
-		<pallet_balances::Pallet<T> as fungible::Inspect<T::AccountId>>::reducible_balance(&account_id, Preservation::Preserve, Fortitude::Polite).encode()
+		<pallet_balances::Pallet<T> as fungible::Inspect<T::AccountId>>::reducible_balance(
+			&account_id,
+			Preservation::Preserve,
+			Fortitude::Polite,
+		)
+		.encode()
 	} else {
-		<orml_tokens::Pallet<T> as fungibles::Inspect<T::AccountId>>::reducible_balance(currency_id, &account_id, Preservation::Preserve, Fortitude::Polite).encode()
+		<orml_tokens::Pallet<T> as fungibles::Inspect<T::AccountId>>::reducible_balance(
+			currency_id,
+			&account_id,
+			Preservation::Preserve,
+			Fortitude::Polite,
+		)
+		.encode()
 	};
 
 	if let Err(_) = env.write(&balance_encoded, false, None) {
-		return Ok(RetVal::Converging(ChainExtensionOutcome::WriteError.as_u32()))
+		return Ok(RetVal::Converging(ChainExtensionOutcome::WriteError.as_u32()));
 	};
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
 }
 
 fn transfer<E, T, Tokens, AccountId>(
@@ -228,7 +239,7 @@ where
 	);
 
 	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
-		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
+		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()));
 	}
 
 	<orml_currencies::Pallet<T> as MultiCurrency<T::AccountId>>::transfer(
@@ -237,7 +248,7 @@ where
 		&recipient,
 		amount,
 	)?;
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
 }
 
 fn allowance<E, T, Tokens, AccountId>(
@@ -273,16 +284,16 @@ where
 	);
 
 	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
-		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
+		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()));
 	}
 
 	let allowance =
 		orml_currencies_allowance_extension::Pallet::<T>::allowance(currency_id, &owner, &spender);
 
 	if let Err(_) = env.write(&allowance.encode(), false, None) {
-		return Ok(RetVal::Converging(ChainExtensionOutcome::WriteError.as_u32()))
+		return Ok(RetVal::Converging(ChainExtensionOutcome::WriteError.as_u32()));
 	};
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
 }
 
 fn approve<E, T, Tokens, AccountId>(
@@ -319,7 +330,7 @@ where
 	);
 
 	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
-		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
+		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()));
 	}
 
 	orml_currencies_allowance_extension::Pallet::<T>::do_approve_transfer(
@@ -328,7 +339,7 @@ where
 		&spender,
 		amount,
 	)?;
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
 }
 
 fn transfer_from<E, T, Tokens, AccountId>(
@@ -370,7 +381,7 @@ where
 	);
 
 	if !orml_currencies_allowance_extension::Pallet::<T>::is_allowed_currency(currency_id) {
-		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()))
+		return Ok(RetVal::Converging(ChainExtensionTokenError::Unsupported.as_u32()));
 	}
 
 	orml_currencies_allowance_extension::Pallet::<T>::do_transfer_approved(
@@ -380,5 +391,5 @@ where
 		&recipient,
 		amount,
 	)?;
-	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()))
+	return Ok(RetVal::Converging(ChainExtensionOutcome::Success.as_u32()));
 }

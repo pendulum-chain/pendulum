@@ -101,8 +101,9 @@ impl From<DispatchError> for ChainExtensionOutcome {
 			DispatchError::ConsumerRemaining => ChainExtensionOutcome::ConsumerRemaining,
 			DispatchError::NoProviders => ChainExtensionOutcome::NoProviders,
 			DispatchError::TooManyConsumers => ChainExtensionOutcome::TooManyConsumers,
-			DispatchError::Token(token_err) =>
-				ChainExtensionOutcome::Token(ChainExtensionTokenError::from(token_err)),
+			DispatchError::Token(token_err) => {
+				ChainExtensionOutcome::Token(ChainExtensionTokenError::from(token_err))
+			},
 			DispatchError::Arithmetic(arithmetic_error) => ChainExtensionOutcome::Arithmetic(
 				ChainExtensionArithmeticError::from(arithmetic_error),
 			),
@@ -155,7 +156,7 @@ fn trim_trailing_zeros(slice: &[u8]) -> &[u8] {
 		if *el == 0 {
 			trim_amount += 1;
 		} else {
-			break
+			break;
 		}
 	}
 	&slice[..slice.len() - trim_amount]
@@ -234,8 +235,9 @@ impl TryFrom<u32> for ChainExtensionOutcome {
 			9 => Ok(ChainExtensionOutcome::WriteError),
 			10 => Ok(ChainExtensionOutcome::UnimplementedFuncId),
 			999 => Ok(ChainExtensionOutcome::Unknown),
-			1000..=1999 =>
-				Ok(ChainExtensionOutcome::Token(ChainExtensionTokenError::try_from(value - 1000)?)),
+			1000..=1999 => {
+				Ok(ChainExtensionOutcome::Token(ChainExtensionTokenError::try_from(value - 1000)?))
+			},
 			2000..=2999 => Ok(ChainExtensionOutcome::Arithmetic(
 				ChainExtensionArithmeticError::try_from(value - 2000)?,
 			)),

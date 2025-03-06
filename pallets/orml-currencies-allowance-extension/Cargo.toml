@@ -2,7 +2,7 @@
 authors = ["Pendulum Chain"]
 edition = "2021"
 name = "orml-currencies-allowance-extension"
-version = "1.6.0-a"
+version = "1.6.0-b"
 
 [dependencies]
 codec = { workspace = true, features = ["derive", "max-encoded-len"] }

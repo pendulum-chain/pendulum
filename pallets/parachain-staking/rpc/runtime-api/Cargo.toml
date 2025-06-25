@@ -2,7 +2,7 @@
 authors = ["Pendulum"]
 edition = "2021"
 name = "module-pallet-staking-rpc-runtime-api"
-version = "1.6.0-b"
+version = "1.6.0-c"
 
 [dependencies]
 frame-support = { workspace = true }

@@ -2,7 +2,7 @@
 authors = ["Pendulum Chain"]
 edition = "2021"
 name = "orml-tokens-management-extension"
-version = "1.6.0-b"
+version = "1.6.0-c"
 
 [dependencies]
 codec = { workspace = true, features = ["derive", "max-encoded-len"] }

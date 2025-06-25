@@ -1,6 +1,6 @@
 [package]
 name = "pendulum-node"
-version = "1.6.0-b"
+version = "1.6.0-c"
 authors = ["Pendulum"]
 description = "The Pendulum/Amplitude collator node"
 homepage = "https://pendulumchain.org"

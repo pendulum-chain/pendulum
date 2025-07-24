@@ -85,6 +85,7 @@ cumulus-client-collator = {  workspace = true, default-features = true }
 cumulus-client-network = {  workspace = true, default-features = true }
 cumulus-client-parachain-inherent = {  workspace = true, default-features = true }
 cumulus-client-service = {  workspace = true, default-features = true }
+cumulus-primitives-aura = { workspace = true, default-features = true }
 cumulus-primitives-core = {  workspace = true, default-features = true }
 cumulus-primitives-parachain-inherent = {  workspace = true, default-features = true }
 cumulus-relay-chain-inprocess-interface = {  workspace = true, default-features = true }

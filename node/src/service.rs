@@ -9,9 +9,7 @@ use runtime_common::{opaque::Block, AccountId, Balance, Index as Nonce};
 
 // Cumulus Imports
 use cumulus_client_collator::service::CollatorService;
-use cumulus_client_consensus_aura::collators::basic::{
-	self as basic_aura, Params as BasicAuraParams,
-};
+use cumulus_client_consensus_aura::collators::lookahead::{self as aura, Params as AuraParams};
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
 use cumulus_client_network::RequireSecondedInBlockAnnounce;
@@ -19,7 +17,10 @@ use cumulus_client_parachain_inherent::{MockValidationDataInherentDataProvider, 
 use cumulus_client_service::{
 	prepare_node_config, start_relay_chain_tasks, DARecoveryProfile, StartRelayChainTasksParams,
 };
-use cumulus_primitives_core::{relay_chain::Hash, ParaId};
+use cumulus_primitives_core::{
+	relay_chain::{CollatorPair, Hash, ValidationCode},
+	ParaId,
+};
 use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
 use cumulus_relay_chain_interface::{RelayChainInterface, RelayChainResult};
 use cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node_with_rpc;
@@ -37,6 +38,7 @@ use sc_service::{
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_consensus_aura::{sr25519::AuthorityId, AuraApi};
+use cumulus_primitives_aura::AuraUnincludedSegmentApi;
 use sp_keystore::KeystorePtr;
 use sp_runtime::traits::{BlakeTwo256, Block as BlockT};
 use substrate_prometheus_endpoint::Registry;
@@ -44,7 +46,7 @@ use substrate_prometheus_endpoint::Registry;
 use crate::rpc::{
 	create_full_amplitude, create_full_foucoco, create_full_pendulum, FullDeps, ResultRpcExtension,
 };
-use polkadot_service::{CollatorPair, Handle};
+use polkadot_service::Handle;
 use sc_consensus::{import_queue::ImportQueueService, ImportQueue};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 
@@ -91,6 +93,7 @@ pub trait ParachainRuntimeApiImpl:
 	+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
 	+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
 	+ AuraApi<Block, AuthorityId>
+	+ AuraUnincludedSegmentApi<Block>
 {
 }
 
@@ -353,9 +356,9 @@ where
 		keystore: params.keystore_container.keystore(),
 		backend: backend.clone(),
 		network: network.clone(),
+		sync_service: sync_service.clone(),
 		system_rpc_tx,
 		tx_handler_controller,
-		sync_service: sync_service.clone(),
 		telemetry: telemetry.as_mut(),
 	})?;
 
@@ -376,7 +379,7 @@ where
 		+ Send
 		+ Sync
 		+ 'static,
-	RuntimeApi::RuntimeApi: ParachainRuntimeApiImpl,
+	RuntimeApi::RuntimeApi: ParachainRuntimeApiImpl + cumulus_primitives_aura::AuraUnincludedSegmentApi<Block>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>:
 		sc_client_api::StateBackend<BlakeTwo256>,
 {
@@ -385,6 +388,7 @@ where
 	let mut params = new_partial(&mut parachain_config, is_standalone)?;
 
 	let client = params.client.clone();
+	let backend = params.backend.clone();
 
 	//just clone the last element of the "other" tuple
 	let telemetry_worker_handle_clone = params.other.2.clone();
@@ -468,6 +472,7 @@ where
 	if validator {
 		start_consensus(
 			client.clone(),
+			backend.clone(),
 			block_import,
 			prometheus_registry.as_ref(),
 			telemetry.as_ref().map(|t| t.handle()),
@@ -628,6 +633,7 @@ where
 #[allow(clippy::too_many_arguments)]
 fn start_consensus<RuntimeApi>(
 	client: Arc<TFullClient<Block, RuntimeApi, ParachainExecutor>>,
+	backend: Arc<TFullBackend<Block>>,
 	block_import: ParachainBlockImport<RuntimeApi>,
 	prometheus_registry: Option<&Registry>,
 	telemetry: Option<TelemetryHandle>,
@@ -647,12 +653,12 @@ where
 		+ Send
 		+ Sync
 		+ 'static,
-	RuntimeApi::RuntimeApi: ParachainRuntimeApiImpl,
+	RuntimeApi::RuntimeApi: ParachainRuntimeApiImpl + cumulus_primitives_aura::AuraUnincludedSegmentApi<Block>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>:
 		sc_client_api::StateBackend<BlakeTwo256>,
 {
 	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
-
+	
 	let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
 		task_manager.spawn_handle(),
 		client.clone(),
@@ -669,29 +675,40 @@ where
 		client.clone(),
 	);
 
-	let params = BasicAuraParams {
-		proposer,
+	let params = AuraParams {
 		create_inherent_data_providers: move |_, ()| async move { Ok(()) },
 		block_import,
-		collator_key,
-		collator_service,
-		para_client: client,
+		para_client: client.clone(),
+		para_backend: backend.clone(),
 		relay_client: relay_chain_interface,
+		code_hash_provider: move |block_hash| {
+			client.code_at(block_hash).ok().map(|c| ValidationCode::from(c).hash())
+		},
 		sync_oracle,
 		keystore,
 		slot_duration,
-		authoring_duration: Duration::from_millis(500),
-		relay_chain_slot_duration,
+		collator_key,
 		para_id: id,
 		overseer_handle,
-		collation_request_receiver: None,
+		relay_chain_slot_duration,
+		proposer,
+		collator_service,
+		authoring_duration: Duration::from_millis(1500),
 	};
 
-	let fut =
-		basic_aura::run::<Block, sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _, _>(
-			params,
-		);
-
+	let fut = aura::run::<
+		Block,
+		sp_consensus_aura::sr25519::AuthorityPair,
+		_,
+		_,
+		_,
+		_,
+		_,
+		_,
+		_,
+		_,
+		_,
+	>(params);
 	task_manager.spawn_essential_handle().spawn("aura", None, fut);
 	Ok(())
 }

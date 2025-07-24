@@ -1,6 +1,6 @@
 [package]
 name = "chain-extension-common"
-version = "1.6.0-c"
+version = "1.6.0-d"
 authors = ["Pendulum"]
 description = "Chain Extension common definitions"
 edition = "2021"

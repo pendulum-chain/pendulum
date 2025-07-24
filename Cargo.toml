@@ -49,6 +49,7 @@ cumulus-pallet-dmp-queue = {  git = "https://github.com/paritytech/polkadot-sdk"
 cumulus-pallet-session-benchmarking = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 cumulus-pallet-xcm = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 cumulus-pallet-xcmp-queue = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-primitives-aura = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 cumulus-primitives-timestamp = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 cumulus-primitives-utility = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 cumulus-client-cli = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
@@ -252,6 +253,7 @@ cumulus-pallet-dmp-queue = {  git = "https://github.com/pendulum-chain/polkadot-
 cumulus-pallet-session-benchmarking = {  git = "https://github.com/pendulum-chain/polkadot-sdk",  branch = "release-polkadot-v1.6.0" }
 cumulus-pallet-xcm = {  git = "https://github.com/pendulum-chain/polkadot-sdk",  branch = "release-polkadot-v1.6.0" }
 cumulus-pallet-xcmp-queue = {  git = "https://github.com/pendulum-chain/polkadot-sdk",  branch = "release-polkadot-v1.6.0" }
+cumulus-primitives-aura = { git = "https://github.com/pendulum-chain/polkadot-sdk",  branch = "release-polkadot-v1.6.0" }
 cumulus-primitives-timestamp = {  git = "https://github.com/pendulum-chain/polkadot-sdk",  branch = "release-polkadot-v1.6.0" }
 cumulus-primitives-utility = {  git = "https://github.com/pendulum-chain/polkadot-sdk",  branch = "release-polkadot-v1.6.0" }
 cumulus-client-cli = {  git = "https://github.com/pendulum-chain/polkadot-sdk",  branch = "release-polkadot-v1.6.0" }

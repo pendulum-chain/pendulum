@@ -1496,7 +1496,6 @@ where
 	type OverarchingCall = RuntimeCall;
 }
 
-pub type RuntimeApiImpl<B, C> = Runtime;
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(

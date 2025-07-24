@@ -130,7 +130,7 @@ dependencies = [
  "cumulus-pallet-session-benchmarking",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-aura 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.6.0)",
+ "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
@@ -2226,7 +2226,7 @@ dependencies = [
  "cumulus-client-consensus-common",
  "cumulus-client-consensus-proposer",
  "cumulus-client-parachain-inherent",
- "cumulus-primitives-aura 0.1.0 (git+https://github.com/pendulum-chain/polkadot-sdk?branch=release-polkadot-v1.6.0)",
+ "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-relay-chain-interface",
  "futures",
@@ -2543,20 +2543,6 @@ dependencies = [
  "sp-std 8.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?branch=release-polkadot-v1.6.0)",
  "staging-xcm",
  "staging-xcm-executor",
-]
-
-[[package]]
-name = "cumulus-primitives-aura"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.6.0#e36ffb3da50afff65f8ec99378fbfe14f9d340e7"
-dependencies = [
- "parity-scale-codec",
- "polkadot-core-primitives",
- "polkadot-primitives",
- "sp-api 4.0.0-dev (git+https://github.com/pendulum-chain/polkadot-sdk?branch=release-polkadot-v1.6.0)",
- "sp-consensus-aura",
- "sp-runtime 24.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?branch=release-polkadot-v1.6.0)",
- "sp-std 8.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?branch=release-polkadot-v1.6.0)",
 ]
 
 [[package]]
@@ -3837,7 +3823,7 @@ dependencies = [
  "cumulus-pallet-session-benchmarking",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-aura 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.6.0)",
+ "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
@@ -8843,7 +8829,7 @@ dependencies = [
  "cumulus-client-network",
  "cumulus-client-parachain-inherent",
  "cumulus-client-service",
- "cumulus-primitives-aura 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.6.0)",
+ "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
  "cumulus-relay-chain-inprocess-interface",
@@ -8928,7 +8914,7 @@ dependencies = [
  "cumulus-pallet-session-benchmarking",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-aura 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.6.0)",
+ "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",

@@ -960,8 +960,8 @@ impl parachain_staking::Config for Runtime {
 	type NetworkRewardBeneficiary = Treasury;
 	type CollatorRewardRateDecay = CollatorRewardRateDecay;
 	type WeightInfo = weights::parachain_staking::SubstrateWeight<Runtime>;
-
 	const BLOCKS_PER_YEAR: BlockNumber = BLOCKS_PER_YEAR;
+	type TreasuryAccount = AmplitudeTreasuryAccount;
 }
 
 parameter_types! {

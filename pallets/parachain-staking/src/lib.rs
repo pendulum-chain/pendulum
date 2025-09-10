@@ -135,6 +135,7 @@ use frame_support::pallet;
 
 pub use crate::{default_weights::WeightInfo, pallet::*};
 pub use module_pallet_staking_rpc_runtime_api::StakingRates;
+pub use crate::types::AccountIdOf;
 
 #[pallet]
 pub mod pallet {
@@ -146,7 +147,7 @@ pub mod pallet {
 		pallet_prelude::*,
 		storage::bounded_btree_map::BoundedBTreeMap,
 		traits::{
-			Currency, EstimateNextSessionRotation, Get, Imbalance, LockIdentifier,
+			Currency, EstimateNextSessionRotation, Get, LockIdentifier,
 			LockableCurrency, OnUnbalanced, ReservableCurrency, StorageVersion, WithdrawReasons,
 		},
 		BoundedVec,
@@ -310,6 +311,11 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		const BLOCKS_PER_YEAR: BlockNumberFor<Self>;
+
+		/// Used for getting the treasury account
+		#[pallet::constant]
+		type TreasuryAccount: Get<AccountIdOf<Self>>;
+		
 	}
 
 	#[pallet::error]
@@ -404,6 +410,10 @@ pub mod pallet {
 		UnstakingIsEmpty,
 		/// Cannot claim rewards if empty.
 		RewardsNotFound,
+		/// Treasury balance is insufficient for the operation.
+		TreasuryBalanceInsufficient,
+		/// Failed to transfer from treasury.
+		TreasuryTransferFailed,
 	}
 
 	#[pallet::event]
@@ -1721,11 +1731,21 @@ pub mod pallet {
 			let rewards = Rewards::<T>::get(&target);
 			ensure!(!rewards.is_zero(), Error::<T>::RewardsNotFound);
 
-			// mint into target and reset rewards
-			let rewards = T::Currency::deposit_into_existing(&target, rewards)?;
+			let treasury_account_id = T::TreasuryAccount::get();
+			let treasury_balance = T::Currency::free_balance(&treasury_account_id);
+			ensure!(treasury_balance >= rewards, Error::<T>::TreasuryBalanceInsufficient);
+
+			T::Currency::transfer(
+				&treasury_account_id,
+				&target,
+				rewards,
+				frame_support::traits::ExistenceRequirement::KeepAlive,
+			)
+			.map_err(|_| Error::<T>::TreasuryTransferFailed)?;
+
 			Rewards::<T>::remove(&target);
 
-			Self::deposit_event(Event::Rewarded(target, rewards.peek()));
+			Self::deposit_event(Event::Rewarded(target, rewards));
 
 			Ok(())
 		}

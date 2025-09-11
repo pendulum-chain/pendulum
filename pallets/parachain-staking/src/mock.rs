@@ -46,6 +46,7 @@ pub(crate) const MAX_COLLATOR_STAKE: Balance = 200_000 * 1000 * MILLI_KILT;
 pub(crate) const BLOCKS_PER_ROUND: BlockNumber = 5;
 pub(crate) const DECIMALS: Balance = 1000 * MILLI_KILT;
 pub(crate) const TREASURY_ACC: AccountId = u64::MAX;
+pub(crate) const TREASURY_INITIAL_BALANCE: u128 = 2_000_000_000_000 * 1000 * MILLI_KILT;
 
 // Configure a mock runtime to test the pallet.
 construct_runtime!(
@@ -153,6 +154,11 @@ impl OnUnbalanced<NegativeImbalanceOf<Test>> for ToBeneficiary {
 	}
 }
 
+parameter_types! {
+	pub const TreasuryAccount: AccountId = TREASURY_ACC;
+}
+
+
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
@@ -176,6 +182,7 @@ impl Config for Test {
 	type CollatorRewardRateDecay = CollatorRewardRateDecay;
 	type WeightInfo = ();
 	const BLOCKS_PER_YEAR: BlockNumber = 5 * 60 * 24 * 36525 / 100;
+	type TreasuryAccount = TreasuryAccount;
 }
 
 impl_opaque_keys! {
@@ -296,7 +303,9 @@ impl ExtBuilder {
 			.build_storage()
 			.expect("Frame system builds valid default genesis config");
 
-		pallet_balances::GenesisConfig::<Test> { balances: self.balances.clone() }
+		let mut balances = self.balances.clone();
+		balances.push((TREASURY_ACC, TREASURY_INITIAL_BALANCE));
+		pallet_balances::GenesisConfig::<Test> { balances }
 			.assimilate_storage(&mut t)
 			.expect("Pallet balances storage can be assimilated");
 

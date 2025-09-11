@@ -1429,7 +1429,7 @@ fn coinbase_rewards_few_blocks_detailed_check() {
 		.execute_with(|| {
 			let inflation = StakePallet::inflation_config();
 			let total_issuance = <Test as Config>::Currency::total_issuance();
-			let EXPECTED_TOTAL_ISSUANCE = 160_000_000 + TREASURY_INITIAL_BALANCE_UNITS;
+			const EXPECTED_TOTAL_ISSUANCE: BalanceOf<Test> = 160_000_000 + TREASURY_INITIAL_BALANCE_UNITS;
 			assert_eq!(total_issuance, EXPECTED_TOTAL_ISSUANCE * DECIMALS);
 
 			// compute rewards

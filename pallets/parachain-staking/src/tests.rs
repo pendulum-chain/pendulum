@@ -1429,8 +1429,8 @@ fn coinbase_rewards_few_blocks_detailed_check() {
 		.execute_with(|| {
 			let inflation = StakePallet::inflation_config();
 			let total_issuance = <Test as Config>::Currency::total_issuance();
-			let expected_total_issuance = 160_000_000 + TREASURY_INITIAL_BALANCE_UNITS;
-			assert_eq!(total_issuance, expected_total_issuance * DECIMALS);
+			let EXPECTED_TOTAL_ISSUANCE = 160_000_000 + TREASURY_INITIAL_BALANCE_UNITS;
+			assert_eq!(total_issuance, EXPECTED_TOTAL_ISSUANCE * DECIMALS);
 
 			// compute rewards
 			let c_staking_rate = Perquintill::from_rational(16_000_000 * DECIMALS, total_issuance);
@@ -1572,8 +1572,8 @@ fn coinbase_rewards_many_blocks_simple_check() {
 
 			let inflation = StakePallet::inflation_config();
 			let total_issuance = <Test as Config>::Currency::total_issuance();
-			const expected_total_issuance: BalanceOf<Test> = 160_000_000 + TREASURY_INITIAL_BALANCE_UNITS;
-			assert_eq!(total_issuance, expected_total_issuance * DECIMALS);
+			const EXPECTED_TOTAL_ISSUANCE: BalanceOf<Test> = 160_000_000 + TREASURY_INITIAL_BALANCE_UNITS;
+			assert_eq!(total_issuance, EXPECTED_TOTAL_ISSUANCE * DECIMALS);
 			let end_block: BlockNumber = num_of_years * Test::BLOCKS_PER_YEAR as BlockNumber;
 			// set round robin authoring
 			let authors: Vec<Option<AccountId>> =

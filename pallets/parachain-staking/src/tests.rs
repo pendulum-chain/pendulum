@@ -18,13 +18,14 @@
 
 //! Unit testing
 
+use core::ops::Add;
 use std::{convert::TryInto, iter};
 
 use crate::{
 	mock::{
 		almost_equal, events, last_event, roll_to, roll_to_claim_rewards, AccountId, Balance,
 		Balances, BlockNumber, ExtBuilder, RuntimeEvent as MetaEvent, RuntimeOrigin as Origin,
-		Session, StakePallet, System, Test, BLOCKS_PER_ROUND, DECIMALS, TREASURY_ACC,
+		Session, StakePallet, System, Test, BLOCKS_PER_ROUND, DECIMALS, TREASURY_ACC, TREASURY_INITIAL_BALANCE_UNITS,
 	},
 	set::OrderedSet,
 	types::{
@@ -1429,7 +1430,8 @@ fn coinbase_rewards_few_blocks_detailed_check() {
 		.execute_with(|| {
 			let inflation = StakePallet::inflation_config();
 			let total_issuance = <Test as Config>::Currency::total_issuance();
-			assert_eq!(total_issuance, 160_000_000 * DECIMALS);
+			let expected_total_issuance = 160_000_000 + TREASURY_INITIAL_BALANCE_UNITS;
+			assert_eq!(total_issuance, expected_total_issuance * DECIMALS);
 
 			// compute rewards
 			let c_staking_rate = Perquintill::from_rational(16_000_000 * DECIMALS, total_issuance);
@@ -1568,9 +1570,11 @@ fn coinbase_rewards_many_blocks_simple_check() {
 		.with_inflation(10, 15, 40, 15, 5)
 		.build()
 		.execute_with(|| {
+
 			let inflation = StakePallet::inflation_config();
 			let total_issuance = <Test as Config>::Currency::total_issuance();
-			assert_eq!(total_issuance, 160_000_000 * DECIMALS);
+			const expected_total_issuance: BalanceOf<Test> = 160_000_000 + TREASURY_INITIAL_BALANCE_UNITS;
+			assert_eq!(total_issuance, expected_total_issuance * DECIMALS);
 			let end_block: BlockNumber = num_of_years * Test::BLOCKS_PER_YEAR as BlockNumber;
 			// set round robin authoring
 			let authors: Vec<Option<AccountId>> =
@@ -3299,13 +3303,14 @@ fn network_reward_multiple_blocks() {
 			let total_collator_stake =
 				max_stake.saturating_mul(<Test as Config>::MinCollators::get().into());
 			assert_eq!(total_collator_stake, StakePallet::total_collator_stake().collators);
-			assert!(Balances::free_balance(&TREASURY_ACC).is_zero());
+			let initial_treasury_balance: Balance = Balances::free_balance(&TREASURY_ACC);
+		
 			let total_issuance = <Test as Config>::Currency::total_issuance();
 
 			// total issuance should not increase when not noting authors because we haven't
 			// reached NetworkRewardStart yet
 			roll_to(10, vec![None]);
-			assert!(Balances::free_balance(&TREASURY_ACC).is_zero());
+			assert_eq!(initial_treasury_balance, Balances::free_balance(&TREASURY_ACC));
 			assert_eq!(total_issuance, <Test as Config>::Currency::total_issuance());
 
 			// set current block to one block before NetworkRewardStart
@@ -3314,12 +3319,12 @@ fn network_reward_multiple_blocks() {
 
 			// network rewards should only appear 1 block after start
 			roll_to(network_reward_start, vec![None]);
-			assert!(Balances::free_balance(&TREASURY_ACC).is_zero());
+			assert_eq!(initial_treasury_balance, Balances::free_balance(&TREASURY_ACC));
 			assert_eq!(total_issuance, <Test as Config>::Currency::total_issuance());
 
 			// should mint to treasury now
 			roll_to(network_reward_start + 1, vec![None]);
-			let network_reward = Balances::free_balance(&TREASURY_ACC);
+			let network_reward = Balances::free_balance(&TREASURY_ACC).saturating_sub(initial_treasury_balance);
 			assert!(!network_reward.is_zero());
 			assert_eq!(
 				total_issuance + network_reward,
@@ -3332,7 +3337,7 @@ fn network_reward_multiple_blocks() {
 
 			// should mint exactly the same amount
 			roll_to(network_reward_start + 2, vec![None]);
-			assert_eq!(2 * network_reward, Balances::free_balance(&TREASURY_ACC));
+			assert_eq!(2 * network_reward, Balances::free_balance(&TREASURY_ACC).saturating_sub(initial_treasury_balance));
 			assert_eq!(
 				total_issuance + 2 * network_reward,
 				<Test as Config>::Currency::total_issuance()
@@ -3340,7 +3345,7 @@ fn network_reward_multiple_blocks() {
 
 			// should mint exactly the same amount in each block
 			roll_to(network_reward_start + 100, vec![None]);
-			assert_eq!(100 * network_reward, Balances::free_balance(&TREASURY_ACC));
+			assert_eq!(100 * network_reward, Balances::free_balance(&TREASURY_ACC).saturating_sub(initial_treasury_balance));
 			assert_eq!(
 				total_issuance + 100 * network_reward,
 				<Test as Config>::Currency::total_issuance()
@@ -3350,7 +3355,7 @@ fn network_reward_multiple_blocks() {
 			// based on MaxCollatorCandidateStake and MaxSelectedCandidates
 			assert_ok!(StakePallet::init_leave_candidates(Origin::signed(1)));
 			roll_to(network_reward_start + 101, vec![None]);
-			assert_eq!(101 * network_reward, Balances::free_balance(&TREASURY_ACC));
+			assert_eq!(101 * network_reward, Balances::free_balance(&TREASURY_ACC).saturating_sub(initial_treasury_balance));
 			assert_eq!(
 				total_issuance + 101 * network_reward,
 				<Test as Config>::Currency::total_issuance()
@@ -3375,9 +3380,10 @@ fn network_reward_increase_max_candidate_stake() {
 			let total_issuance = <Test as Config>::Currency::total_issuance();
 			System::set_block_number(network_reward_start);
 
+			let initial_treasury_balance: Balance = Balances::free_balance(&TREASURY_ACC);
 			// should mint to treasury now
 			roll_to(network_reward_start + 1, vec![None]);
-			let reward_before = Balances::free_balance(&TREASURY_ACC);
+			let reward_before = Balances::free_balance(&TREASURY_ACC).saturating_sub(initial_treasury_balance);
 			assert!(!reward_before.is_zero());
 			assert_eq!(
 				total_issuance + reward_before,
@@ -3389,7 +3395,7 @@ fn network_reward_increase_max_candidate_stake() {
 			let reward_after = 2 * reward_before;
 			assert_ok!(StakePallet::set_max_candidate_stake(Origin::root(), max_stake_doubled));
 			roll_to(network_reward_start + 2, vec![None]);
-			assert_eq!(reward_before + reward_after, Balances::free_balance(&TREASURY_ACC));
+			assert_eq!(reward_before + reward_after, Balances::free_balance(&TREASURY_ACC).saturating_sub(initial_treasury_balance));
 			assert_eq!(
 				reward_before + reward_after + total_issuance,
 				<Test as Config>::Currency::total_issuance()
@@ -3414,9 +3420,10 @@ fn network_reward_increase_max_collator_count() {
 			let total_issuance = <Test as Config>::Currency::total_issuance();
 			System::set_block_number(network_reward_start);
 
+			let initial_treasury_balance: Balance = Balances::free_balance(&TREASURY_ACC);
 			// should mint to treasury now
 			roll_to(network_reward_start + 1, vec![None]);
-			let reward_before = Balances::free_balance(&TREASURY_ACC);
+			let reward_before = Balances::free_balance(&TREASURY_ACC).saturating_sub(initial_treasury_balance);
 			assert!(!reward_before.is_zero());
 			assert_eq!(
 				total_issuance + reward_before,
@@ -3430,7 +3437,7 @@ fn network_reward_increase_max_collator_count() {
 				<Test as Config>::MinCollators::get() * 3
 			));
 			roll_to(network_reward_start + 2, vec![None]);
-			assert_eq!(reward_before + reward_after, Balances::free_balance(&TREASURY_ACC));
+			assert_eq!(reward_before + reward_after, Balances::free_balance(&TREASURY_ACC).saturating_sub(initial_treasury_balance));
 			assert_eq!(
 				reward_before + reward_after + total_issuance,
 				<Test as Config>::Currency::total_issuance()
@@ -4083,9 +4090,9 @@ fn api_get_staking_rates() {
 		.build()
 		.execute_with(|| {
 			let mut rates = StakingRates {
-				collator_staking_rate: Perquintill::from_percent(50),
-				collator_reward_rate: Perquintill::from_percent(5),
-				delegator_staking_rate: Perquintill::from_percent(25),
+				collator_staking_rate: Perquintill::from_percent(25),
+				collator_reward_rate: Perquintill::from_percent(10),
+				delegator_staking_rate: Perquintill::from_float(0.125),
 				delegator_reward_rate: Perquintill::from_percent(8),
 			};
 			// collators exceed max staking rate
@@ -4096,10 +4103,10 @@ fn api_get_staking_rates() {
 			assert_ok!(StakePallet::candidate_stake_less(Origin::signed(2), stake / 2));
 			// delegator stakes more to exceed
 			assert_ok!(StakePallet::delegator_stake_more(Origin::signed(3), 1, stake));
-			rates.collator_staking_rate = Perquintill::from_percent(25);
+			rates.collator_staking_rate = Perquintill::from_float(0.125);
 			rates.collator_reward_rate = Perquintill::from_percent(10);
-			rates.delegator_staking_rate = Perquintill::from_percent(50);
-			rates.delegator_reward_rate = Perquintill::from_percent(4);
+			rates.delegator_staking_rate = Perquintill::from_percent(25);
+			rates.delegator_reward_rate = Perquintill::from_percent(8);
 			assert_eq!(rates, StakePallet::get_staking_rates());
 		});
 }

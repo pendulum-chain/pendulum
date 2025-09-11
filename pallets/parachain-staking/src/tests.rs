@@ -18,7 +18,6 @@
 
 //! Unit testing
 
-use core::ops::Add;
 use std::{convert::TryInto, iter};
 
 use crate::{

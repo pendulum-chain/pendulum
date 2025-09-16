@@ -603,16 +603,31 @@ benchmarks! {
 	}
 
 	claim_rewards {
+		let treasury_account = T::TreasuryAccount::get();
+		let reward_amount = T::MinCollatorCandidateStake::get();
+
 		let beneficiary = account("beneficiary", 0, 0);
 		let amount = T::MinCollatorCandidateStake::get();
 		T::Currency::make_free_balance_be(&beneficiary, amount);
 		Rewards::<T>::insert(&beneficiary, amount);
+
+		let initial_issuance = T::Currency::total_issuance();
+		let initial_treasury_balance = T::Currency::free_balance(&treasury_account);
+
 		assert_eq!(pallet_balances::Pallet::<T>::usable_balance(&beneficiary), amount.into());
 		let origin = RawOrigin::Signed(beneficiary.clone());
 	}: _(origin)
 	verify {
 		assert!(Rewards::<T>::get(&beneficiary).is_zero());
-		assert_eq!(pallet_balances::Pallet::<T>::usable_balance(&beneficiary), (amount + amount).into());
+		assert_eq!(
+			pallet_balances::Pallet::<T>::usable_balance(&beneficiary),
+			(amount + reward_amount).into()
+		);
+		assert_eq!(
+			T::Currency::free_balance(&treasury_account),
+			initial_treasury_balance - reward_amount
+		);
+		assert_eq!(T::Currency::total_issuance(), initial_issuance);
 	}
 
 	execute_scheduled_reward_change {
@@ -645,7 +660,6 @@ benchmarks! {
 impl_benchmark_test_suite!(
 	Pallet,
 	crate::mock::ExtBuilder::default()
-		.with_balances(vec![(u64::MAX, 1000 * crate::mock::MILLI_KILT)])
 		.with_collators(vec![(u64::MAX, 1000 * crate::mock::MILLI_KILT)])
 		.build(),
 	crate::mock::Test,

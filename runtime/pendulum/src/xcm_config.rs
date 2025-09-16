@@ -74,6 +74,20 @@ where
 	ReserveProvider: Reserve,
 {
 	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+		// Explicit allow for DOT from Asset Hub
+		if matches!(
+            asset,
+            MultiAsset {
+                id: Concrete(MultiLocation { parents: 1, interior: Here }),
+                fun: Fungible(_),
+            }
+        ) && matches!(
+            origin,
+            MultiLocation { parents: 1, interior: X1(Parachain(1000)) }
+        ) {
+            return true;
+        }
+
 		if let Some(ref reserve) = ReserveProvider::reserve(asset) {
 			if reserve == origin {
 				return true;

@@ -231,7 +231,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("amplitude"),
 	impl_name: create_runtime_str!("amplitude"),
 	authoring_version: 1,
-	spec_version: 22,
+	spec_version: 23,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 14,
@@ -2111,7 +2111,6 @@ impl_runtime_apis! {
 	}
 
 }
-
 
 cumulus_pallet_parachain_system::register_validate_block! {
 	Runtime = Runtime,

@@ -3,11 +3,11 @@
 use crate::constants::{amplitude, foucoco, pendulum};
 use core::default::Default;
 use cumulus_primitives_core::ParaId;
-use serde_json::{Map, Value};
 use runtime_common::{AccountId, AuraId, Balance, Signature, UNIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use sp_core::{
 	crypto::{Ss58Codec, UncheckedInto},
 	sp_std, sr25519, Pair, Public,
@@ -21,6 +21,8 @@ use spacewalk_primitives::{oracle::Key, Asset, CurrencyId, CurrencyId::XCM, Vaul
 
 const MAINNET_USDC_CURRENCY_ID: CurrencyId = pendulum_runtime::GetWrappedCurrencyId::get();
 const TESTNET_USDC_CURRENCY_ID: CurrencyId = amplitude_runtime::GetWrappedCurrencyId::get();
+
+const MAX_SAFE_INTEGER_JSON: u128 = 1 << 53;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type AmplitudeChainSpec =
@@ -129,13 +131,13 @@ pub fn amplitude_config() -> AmplitudeChainSpec {
 	);
 
 	AmplitudeChainSpec::builder(
-		amplitude_runtime::WASM_BINARY
-			.expect("WASM binary was not built, please build it!"),
+		amplitude_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 		ParachainExtensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
 			para_id: amplitude::PARACHAIN_ID,
-		}
-	).with_name("Amplitude")
+		},
+	)
+	.with_name("Amplitude")
 	.with_id("amplitude")
 	.with_chain_type(ChainType::Live)
 	.with_properties(get_amplitude_properties())
@@ -172,27 +174,27 @@ pub fn foucoco_config() -> FoucocoChainSpec {
 		AccountId::from_ss58check(foucoco::OFF_CHAIN_WORKER_ADDRESS).unwrap();
 
 	FoucocoChainSpec::builder(
-		foucoco_runtime::WASM_BINARY
-			.expect("WASM binary was not built, please build it!"),
+		foucoco_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 		ParachainExtensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
 			para_id: foucoco::PARACHAIN_ID,
-		}
-	).with_name("Foucoco")
-		.with_id("foucoco")
-		.with_chain_type(ChainType::Live)
-		.with_properties(get_amplitude_properties())// Same properties as Amplitude chain.
-		.with_genesis_config_patch(foucoco_genesis(
-			// initial collators.
-			invulnerables.clone(),
-			signatories.clone(),
-			vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
-			sudo_account.clone(),
-			foucoco::PARACHAIN_ID.into(),
-			false,
-			vec![],
-		))
-		.build()
+		},
+	)
+	.with_name("Foucoco")
+	.with_id("foucoco")
+	.with_chain_type(ChainType::Live)
+	.with_properties(get_amplitude_properties()) // Same properties as Amplitude chain.
+	.with_genesis_config_patch(foucoco_genesis(
+		// initial collators.
+		invulnerables.clone(),
+		signatories.clone(),
+		vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
+		sudo_account.clone(),
+		foucoco::PARACHAIN_ID.into(),
+		false,
+		vec![],
+	))
+	.build()
 }
 
 pub fn foucoco_standalone_config() -> FoucocoChainSpec {
@@ -254,27 +256,27 @@ pub fn foucoco_standalone_config() -> FoucocoChainSpec {
 	];
 
 	FoucocoChainSpec::builder(
-		foucoco_runtime::WASM_BINARY
-			.expect("WASM binary was not built, please build it!"),
+		foucoco_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 		ParachainExtensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
 			para_id: foucoco::PARACHAIN_ID,
-		}
-	).with_name("Foucoco-Standalone")
-		.with_id("foucoco-standalone")
-		.with_chain_type(ChainType::Live)
-		.with_properties(get_amplitude_properties())
-		.with_genesis_config_patch(foucoco_genesis(
-			// initial collators.
-			invulnerables.clone(),
-			signatories.clone(),
-			vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
-			sudo_account.clone(),
-			foucoco::PARACHAIN_ID.into(),
-			false,
-			allowed_currencies.clone(),
-		))
-		.build()
+		},
+	)
+	.with_name("Foucoco-Standalone")
+	.with_id("foucoco-standalone")
+	.with_chain_type(ChainType::Live)
+	.with_properties(get_amplitude_properties())
+	.with_genesis_config_patch(foucoco_genesis(
+		// initial collators.
+		invulnerables.clone(),
+		signatories.clone(),
+		vec![sudo_account.clone(), offchain_worker_price_feeder.clone()],
+		sudo_account.clone(),
+		foucoco::PARACHAIN_ID.into(),
+		false,
+		allowed_currencies.clone(),
+	))
+	.build()
 }
 
 fn get_pendulum_properties() -> Map<String, Value> {
@@ -284,7 +286,6 @@ fn get_pendulum_properties() -> Map<String, Value> {
 	properties.insert("ss58Format".into(), pendulum_runtime::SS58Prefix::get().into());
 	properties
 }
-
 
 pub fn pendulum_config() -> PendulumChainSpec {
 	// Give your base currency a unit name and decimal places
@@ -341,27 +342,27 @@ pub fn pendulum_config() -> PendulumChainSpec {
 		balances.push((account_id, pendulum::INITIAL_ISSUANCE_PER_SIGNATORY));
 	}
 
-    PendulumChainSpec::builder(
-        pendulum_runtime::WASM_BINARY
-            .expect("WASM binary was not built, please build it!"),
+	PendulumChainSpec::builder(
+		pendulum_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 		ParachainExtensions {
 			relay_chain: "polkadot".into(), // You MUST set this to the correct network!
 			para_id: pendulum::PARACHAIN_ID,
-		}
-    ).with_name("Pendulum")
-        .with_id("pendulum")
-        .with_chain_type(ChainType::Live)
-        .with_properties(get_pendulum_properties())
-        .with_genesis_config_patch(pendulum_genesis(
-			// initial collators.
-			collators.clone(),
-			balances.clone(),
-			vec![],
-			multisig_genesis.clone(),
-			pendulum::PARACHAIN_ID.into(),
-			false,
-		))
-        .build()
+		},
+	)
+	.with_name("Pendulum")
+	.with_id("pendulum")
+	.with_chain_type(ChainType::Live)
+	.with_properties(get_pendulum_properties())
+	.with_genesis_config_patch(pendulum_genesis(
+		// initial collators.
+		collators.clone(),
+		balances.clone(),
+		vec![],
+		multisig_genesis.clone(),
+		pendulum::PARACHAIN_ID.into(),
+		false,
+	))
+	.build()
 }
 
 fn default_pair(currency_id: CurrencyId, is_public_network: bool) -> VaultCurrencyPair<CurrencyId> {
@@ -392,7 +393,6 @@ fn amplitude_genesis(
 
 	let mut safe_balances = balances;
 	safe_balances.push((sudo_account.clone(), MAX_SAFE_INTEGER_JSON - 1));
-
 
 	let token_balances = vec![];
 
@@ -610,9 +610,7 @@ fn foucoco_genesis(
 
 	let genesis_config = foucoco_runtime::RuntimeGenesisConfig {
 		asset_registry: Default::default(),
-		system: foucoco_runtime::SystemConfig {
-			_config: sp_std::marker::PhantomData::default(),
-		},
+		system: foucoco_runtime::SystemConfig { _config: sp_std::marker::PhantomData::default() },
 		balances: foucoco_runtime::BalancesConfig { balances: safe_balances },
 		parachain_info: foucoco_runtime::ParachainInfoConfig {
 			parachain_id: id,
@@ -768,7 +766,6 @@ fn foucoco_genesis(
 	serde_json::to_value(genesis_config).expect("Serialization of genesis config should work")
 }
 
-const MAX_SAFE_INTEGER_JSON: u128 = 1 << 53;
 fn pendulum_genesis(
 	collators: Vec<AccountId>,
 	balances: Vec<(AccountId, Balance)>,
@@ -801,9 +798,7 @@ fn pendulum_genesis(
 
 	let genesis_config = pendulum_runtime::RuntimeGenesisConfig {
 		asset_registry: Default::default(),
-		system: pendulum_runtime::SystemConfig {
-			_config: sp_std::marker::PhantomData::default(),
-		},
+		system: pendulum_runtime::SystemConfig { _config: sp_std::marker::PhantomData::default() },
 		balances: pendulum_runtime::BalancesConfig { balances: safe_balances },
 		parachain_info: pendulum_runtime::ParachainInfoConfig {
 			parachain_id: id,
@@ -939,13 +934,18 @@ fn pendulum_genesis(
 	serde_json::to_value(genesis_config).expect("Serialization of genesis config should work")
 }
 
-fn limit_balance_for_serialization( balances: Vec<(AccountId, Balance)> ) -> Vec<(AccountId,Balance)> {
-	balances.into_iter().map(|balance| {
-		if balance.1 >= MAX_SAFE_INTEGER_JSON {
-			return (balance.0, MAX_SAFE_INTEGER_JSON - 1 )
-		}
-		balance
-	}).collect::<Vec<(AccountId, Balance)>>()
+fn limit_balance_for_serialization(
+	balances: Vec<(AccountId, Balance)>,
+) -> Vec<(AccountId, Balance)> {
+	balances
+		.into_iter()
+		.map(|balance| {
+			if balance.1 >= MAX_SAFE_INTEGER_JSON {
+				return (balance.0, MAX_SAFE_INTEGER_JSON - 1);
+			}
+			balance
+		})
+		.collect::<Vec<(AccountId, Balance)>>()
 }
 
 // These tests are useful to verify the conversion of the ChainSpec struct to the serialized json.

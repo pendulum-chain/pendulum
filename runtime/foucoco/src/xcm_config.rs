@@ -64,7 +64,7 @@ where
 	ReserveProvider: Reserve,
 {
 	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
-		// Explicit allow for KSM from Asset Hub
+		// Explicit allow for PAS from Asset Hub
 		if matches!(
 			asset,
 			MultiAsset {
@@ -76,7 +76,7 @@ where
 			return true;
 		}
 
-		// Explicit deny for KSM from Relay Chain
+		// Explicit deny for PAS from Relay Chain
 		if matches!(
 			asset,
 			MultiAsset {

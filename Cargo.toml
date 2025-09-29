@@ -29,10 +29,10 @@ clap = { version = "4.0.17", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
 futures = { version = "0.3.30", default-features = false }
 hex-literal = { version = "0.3.4" }
-jsonrpsee = { version = "0.16.0", default-features = false }
-log = { version = "0.4.22", default-features = false }
+jsonrpsee = { version = "0.16.0", default-features = false}
+log = { version = "0.4.22",  default-features = false }
 parity-scale-codec = { version = "3.1.5", default-features = false }
-paste = { version = "1.0.14", default-features = false }
+paste = { version = "1.0.14" , default-features = false }
 scale-info = { version = "2.0", default-features = false }
 serde = { version = "1.0.136", default-features = false }
 serde_derive = { version = "1.0.117" }
@@ -44,27 +44,26 @@ smallvec = "1.9.0"
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 
-cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-pallet-session-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-primitives-aura = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-primitives-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-primitives-utility = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-client-cli = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-client-consensus-aura = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-client-consensus-common = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-client-consensus-proposer = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-client-collator = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-client-network = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-client-parachain-inherent = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-client-service = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-primitives-parachain-inherent = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-relay-chain-inprocess-interface = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-relay-chain-interface = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-relay-chain-rpc-interface = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-cumulus-relay-chain-minimal-node = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-pallet-aura-ext = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-pallet-dmp-queue = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-pallet-session-benchmarking = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-pallet-xcm = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-pallet-xcmp-queue = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-primitives-timestamp = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-primitives-utility = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-client-cli = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-client-consensus-aura = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-client-consensus-common = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-client-consensus-proposer = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-client-collator = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-client-network = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-client-parachain-inherent = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-client-service = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-primitives-parachain-inherent = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-relay-chain-inprocess-interface = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-relay-chain-interface = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-relay-chain-rpc-interface = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+cumulus-relay-chain-minimal-node = {  git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 frame-benchmarking-cli = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
@@ -96,10 +95,10 @@ staging-xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", def
 xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-xcm-executor", default-features = false, branch = "release-polkadot-v1.6.0" }
 
 frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-frame-metadata-hash-extension = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-frame-system-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+frame-metadata-hash-extension = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0"}
+frame-system-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false,   branch = "release-polkadot-v1.6.0" }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
-frame-try-runtime = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
+frame-try-runtime = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false,   branch = "release-polkadot-v1.6.0" }
 pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 pallet-aura = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
 pallet-authorship = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false, branch = "release-polkadot-v1.6.0" }
@@ -175,32 +174,32 @@ substrate-build-script-utils = { git = "https://github.com/paritytech/polkadot-s
 substrate-wasm-builder = { git = "https://github.com/paritytech//polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 
 # Spacewalk
-module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-module-issue-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-module-issue-rpc = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-module-oracle-rpc = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-module-redeem-rpc = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-module-replace-rpc = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-module-vault-registry-rpc = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
+module-oracle-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+module-issue-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+module-redeem-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+module-replace-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+module-vault-registry-rpc-runtime-api = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+module-issue-rpc = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+module-oracle-rpc = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+module-redeem-rpc = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+module-replace-rpc = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+module-vault-registry-rpc = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
 
-spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-clients-info = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-security = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-staking = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-oracle = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-stellar-relay = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-fee = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-vault-registry = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-redeem = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-issue = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-nomination = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-replace = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-pooled-rewards = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
-reward-distribution = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "cf97142d29ce666a6a2587b8de182ddef0154a14" }
+spacewalk-primitives = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+clients-info = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+currency = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+security = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+staking = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+oracle = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+stellar-relay = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+fee = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+vault-registry = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+redeem = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+issue = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+nomination = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+replace = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+pooled-rewards = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
+reward-distribution = { git = "https://github.com/pendulum-chain/spacewalk", default-features = false, rev = "70beae689db5c20efc17363397e4353cc60fe347" }
 
 # Zenlink
 zenlink-protocol = { git = "https://github.com/pendulum-chain/Zenlink-DEX-Module", default-features = false, branch = "release-polkadot-v1.6.0" }
@@ -246,121 +245,6 @@ orml-tokens = { git = "https://github.com/pendulum-chain//open-runtime-module-li
 
 
 [patch."https://github.com/paritytech/polkadot-sdk"]
-cumulus-pallet-parachain-system = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-primitives-core = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-pallet-aura-ext = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-pallet-dmp-queue = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-pallet-session-benchmarking = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-pallet-xcm = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-pallet-xcmp-queue = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-primitives-aura = { git = "https://github.com/pendulum-chain/polkadot-sdk",  rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-primitives-timestamp = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-primitives-utility = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-client-cli = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-client-consensus-aura = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-client-consensus-common = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-client-consensus-proposer = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-client-collator = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-client-network = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-client-parachain-inherent = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-client-service = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-primitives-parachain-inherent = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-relay-chain-inprocess-interface = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-relay-chain-interface = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-relay-chain-rpc-interface = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-cumulus-relay-chain-minimal-node = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-frame-benchmarking = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-frame-benchmarking-cli = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-frame-system = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-frame-support = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-kusama-runtime = { git = "https://github.com/pendulum-chain/polkadot-sdk", package = "staging-kusama-runtime", branch = "release-polkadot-v1.1.0" }
-pallet-balances = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-contracts = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-treasury = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-vesting = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-parachains-common = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-staging-parachain-info = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-api = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-arithmetic = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-blockchain = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-consensus-aura = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-core = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-io = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-runtime = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-tracing = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-weights = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-staking = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-std = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-staging-xcm-executor = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-frame-executive = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-frame-metadata-hash-extension = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-frame-system-benchmarking = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-frame-system-rpc-runtime-api = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-frame-try-runtime = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-assets = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-aura = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-authorship = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-bounties = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-child-bounties = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-collective = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-democracy = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-identity = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-message-queue = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-multisig = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-preimage = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-proxy = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-insecure-randomness-collective-flip = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-scheduler = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-session = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-staking = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-sudo = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-timestamp = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-transaction-payment = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-utility = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-xcm = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-polkadot-core-primitives = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-polkadot-runtime-parachains = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-polkadot-primitives = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-block-builder = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-genesis-builder = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-inherents = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-offchain = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-session = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-rococo-runtime = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-storage = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-transaction-pool = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-version = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-pallet-transaction-payment-rpc = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-basic-authorship = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-chain-spec = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-cli = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-client-api = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-consensus = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-consensus-manual-seal = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-executor = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-network = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-network-sync = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-rpc = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-service = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-sysinfo = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-telemetry = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-tracing = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-transaction-pool = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-transaction-pool-api = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sc-offchain = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-keystore = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-sp-timestamp = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-substrate-frame-rpc-system = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-substrate-prometheus-endpoint = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-try-runtime-cli = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-polkadot-parachain = { git = "https://github.com/pendulum-chain/polkadot-sdk", package = "polkadot-parachain-primitives", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-polkadot-runtime-common = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-staging-xcm-builder = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-polkadot-cli = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-polkadot-service = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-staging-xcm = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-xcm-emulator = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-xcm-simulator = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-substrate-build-script-utils = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
-substrate-wasm-builder = { git = "https://github.com/pendulum-chain/polkadot-sdk", rev = "22dd6dee5148a0879306337bd8619c16224cc07b" }
+sp-std = { git = "https://github.com/paritytech//polkadot-sdk", branch = "release-polkadot-v1.6.0", package = "sp-std", version = "8.0.0" } # WHY NEED FOR THIS?
+
+

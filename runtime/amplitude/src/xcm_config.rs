@@ -81,17 +81,6 @@ where
 			return true;
 		}
 
-		// Explicit deny for KSM from Relay Chain
-		if matches!(
-			asset,
-			MultiAsset {
-				id: Concrete(MultiLocation { parents: 1, interior: Here }),
-				fun: Fungible(_),
-			}
-		) && matches!(origin, MultiLocation { parents: 1, interior: Here })
-		{
-			return false;
-		}
 
 		if let Some(ref reserve) = ReserveProvider::reserve(asset) {
 			if reserve == origin {

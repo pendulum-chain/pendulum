@@ -1,6 +1,7 @@
 use core::marker::PhantomData;
 
 use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
+use frame_support::traits::{Contains, PalletInfoAccess};
 use frame_support::{
 	match_types, parameter_types,
 	traits::{ContainsPair, Everything, Nothing, ProcessMessageError},
@@ -15,6 +16,7 @@ use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdap
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::Convert;
+use sp_std::vec::Vec;
 
 use staging_xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
@@ -52,6 +54,17 @@ parameter_types! {
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 	pub UniversalLocation: InteriorMultiLocation =
 		X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
+
+	/// Asset Hub
+	pub AssetHubLocation: MultiLocation = (Parent, Parachain(1000)).into();
+
+	// PEN (native)
+	pub NativeTokenLocation: MultiLocation = MultiLocation {
+		parents: 0,
+		interior: Junctions::X1(
+			PalletInstance(<Balances as PalletInfoAccess>::index() as u8)
+		)
+	};
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
@@ -118,7 +131,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
-	pub UnitWeightCost: XCMWeight = XCMWeight::from_parts(1_000_000_000, 0);
+	pub UnitWeightCost: XCMWeight = XCMWeight::from_parts(1_000_000_000, 1024);
 	pub const MaxInstructions: u32 = 100;
 	pub SelfLocation: MultiLocation = MultiLocation::here();
 	pub const BaseXcmWeight: XCMWeight = XCMWeight::from_parts(150_000_000, 0);
@@ -266,6 +279,20 @@ impl AutomationPalletConfig for AutomationPalletConfigPendulum {
 pub type LocalAssetTransactor =
 	CustomTransactorInterceptor<Transactor, AutomationPalletConfigPendulum>;
 
+pub struct TrustedTeleporters;
+impl ContainsPair<MultiAsset, MultiLocation> for TrustedTeleporters {
+	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+		if let MultiAsset { id: Concrete(loc), fun: Fungible(_) } = asset {
+			if loc == &NativeTokenLocation::get() && origin == &AssetHubLocation::get() {
+				log::trace!(target: "xcm::TrustedTeleporters", "Allowing teleport of native asset from Asset Hub");
+				return true;
+			}
+		}
+
+		false
+	}
+}
+
 pub struct XcmConfig;
 impl staging_xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
@@ -275,7 +302,7 @@ impl staging_xcm_executor::Config for XcmConfig {
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	// Teleporting is disabled.
-	type IsTeleporter = ();
+	type IsTeleporter = TrustedTeleporters;
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
@@ -308,6 +335,21 @@ pub type XcmRouter = (
 	XcmpQueue,
 );
 
+pub struct OnlyTeleportNative;
+impl Contains<(MultiLocation, Vec<MultiAsset>)> for OnlyTeleportNative {
+	fn contains(t: &(MultiLocation, Vec<MultiAsset>)) -> bool {
+		let native = NativeTokenLocation::get();
+		t.1.iter().all(|asset| {
+			log::trace!(target: "xcm::OnlyTeleportNative", "Asset to be teleported: {:?}", asset);
+			if let MultiAsset { id: Concrete(location), fun: Fungible(_) } = asset {
+				*location == native
+			} else {
+				false
+			}
+		})
+	}
+}
+
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
@@ -319,7 +361,7 @@ impl pallet_xcm::Config for Runtime {
 	// ^ Disable dispatchable execute on the XCM pallet.
 	// Needs to be `Everything` for local testing.
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmTeleportFilter = Nothing;
+	type XcmTeleportFilter = OnlyTeleportNative;
 	type XcmReserveTransferFilter = Everything;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type UniversalLocation = UniversalLocation;

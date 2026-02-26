@@ -57,4 +57,43 @@ impl<WrappedTransactor: TransactAsset, AutomationPalletConfigT: AutomationPallet
 	) -> result::Result<Assets, XcmError> {
 		WrappedTransactor::transfer_asset(asset, from, to, _context)
 	}
+
+	fn can_check_out(
+		_dest: &MultiLocation,
+		_what: &MultiAsset,
+		_context: &XcmContext,
+	) -> Result {
+		// Allow teleport check-out. The asset has already been withdrawn from the
+		// sender's account via WithdrawAsset and is in the holding register.
+		// We simply permit the teleport-out here.
+		Ok(())
+	}
+
+	fn check_out(
+		_dest: &MultiLocation,
+		_what: &MultiAsset,
+		_context: &XcmContext,
+	) {
+		// No-op: the asset was already withdrawn from the sender's account.
+		// In a teleport, the local side just needs to ensure the asset is
+		// removed from circulation, which WithdrawAsset + not depositing
+		// back effectively does (the asset is burned from holding).
+	}
+
+	fn can_check_in(
+		_origin: &MultiLocation,
+		_what: &MultiAsset,
+		_context: &XcmContext,
+	) -> Result {
+		// Allow teleport check-in (receiving teleported assets).
+		Ok(())
+	}
+
+	fn check_in(
+		_origin: &MultiLocation,
+		_what: &MultiAsset,
+		_context: &XcmContext,
+	) {
+		// No-op: the asset will be deposited via deposit_asset.
+	}
 }

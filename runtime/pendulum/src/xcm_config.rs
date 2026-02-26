@@ -302,8 +302,16 @@ impl AutomationPalletConfig for AutomationPalletConfigPendulum {
 	}
 }
 
+/// Only allows teleporting assets to AssetHub.
+pub struct AllowedTeleportDestinations;
+impl Contains<MultiLocation> for AllowedTeleportDestinations {
+	fn contains(dest: &MultiLocation) -> bool {
+		*dest == AssetHubLocation::get()
+	}
+}
+
 pub type LocalAssetTransactor =
-	CustomTransactorInterceptor<Transactor, AutomationPalletConfigPendulum>;
+	CustomTransactorInterceptor<Transactor, AutomationPalletConfigPendulum, AllowedTeleportDestinations>;
 
 pub struct TrustedTeleporters;
 impl ContainsPair<MultiAsset, MultiLocation> for TrustedTeleporters {
@@ -365,6 +373,19 @@ pub struct OnlyTeleportNative;
 impl Contains<(MultiLocation, Vec<MultiAsset>)> for OnlyTeleportNative {
 	fn contains(t: &(MultiLocation, Vec<MultiAsset>)) -> bool {
 		let native = NativeTokenLocation::get();
+		let allowed_dest = AssetHubLocation::get();
+
+		// Only allow teleporting to AssetHub
+		if t.0 != allowed_dest {
+			log::warn!(
+				target: "xcm::OnlyTeleportNative",
+				"Teleport rejected: destination {:?} is not AssetHub",
+				t.0
+			);
+			return false;
+		}
+
+		// Only allow teleporting PEN (native token)
 		t.1.iter().all(|asset| {
 			log::trace!(target: "xcm::OnlyTeleportNative", "Asset to be teleported: {:?}", asset);
 			if let MultiAsset { id: Concrete(location), fun: Fungible(_) } = asset {

@@ -18,12 +18,23 @@
 //! BuyExecution(DOT)           ← passes the barrier
 //! ReceiveTeleportedAsset(PEN) ← mints PEN on AssetHub
 //! ClearOrigin
-//! DepositAsset(All, beneficiary)
+//! DepositAsset(PEN, beneficiary)           ← only PEN goes to the user
+//! DepositAsset(remaining, sovereign_acct)  ← leftover DOT returns to sovereign
 //! ```
 //!
 //! Locally, PEN is withdrawn from the sender's account and burned (removed from circulation).
 //! The message is sent via `XcmRouter` from the **parachain origin** (no `DescendOrigin`),
 //! so `WithdrawAsset(DOT)` correctly accesses the Pendulum sovereign account on AssetHub.
+//!
+//! ## Fee Protection
+//!
+//! Two layers of protection prevent users from draining the sovereign DOT balance:
+//!
+//! 1. **Max fee cap** (`MaxFeeAmount`): The `fee_amount` parameter is capped at a
+//!    configurable maximum. Any value above this is rejected.
+//!
+//! 2. **Split deposits**: PEN is deposited to the beneficiary, but leftover DOT (not
+//!    consumed by `BuyExecution`) is returned to the sovereign account — not the user.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -39,7 +50,7 @@ pub mod pallet {
 	use sp_std::vec;
 	use xcm::v3::{
 		prelude::*, Instruction, Junction, Junctions, MultiAsset, MultiAssetFilter, MultiAssets,
-		MultiLocation, SendXcm, WeightLimit, WildMultiAsset, Xcm,
+		MultiLocation, SendXcm, WeightLimit, WildFungibility, WildMultiAsset, Xcm,
 	};
 
 	type BalanceOf<T> =
@@ -73,6 +84,17 @@ pub mod pallet {
 		/// For DOT on AssetHub: `(parents: 1, Here)`.
 		#[pallet::constant]
 		type FeeAssetOnDest: Get<MultiLocation>;
+
+		/// The MultiLocation of this chain's sovereign account on the destination,
+		/// used to return leftover fee assets after execution.
+		/// For Pendulum on AssetHub: `(parents: 0, X1(AccountId32 { network: None, id: sovereign_bytes }))`.
+		#[pallet::constant]
+		type SovereignAccountOnDest: Get<MultiLocation>;
+
+		/// Maximum fee amount (in fee asset's smallest unit) that can be specified.
+		/// This prevents users from draining the sovereign account's fee asset balance.
+		#[pallet::constant]
+		type MaxFeeAmount: Get<u128>;
 	}
 
 	#[pallet::event]
@@ -99,6 +121,8 @@ pub mod pallet {
 		ZeroAmount,
 		/// The fee amount must be greater than zero.
 		ZeroFeeAmount,
+		/// The fee amount exceeds the maximum allowed.
+		FeeAmountTooHigh,
 		/// Failed to convert the amount to u128.
 		AmountConversionFailed,
 	}
@@ -116,13 +140,15 @@ pub mod pallet {
 		///    - Withdraws `fee_amount` of the fee asset (DOT) from this chain's
 		///      sovereign account for execution fees.
 		///    - Mints `amount` native tokens on the destination via `ReceiveTeleportedAsset`.
-		///    - Deposits all assets to the `beneficiary`.
+		///    - Deposits only the native tokens to the `beneficiary`.
+		///    - Returns any leftover fee asset (DOT) to the sovereign account.
 		///
 		/// # Parameters
 		/// - `origin`: Must be a signed origin (the sender).
 		/// - `amount`: The amount of native tokens to teleport.
 		/// - `fee_amount`: The amount of the fee asset (DOT) to use for execution fees
-		///   on the destination. This is withdrawn from this chain's sovereign account.
+		///   on the destination. Must not exceed `MaxFeeAmount`. This DOT is withdrawn
+		///   from this chain's sovereign account on the destination.
 		/// - `beneficiary`: The destination AccountId32 on the destination chain.
 		#[pallet::call_index(0)]
 		#[pallet::weight(Weight::from_parts(200_000_000, 10_000))]
@@ -137,6 +163,10 @@ pub mod pallet {
 			// Validate inputs
 			ensure!(amount > BalanceOf::<T>::from(0u32), Error::<T>::ZeroAmount);
 			ensure!(fee_amount > 0, Error::<T>::ZeroFeeAmount);
+			ensure!(
+				fee_amount <= T::MaxFeeAmount::get(),
+				Error::<T>::FeeAmountTooHigh
+			);
 
 			// Convert balance to u128 for XCM
 			let amount_u128: u128 = amount
@@ -156,6 +186,7 @@ pub mod pallet {
 			// 2. Construct the remote XCM message for the destination chain.
 			let fee_asset_location = T::FeeAssetOnDest::get();
 			let native_asset_on_dest = T::NativeAssetOnDest::get();
+			let sovereign_on_dest = T::SovereignAccountOnDest::get();
 
 			let beneficiary_bytes: [u8; 32] = beneficiary.clone().into();
 			let beneficiary_location = MultiLocation {
@@ -172,7 +203,7 @@ pub mod pallet {
 			};
 
 			let native_multi_asset = MultiAsset {
-				id: AssetId::Concrete(native_asset_on_dest),
+				id: AssetId::Concrete(native_asset_on_dest.clone()),
 				fun: Fungibility::Fungible(amount_u128),
 			};
 
@@ -188,10 +219,18 @@ pub mod pallet {
 				Instruction::ReceiveTeleportedAsset(MultiAssets::from(vec![native_multi_asset])),
 				// Remove origin to prevent further privileged operations
 				Instruction::ClearOrigin,
-				// Deposit everything (native token + leftover DOT) to the beneficiary
+				// Deposit ONLY the native token (PEN) to the beneficiary
+				Instruction::DepositAsset {
+					assets: MultiAssetFilter::Wild(WildMultiAsset::AllOf {
+						id: AssetId::Concrete(native_asset_on_dest),
+						fun: WildFungibility::Fungible,
+					}),
+					beneficiary: beneficiary_location,
+				},
+				// Return any leftover fee asset (DOT) to the sovereign account
 				Instruction::DepositAsset {
 					assets: MultiAssetFilter::Wild(WildMultiAsset::All),
-					beneficiary: beneficiary_location,
+					beneficiary: sovereign_on_dest,
 				},
 			]);
 

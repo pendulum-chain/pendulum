@@ -15,7 +15,7 @@ use orml_traits::{
 use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
-use sp_runtime::traits::Convert;
+use sp_runtime::traits::{AccountIdConversion, Convert};
 use sp_std::vec::Vec;
 
 use staging_xcm_builder::{
@@ -78,6 +78,19 @@ parameter_types! {
 
 	/// DOT location as seen from AssetHub (the relay chain token).
 	pub const DotOnAssetHub: MultiLocation = MultiLocation { parents: 1, interior: Junctions::Here };
+
+	/// Pendulum's sovereign account on AssetHub, used for returning leftover DOT fees.
+	/// Computed from Sibling(para_id) using the standard AccountIdConversion.
+	pub SovereignAccountOnAssetHub: MultiLocation = {
+		let sovereign: AccountId = Sibling::from(ParachainInfo::parachain_id()).into_account_truncating();
+		MultiLocation {
+			parents: 0,
+			interior: Junctions::X1(AccountId32 { network: None, id: sovereign.into() }),
+		}
+	};
+
+	/// Maximum amount of DOT (in Plancks) that can be used for fees per teleport.
+	pub const MaxDotFeeAmount: u128 = 10_000_000_000; // 1 DOT
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used

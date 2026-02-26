@@ -1018,6 +1018,8 @@ impl pallet_xcm_teleport::Config for Runtime {
 	type DestinationLocation = xcm_config::AssetHubLocation;
 	type NativeAssetOnDest = xcm_config::NativeAssetOnAssetHub;
 	type FeeAssetOnDest = xcm_config::DotOnAssetHub;
+	type SovereignAccountOnDest = xcm_config::SovereignAccountOnAssetHub;
+	type MaxFeeAmount = xcm_config::MaxDotFeeAmount;
 }
 
 const fn deposit(items: u32, bytes: u32) -> Balance {

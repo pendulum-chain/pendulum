@@ -371,6 +371,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			| RuntimeCall::ParachainInfo(_)
 			| RuntimeCall::CumulusXcm(_)
 			| RuntimeCall::VaultStaking(_)
+			| RuntimeCall::XcmTeleport(_)
 			| RuntimeCall::MessageQueue(_) => true, // All pallets are allowed, but exhaustive match is defensive
 			                                        // in the case of adding new pallets.
 		}
@@ -1010,6 +1011,15 @@ impl vesting_manager::Config for Runtime {
 	type VestingSchedule = Vesting;
 }
 
+impl pallet_xcm_teleport::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type XcmRouter = xcm_config::XcmRouter;
+	type DestinationLocation = xcm_config::AssetHubLocation;
+	type NativeAssetOnDest = xcm_config::NativeAssetOnAssetHub;
+	type FeeAssetOnDest = xcm_config::DotOnAssetHub;
+}
+
 const fn deposit(items: u32, bytes: u32) -> Balance {
 	(items as Balance * UNIT + (bytes as Balance) * (5 * MILLIUNIT / 100)) / 10
 }
@@ -1583,6 +1593,8 @@ construct_runtime!(
 		AssetRegistry: orml_asset_registry = 91,
 
 		VestingManager: vesting_manager = 100,
+
+		XcmTeleport: pallet_xcm_teleport = 101,
 
 		MessageQueue: pallet_message_queue = 110,
 	}

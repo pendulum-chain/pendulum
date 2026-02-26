@@ -8592,6 +8592,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-xcm-teleport"
+version = "1.6.0-d"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime 24.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?rev=22dd6dee5148a0879306337bd8619c16224cc07b)",
+ "sp-std 8.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?rev=22dd6dee5148a0879306337bd8619c16224cc07b)",
+ "staging-xcm",
+ "staging-xcm-executor",
+]
+
+[[package]]
 name = "parachain-staking"
 version = "1.6.0-d"
 dependencies = [
@@ -8974,6 +8990,7 @@ dependencies = [
  "pallet-utility",
  "pallet-vesting",
  "pallet-xcm",
+ "pallet-xcm-teleport",
  "parachain-staking",
  "parachains-common",
  "parity-scale-codec",

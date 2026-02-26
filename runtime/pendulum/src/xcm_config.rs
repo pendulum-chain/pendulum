@@ -58,13 +58,26 @@ parameter_types! {
 	/// Asset Hub
 	pub AssetHubLocation: MultiLocation = (Parent, Parachain(1000)).into();
 
-	// PEN (native)
+	// PEN (native) — local location
 	pub NativeTokenLocation: MultiLocation = MultiLocation {
 		parents: 0,
 		interior: Junctions::X1(
 			PalletInstance(<Balances as PalletInfoAccess>::index() as u8)
 		)
 	};
+
+	/// PEN location as seen from AssetHub (used for ReceiveTeleportedAsset on the remote side).
+	/// (parents: 1, X2(Parachain(self), PalletInstance(Balances_index)))
+	pub NativeAssetOnAssetHub: MultiLocation = MultiLocation {
+		parents: 1,
+		interior: Junctions::X2(
+			Parachain(ParachainInfo::parachain_id().into()),
+			PalletInstance(<Balances as PalletInfoAccess>::index() as u8),
+		)
+	};
+
+	/// DOT location as seen from AssetHub (the relay chain token).
+	pub const DotOnAssetHub: MultiLocation = MultiLocation { parents: 1, interior: Junctions::Here };
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used

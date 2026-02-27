@@ -157,7 +157,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
-	pub UnitWeightCost: XCMWeight = XCMWeight::from_parts(1_000_000_000, 1024);
+	pub UnitWeightCost: XCMWeight = XCMWeight::from_parts(1_000_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
 	pub SelfLocation: MultiLocation = MultiLocation::here();
 	pub const BaseXcmWeight: XCMWeight = XCMWeight::from_parts(150_000_000, 0);
@@ -310,8 +310,11 @@ impl Contains<MultiLocation> for AllowedTeleportDestinations {
 	}
 }
 
-pub type LocalAssetTransactor =
-	CustomTransactorInterceptor<Transactor, AutomationPalletConfigPendulum, AllowedTeleportDestinations>;
+pub type LocalAssetTransactor = CustomTransactorInterceptor<
+	Transactor,
+	AutomationPalletConfigPendulum,
+	AllowedTeleportDestinations,
+>;
 
 pub struct TrustedTeleporters;
 impl ContainsPair<MultiAsset, MultiLocation> for TrustedTeleporters {

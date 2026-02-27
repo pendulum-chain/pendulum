@@ -100,15 +100,15 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Native tokens were teleported to the destination chain.
-		TeleportedNativeTo {
+		/// Native tokens were teleported to AssetHub.
+		NativeTeleportedToAssetHub {
 			/// The account that initiated the teleport.
 			sender: T::AccountId,
-			/// The beneficiary account on the destination chain.
+			/// The beneficiary account on AssetHub.
 			beneficiary: T::AccountId,
 			/// The amount of native token teleported.
 			amount: BalanceOf<T>,
-			/// The amount of fee asset (DOT) used for execution on the destination.
+			/// The amount of DOT used for execution fees on AssetHub.
 			fee_amount: u128,
 		},
 	}
@@ -132,27 +132,26 @@ pub mod pallet {
 	where
 		T::AccountId: Into<[u8; 32]>,
 	{
-		/// Teleport native tokens to the destination chain (AssetHub).
+		/// Teleport native tokens to AssetHub.
 		///
 		/// This extrinsic:
-		/// 1. Burns `amount` of native tokens from the sender's account.
-		/// 2. Sends an XCM message to the destination that:
-		///    - Withdraws `fee_amount` of the fee asset (DOT) from this chain's
-		///      sovereign account for execution fees.
-		///    - Mints `amount` native tokens on the destination via `ReceiveTeleportedAsset`.
+		/// 1. Burns `amount` of native tokens from the sender's account on this chain.
+		/// 2. Sends an XCM message to AssetHub that:
+		///    - Withdraws `fee_amount` DOT from this chain's sovereign account for fees.
+		///    - Mints `amount` native tokens on AssetHub via `ReceiveTeleportedAsset`.
 		///    - Deposits only the native tokens to the `beneficiary`.
-		///    - Returns any leftover fee asset (DOT) to the sovereign account.
+		///    - Returns any leftover DOT to the sovereign account.
 		///
 		/// # Parameters
 		/// - `origin`: Must be a signed origin (the sender).
 		/// - `amount`: The amount of native tokens to teleport.
-		/// - `fee_amount`: The amount of the fee asset (DOT) to use for execution fees
-		///   on the destination. Must not exceed `MaxFeeAmount`. This DOT is withdrawn
-		///   from this chain's sovereign account on the destination.
-		/// - `beneficiary`: The destination AccountId32 on the destination chain.
+		/// - `fee_amount`: The amount of DOT (in Plancks) to use for execution fees
+		///   on AssetHub. Must not exceed `MaxFeeAmount`. This DOT is withdrawn
+		///   from this chain's sovereign account on AssetHub.
+		/// - `beneficiary`: The destination AccountId32 on AssetHub.
 		#[pallet::call_index(0)]
 		#[pallet::weight(Weight::from_parts(200_000_000, 10_000))]
-		pub fn teleport_native_to_dest(
+		pub fn teleport_native_to_asset_hub(
 			origin: OriginFor<T>,
 			amount: BalanceOf<T>,
 			fee_amount: u128,
@@ -183,7 +182,7 @@ pub mod pallet {
 			)?;
 			// _imbalance is dropped here → tokens are burned
 
-			// 2. Construct the remote XCM message for the destination chain.
+			// 2. Construct the remote XCM message for AssetHub.
 			let fee_asset_location = T::FeeAssetOnDest::get();
 			let native_asset_on_dest = T::NativeAssetOnDest::get();
 			let sovereign_on_dest = T::SovereignAccountOnDest::get();
@@ -234,19 +233,19 @@ pub mod pallet {
 				},
 			]);
 
-			// 3. Send the message to the destination via the XCM router.
+			// 3. Send the message to AssetHub via the XCM router.
 			//    Since we call the router directly (not through pallet_xcm::send),
 			//    no DescendOrigin is prepended. The message arrives from the
 			//    parachain origin, so WithdrawAsset accesses the sovereign account.
-			let dest = T::DestinationLocation::get();
+			let asset_hub = T::DestinationLocation::get();
 
 			log::info!(
 				target: "xcm-teleport",
-				"Sending teleport message to {:?}: amount={}, fee_amount={}",
-				dest, amount_u128, fee_amount,
+				"Teleporting native to AssetHub ({:?}): amount={}, fee_amount={}",
+				asset_hub, amount_u128, fee_amount,
 			);
 
-			let (ticket, _price) = T::XcmRouter::validate(&mut Some(dest), &mut Some(message))
+			let (ticket, _price) = T::XcmRouter::validate(&mut Some(asset_hub), &mut Some(message))
 				.map_err(|e| {
 					log::error!(
 						target: "xcm-teleport",
@@ -264,7 +263,7 @@ pub mod pallet {
 			})?;
 
 			// 4. Emit event
-			Self::deposit_event(Event::TeleportedNativeTo {
+			Self::deposit_event(Event::NativeTeleportedToAssetHub {
 				sender,
 				beneficiary,
 				amount,

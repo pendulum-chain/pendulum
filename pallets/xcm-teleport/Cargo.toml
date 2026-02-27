@@ -16,7 +16,6 @@ sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
 xcm = { workspace = true }
-staging-xcm-executor = { workspace = true }
 
 # benchmarking
 frame-benchmarking = { workspace = true, optional = true }
@@ -29,7 +28,6 @@ runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
-	"staging-xcm-executor/runtime-benchmarks",
 ]
 std = [
 	"frame-support/std",
@@ -40,7 +38,6 @@ std = [
 	"sp-runtime/std",
 	"sp-std/std",
 	"xcm/std",
-	"staging-xcm-executor/std",
 	"frame-benchmarking?/std",
 ]
 try-runtime = [

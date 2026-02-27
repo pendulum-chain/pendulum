@@ -47,7 +47,6 @@ pub mod pallet {
 		traits::{Currency, ExistenceRequirement, WithdrawReasons},
 	};
 	use frame_system::pallet_prelude::*;
-	use sp_std::vec;
 	use xcm::v3::{
 		prelude::*, Instruction, Junction, Junctions, MultiAsset, MultiAssetFilter, MultiAssets,
 		MultiLocation, SendXcm, WeightLimit, WildFungibility, WildMultiAsset, Xcm,
@@ -172,15 +171,15 @@ pub mod pallet {
 				.try_into()
 				.map_err(|_| Error::<T>::AmountConversionFailed)?;
 
-			// 1. Withdraw and burn native tokens from the sender's account.
-			//    Dropping the NegativeImbalance burns the tokens (reduces total issuance).
-			let _imbalance = T::Currency::withdraw(
+			// 1. Withdraw native tokens from the sender's account.
+			//    We keep the imbalance and only burn it after successful XCM delivery.
+			//    If delivery fails, we refund the tokens back to the sender.
+			let imbalance = T::Currency::withdraw(
 				&sender,
 				amount,
 				WithdrawReasons::TRANSFER,
 				ExistenceRequirement::AllowDeath,
 			)?;
-			// _imbalance is dropped here → tokens are burned
 
 			// 2. Construct the remote XCM message for AssetHub.
 			let fee_asset_location = T::FeeAssetOnDest::get();
@@ -245,22 +244,31 @@ pub mod pallet {
 				asset_hub, amount_u128, fee_amount,
 			);
 
-			let (ticket, _price) = T::XcmRouter::validate(&mut Some(asset_hub), &mut Some(message))
-				.map_err(|e| {
+			let (ticket, _price) = match T::XcmRouter::validate(&mut Some(asset_hub), &mut Some(message)) {
+				Ok(result) => result,
+				Err(e) => {
 					log::error!(
 						target: "xcm-teleport",
 						"Failed to validate XCM message: {:?}", e
 					);
-					Error::<T>::XcmSendFailed
-				})?;
+					// Refund the withdrawn tokens back to the sender
+					T::Currency::resolve_creating(&sender, imbalance);
+					return Err(Error::<T>::XcmSendFailed.into());
+				},
+			};
 
-			T::XcmRouter::deliver(ticket).map_err(|e| {
+			if let Err(e) = T::XcmRouter::deliver(ticket) {
 				log::error!(
 					target: "xcm-teleport",
 					"Failed to deliver XCM message: {:?}", e
 				);
-				Error::<T>::XcmSendFailed
-			})?;
+				// Refund the withdrawn tokens back to the sender
+				T::Currency::resolve_creating(&sender, imbalance);
+				return Err(Error::<T>::XcmSendFailed.into());
+			}
+
+			// Drop the imbalance to burn the tokens (successful teleport)
+			drop(imbalance);
 
 			// 4. Emit event
 			Self::deposit_event(Event::NativeTeleportedToAssetHub {

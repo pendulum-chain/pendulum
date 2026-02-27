@@ -173,7 +173,9 @@ pub mod pallet {
 
 			// 1. Withdraw native tokens from the sender's account.
 			//    We keep the imbalance and only burn it after successful XCM delivery.
-			//    If delivery fails, we refund the tokens back to the sender.
+			//    If validation or delivery fails locally, we refund the tokens back to the sender.
+			//    Note: If the message is delivered but fails during execution on AssetHub,
+			//    the tokens are still burned (remote execution failures cannot be detected here).
 			let imbalance = T::Currency::withdraw(
 				&sender,
 				amount,

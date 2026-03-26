@@ -18,8 +18,7 @@
 //! BuyExecution(DOT)           ← passes the barrier
 //! ReceiveTeleportedAsset(PEN) ← mints PEN on AssetHub
 //! ClearOrigin
-//! DepositAsset(PEN, beneficiary)           ← only PEN goes to the user
-//! DepositAsset(remaining, sovereign_acct)  ← leftover DOT returns to sovereign
+//! DepositAsset(All, beneficiary)           ← PEN + leftover DOT go to the user
 //! ```
 //!
 //! Locally, PEN is withdrawn from the sender's account and burned (removed from circulation).
@@ -284,7 +283,6 @@ pub mod pallet {
 			// 2. Construct the remote XCM message for AssetHub.
 			let fee_asset_location = T::FeeAssetOnDest::get();
 			let native_asset_on_dest = T::NativeAssetOnDest::get();
-			let sovereign_on_dest = T::SovereignAccountOnDest::get();
 
 			let beneficiary_bytes: [u8; 32] = beneficiary.clone().into();
 			let beneficiary_location = MultiLocation {
@@ -317,18 +315,16 @@ pub mod pallet {
 				Instruction::ReceiveTeleportedAsset(MultiAssets::from(vec![native_multi_asset])),
 				// Remove origin to prevent further privileged operations
 				Instruction::ClearOrigin,
-				// Deposit ONLY the native token (PEN) to the beneficiary
-				Instruction::DepositAsset {
-					assets: MultiAssetFilter::Wild(WildMultiAsset::AllOf {
-						id: AssetId::Concrete(native_asset_on_dest),
-						fun: WildFungibility::Fungible,
-					}),
-					beneficiary: beneficiary_location,
-				},
-				// Return any leftover fee asset (DOT) to the sovereign account
+				// Deposit ALL remaining assets (PEN + leftover DOT) to the beneficiary.
+				//
+				// The caller already paid 110% of fee_amount in DOT-equivalent PEN to the
+				// treasury on the source chain, so the sovereign account is fully compensated.
+				// The leftover DOT (fee_amount minus actual execution cost) goes to the
+				// beneficiary as a fair refund. This also helps fund the beneficiary's
+				// existential deposit on AssetHub where PEN has isSufficient: false.
 				Instruction::DepositAsset {
 					assets: MultiAssetFilter::Wild(WildMultiAsset::All),
-					beneficiary: sovereign_on_dest,
+					beneficiary: beneficiary_location,
 				},
 			]);
 

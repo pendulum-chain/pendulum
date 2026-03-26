@@ -28,7 +28,7 @@
 //!
 //! ## Fee Protection
 //!
-//! Three layers of protection prevent users from draining the sovereign DOT balance:
+//! Four layers of protection prevent users from draining the sovereign DOT balance:
 //!
 //! 1. **Max fee cap** (`MaxFeeAmount`): The `fee_amount` parameter is capped at a
 //!    configurable maximum. Any value above this is rejected.
@@ -37,20 +37,46 @@
 //!    consumed by `BuyExecution`) is returned to the sovereign account — not the user.
 //!
 //! 3. **Minimum teleport amount** (`MinTeleportAmount`): A minimum PEN amount is
-//!    required per teleport. Since PEN is burned on the source chain, this makes
-//!    griefing attacks (spamming cheap teleports to drain sovereign DOT) economically
-//!    unviable — the attacker must burn meaningful PEN on every call.
+//!    required per teleport.
+//!
+//! 4. **Fee-equivalent PEN charge** (`FeeToNativeConverter`): The `fee_amount` DOT that
+//!    will be withdrawn from the sovereign account on AssetHub is converted to PEN-equivalent
+//!    using on-chain oracle prices. That PEN amount is transferred from the caller to the
+//!    treasury. This ensures every teleport costs the caller the DOT-value of fees in PEN,
+//!    making sovereign DOT drainage economically unviable. The fee is only charged on
+//!    successful XCM delivery — failed extrinsics refund everything.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
 
+use frame_support::pallet_prelude::*;
+use sp_runtime::DispatchError;
+
+/// Converts a fee asset amount (in smallest units, e.g., DOT Plancks) to the
+/// equivalent amount of the native currency (in smallest units, e.g., PEN Plancks).
+///
+/// Implementations should use on-chain price oracles and account for decimal
+/// differences between the fee asset and the native currency.
+///
+/// A safety margin may be applied by the implementation to account for price
+/// fluctuations between when the conversion is computed and when the XCM message
+/// executes on the destination chain.
+pub trait FeeToNativeConverter {
+	/// The balance type used for the native currency.
+	type Balance;
+
+	/// Convert `fee_amount` units of the destination chain's fee asset to the
+	/// equivalent amount in the local native currency.
+	///
+	/// Returns `Err` if the oracle price is unavailable or the conversion overflows.
+	fn convert_fee_to_native(fee_amount: u128) -> Result<Self::Balance, DispatchError>;
+}
+
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{
-		pallet_prelude::*,
-		traits::{Currency, ExistenceRequirement, WithdrawReasons},
-	};
+	use super::*;
+	use frame_support::traits::{Currency, ExistenceRequirement, Get, WithdrawReasons};
 	use frame_system::pallet_prelude::*;
 	use xcm::v3::{
 		prelude::*, Instruction, Junction, Junctions, MultiAsset, MultiAssetFilter, MultiAssets,
@@ -101,8 +127,28 @@ pub mod pallet {
 		type MaxFeeAmount: Get<u128>;
 
 		/// Minimum amount of native tokens required per teleport.
+		///
+		/// This is an anti-griefing measure. Each teleport costs real DOT from the
+		/// sovereign account on the destination chain. Without a minimum, an attacker
+		/// could spam teleports of dust amounts paying only a tiny transaction fee.
 		#[pallet::constant]
 		type MinTeleportAmount: Get<BalanceOf<Self>>;
+
+		/// Converts a fee asset amount (DOT Plancks) to the equivalent native currency
+		/// amount (PEN Plancks) using on-chain oracle prices.
+		///
+		/// This is the primary economic protection: the caller must pay PEN equal in
+		/// value to the DOT that will be withdrawn from the sovereign account. This
+		/// PEN is transferred to the treasury, removing any economic incentive for
+		/// griefing attacks.
+		type FeeToNativeConverter: FeeToNativeConverter<Balance = BalanceOf<Self>>;
+
+		/// The treasury account that receives the PEN fee equivalent.
+		///
+		/// When a user teleports PEN to AssetHub, the fee_amount DOT consumed from
+		/// the sovereign account is converted to PEN-equivalent and transferred from
+		/// the caller to this treasury account.
+		type TreasuryAccount: Get<Self::AccountId>;
 	}
 
 	#[pallet::event]
@@ -116,8 +162,10 @@ pub mod pallet {
 			beneficiary: T::AccountId,
 			/// The amount of native token teleported.
 			amount: BalanceOf<T>,
-			/// The amount of DOT used for execution fees on AssetHub.
+			/// The DOT fee amount requested for execution on AssetHub.
 			fee_amount: u128,
+			/// The PEN equivalent of the DOT fee, transferred to treasury.
+			fee_pen_equivalent: BalanceOf<T>,
 		},
 	}
 
@@ -134,7 +182,12 @@ pub mod pallet {
 		/// Failed to convert the amount to u128.
 		AmountConversionFailed,
 		/// The teleport amount is below the required minimum (`MinTeleportAmount`).
+		/// This minimum exists to prevent griefing attacks that drain the sovereign
+		/// account's DOT balance on the destination chain.
 		AmountBelowMinimum,
+		/// Failed to convert the fee asset amount to native currency using oracle prices.
+		/// This can happen if the oracle price is unavailable or the conversion overflows.
+		FeeConversionFailed,
 	}
 
 	#[pallet::call]
@@ -145,12 +198,14 @@ pub mod pallet {
 		/// Teleport native tokens to AssetHub.
 		///
 		/// This extrinsic:
-		/// 1. Burns `amount` of native tokens from the sender's account on this chain.
+		/// 1. Withdraws `amount` + fee-PEN from the sender upfront to ensure funds exist.
 		/// 2. Sends an XCM message to AssetHub that:
 		///    - Withdraws `fee_amount` DOT from this chain's sovereign account for fees.
 		///    - Mints `amount` native tokens on AssetHub via `ReceiveTeleportedAsset`.
 		///    - Deposits only the native tokens to the `beneficiary`.
 		///    - Returns any leftover DOT to the sovereign account.
+		/// 3. On success: burns the teleport amount and deposits fee-PEN to treasury.
+		/// 4. On failure: refunds everything to the sender.
 		///
 		/// # Parameters
 		/// - `origin`: Must be a signed origin (the sender).
@@ -159,21 +214,20 @@ pub mod pallet {
 		///   on AssetHub. Must not exceed `MaxFeeAmount`. This DOT is withdrawn
 		///   from this chain's sovereign account on AssetHub.
 		/// - `beneficiary`: The destination AccountId32 on AssetHub.
-		// Weight: This is a deliberately conservative estimate. The extrinsic performs:
-		//   - 1 Currency::withdraw (1 read + 1 write)
-		//   - XCM message construction (computation only)
-		//   - XcmRouter::validate + deliver (1 read for XCMP queue + 1 write)
+		///
+		/// # Fees
+		///
+		/// The caller pays two costs:
+		/// 1. The normal Pendulum transaction fee (weight-based).
+		/// 2. An additional PEN transfer to treasury equal to the DOT-value of
+		///    `fee_amount`, computed via on-chain oracle prices. This compensates
+		///    the chain for the sovereign DOT expenditure on AssetHub.
 		//
-		// The weight is set higher than the pure computational cost to ensure the PEN
-		// transaction fee covers a meaningful portion of the DOT execution cost on AssetHub
-		// (~0.001-0.003 DOT per message). This should be replaced with proper benchmarks.
-		//
-		// At the current WeightToFee configuration (MILLIUNIT / (10 * ExtrinsicBaseWeight)):
-		//   1_000_000_000 ref_time ≈ 0.8 MILLIUNIT ≈ 0.0008 PEN
-		//
-		// TODO: Replace with proper frame-benchmarking weights once benchmarks are implemented.
+		// Weight: Accounts for Currency::withdraw (x2), oracle reads (x2),
+		// XCM message construction, and XcmRouter::validate + deliver.
+		// TODO: Replace with proper frame-benchmarking weights.
 		#[pallet::call_index(0)]
-		#[pallet::weight(Weight::from_parts(1_000_000_000, 65_000))]
+		#[pallet::weight(Weight::from_parts(400_000_000, 65_000))]
 		pub fn teleport_native_to_asset_hub(
 			origin: OriginFor<T>,
 			amount: BalanceOf<T>,
@@ -191,17 +245,43 @@ pub mod pallet {
 			let amount_u128: u128 =
 				amount.try_into().map_err(|_| Error::<T>::AmountConversionFailed)?;
 
-			// 1. Withdraw native tokens from the sender's account.
-			//    We keep the imbalance and only burn it after successful XCM delivery.
-			//    If validation or delivery fails locally, we refund the tokens back to the sender.
-			//    Note: If the message is delivered but fails during execution on AssetHub,
-			//    the tokens are still burned (remote execution failures cannot be detected here).
-			let imbalance = T::Currency::withdraw(
+			// Convert the DOT fee_amount to PEN-equivalent using oracle prices.
+			let fee_pen_equivalent = T::FeeToNativeConverter::convert_fee_to_native(fee_amount)
+				.map_err(|_| Error::<T>::FeeConversionFailed)?;
+
+			log::info!(
+				target: "xcm-teleport",
+				"Fee conversion: {} DOT plancks => {:?} PEN plancks (will be sent to treasury)",
+				fee_amount, fee_pen_equivalent,
+			);
+
+			// 1. Withdraw BOTH the fee-equivalent PEN and the teleport amount upfront.
+			//    This ensures the sender has sufficient funds for everything before we
+			//    attempt the XCM send. Both are refunded if the XCM send fails.
+
+			// Withdraw the fee-equivalent PEN first (KeepAlive so account stays alive
+			// for the subsequent teleport amount withdrawal).
+			let fee_imbalance = T::Currency::withdraw(
+				&sender,
+				fee_pen_equivalent,
+				WithdrawReasons::TRANSFER,
+				ExistenceRequirement::KeepAlive,
+			)?;
+
+			// Withdraw the teleport amount (AllowDeath — sender may drain entirely).
+			let teleport_imbalance = match T::Currency::withdraw(
 				&sender,
 				amount,
 				WithdrawReasons::TRANSFER,
 				ExistenceRequirement::AllowDeath,
-			)?;
+			) {
+				Ok(imbalance) => imbalance,
+				Err(e) => {
+					// Refund the fee withdrawal since the teleport withdrawal failed
+					T::Currency::resolve_creating(&sender, fee_imbalance);
+					return Err(e);
+				},
+			};
 
 			// 2. Construct the remote XCM message for AssetHub.
 			let fee_asset_location = T::FeeAssetOnDest::get();
@@ -274,8 +354,9 @@ pub mod pallet {
 							target: "xcm-teleport",
 							"Failed to validate XCM message: {:?}", e
 						);
-						// Refund the withdrawn tokens back to the sender
-						T::Currency::resolve_creating(&sender, imbalance);
+						// Refund everything — XCM was never sent
+						T::Currency::resolve_creating(&sender, fee_imbalance);
+						T::Currency::resolve_creating(&sender, teleport_imbalance);
 						return Err(Error::<T>::XcmSendFailed.into());
 					},
 				};
@@ -285,20 +366,27 @@ pub mod pallet {
 					target: "xcm-teleport",
 					"Failed to deliver XCM message: {:?}", e
 				);
-				// Refund the withdrawn tokens back to the sender
-				T::Currency::resolve_creating(&sender, imbalance);
+				// Refund everything — XCM delivery failed
+				T::Currency::resolve_creating(&sender, fee_imbalance);
+				T::Currency::resolve_creating(&sender, teleport_imbalance);
 				return Err(Error::<T>::XcmSendFailed.into());
 			}
 
-			// Drop the imbalance to burn the tokens (successful teleport)
-			drop(imbalance);
+			// 4. XCM sent successfully — finalize:
+			//    - Drop teleport_imbalance to burn the teleported PEN (removed from supply)
+			drop(teleport_imbalance);
 
-			// 4. Emit event
+			//    - Deposit the fee-equivalent PEN to the treasury account
+			let treasury = T::TreasuryAccount::get();
+			T::Currency::resolve_creating(&treasury, fee_imbalance);
+
+			// 5. Emit event
 			Self::deposit_event(Event::NativeTeleportedToAssetHub {
 				sender,
 				beneficiary,
 				amount,
 				fee_amount,
+				fee_pen_equivalent,
 			});
 
 			Ok(())

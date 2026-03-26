@@ -76,12 +76,10 @@ pub trait FeeToNativeConverter {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::traits::{Currency, ExistenceRequirement, Get, WithdrawReasons};
+	use frame_support::traits::{Currency, ExistenceRequirement, WithdrawReasons};
 	use frame_system::pallet_prelude::*;
-	use xcm::v3::{
-		prelude::*, Instruction, Junction, Junctions, MultiAsset, MultiAssetFilter, MultiAssets,
-		MultiLocation, SendXcm, WeightLimit, WildFungibility, WildMultiAsset, Xcm,
-	};
+	use sp_std::vec;
+	use xcm::v3::{prelude::*, Junction, Junctions, MultiAsset, MultiLocation, SendXcm, Xcm};
 
 	type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;

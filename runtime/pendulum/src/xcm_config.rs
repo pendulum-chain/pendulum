@@ -91,6 +91,18 @@ parameter_types! {
 
 	/// Maximum amount of DOT (in Plancks) that can be used for fees per teleport.
 	pub const MaxDotFeeAmount: u128 = 10_000_000_000; // 1 DOT
+
+	/// Minimum PEN amount required per teleport (anti-griefing).
+	///
+	/// Each teleport costs ~0.001-0.003 DOT net from the sovereign account on AssetHub
+	/// (the XCM execution fee that BuyExecution consumes). Without a minimum, an attacker
+	/// could spam dust teleports paying only ~0.00016 PEN per call (the Pendulum transaction
+	/// fee) while draining the sovereign's DOT at ~0.001 DOT per call.
+	///
+	/// At 1 PEN minimum, the attacker must burn 1 PEN per teleport, making the attack cost
+	/// scale linearly with the number of calls. Combined with the transaction fee, this makes
+	/// sovereign DOT drainage economically unviable as long as PEN retains meaningful value.
+	pub MinNativeTeleportAmount: super::Balance = super::UNIT; // 1 PEN
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used

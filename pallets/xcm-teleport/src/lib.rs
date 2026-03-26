@@ -28,13 +28,18 @@
 //!
 //! ## Fee Protection
 //!
-//! Two layers of protection prevent users from draining the sovereign DOT balance:
+//! Three layers of protection prevent users from draining the sovereign DOT balance:
 //!
 //! 1. **Max fee cap** (`MaxFeeAmount`): The `fee_amount` parameter is capped at a
 //!    configurable maximum. Any value above this is rejected.
 //!
 //! 2. **Split deposits**: PEN is deposited to the beneficiary, but leftover DOT (not
 //!    consumed by `BuyExecution`) is returned to the sovereign account — not the user.
+//!
+//! 3. **Minimum teleport amount** (`MinTeleportAmount`): A minimum PEN amount is
+//!    required per teleport. Since PEN is burned on the source chain, this makes
+//!    griefing attacks (spamming cheap teleports to drain sovereign DOT) economically
+//!    unviable — the attacker must burn meaningful PEN on every call.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -94,6 +99,10 @@ pub mod pallet {
 		/// This prevents users from draining the sovereign account's fee asset balance.
 		#[pallet::constant]
 		type MaxFeeAmount: Get<u128>;
+
+		/// Minimum amount of native tokens required per teleport.
+		#[pallet::constant]
+		type MinTeleportAmount: Get<BalanceOf<Self>>;
 	}
 
 	#[pallet::event]
@@ -124,6 +133,8 @@ pub mod pallet {
 		FeeAmountTooHigh,
 		/// Failed to convert the amount to u128.
 		AmountConversionFailed,
+		/// The teleport amount is below the required minimum (`MinTeleportAmount`).
+		AmountBelowMinimum,
 	}
 
 	#[pallet::call]
@@ -148,8 +159,21 @@ pub mod pallet {
 		///   on AssetHub. Must not exceed `MaxFeeAmount`. This DOT is withdrawn
 		///   from this chain's sovereign account on AssetHub.
 		/// - `beneficiary`: The destination AccountId32 on AssetHub.
+		// Weight: This is a deliberately conservative estimate. The extrinsic performs:
+		//   - 1 Currency::withdraw (1 read + 1 write)
+		//   - XCM message construction (computation only)
+		//   - XcmRouter::validate + deliver (1 read for XCMP queue + 1 write)
+		//
+		// The weight is set higher than the pure computational cost to ensure the PEN
+		// transaction fee covers a meaningful portion of the DOT execution cost on AssetHub
+		// (~0.001-0.003 DOT per message). This should be replaced with proper benchmarks.
+		//
+		// At the current WeightToFee configuration (MILLIUNIT / (10 * ExtrinsicBaseWeight)):
+		//   1_000_000_000 ref_time ≈ 0.8 MILLIUNIT ≈ 0.0008 PEN
+		//
+		// TODO: Replace with proper frame-benchmarking weights once benchmarks are implemented.
 		#[pallet::call_index(0)]
-		#[pallet::weight(Weight::from_parts(200_000_000, 10_000))]
+		#[pallet::weight(Weight::from_parts(1_000_000_000, 65_000))]
 		pub fn teleport_native_to_asset_hub(
 			origin: OriginFor<T>,
 			amount: BalanceOf<T>,
@@ -159,17 +183,13 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 
 			// Validate inputs
-			ensure!(amount > BalanceOf::<T>::from(0u32), Error::<T>::ZeroAmount);
+			ensure!(amount >= T::MinTeleportAmount::get(), Error::<T>::AmountBelowMinimum);
 			ensure!(fee_amount > 0, Error::<T>::ZeroFeeAmount);
-			ensure!(
-				fee_amount <= T::MaxFeeAmount::get(),
-				Error::<T>::FeeAmountTooHigh
-			);
+			ensure!(fee_amount <= T::MaxFeeAmount::get(), Error::<T>::FeeAmountTooHigh);
 
 			// Convert balance to u128 for XCM
-			let amount_u128: u128 = amount
-				.try_into()
-				.map_err(|_| Error::<T>::AmountConversionFailed)?;
+			let amount_u128: u128 =
+				amount.try_into().map_err(|_| Error::<T>::AmountConversionFailed)?;
 
 			// 1. Withdraw native tokens from the sender's account.
 			//    We keep the imbalance and only burn it after successful XCM delivery.
@@ -246,18 +266,19 @@ pub mod pallet {
 				asset_hub, amount_u128, fee_amount,
 			);
 
-			let (ticket, _price) = match T::XcmRouter::validate(&mut Some(asset_hub), &mut Some(message)) {
-				Ok(result) => result,
-				Err(e) => {
-					log::error!(
-						target: "xcm-teleport",
-						"Failed to validate XCM message: {:?}", e
-					);
-					// Refund the withdrawn tokens back to the sender
-					T::Currency::resolve_creating(&sender, imbalance);
-					return Err(Error::<T>::XcmSendFailed.into());
-				},
-			};
+			let (ticket, _price) =
+				match T::XcmRouter::validate(&mut Some(asset_hub), &mut Some(message)) {
+					Ok(result) => result,
+					Err(e) => {
+						log::error!(
+							target: "xcm-teleport",
+							"Failed to validate XCM message: {:?}", e
+						);
+						// Refund the withdrawn tokens back to the sender
+						T::Currency::resolve_creating(&sender, imbalance);
+						return Err(Error::<T>::XcmSendFailed.into());
+					},
+				};
 
 			if let Err(e) = T::XcmRouter::deliver(ticket) {
 				log::error!(

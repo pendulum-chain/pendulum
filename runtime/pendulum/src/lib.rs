@@ -234,7 +234,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("pendulum"),
 	impl_name: create_runtime_str!("pendulum"),
 	authoring_version: 1,
-	spec_version: 24,
+	spec_version: 25,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 11,
@@ -1040,19 +1040,17 @@ impl pallet_xcm_teleport::FeeToNativeConverter for DotToPenFeeConverter {
 		let dot_usd_price: FixedU128 =
 			runtime_common::OraclePriceGetter::<Runtime>::get_price::<FixedU128>(XCM(0))
 				.map_err(|_| DispatchError::Other("Failed to get DOT price from oracle"))?;
-		let pen_usd_price: FixedU128 =
-			runtime_common::OraclePriceGetter::<Runtime>::get_price::<FixedU128>(
-				CurrencyId::Native,
-			)
-			.map_err(|_| DispatchError::Other("Failed to get PEN price from oracle"))?;
+		let pen_usd_price: FixedU128 = runtime_common::OraclePriceGetter::<Runtime>::get_price::<
+			FixedU128,
+		>(CurrencyId::Native)
+		.map_err(|_| DispatchError::Other("Failed to get PEN price from oracle"))?;
 
 		// Get decimals from the asset registry (DOT: 10, PEN: 12)
 		let dot_decimals =
 			<DecimalsLookupImpl as spacewalk_primitives::DecimalsLookup>::decimals(XCM(0));
-		let pen_decimals =
-			<DecimalsLookupImpl as spacewalk_primitives::DecimalsLookup>::decimals(
-				CurrencyId::Native,
-			);
+		let pen_decimals = <DecimalsLookupImpl as spacewalk_primitives::DecimalsLookup>::decimals(
+			CurrencyId::Native,
+		);
 
 		// Convert: pen_plancks = fee_dot_plancks * dot_usd / pen_usd * 10^(pen_dec - dot_dec)
 		// Using the same FixedU128 math pattern as treasury_buyout_extension::convert_amount

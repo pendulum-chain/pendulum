@@ -170,8 +170,6 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Failed to send the XCM message to the destination chain.
 		XcmSendFailed,
-		/// The teleport amount must be greater than zero.
-		ZeroAmount,
 		/// The fee amount must be greater than zero.
 		ZeroFeeAmount,
 		/// The fee amount exceeds the maximum allowed.
@@ -199,8 +197,7 @@ pub mod pallet {
 		/// 2. Sends an XCM message to AssetHub that:
 		///    - Withdraws `fee_amount` DOT from this chain's sovereign account for fees.
 		///    - Mints `amount` native tokens on AssetHub via `ReceiveTeleportedAsset`.
-		///    - Deposits only the native tokens to the `beneficiary`.
-		///    - Returns any leftover DOT to the sovereign account.
+		///    - Deposits the native tokens and leftover DOT to the `beneficiary`.
 		/// 3. On success: burns the teleport amount and deposits fee-PEN to treasury.
 		/// 4. On failure: refunds everything to the sender.
 		///

@@ -1,6 +1,7 @@
 use core::marker::PhantomData;
 
 use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
+use frame_support::traits::{Contains, PalletInfoAccess};
 use frame_support::{
 	match_types, parameter_types,
 	traits::{ContainsPair, Everything, Nothing, ProcessMessageError},
@@ -14,7 +15,8 @@ use orml_traits::{
 use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
-use sp_runtime::traits::Convert;
+use sp_runtime::traits::{AccountIdConversion, Convert};
+use sp_std::vec::Vec;
 
 use staging_xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
@@ -52,6 +54,46 @@ parameter_types! {
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 	pub UniversalLocation: InteriorMultiLocation =
 		X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
+
+	/// Asset Hub
+	pub AssetHubLocation: MultiLocation = (Parent, Parachain(1000)).into();
+
+	// PEN (native) — local location
+	pub NativeTokenLocation: MultiLocation = MultiLocation {
+		parents: 0,
+		interior: Junctions::X1(
+			PalletInstance(<Balances as PalletInfoAccess>::index() as u8)
+		)
+	};
+
+	/// PEN location as seen from AssetHub (used for ReceiveTeleportedAsset on the remote side).
+	/// (parents: 1, X2(Parachain(self), PalletInstance(Balances_index)))
+	pub NativeAssetOnAssetHub: MultiLocation = MultiLocation {
+		parents: 1,
+		interior: Junctions::X2(
+			Parachain(ParachainInfo::parachain_id().into()),
+			PalletInstance(<Balances as PalletInfoAccess>::index() as u8),
+		)
+	};
+
+	/// DOT location as seen from AssetHub (the relay chain token).
+	pub const DotOnAssetHub: MultiLocation = MultiLocation { parents: 1, interior: Junctions::Here };
+
+	/// Pendulum's sovereign account on AssetHub, used for returning leftover DOT fees.
+	/// Computed from Sibling(para_id) using the standard AccountIdConversion.
+	pub SovereignAccountOnAssetHub: MultiLocation = {
+		let sovereign: AccountId = Sibling::from(ParachainInfo::parachain_id()).into_account_truncating();
+		MultiLocation {
+			parents: 0,
+			interior: Junctions::X1(AccountId32 { network: None, id: sovereign.into() }),
+		}
+	};
+
+	/// Maximum amount of DOT (in Plancks) that can be used for fees per teleport.
+	pub const MaxDotFeeAmount: u128 = 5_000_000_000; // 0.5 DOT
+
+	/// Minimum PEN amount required per teleport (anti-griefing).
+	pub MinNativeTeleportAmount: super::Balance = super::UNIT; // 1 PEN
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
@@ -263,8 +305,33 @@ impl AutomationPalletConfig for AutomationPalletConfigPendulum {
 	}
 }
 
-pub type LocalAssetTransactor =
-	CustomTransactorInterceptor<Transactor, AutomationPalletConfigPendulum>;
+/// Only allows teleporting assets to AssetHub.
+pub struct AllowedTeleportDestinations;
+impl Contains<MultiLocation> for AllowedTeleportDestinations {
+	fn contains(dest: &MultiLocation) -> bool {
+		*dest == AssetHubLocation::get()
+	}
+}
+
+pub type LocalAssetTransactor = CustomTransactorInterceptor<
+	Transactor,
+	AutomationPalletConfigPendulum,
+	AllowedTeleportDestinations,
+>;
+
+pub struct TrustedTeleporters;
+impl ContainsPair<MultiAsset, MultiLocation> for TrustedTeleporters {
+	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+		if let MultiAsset { id: Concrete(loc), fun: Fungible(_) } = asset {
+			if loc == &NativeTokenLocation::get() && origin == &AssetHubLocation::get() {
+				log::trace!(target: "xcm::TrustedTeleporters", "Allowing teleport of native asset from Asset Hub");
+				return true;
+			}
+		}
+
+		false
+	}
+}
 
 pub struct XcmConfig;
 impl staging_xcm_executor::Config for XcmConfig {
@@ -274,8 +341,8 @@ impl staging_xcm_executor::Config for XcmConfig {
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
-	// Teleporting is disabled.
-	type IsTeleporter = ();
+	// Teleporting is restricted to assets/origins defined in TrustedTeleporters.
+	type IsTeleporter = TrustedTeleporters;
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
@@ -308,6 +375,34 @@ pub type XcmRouter = (
 	XcmpQueue,
 );
 
+pub struct OnlyTeleportNative;
+impl Contains<(MultiLocation, Vec<MultiAsset>)> for OnlyTeleportNative {
+	fn contains(t: &(MultiLocation, Vec<MultiAsset>)) -> bool {
+		let native = NativeTokenLocation::get();
+		let allowed_dest = AssetHubLocation::get();
+
+		// Only allow teleporting to AssetHub
+		if t.0 != allowed_dest {
+			log::warn!(
+				target: "xcm::OnlyTeleportNative",
+				"Teleport rejected: destination {:?} is not AssetHub",
+				t.0
+			);
+			return false;
+		}
+
+		// Only allow teleporting PEN (native token)
+		t.1.iter().all(|asset| {
+			log::trace!(target: "xcm::OnlyTeleportNative", "Asset to be teleported: {:?}", asset);
+			if let MultiAsset { id: Concrete(location), fun: Fungible(_) } = asset {
+				*location == native
+			} else {
+				false
+			}
+		})
+	}
+}
+
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
@@ -319,7 +414,7 @@ impl pallet_xcm::Config for Runtime {
 	// ^ Disable dispatchable execute on the XCM pallet.
 	// Needs to be `Everything` for local testing.
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmTeleportFilter = Nothing;
+	type XcmTeleportFilter = OnlyTeleportNative;
 	type XcmReserveTransferFilter = Everything;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type UniversalLocation = UniversalLocation;

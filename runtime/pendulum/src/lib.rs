@@ -371,6 +371,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			| RuntimeCall::ParachainInfo(_)
 			| RuntimeCall::CumulusXcm(_)
 			| RuntimeCall::VaultStaking(_)
+			| RuntimeCall::XcmTeleport(_)
 			| RuntimeCall::MessageQueue(_) => true, // All pallets are allowed, but exhaustive match is defensive
 			                                        // in the case of adding new pallets.
 		}
@@ -1010,6 +1011,113 @@ impl vesting_manager::Config for Runtime {
 	type VestingSchedule = Vesting;
 }
 
+/// Converts a DOT fee amount (in Plancks) to the equivalent PEN amount using
+/// on-chain DIA oracle prices.
+///
+/// This uses the same oracle infrastructure as the treasury-buyout-extension pallet.
+/// Both DOT-USD and PEN-USD prices are fetched from the DIA oracle, and the conversion
+/// accounts for the difference in decimals (DOT: 10, PEN: 12).
+///
+/// A 10% safety margin is applied to the converted amount to account for price
+/// volatility between transaction submission and block inclusion.
+pub struct DotToPenFeeConverter;
+
+impl pallet_xcm_teleport::FeeToNativeConverter for DotToPenFeeConverter {
+	type Balance = Balance;
+
+	fn convert_fee_to_native(fee_amount: u128) -> Result<Balance, DispatchError> {
+		use sp_runtime::{
+			traits::{CheckedDiv, CheckedMul},
+			FixedPointNumber, FixedU128,
+		};
+		use treasury_buyout_extension::PriceGetter;
+
+		if fee_amount == 0 {
+			return Ok(0);
+		}
+
+		// Get USD prices from DIA oracle
+		let dot_usd_price: FixedU128 =
+			runtime_common::OraclePriceGetter::<Runtime>::get_price::<FixedU128>(XCM(0))
+				.map_err(|_| DispatchError::Other("Failed to get DOT price from oracle"))?;
+		let pen_usd_price: FixedU128 =
+			runtime_common::OraclePriceGetter::<Runtime>::get_price::<FixedU128>(
+				CurrencyId::Native,
+			)
+			.map_err(|_| DispatchError::Other("Failed to get PEN price from oracle"))?;
+
+		// Get decimals from the asset registry (DOT: 10, PEN: 12)
+		let dot_decimals =
+			<DecimalsLookupImpl as spacewalk_primitives::DecimalsLookup>::decimals(XCM(0));
+		let pen_decimals =
+			<DecimalsLookupImpl as spacewalk_primitives::DecimalsLookup>::decimals(
+				CurrencyId::Native,
+			);
+
+		// Convert: pen_plancks = fee_dot_plancks * dot_usd / pen_usd * 10^(pen_dec - dot_dec)
+		// Using the same FixedU128 math pattern as treasury_buyout_extension::convert_amount
+		let from_amount = FixedU128::from_inner(fee_amount);
+
+		let pen_amount_raw: u128 = if dot_decimals > pen_decimals {
+			// pen_amount = fee * dot_price / pen_price / 10^(dot_dec - pen_dec)
+			dot_usd_price
+				.checked_mul(&from_amount)
+				.ok_or(DispatchError::Arithmetic(sp_runtime::ArithmeticError::Overflow))?
+				.checked_div(&pen_usd_price)
+				.ok_or(DispatchError::Arithmetic(sp_runtime::ArithmeticError::Underflow))?
+				.checked_div(
+					&FixedU128::checked_from_integer(
+						10u128.pow(dot_decimals.saturating_sub(pen_decimals)),
+					)
+					.ok_or(DispatchError::Arithmetic(sp_runtime::ArithmeticError::Overflow))?,
+				)
+				.ok_or(DispatchError::Arithmetic(sp_runtime::ArithmeticError::Underflow))?
+				.into_inner()
+		} else {
+			// pen_amount = fee * dot_price * 10^(pen_dec - dot_dec) / pen_price
+			dot_usd_price
+				.checked_mul(&from_amount)
+				.ok_or(DispatchError::Arithmetic(sp_runtime::ArithmeticError::Overflow))?
+				.checked_mul(
+					&FixedU128::checked_from_integer(
+						10u128.pow(pen_decimals.saturating_sub(dot_decimals)),
+					)
+					.ok_or(DispatchError::Arithmetic(sp_runtime::ArithmeticError::Overflow))?,
+				)
+				.ok_or(DispatchError::Arithmetic(sp_runtime::ArithmeticError::Overflow))?
+				.checked_div(&pen_usd_price)
+				.ok_or(DispatchError::Arithmetic(sp_runtime::ArithmeticError::Underflow))?
+				.into_inner()
+		};
+
+		// Apply 10% safety margin to account for price volatility.
+		// This ensures the caller always pays slightly more PEN than the exact DOT value,
+		// protecting the sovereign account even if prices move between tx submission and
+		// block inclusion.
+		let pen_amount_with_margin = pen_amount_raw
+			.checked_mul(110)
+			.ok_or(DispatchError::Arithmetic(sp_runtime::ArithmeticError::Overflow))?
+			.checked_div(100)
+			.ok_or(DispatchError::Arithmetic(sp_runtime::ArithmeticError::Underflow))?;
+
+		Ok(pen_amount_with_margin)
+	}
+}
+
+impl pallet_xcm_teleport::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type XcmRouter = xcm_config::XcmRouter;
+	type DestinationLocation = xcm_config::AssetHubLocation;
+	type NativeAssetOnDest = xcm_config::NativeAssetOnAssetHub;
+	type FeeAssetOnDest = xcm_config::DotOnAssetHub;
+	type SovereignAccountOnDest = xcm_config::SovereignAccountOnAssetHub;
+	type MaxFeeAmount = xcm_config::MaxDotFeeAmount;
+	type MinTeleportAmount = xcm_config::MinNativeTeleportAmount;
+	type FeeToNativeConverter = DotToPenFeeConverter;
+	type TreasuryAccount = PendulumTreasuryAccount;
+}
+
 const fn deposit(items: u32, bytes: u32) -> Balance {
 	(items as Balance * UNIT + (bytes as Balance) * (5 * MILLIUNIT / 100)) / 10
 }
@@ -1583,6 +1691,8 @@ construct_runtime!(
 		AssetRegistry: orml_asset_registry = 91,
 
 		VestingManager: vesting_manager = 100,
+
+		XcmTeleport: pallet_xcm_teleport = 101,
 
 		MessageQueue: pallet_message_queue = 110,
 	}

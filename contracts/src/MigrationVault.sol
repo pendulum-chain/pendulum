@@ -108,7 +108,16 @@ contract MigrationVault {
     ///      against the *current* attestor set, so removing a compromised
     ///      attestor retroactively invalidates its approvals (PRD V6).
     mapping(bytes32 => address[]) internal _approvers;
-    mapping(bytes32 => mapping(address => bool)) public hasApproved;
+    mapping(bytes32 => mapping(address => bool)) internal _inApprovers;
+
+    /// @dev Generation of each attestor address, bumped on every addAttestor.
+    ///      An approval only counts while its recorded generation matches the
+    ///      attestor's current one, so approvals from before a removal can
+    ///      never count again after a re-add — the threshold can only ever be
+    ///      crossed inside approve(), which maintains the pending-release
+    ///      accounting that protects sweepRemainder.
+    mapping(address => uint64) public attestorGeneration;
+    mapping(bytes32 => mapping(address => uint64)) internal _approvalGeneration;
 
     /// @notice Total token units released so far (for the invariant monitor:
     ///         balanceOf(vault) + totalReleased == totalSupply).
@@ -161,6 +170,7 @@ contract MigrationVault {
             if (attestor == address(0)) revert ZeroAddress();
             if (isAttestor[attestor]) revert DuplicateAttestor();
             isAttestor[attestor] = true;
+            attestorGeneration[attestor] = 1;
             emit AttestorAdded(attestor);
         }
         attestorCount = attestors_.length;
@@ -191,9 +201,13 @@ contract MigrationVault {
         if (nonceConsumed[nonce]) revert NonceAlreadyConsumed(nonce);
 
         bytes32 payload = payloadHash(nonce, recipient, palletAmount);
-        if (hasApproved[payload][msg.sender]) revert AlreadyApproved(msg.sender);
-        hasApproved[payload][msg.sender] = true;
-        _approvers[payload].push(msg.sender);
+        uint64 generation = attestorGeneration[msg.sender];
+        if (_approvalGeneration[payload][msg.sender] == generation) revert AlreadyApproved(msg.sender);
+        _approvalGeneration[payload][msg.sender] = generation;
+        if (!_inApprovers[payload][msg.sender]) {
+            _inApprovers[payload][msg.sender] = true;
+            _approvers[payload].push(msg.sender);
+        }
         emit Approved(nonce, recipient, palletAmount, msg.sender);
 
         // Opportunistic release: skipped (not reverted) when paused or a cap
@@ -269,12 +283,24 @@ contract MigrationVault {
     }
 
     /// @notice Approvals for a payload counted against the current attestor
-    ///         set. Removed attestors no longer count; re-added ones do.
+    ///         set and generation. Removed attestors no longer count, and a
+    ///         re-added attestor must approve again (its pre-removal approval
+    ///         belongs to an older generation).
     function activeApprovals(bytes32 payload) public view returns (uint256 count) {
         address[] storage approvers = _approvers[payload];
         for (uint256 i = 0; i < approvers.length; i++) {
-            if (isAttestor[approvers[i]]) count++;
+            address approver = approvers[i];
+            if (isAttestor[approver] && _approvalGeneration[payload][approver] == attestorGeneration[approver]) {
+                count++;
+            }
         }
+    }
+
+    /// @notice Whether `attestor` holds a currently-valid approval for the
+    ///         payload (i.e. one from its current generation).
+    function hasApproved(bytes32 payload, address attestor) public view returns (bool) {
+        uint64 generation = attestorGeneration[attestor];
+        return generation != 0 && _approvalGeneration[payload][attestor] == generation;
     }
 
     function approversOf(bytes32 payload) external view returns (address[] memory) {
@@ -312,6 +338,9 @@ contract MigrationVault {
         if (attestor == address(0)) revert ZeroAddress();
         if (isAttestor[attestor]) revert DuplicateAttestor();
         isAttestor[attestor] = true;
+        // New generation: any approvals this address recorded before a prior
+        // removal stop counting, so this call can never cross a threshold.
+        attestorGeneration[attestor] += 1;
         attestorCount += 1;
         emit AttestorAdded(attestor);
     }

@@ -93,6 +93,10 @@ pub mod pallet {
 		/// The migration would leave a remainder below the existential deposit.
 		/// Migrate the entire balance or leave at least the existential deposit.
 		WouldLeaveDust,
+		/// The Base address is structurally invalid (e.g. the zero address).
+		/// The vault on Base would reject the release, permanently stranding
+		/// the burned tokens and stalling the attestor pipeline.
+		InvalidBaseAddress,
 	}
 
 	/// Nonce of the next migration. Monotonically increasing, never reused;
@@ -130,6 +134,9 @@ pub mod pallet {
 				amount >= T::MinimumMigrationAmount::get(),
 				Error::<T>::AmountBelowMinimum
 			);
+			// The vault contract rejects the zero address; burning towards it
+			// would emit an event no attestor can ever execute.
+			ensure!(base_address != H160::zero(), Error::<T>::InvalidBaseAddress);
 
 			let free = T::Currency::free_balance(&who);
 			let remainder = free.checked_sub(&amount).ok_or(Error::<T>::InsufficientBalance)?;

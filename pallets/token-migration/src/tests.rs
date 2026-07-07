@@ -75,6 +75,16 @@ fn migrate_fails_below_minimum_amount() {
 }
 
 #[test]
+fn migrate_fails_for_zero_base_address() {
+	run_test(|| {
+		assert_noop!(
+			TokenMigration::migrate(RuntimeOrigin::signed(USER), UNIT, H160::zero()),
+			Error::<Test>::InvalidBaseAddress
+		);
+	});
+}
+
+#[test]
 fn migrate_fails_with_insufficient_balance() {
 	run_test(|| {
 		assert_noop!(

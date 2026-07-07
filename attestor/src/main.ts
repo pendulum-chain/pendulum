@@ -146,9 +146,25 @@ async function alreadyHandled(event: MigrationEvent): Promise<boolean> {
 	});
 }
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+/** True when the vault will deterministically reject this tuple, no matter
+ *  who submits it or when. Such an event must be skipped (with a critical
+ *  alert), never retried: crash-looping on it would halt the entire fleet at
+ *  this block and block every migration behind it. The pallet rejects these
+ *  inputs, so seeing one here means a pallet/vault validation mismatch. */
+function isUnreleasable(event: MigrationEvent): boolean {
+	return event.recipient.toLowerCase() === ZERO_ADDRESS || event.palletAmount === 0n;
+}
+
 /** Submit the approval for one migration event, skipping work already done. */
 async function approve(event: MigrationEvent): Promise<void> {
 	const label = `nonce=${event.nonce} recipient=${event.recipient} amount=${event.palletAmount}`;
+
+	if (isUnreleasable(event)) {
+		await alert("CRITICAL: unreleasable migration event skipped permanently", label);
+		return;
+	}
 
 	if (await alreadyHandled(event)) {
 		log(`skip (already released or approved): ${label}`);

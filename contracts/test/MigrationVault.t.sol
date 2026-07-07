@@ -229,6 +229,32 @@ contract MigrationVaultTest is Test {
         assertEq(pen.balanceOf(recipient), 5e18);
     }
 
+    function test_ReaddingAttestorNeverCrossesThresholdSilently() public {
+        // Two approvals, then the first approver is removed and later re-added.
+        approveAs(0, 0, recipient, 5e12);
+        approveAs(1, 0, recipient, 5e12);
+
+        vm.startPrank(admin);
+        vault.removeAttestor(attestors[0]);
+        vault.addAttestor(attestors[0]);
+        vm.stopPrank();
+
+        // The re-add must NOT resurrect the pre-removal approval: crossing the
+        // threshold outside approve() would bypass pending-release accounting
+        // and let sweepRemainder strand the migration.
+        bytes32 payload = vault.payloadHash(0, recipient, 5e12);
+        assertEq(vault.activeApprovals(payload), 1, "old-generation approval must not count");
+        assertFalse(vault.hasApproved(payload, attestors[0]));
+
+        // The re-added attestor approves again (new generation) — allowed, and
+        // together with a third attestor the release executes through approve().
+        approveAs(0, 0, recipient, 5e12);
+        assertEq(vault.activeApprovals(payload), 2);
+        approveAs(2, 0, recipient, 5e12);
+        assertEq(pen.balanceOf(recipient), 5e18);
+        assertEq(vault.pendingApprovedAmount(), 0);
+    }
+
     function test_CannotRemoveAttestorBelowThreshold() public {
         vm.startPrank(admin);
         vault.removeAttestor(attestors[0]);

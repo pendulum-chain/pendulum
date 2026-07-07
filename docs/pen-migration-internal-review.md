@@ -60,6 +60,45 @@ to their migrator and can never be cleared. Covered by three new tests.
 - **Admin takeover / role wiring:** two-step admin transfer; deploy scripts
   leave no dangling deployer privileges; timelock self-administered.
 
+## Round 2 (2026-07-07, second independent reviewer over the full diff of both repos)
+
+### C1. CRITICAL — Zero-address migration deadlocked the entire attestor fleet
+`migrate(amount, H160::zero())` was accepted by the pallet and the portal, but
+the vault deterministically rejects a zero recipient. Every attestor would hit
+the same permanent revert at the same block, alert, exit, and — because the
+checkpoint only advances after a block fully processes — crash-loop forever.
+One 1-PEN transaction could halt every migration behind it for all five
+operators simultaneously.
+
+**Resolution (fixed, defense in depth):** the pallet rejects
+`H160::zero()` (`InvalidBaseAddress`, with test); the portal validator rejects
+the zero address; the attestor statically detects vault-unreleasable tuples
+(zero recipient/amount), raises a distinct CRITICAL alert, and skips past the
+event instead of crash-looping — such an event can now only mean a
+pallet/vault validation mismatch.
+
+### H1. HIGH — Re-adding a removed attestor could cross a threshold outside `approve()`
+`activeApprovals` counted historical approvals against the current attestor
+set, so `addAttestor` re-adding an address with stale recorded approvals could
+push a payload over the threshold without running the pending-release
+accounting in `approve()` — re-opening the sweep-stranding hole of round-1
+finding 3 through a rotation side door.
+
+**Resolution (fixed structurally):** attestor **generations**. Every
+`addAttestor` bumps the address's generation and approvals only count while
+their recorded generation matches — a re-added attestor must approve again, so
+the threshold can only ever be crossed inside `approve()`. The public
+`hasApproved` view now means "holds a currently-valid approval" (same ABI, so
+the daemon keeps working and correctly re-approves after a re-add). Covered by
+a regression test.
+
+### Round 2 explicitly verified as not vulnerable
+Portal EIP-55 implementation and keccak string semantics; portal/attestor
+payload-hash construction exactly mirroring the vault's `abi.encode`;
+pallet↔attestor↔vault↔portal event-field alignment; replay/reentrancy/
+conflicting-tuple logic (re-confirmed); monitor block-pinning fix;
+`clearStalePending` restrictions; deploy-script role wiring.
+
 ## Follow-ups for the external audit
 - The cap-accounting window (`currentDay` bucketing) and attestor-rotation
   edge cases around `pendingRelease` marking (threshold crossed via

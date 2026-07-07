@@ -372,6 +372,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			| RuntimeCall::CumulusXcm(_)
 			| RuntimeCall::VaultStaking(_)
 			| RuntimeCall::XcmTeleport(_)
+			| RuntimeCall::TokenMigration(_)
 			| RuntimeCall::MessageQueue(_) => true, // All pallets are allowed, but exhaustive match is defensive
 			                                        // in the case of adding new pallets.
 		}
@@ -1116,6 +1117,23 @@ impl pallet_xcm_teleport::Config for Runtime {
 	type TreasuryAccount = PendulumTreasuryAccount;
 }
 
+parameter_types! {
+	// 1 PEN; keeps dust-sized migrations from spamming the attestor pipeline.
+	pub const MinimumMigrationAmount: Balance = UNIT;
+}
+
+impl token_migration::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type MinimumMigrationAmount = MinimumMigrationAmount;
+	// Root/half-council, or 2/3 of the technical committee for fast incident response.
+	type PauseOrigin = EitherOfDiverse<
+		EnsureRootOrHalfCouncil,
+		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>,
+	>;
+	type WeightInfo = token_migration::default_weights::SubstrateWeight<Runtime>;
+}
+
 const fn deposit(items: u32, bytes: u32) -> Balance {
 	(items as Balance * UNIT + (bytes as Balance) * (5 * MILLIUNIT / 100)) / 10
 }
@@ -1691,6 +1709,8 @@ construct_runtime!(
 		VestingManager: vesting_manager = 100,
 
 		XcmTeleport: pallet_xcm_teleport = 101,
+
+		TokenMigration: token_migration = 102,
 
 		MessageQueue: pallet_message_queue = 110,
 	}

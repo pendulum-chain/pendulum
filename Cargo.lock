@@ -9029,6 +9029,7 @@ dependencies = [
  "stellar-relay",
  "substrate-wasm-builder 5.0.0-dev (git+https://github.com/paritytech//polkadot-sdk?branch=release-polkadot-v1.6.0)",
  "token-chain-extension",
+ "token-migration",
  "treasury-buyout-extension",
  "vault-registry",
  "vesting-manager",

@@ -1745,6 +1745,7 @@ mod benches {
 
 		[orml_currencies_allowance_extension, TokenAllowance]
 		[treasury_buyout_extension, TreasuryBuyoutExtension]
+		[token_migration, TokenMigration]
 
 		[dia_oracle, DiaOracleModule]
 	);

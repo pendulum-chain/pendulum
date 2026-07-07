@@ -18,6 +18,9 @@ pub use pallet::*;
 
 pub mod default_weights;
 
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
+
 #[cfg(test)]
 mod mock;
 #[cfg(test)]

@@ -15496,6 +15496,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "token-migration"
+version = "1.6.0-d"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core 21.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?rev=22dd6dee5148a0879306337bd8619c16224cc07b)",
+ "sp-io 23.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?rev=22dd6dee5148a0879306337bd8619c16224cc07b)",
+ "sp-runtime 24.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?rev=22dd6dee5148a0879306337bd8619c16224cc07b)",
+ "sp-std 8.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?rev=22dd6dee5148a0879306337bd8619c16224cc07b)",
+]
+
+[[package]]
 name = "tokio"
 version = "1.42.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

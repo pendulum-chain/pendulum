@@ -111,6 +111,42 @@ After enactment:
 5. If daemons exit on the upgrade block: they hold position (checkpoint stays
    put) — fix decoding, redeploy, they resume without loss.
 
+## RB-7: Window close and remainder sweep
+
+**Trigger:** the migration window is closing (per decision D5) and governance
+wants to sweep the unmigrated remainder to its designated destination.
+
+**Why this needs care:** `sweepRemainder` reserves only *threshold-approved*
+pending releases (`pendingApprovedAmount`). A migration that was burned on
+Pendulum but is still gathering attestor approvals is **not** reserved — sweep
+it and, while the attestor fleet no longer crash-loops (the release simply
+defers and stays recoverable), that user's tokens must be restored by a
+governance refund before they can be released. Avoid this by reconciling
+first.
+
+1. **Stop new burns:** pause the pallet — `tokenMigration.setPaused(true)` via
+   governance/technical committee (RB-4). No new migrations can start.
+2. **Wait a finality + processing buffer** (at least the relay finality window
+   plus a generous attestor-processing margin; hours, not minutes) so every
+   already-finalized migration reaches the vault and is released.
+3. **Reconcile via the monitor:** confirm `TotalMigrated × conversionFactor ==
+   totalReleased + pendingApprovedAmount` and that the monitor reports **zero**
+   outstanding/unreleased nonces for a sustained window. Resolve any pending
+   or deferred releases (raise caps / unpause / `release`) before proceeding.
+4. **Compute the sweep amount** off-chain: `balance − pendingApprovedAmount`,
+   and sanity-check it against expected unmigrated supply. Do not sweep more.
+5. **Sweep:** admin (timelock) calls `sweepRemainder(destination, amount)`.
+   The call reverts (`ExceedsSweepable`) if the amount exceeds
+   `balance − pendingApprovedAmount`, as a last-line guard.
+6. **Verify:** `totalSwept` increased by `amount`; the monitor's conservation
+   check (`balance + totalReleased + totalSwept == totalSupply`) still holds
+   and does **not** alert (it accounts for `totalSwept`).
+
+**If a still-in-flight migration was swept anyway:** its release defers with
+`InsufficientVaultBalance` and is marked pending. To make the user whole,
+governance transfers the owed token amount back to the vault, then anyone
+calls `release(nonce, recipient, palletAmount)`.
+
 ## RB-6: Attestor set / threshold change (planned)
 
 1. Admin Safe (timelocked post-handover: expect the configured delay between

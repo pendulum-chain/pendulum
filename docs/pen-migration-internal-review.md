@@ -99,6 +99,66 @@ pallet↔attestor↔vault↔portal event-field alignment; replay/reentrancy/
 conflicting-tuple logic (re-confirmed); monitor block-pinning fix;
 `clearStalePending` restrictions; deploy-script role wiring.
 
+## Round 3 (2026-07-07, third independent reviewer, focused on the round-1/2 fixes)
+
+All three findings trace to the round-1 `sweepRemainder`/`pendingApprovedAmount`
+mechanism never being re-verified against *sub-threshold* in-flight migrations
+or against the monitor's conservation formula.
+
+### C1(r3). CRITICAL — `sweepRemainder` could strand an in-flight migration and crash-loop the fleet
+`pendingApprovedAmount` reserves only payloads that have already crossed the
+threshold. A migration with 1–2 approvals at sweep time reserved nothing, so
+`sweepRemainder` (which swept `balance − pendingApprovedAmount`) could remove
+its tokens. When the remaining attestors then crossed the threshold, the
+inline release in `approve()` reverted on insufficient balance — rolling back
+the approval, and, because every attestor hit it identically, permanently
+crash-looping 3-of-5 daemons and halting all future migrations.
+
+**Resolution (fixed):**
+- `approve()` now includes vault balance in its `releasable` check, so an
+  under-funded release **defers** (marks pending) instead of reverting — the
+  fleet can never crash-loop on it, and the debt stays tracked and recoverable
+  after a governance refund. (`release()` gained a matching
+  `InsufficientVaultBalance` guard.)
+- `sweepRemainder(to, amount)` now takes an explicit amount bounded by
+  `balance − pendingApprovedAmount` (saturating, so a prior over-sweep can't
+  cause an underflow revert), forcing conscious reconciliation.
+- New runbook **RB-7** (window close) mandates pausing the pallet and
+  confirming zero outstanding nonces via the monitor before sweeping.
+- Tests: `test_OverSweptInFlightMigrationDefersAndRecovers` proves the fleet
+  stays up and the migration recovers; sweep tests updated to the new
+  signature.
+
+### H1(r3). HIGH — Monitor's M2b check ignored `sweepRemainder`
+`sweepRemainder` moved tokens out without touching `totalReleased`, so the
+monitor's `balance + totalReleased == totalSupply` check would fire a
+guaranteed false `VAULT BALANCE MISMATCH` — and auto-pause — on the first
+legitimate window-close sweep.
+
+**Resolution (fixed):** the vault now tracks `totalSwept` (incremented in
+`sweepRemainder`); the monitor checks `balance + totalReleased + totalSwept ==
+totalSupply`. RB-7 also notes a mismatch coinciding with a `RemainderSwept`
+event is expected, not a compromise signal. The fuzz invariant test now
+includes `totalSwept`.
+
+### M1(r3). MEDIUM — `hasApproved` disagreed with `activeApprovals`
+`hasApproved` checked only the generation, not `isAttestor`, so it reported
+`true` for an attestor removed and never re-added (the standard RB-1 outcome),
+while that approval counts 0 toward releases. Low live impact (only the
+attestor self-check reads it) but wrong on a public view meant for
+auditability.
+
+**Resolution (fixed):** `hasApproved` now requires `isAttestor` too, mirroring
+`activeApprovals`. Covered by `test_HasApprovedFalseForRemovedAttestor`.
+
+### Round 3 explicitly verified as not vulnerable
+The H1 generation mechanism itself (no double-count, no stale re-match, no
+double-increment of pending); C1's `isUnreleasable` completeness for the
+`approve` revert set; reentrancy; governance cannot bypass the attestor quorum
+or move the immutable sweep timestamp; deploy-script role wiring against the
+actual vendored OZ v5.4.0 `TimelockController`; unbounded-`_approvers`
+gas-griefing (not practically reachable).
+
 ## Follow-ups for the external audit
 - The cap-accounting window (`currentDay` bucketing) and attestor-rotation
   edge cases around `pendingRelease` marking (threshold crossed via

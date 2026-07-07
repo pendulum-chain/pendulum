@@ -273,7 +273,7 @@ contract MigrationVaultTest is Test {
         vm.expectRevert(MigrationVault.NotAdmin.selector);
         vault.addAttestor(makeAddr("x"));
         vm.expectRevert(MigrationVault.NotAdmin.selector);
-        vault.sweepRemainder(makeAddr("x"));
+        vault.sweepRemainder(makeAddr("x"), 1);
         vm.stopPrank();
     }
 
@@ -292,13 +292,14 @@ contract MigrationVaultTest is Test {
         address treasury = makeAddr("treasury");
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(MigrationVault.SweepNotYetAllowed.selector, earliestSweep));
-        vault.sweepRemainder(treasury);
+        vault.sweepRemainder(treasury, MAX_ISSUANCE);
 
         vm.warp(earliestSweep);
         vm.prank(admin);
-        vault.sweepRemainder(treasury);
+        vault.sweepRemainder(treasury, MAX_ISSUANCE);
         assertEq(pen.balanceOf(treasury), MAX_ISSUANCE);
         assertEq(pen.balanceOf(address(vault)), 0);
+        assertEq(vault.totalSwept(), MAX_ISSUANCE);
     }
 
     // ---------------------------------------------------------------- pending-release accounting
@@ -314,8 +315,15 @@ contract MigrationVaultTest is Test {
 
         address treasury = makeAddr("treasury");
         vm.warp(earliestSweep);
+        // The pending (owed) amount is not sweepable.
         vm.prank(admin);
-        vault.sweepRemainder(treasury);
+        vm.expectRevert(
+            abi.encodeWithSelector(MigrationVault.ExceedsSweepable.selector, MAX_ISSUANCE, MAX_ISSUANCE - 2_000_000e18)
+        );
+        vault.sweepRemainder(treasury, MAX_ISSUANCE);
+
+        vm.prank(admin);
+        vault.sweepRemainder(treasury, MAX_ISSUANCE - 2_000_000e18);
         assertEq(pen.balanceOf(treasury), MAX_ISSUANCE - 2_000_000e18);
         assertEq(pen.balanceOf(address(vault)), 2_000_000e18, "owed amount stays in the vault");
 
@@ -371,6 +379,53 @@ contract MigrationVaultTest is Test {
         assertEq(vault.pendingApprovedAmount(), 0);
     }
 
+    // A migration that was still gathering approvals when the vault was
+    // over-swept must NOT crash the attestor fleet, and must stay recoverable.
+    function test_OverSweptInFlightMigrationDefersAndRecovers() public {
+        // Bob's migration has 2 of 3 approvals — sub-threshold, so nothing is
+        // reserved in pendingApprovedAmount yet.
+        approveAs(0, 42, recipient, 5e12);
+        approveAs(1, 42, recipient, 5e12);
+        assertEq(vault.pendingApprovedAmount(), 0);
+
+        // Admin sweeps the entire (unreserved) balance at window close.
+        address treasury = makeAddr("treasury");
+        vm.warp(earliestSweep);
+        vm.prank(admin);
+        vault.sweepRemainder(treasury, MAX_ISSUANCE);
+        assertEq(pen.balanceOf(address(vault)), 0);
+
+        // The 3rd approval crosses the threshold with an empty vault. This must
+        // NOT revert (which would crash-loop every attestor); it defers instead.
+        approveAs(2, 42, recipient, 5e12);
+        assertFalse(vault.nonceConsumed(42));
+        assertEq(vault.pendingApprovedAmount(), 5e18, "owed amount now tracked as pending");
+
+        // A standalone release attempt reverts cleanly (distinct error).
+        vm.expectRevert(MigrationVault.InsufficientVaultBalance.selector);
+        vault.release(42, recipient, 5e12);
+
+        // Governance refunds the vault; the release then completes — recoverable.
+        vm.prank(treasury);
+        pen.transfer(address(vault), 5e18);
+        vault.release(42, recipient, 5e12);
+        assertEq(pen.balanceOf(recipient), 5e18);
+        assertEq(vault.pendingApprovedAmount(), 0);
+    }
+
+    function test_HasApprovedFalseForRemovedAttestor() public {
+        bytes32 payload = vault.payloadHash(0, recipient, 5e12);
+        approveAs(0, 0, recipient, 5e12);
+        assertTrue(vault.hasApproved(payload, attestors[0]));
+
+        // Removed and never re-added (the standard RB-1 response): hasApproved
+        // must agree with activeApprovals and report false.
+        vm.prank(admin);
+        vault.removeAttestor(attestors[0]);
+        assertFalse(vault.hasApproved(payload, attestors[0]));
+        assertEq(vault.activeApprovals(payload), 0);
+    }
+
     // ---------------------------------------------------------------- fuzz
 
     function testFuzz_ReleasePreservesSupplyInvariant(uint64 nonce, uint96 palletAmount) public {
@@ -380,6 +435,10 @@ contract MigrationVaultTest is Test {
         approveAs(2, nonce, recipient, palletAmount);
 
         assertEq(pen.balanceOf(recipient), uint256(palletAmount) * CONVERSION_FACTOR);
-        assertEq(pen.balanceOf(address(vault)) + vault.totalReleased(), pen.totalSupply());
+        // Conservation incl. the sweep accumulator (monitor's M2b formula).
+        assertEq(
+            pen.balanceOf(address(vault)) + vault.totalReleased() + vault.totalSwept(),
+            pen.totalSupply()
+        );
     }
 }

@@ -44,6 +44,8 @@ contract MigrationVault {
     error ExceedsDailyCap(uint256 wouldBeReleasedToday, uint256 cap);
     error SweepNotYetAllowed(uint256 earliest);
     error PendingNotStale();
+    error InsufficientVaultBalance();
+    error ExceedsSweepable(uint256 requested, uint256 sweepable);
 
     // ---------------------------------------------------------------- events
 
@@ -128,6 +130,12 @@ contract MigrationVault {
     ///         so a sweep can never strand an already-earned release.
     uint256 public pendingApprovedAmount;
     mapping(bytes32 => bool) public pendingRelease;
+
+    /// @notice Total token units swept out via `sweepRemainder`. Tracked so
+    ///         the invariant monitor's conservation check stays exact after a
+    ///         window-close sweep: balanceOf(vault) + totalReleased +
+    ///         totalSwept == totalSupply at all times.
+    uint256 public totalSwept;
 
     // ---------------------------------------------------------------- modifiers
 
@@ -215,8 +223,15 @@ contract MigrationVault {
         // called by anyone later to retry.
         if (activeApprovals(payload) >= threshold) {
             uint256 tokenAmount = palletAmount * conversionFactor;
+            // Insufficient balance is included here deliberately: if the vault
+            // was over-swept, the release is deferred (marked pending) rather
+            // than reverting. A revert here would roll back this approval and,
+            // because every attestor hits it identically, permanently
+            // crash-loop the fleet on this block. Deferral keeps the debt
+            // tracked and recoverable once the vault is refunded.
             bool releasable = !paused && address(token) != address(0) && tokenAmount <= perReleaseCap
-                && _releasedTodayAfterRoll() + tokenAmount <= dailyCap;
+                && _releasedTodayAfterRoll() + tokenAmount <= dailyCap
+                && token.balanceOf(address(this)) >= tokenAmount;
             if (releasable) {
                 _release(nonce, recipient, palletAmount, payload);
             } else if (!pendingRelease[payload]) {
@@ -244,6 +259,7 @@ contract MigrationVault {
         if (tokenAmount > perReleaseCap) revert ExceedsPerReleaseCap(tokenAmount, perReleaseCap);
         uint256 releasedAfter = _releasedTodayAfterRoll() + tokenAmount;
         if (releasedAfter > dailyCap) revert ExceedsDailyCap(releasedAfter, dailyCap);
+        if (token.balanceOf(address(this)) < tokenAmount) revert InsufficientVaultBalance();
 
         _release(nonce, recipient, palletAmount, payload);
     }
@@ -297,10 +313,11 @@ contract MigrationVault {
     }
 
     /// @notice Whether `attestor` holds a currently-valid approval for the
-    ///         payload (i.e. one from its current generation).
+    ///         payload — i.e. it is a current attestor and its approval is
+    ///         from its current generation. Mirrors the conditions
+    ///         `activeApprovals` counts, so a removed attestor reports false.
     function hasApproved(bytes32 payload, address attestor) public view returns (bool) {
-        uint64 generation = attestorGeneration[attestor];
-        return generation != 0 && _approvalGeneration[payload][attestor] == generation;
+        return isAttestor[attestor] && _approvalGeneration[payload][attestor] == attestorGeneration[attestor];
     }
 
     function approversOf(bytes32 payload) external view returns (address[] memory) {
@@ -384,16 +401,24 @@ contract MigrationVault {
         emit AdminTransferred(msg.sender);
     }
 
-    /// @notice Sweep the unmigrated remainder after the migration window
-    ///         closes (destination decided by governance, PRD D5). Amounts
-    ///         owed to threshold-approved-but-deferred releases are excluded,
-    ///         so a sweep can never strand a burned-but-unreleased migration.
-    function sweepRemainder(address to) external onlyAdmin {
+    /// @notice Sweep up to `amount` of the unmigrated remainder after the
+    ///         migration window closes (destination decided by governance,
+    ///         PRD D5). The caller must pass an explicit amount, bounded by
+    ///         `balance − pendingApprovedAmount`, forcing a conscious
+    ///         reconciliation against the monitor's outstanding-nonce count
+    ///         (runbook RB-7) rather than blindly sweeping everything —
+    ///         `pendingApprovedAmount` only reserves threshold-approved
+    ///         releases, not migrations still gathering approvals.
+    function sweepRemainder(address to, uint256 amount) external onlyAdmin {
         if (block.timestamp < earliestSweepTimestamp) revert SweepNotYetAllowed(earliestSweepTimestamp);
         if (to == address(0)) revert ZeroAddress();
         if (address(token) == address(0)) revert TokenNotSet();
-        uint256 sweepable = token.balanceOf(address(this)) - pendingApprovedAmount;
-        token.safeTransfer(to, sweepable);
-        emit RemainderSwept(to, sweepable);
+        uint256 balanceHeld = token.balanceOf(address(this));
+        // Saturating: a prior over-sweep can leave pending > balance; never revert on underflow.
+        uint256 sweepable = balanceHeld > pendingApprovedAmount ? balanceHeld - pendingApprovedAmount : 0;
+        if (amount > sweepable) revert ExceedsSweepable(amount, sweepable);
+        totalSwept += amount;
+        token.safeTransfer(to, amount);
+        emit RemainderSwept(to, amount);
     }
 }

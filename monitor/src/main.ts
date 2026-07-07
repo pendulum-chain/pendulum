@@ -23,6 +23,7 @@ import { privateKeyToAccount } from "viem/accounts";
 
 const vaultAbi = [
 	{ type: "function", name: "totalReleased", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+	{ type: "function", name: "totalSwept", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
 	{ type: "function", name: "conversionFactor", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
 	{ type: "function", name: "token", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
 	{ type: "function", name: "paused", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
@@ -126,8 +127,9 @@ async function check(api: ApiPromise): Promise<void> {
 	// reads would skew totalReleased vs. vaultBalance and trigger a false
 	// conservation alert (and auto-pause).
 	const blockNumber = await publicClient.getBlockNumber();
-	const [totalReleased, conversionFactor, tokenAddress] = await Promise.all([
+	const [totalReleased, totalSwept, conversionFactor, tokenAddress] = await Promise.all([
 		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalReleased", blockNumber }),
+		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalSwept", blockNumber }),
 		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "conversionFactor", blockNumber }),
 		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "token", blockNumber }),
 	]);
@@ -155,11 +157,14 @@ async function check(api: ApiPromise): Promise<void> {
 		return;
 	}
 
-	// (M2b) Vault-internal conservation.
-	if (vaultBalance + totalReleased !== totalSupply) {
+	// (M2b) Vault-internal conservation. totalSwept accounts for the intended
+	// end-of-window sweep, which moves tokens out without touching
+	// totalReleased — omitting it would fire a guaranteed false positive (and
+	// auto-pause) on the first legitimate sweep.
+	if (vaultBalance + totalReleased + totalSwept !== totalSupply) {
 		await alert(
 			"VAULT BALANCE MISMATCH",
-			`balance ${vaultBalance} + released ${totalReleased} != supply ${totalSupply}`,
+			`balance ${vaultBalance} + released ${totalReleased} + swept ${totalSwept} != supply ${totalSupply}`,
 		);
 		await pauseVault();
 		return;
@@ -189,8 +194,8 @@ async function check(api: ApiPromise): Promise<void> {
 	}
 
 	log(
-		`ok: migrated=${totalMigrated} released=${totalReleased} pending=${nonceFirstSeen.size} ` +
-			`vaultBalance=${vaultBalance}`,
+		`ok: migrated=${totalMigrated} released=${totalReleased} swept=${totalSwept} ` +
+			`pending=${nonceFirstSeen.size} vaultBalance=${vaultBalance}`,
 	);
 }
 

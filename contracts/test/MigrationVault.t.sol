@@ -275,6 +275,76 @@ contract MigrationVaultTest is Test {
         assertEq(pen.balanceOf(address(vault)), 0);
     }
 
+    // ---------------------------------------------------------------- pending-release accounting
+
+    function test_SweepExcludesPendingApprovedReleases() public {
+        // A migration larger than the per-release cap reaches quorum but is
+        // deferred; its owed amount must survive a remainder sweep.
+        uint256 palletAmount = 2_000_000e12; // > perReleaseCap after conversion
+        approveAs(0, 0, recipient, palletAmount);
+        approveAs(1, 0, recipient, palletAmount);
+        approveAs(2, 0, recipient, palletAmount);
+        assertEq(vault.pendingApprovedAmount(), 2_000_000e18);
+
+        address treasury = makeAddr("treasury");
+        vm.warp(earliestSweep);
+        vm.prank(admin);
+        vault.sweepRemainder(treasury);
+        assertEq(pen.balanceOf(treasury), MAX_ISSUANCE - 2_000_000e18);
+        assertEq(pen.balanceOf(address(vault)), 2_000_000e18, "owed amount stays in the vault");
+
+        // After governance raises the cap, the deferred release still succeeds.
+        vm.prank(admin);
+        vault.setCaps(3_000_000e18, 3_000_000e18);
+        vault.release(0, recipient, palletAmount);
+        assertEq(pen.balanceOf(recipient), 2_000_000e18);
+        assertEq(vault.pendingApprovedAmount(), 0);
+    }
+
+    function test_PendingAccountingClearsOnRelease() public {
+        vm.prank(guardian);
+        vault.pause();
+
+        approveAs(0, 0, recipient, 5e12);
+        approveAs(1, 0, recipient, 5e12);
+        approveAs(2, 0, recipient, 5e12);
+        assertEq(vault.pendingApprovedAmount(), 5e18, "deferred by pause -> pending");
+
+        vm.prank(admin);
+        vault.unpause();
+        vault.release(0, recipient, 5e12);
+        assertEq(vault.pendingApprovedAmount(), 0);
+        assertFalse(vault.pendingRelease(vault.payloadHash(0, recipient, 5e12)));
+    }
+
+    function test_ClearStalePendingOnlyForConsumedNonce() public {
+        address mallory = makeAddr("mallory");
+        vm.prank(guardian);
+        vault.pause();
+
+        // Both a legitimate and a conflicting tuple for nonce 0 reach quorum
+        // while paused (attestors may approve two different tuples).
+        for (uint256 i = 0; i < 3; i++) {
+            approveAs(i, 0, recipient, 5e12);
+            approveAs(i, 0, mallory, 5e12);
+        }
+        assertEq(vault.pendingApprovedAmount(), 10e18);
+
+        // The stale (unreleased, unconsumed) pending cannot be cleared yet.
+        vm.prank(admin);
+        vm.expectRevert(MigrationVault.PendingNotStale.selector);
+        vault.clearStalePending(0, mallory, 5e12);
+
+        vm.prank(admin);
+        vault.unpause();
+        vault.release(0, recipient, 5e12);
+
+        // Now the conflicting tuple's pending entry is stale and clearable.
+        vm.prank(admin);
+        vault.clearStalePending(0, mallory, 5e12);
+        assertEq(vault.pendingApprovedAmount(), 0);
+    }
+
     // ---------------------------------------------------------------- fuzz
 
     function testFuzz_ReleasePreservesSupplyInvariant(uint64 nonce, uint96 palletAmount) public {

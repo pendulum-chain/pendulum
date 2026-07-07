@@ -122,18 +122,23 @@ async function check(api: ApiPromise): Promise<void> {
 	const nextNonce = BigInt((await apiAt.query.tokenMigration.nextNonce()).toString());
 
 	// --- Base side ---
+	// All reads are pinned to one block: a release landing between unpinned
+	// reads would skew totalReleased vs. vaultBalance and trigger a false
+	// conservation alert (and auto-pause).
+	const blockNumber = await publicClient.getBlockNumber();
 	const [totalReleased, conversionFactor, tokenAddress] = await Promise.all([
-		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalReleased" }),
-		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "conversionFactor" }),
-		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "token" }),
+		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalReleased", blockNumber }),
+		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "conversionFactor", blockNumber }),
+		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "token", blockNumber }),
 	]);
 	const [totalSupply, vaultBalance] = await Promise.all([
-		publicClient.readContract({ address: tokenAddress, abi: erc20Abi, functionName: "totalSupply" }),
+		publicClient.readContract({ address: tokenAddress, abi: erc20Abi, functionName: "totalSupply", blockNumber }),
 		publicClient.readContract({
 			address: tokenAddress,
 			abi: erc20Abi,
 			functionName: "balanceOf",
 			args: [config.vaultAddress],
+			blockNumber,
 		}),
 	]);
 

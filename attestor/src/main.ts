@@ -106,7 +106,12 @@ async function migrationEventsInBlock(api: ApiPromise, blockNumber: number): Pro
 	for (const record of records) {
 		const { section, method, data } = record.event;
 		if (section !== "tokenMigration" || method !== "MigrationInitiated") continue;
-		// Event shape: { nonce: u64, who: AccountId, base_address: H160, amount: u128 }
+		// Event shape: { nonce: u64, who: AccountId, base_address: H160, amount: u128 }.
+		// Guard the shape explicitly: a runtime upgrade changing the event must
+		// fail loudly (PRD A5), not decode garbage positionally.
+		if (data.length !== 4) {
+			throw new Error(`MigrationInitiated in block ${blockNumber} has ${data.length} fields, expected 4`);
+		}
 		const [nonce, , baseAddress, amount] = data as [
 			{ toBigInt(): bigint },
 			unknown,
@@ -122,46 +127,58 @@ async function migrationEventsInBlock(api: ApiPromise, blockNumber: number): Pro
 	return events;
 }
 
-/** Submit the approval for one migration event, skipping work already done. */
-async function approve(event: MigrationEvent): Promise<void> {
-	const label = `nonce=${event.nonce} recipient=${event.recipient} amount=${event.palletAmount}`;
-
+/** True when this migration no longer needs our approval (released, or we
+ *  already approved). Rechecked after failures: with 5 independent attestors
+ *  racing to the same event, losing the race is the NORMAL case, not an error. */
+async function alreadyHandled(event: MigrationEvent): Promise<boolean> {
 	const consumed = await publicClient.readContract({
 		address: config.vaultAddress,
 		abi: vaultAbi,
 		functionName: "nonceConsumed",
 		args: [event.nonce],
 	});
-	if (consumed) {
-		log(`skip (already released): ${label}`);
-		return;
-	}
-
-	const alreadyApproved = await publicClient.readContract({
+	if (consumed) return true;
+	return publicClient.readContract({
 		address: config.vaultAddress,
 		abi: vaultAbi,
 		functionName: "hasApproved",
 		args: [payloadHash(event), account.address],
 	});
-	if (alreadyApproved) {
-		log(`skip (already approved by us): ${label}`);
+}
+
+/** Submit the approval for one migration event, skipping work already done. */
+async function approve(event: MigrationEvent): Promise<void> {
+	const label = `nonce=${event.nonce} recipient=${event.recipient} amount=${event.palletAmount}`;
+
+	if (await alreadyHandled(event)) {
+		log(`skip (already released or approved): ${label}`);
 		return;
 	}
 
-	// simulate first: turns approvals raced by other paths into clean skips
-	const { request } = await publicClient.simulateContract({
-		account,
-		address: config.vaultAddress,
-		abi: vaultAbi,
-		functionName: "approve",
-		args: [event.nonce, event.recipient, event.palletAmount],
-	});
-	const txHash = await walletClient.writeContract(request);
-	const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-	if (receipt.status !== "success") {
-		throw new Error(`approve transaction reverted: ${txHash} (${label})`);
+	try {
+		const { request } = await publicClient.simulateContract({
+			account,
+			address: config.vaultAddress,
+			abi: vaultAbi,
+			functionName: "approve",
+			args: [event.nonce, event.recipient, event.palletAmount],
+		});
+		const txHash = await walletClient.writeContract(request);
+		const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+		if (receipt.status !== "success") {
+			throw new Error(`approve transaction reverted: ${txHash} (${label})`);
+		}
+		log(`approved: ${label} tx=${txHash}`);
+	} catch (error) {
+		// Expected race: the release landed (or our own retried tx landed)
+		// between our pre-check and the transaction. Benign — anything else
+		// is a genuine failure and propagates to the fatal handler.
+		if (await alreadyHandled(event)) {
+			log(`skip (raced, resolved on-chain): ${label}`);
+			return;
+		}
+		throw error;
 	}
-	log(`approved: ${label} tx=${txHash}`);
 }
 
 async function checkGasBalance(): Promise<void> {
@@ -208,7 +225,10 @@ async function main(): Promise<void> {
 		});
 	});
 
-	setInterval(() => void checkGasBalance().catch(() => {}), 10 * 60 * 1000);
+	setInterval(
+		() => void checkGasBalance().catch((error) => console.error("gas balance check failed", error)),
+		10 * 60 * 1000,
+	);
 }
 
 main().catch(async (error) => {

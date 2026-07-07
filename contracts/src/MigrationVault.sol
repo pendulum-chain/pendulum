@@ -43,6 +43,7 @@ contract MigrationVault {
     error ExceedsPerReleaseCap(uint256 amount, uint256 cap);
     error ExceedsDailyCap(uint256 wouldBeReleasedToday, uint256 cap);
     error SweepNotYetAllowed(uint256 earliest);
+    error PendingNotStale();
 
     // ---------------------------------------------------------------- events
 
@@ -59,6 +60,8 @@ contract MigrationVault {
     event AdminTransferStarted(address indexed pendingAdmin);
     event AdminTransferred(address indexed newAdmin);
     event RemainderSwept(address indexed to, uint256 amount);
+    event ReleasePending(uint64 indexed nonce, address indexed recipient, uint256 tokenAmount);
+    event StalePendingCleared(bytes32 indexed payload, uint256 tokenAmount);
 
     // ---------------------------------------------------------------- state
 
@@ -110,6 +113,12 @@ contract MigrationVault {
     /// @notice Total token units released so far (for the invariant monitor:
     ///         balanceOf(vault) + totalReleased == totalSupply).
     uint256 public totalReleased;
+
+    /// @notice Token units owed to threshold-approved payloads whose release
+    ///         was deferred (pause or caps). Excluded from `sweepRemainder`
+    ///         so a sweep can never strand an already-earned release.
+    uint256 public pendingApprovedAmount;
+    mapping(bytes32 => bool) public pendingRelease;
 
     // ---------------------------------------------------------------- modifiers
 
@@ -190,10 +199,18 @@ contract MigrationVault {
         // Opportunistic release: skipped (not reverted) when paused or a cap
         // is hit, so the approval is recorded either way. `release` can be
         // called by anyone later to retry.
-        if (!paused && address(token) != address(0) && activeApprovals(payload) >= threshold) {
+        if (activeApprovals(payload) >= threshold) {
             uint256 tokenAmount = palletAmount * conversionFactor;
-            if (tokenAmount <= perReleaseCap && _releasedTodayAfterRoll() + tokenAmount <= dailyCap) {
-                _release(nonce, recipient, palletAmount);
+            bool releasable = !paused && address(token) != address(0) && tokenAmount <= perReleaseCap
+                && _releasedTodayAfterRoll() + tokenAmount <= dailyCap;
+            if (releasable) {
+                _release(nonce, recipient, palletAmount, payload);
+            } else if (!pendingRelease[payload]) {
+                // Threshold reached but deferred: account for the owed amount
+                // so `sweepRemainder` cannot strand it.
+                pendingRelease[payload] = true;
+                pendingApprovedAmount += tokenAmount;
+                emit ReleasePending(nonce, recipient, tokenAmount);
             }
         }
     }
@@ -214,17 +231,35 @@ contract MigrationVault {
         uint256 releasedAfter = _releasedTodayAfterRoll() + tokenAmount;
         if (releasedAfter > dailyCap) revert ExceedsDailyCap(releasedAfter, dailyCap);
 
-        _release(nonce, recipient, palletAmount);
+        _release(nonce, recipient, palletAmount, payload);
     }
 
     /// @dev Caller must have verified pause state, approvals and caps.
-    function _release(uint64 nonce, address recipient, uint256 palletAmount) internal {
+    function _release(uint64 nonce, address recipient, uint256 palletAmount, bytes32 payload) internal {
         uint256 tokenAmount = palletAmount * conversionFactor;
         nonceConsumed[nonce] = true;
+        if (pendingRelease[payload]) {
+            pendingRelease[payload] = false;
+            pendingApprovedAmount -= tokenAmount;
+        }
         releasedToday += tokenAmount;
         totalReleased += tokenAmount;
         token.safeTransfer(recipient, tokenAmount);
         emit Released(nonce, recipient, palletAmount, tokenAmount);
+    }
+
+    /// @notice Clear the pending-release accounting of a payload whose nonce
+    ///         was released via a DIFFERENT (conflicting) tuple. Restricted to
+    ///         consumed nonces: an unconsumed pending payload is still owed to
+    ///         its migrator and must never be cleared.
+    function clearStalePending(uint64 nonce, address recipient, uint256 palletAmount) external onlyAdmin {
+        if (!nonceConsumed[nonce]) revert PendingNotStale();
+        bytes32 payload = payloadHash(nonce, recipient, palletAmount);
+        if (!pendingRelease[payload]) revert PendingNotStale();
+        pendingRelease[payload] = false;
+        uint256 tokenAmount = palletAmount * conversionFactor;
+        pendingApprovedAmount -= tokenAmount;
+        emit StalePendingCleared(payload, tokenAmount);
     }
 
     // ---------------------------------------------------------------- views
@@ -321,13 +356,15 @@ contract MigrationVault {
     }
 
     /// @notice Sweep the unmigrated remainder after the migration window
-    ///         closes (destination decided by governance, PRD D5).
+    ///         closes (destination decided by governance, PRD D5). Amounts
+    ///         owed to threshold-approved-but-deferred releases are excluded,
+    ///         so a sweep can never strand a burned-but-unreleased migration.
     function sweepRemainder(address to) external onlyAdmin {
         if (block.timestamp < earliestSweepTimestamp) revert SweepNotYetAllowed(earliestSweepTimestamp);
         if (to == address(0)) revert ZeroAddress();
         if (address(token) == address(0)) revert TokenNotSet();
-        uint256 balance = token.balanceOf(address(this));
-        token.safeTransfer(to, balance);
-        emit RemainderSwept(to, balance);
+        uint256 sweepable = token.balanceOf(address(this)) - pendingApprovedAmount;
+        token.safeTransfer(to, sweepable);
+        emit RemainderSwept(to, sweepable);
     }
 }

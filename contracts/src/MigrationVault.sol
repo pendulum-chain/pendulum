@@ -41,11 +41,12 @@ contract MigrationVault {
     error NotPaused();
     error ZeroAmount();
     error ExceedsPerReleaseCap(uint256 amount, uint256 cap);
-    error ExceedsDailyCap(uint256 wouldBeReleasedToday, uint256 cap);
+    error ExceedsDailyCap(uint256 requested, uint256 available);
     error SweepNotYetAllowed(uint256 earliest);
     error PendingNotStale();
     error InsufficientVaultBalance();
     error ExceedsSweepable(uint256 requested, uint256 sweepable);
+    error SweepSettlingAfterThresholdCut(uint256 allowedFrom);
 
     // ---------------------------------------------------------------- events
 
@@ -92,10 +93,15 @@ contract MigrationVault {
 
     /// @notice Maximum token units released in a single migration.
     uint256 public perReleaseCap;
-    /// @notice Maximum token units released per UTC day.
+    /// @notice Maximum token units released in any rolling 24h window (PRD V4).
+    ///         Enforced as a leaky bucket of capacity `dailyCap` that refills
+    ///         linearly at `dailyCap` per day: a burst is capped at `dailyCap`
+    ///         and a second burst must wait for the bucket to refill. There is
+    ///         no instant reset at a calendar boundary.
     uint256 public dailyCap;
-    uint256 public currentDay;
-    uint256 public releasedToday;
+    /// @dev Consumed allowance recorded at `windowUpdatedAt`, before decay.
+    uint256 public windowConsumed;
+    uint256 public windowUpdatedAt;
 
     /// @notice Earliest timestamp at which the admin may sweep the unmigrated
     ///         remainder (end-of-window handling, PRD V9 / decision D5).
@@ -136,6 +142,17 @@ contract MigrationVault {
     ///         window-close sweep: balanceOf(vault) + totalReleased +
     ///         totalSwept == totalSupply at all times.
     uint256 public totalSwept;
+
+    /// @notice Timestamp of the last threshold *decrease*. `sweepRemainder` is
+    ///         blocked for `SWEEP_SETTLING_PERIOD` afterwards: lowering the
+    ///         threshold can retroactively make a sub-threshold payload
+    ///         releasable without registering it in `pendingApprovedAmount`
+    ///         (that accounting is maintained only inside `approve()`), so the
+    ///         delay gives the monitor and a permissionless `release()` time to
+    ///         settle any newly-qualifying payload before a sweep could strand
+    ///         it. See runbooks RB-6/RB-7.
+    uint256 public thresholdReducedAt;
+    uint256 public constant SWEEP_SETTLING_PERIOD = 7 days;
 
     // ---------------------------------------------------------------- modifiers
 
@@ -230,7 +247,7 @@ contract MigrationVault {
             // crash-loop the fleet on this block. Deferral keeps the debt
             // tracked and recoverable once the vault is refunded.
             bool releasable = !paused && address(token) != address(0) && tokenAmount <= perReleaseCap
-                && _releasedTodayAfterRoll() + tokenAmount <= dailyCap
+                && tokenAmount <= availableDailyAllowance()
                 && token.balanceOf(address(this)) >= tokenAmount;
             if (releasable) {
                 _release(nonce, recipient, palletAmount, payload);
@@ -257,8 +274,8 @@ contract MigrationVault {
 
         uint256 tokenAmount = palletAmount * conversionFactor;
         if (tokenAmount > perReleaseCap) revert ExceedsPerReleaseCap(tokenAmount, perReleaseCap);
-        uint256 releasedAfter = _releasedTodayAfterRoll() + tokenAmount;
-        if (releasedAfter > dailyCap) revert ExceedsDailyCap(releasedAfter, dailyCap);
+        uint256 available = availableDailyAllowance();
+        if (tokenAmount > available) revert ExceedsDailyCap(tokenAmount, available);
         if (token.balanceOf(address(this)) < tokenAmount) revert InsufficientVaultBalance();
 
         _release(nonce, recipient, palletAmount, payload);
@@ -272,7 +289,8 @@ contract MigrationVault {
             pendingRelease[payload] = false;
             pendingApprovedAmount -= tokenAmount;
         }
-        releasedToday += tokenAmount;
+        windowConsumed = _decayedConsumed() + tokenAmount;
+        windowUpdatedAt = block.timestamp;
         totalReleased += tokenAmount;
         token.safeTransfer(recipient, tokenAmount);
         emit Released(nonce, recipient, palletAmount, tokenAmount);
@@ -324,14 +342,16 @@ contract MigrationVault {
         return _approvers[payload];
     }
 
-    /// @dev Rolls the daily accounting window forward if a new UTC day started.
-    function _releasedTodayAfterRoll() internal returns (uint256) {
-        uint256 day = block.timestamp / 1 days;
-        if (day != currentDay) {
-            currentDay = day;
-            releasedToday = 0;
-        }
-        return releasedToday;
+    /// @dev Consumed allowance after linear refill since the last release.
+    function _decayedConsumed() internal view returns (uint256) {
+        uint256 refilled = ((block.timestamp - windowUpdatedAt) * dailyCap) / 1 days;
+        return windowConsumed > refilled ? windowConsumed - refilled : 0;
+    }
+
+    /// @notice Token units releasable right now under the rolling daily cap.
+    function availableDailyAllowance() public view returns (uint256) {
+        uint256 consumed = _decayedConsumed();
+        return dailyCap > consumed ? dailyCap - consumed : 0;
     }
 
     // ---------------------------------------------------------------- pause
@@ -372,6 +392,11 @@ contract MigrationVault {
 
     function setThreshold(uint256 threshold_) external onlyAdmin {
         if (threshold_ < 2 || threshold_ > attestorCount) revert InvalidThreshold();
+        // A decrease can retroactively qualify a sub-threshold payload without
+        // routing through approve() (which maintains pendingApprovedAmount);
+        // gate sweeps for a settling period so it can be detected and released
+        // first (round-4 finding).
+        if (threshold_ < threshold) thresholdReducedAt = block.timestamp;
         threshold = threshold_;
         emit ThresholdUpdated(threshold_);
     }
@@ -411,6 +436,9 @@ contract MigrationVault {
     ///         releases, not migrations still gathering approvals.
     function sweepRemainder(address to, uint256 amount) external onlyAdmin {
         if (block.timestamp < earliestSweepTimestamp) revert SweepNotYetAllowed(earliestSweepTimestamp);
+        if (block.timestamp < thresholdReducedAt + SWEEP_SETTLING_PERIOD) {
+            revert SweepSettlingAfterThresholdCut(thresholdReducedAt + SWEEP_SETTLING_PERIOD);
+        }
         if (to == address(0)) revert ZeroAddress();
         if (address(token) == address(0)) revert TokenNotSet();
         uint256 balanceHeld = token.balanceOf(address(this));

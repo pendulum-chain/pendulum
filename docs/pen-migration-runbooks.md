@@ -159,3 +159,12 @@ calls `release(nonce, recipient, palletAmount)`.
    migrations that relied on them simply need approvals from the remaining
    set (the new attestor's daemon backfills from its `START_BLOCK` — set it
    to a block before the oldest unreleased migration).
+4. **Lowering the threshold** (`setThreshold` to a smaller value) can make a
+   payload that was one approval short suddenly releasable, *without* routing
+   through `approve()` — so its owed amount is not registered in
+   `pendingApprovedAmount`. The contract guards this: `sweepRemainder` is
+   blocked for `SWEEP_SETTLING_PERIOD` (7 days) after any threshold decrease.
+   During that window, call `release(...)` on every migration that the new,
+   lower threshold now satisfies (the M4 liveness monitor lists them), so each
+   is properly released or re-registered before the next sweep. Never sweep
+   right after cutting the threshold.

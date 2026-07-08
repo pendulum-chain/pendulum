@@ -65,15 +65,16 @@ restricted to consumed nonces. Details and verified-not-vulnerable list in
 
 - Pallet: `cargo test -p token-migration` 11/11 (incl. benchmark suite).
 - Runtime: `cargo check -p pendulum-runtime` clean, both feature sets.
-- Contracts: `forge test` 33/33 (incl. 512-run fuzz).
+- Contracts: `forge test` 35/35 (incl. 512-run fuzz).
 - Attestor & monitor: `tsc --noEmit` clean.
-- Portal: `tsc --noEmit` and ESLint clean; committed through lint-staged.
+- Portal: `yarn build` (tsc + vite) clean against `main`; committed through lint-staged.
 
-Three internal audit rounds have run; each found real issues (including in the
-prior round's fixes), all fixed and recorded in
-[pen-migration-internal-review.md](pen-migration-internal-review.md). This
-convergence pattern is why the external audit (PRD §9) remains a hard gate
-before mainnet.
+Four internal audit rounds have run; each found real issues (twice in a prior
+round's own fix), all fixed and recorded in
+[pen-migration-internal-review.md](pen-migration-internal-review.md). The
+round-4 fixes touch the fund-release path and have not had a subsequent
+internal round — the external audit (PRD §9) is the right next step and a hard
+gate before mainnet, not more internal iteration.
 
 ## Commit map (this repo)
 

@@ -159,10 +159,45 @@ or move the immutable sweep timestamp; deploy-script role wiring against the
 actual vendored OZ v5.4.0 `TimelockController`; unbounded-`_approvers`
 gas-griefing (not practically reachable).
 
+## Round 4 (2026-07-08, resumed first reviewer, full-diff pass incl. the portal UI)
+
+Verified all eight round-1/2/3 fixes are correctly implemented and cleared the
+portal migration UI (EIP-55, payload-hash parity, finality-gated submission).
+Two novel findings, both in the same class as prior rounds — a threshold
+crossed outside `approve()`, and the cap backstop:
+
+### H1(r4). HIGH — `setThreshold` decrease could retroactively strand a payload
+Lowering the threshold can make a sub-threshold payload releasable without
+routing through `approve()`, so its amount is never added to
+`pendingApprovedAmount`; a later `sweepRemainder` could then sweep it, and its
+`release()` reverts `InsufficientVaultBalance` until governance refunds.
+
+**Resolution (fixed):** `setThreshold` records the time of any decrease;
+`sweepRemainder` is blocked for `SWEEP_SETTLING_PERIOD` (7 days) afterwards,
+giving the monitor and a permissionless `release()` time to settle any
+newly-qualifying payload first. Runbook RB-6 updated. Recoverable and
+detectable even absent the guard (RB-7 reconciliation shows the shortfall).
+Covered by `test_ThresholdCutBlocksSweepDuringSettling`.
+
+### H2(r4). HIGH — Daily cap was a fixed calendar-day bucket, not a rolling window
+The `currentDay` bucket reset to zero at the UTC boundary, letting a
+compromised quorum release `dailyCap` at 23:59 and again at 00:00 — 2× the
+intended blast-radius bound (PRD V4 specifies a *rolling* 24h maximum).
+
+**Resolution (fixed):** replaced with a leaky-bucket rolling limiter —
+`dailyCap` capacity refilling linearly at `dailyCap`/day
+(`availableDailyAllowance()`), so a burst is capped at `dailyCap` and a second
+burst must wait ~24h for the bucket to refill. No instant reset at any
+boundary. Covered by `test_DailyCapRefillsGraduallyOverRollingWindow` and
+`test_DailyCapHasNoInstantResetAtBoundary`. Residual: over a *rolling* 24h a
+full bucket plus full refill still totals up to ~2× `dailyCap`, but spread over
+24h rather than instantaneous — size `dailyCap` accordingly.
+
 ## Follow-ups for the external audit
-- The cap-accounting window (`currentDay` bucketing) and attestor-rotation
-  edge cases around `pendingRelease` marking (threshold crossed via
-  `addAttestor` re-adding a prior approver is not marked pending) deserve
-  focused auditor attention.
+- These round-4 fixes touch the fund-release path and have **not** had a
+  subsequent internal round; they are the first thing the external audit should
+  re-derive. Four internal rounds have each found an issue (twice in a prior
+  round's own fix) — continued internal iteration shows diminishing returns
+  against real external review.
 - The attestor's positional event decode is shape-checked but still assumes
   field order; re-verify against metadata after any runtime upgrade (RB-5).

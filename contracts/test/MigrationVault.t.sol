@@ -147,31 +147,55 @@ contract MigrationVaultTest is Test {
         assertEq(pen.balanceOf(recipient), 2_000_000e18);
     }
 
-    function test_DailyCapRollsOverAtNextDay() public {
+    function test_DailyCapRefillsGraduallyOverRollingWindow() public {
         uint256 palletAmount = 1_000_000e12; // converts to exactly the per-release cap
 
+        // Consume the full daily cap (2 × 1M = DAILY_CAP).
         for (uint64 nonce = 0; nonce < 2; nonce++) {
             approveAs(0, nonce, recipient, palletAmount);
             approveAs(1, nonce, recipient, palletAmount);
             approveAs(2, nonce, recipient, palletAmount);
         }
-        // Both releases fit the daily cap exactly.
         assertEq(pen.balanceOf(recipient), 2_000_000e18);
+        assertEq(vault.availableDailyAllowance(), 0);
 
-        // A third release today is deferred by the daily cap...
+        // A third release is deferred: the bucket is empty.
         approveAs(0, 2, recipient, palletAmount);
         approveAs(1, 2, recipient, palletAmount);
         approveAs(2, 2, recipient, palletAmount);
         assertEq(pen.balanceOf(recipient), 2_000_000e18);
-        vm.expectRevert(
-            abi.encodeWithSelector(MigrationVault.ExceedsDailyCap.selector, 3_000_000e18, DAILY_CAP)
-        );
+        vm.expectRevert(abi.encodeWithSelector(MigrationVault.ExceedsDailyCap.selector, 1_000_000e18, 0));
         vault.release(2, recipient, palletAmount);
 
-        // ...and anyone can retry it the next day.
-        vm.warp(block.timestamp + 1 days);
+        // Half a day later, exactly half the cap has refilled.
+        vm.warp(block.timestamp + 12 hours);
+        assertEq(vault.availableDailyAllowance(), 1_000_000e18);
         vault.release(2, recipient, palletAmount);
         assertEq(pen.balanceOf(recipient), 3_000_000e18);
+    }
+
+    // The exploit the leaky bucket fixes: the old calendar-day bucket reset to
+    // zero at the UTC boundary, letting a compromised quorum release 2× the cap
+    // seconds apart. The rolling window must NOT refill instantly.
+    function test_DailyCapHasNoInstantResetAtBoundary() public {
+        // Sit one second before a UTC day boundary and consume the full cap.
+        vm.warp(10 days - 1);
+        uint256 palletAmount = 1_000_000e12;
+        for (uint64 nonce = 0; nonce < 2; nonce++) {
+            approveAs(0, nonce, recipient, palletAmount);
+            approveAs(1, nonce, recipient, palletAmount);
+            approveAs(2, nonce, recipient, palletAmount);
+        }
+        assertEq(pen.balanceOf(recipient), 2_000_000e18);
+
+        // Cross the boundary by two seconds — negligible refill. The old
+        // calendar-day bucket would have fully reset to the cap here.
+        vm.warp(10 days + 1);
+        assertLt(vault.availableDailyAllowance(), 1_000e18);
+        approveAs(0, 2, recipient, palletAmount);
+        approveAs(1, 2, recipient, palletAmount);
+        approveAs(2, 2, recipient, palletAmount);
+        assertEq(pen.balanceOf(recipient), 2_000_000e18, "no instant reset at the day boundary");
     }
 
     // ---------------------------------------------------------------- pause
@@ -424,6 +448,43 @@ contract MigrationVaultTest is Test {
         vault.removeAttestor(attestors[0]);
         assertFalse(vault.hasApproved(payload, attestors[0]));
         assertEq(vault.activeApprovals(payload), 0);
+    }
+
+    // Lowering the threshold can retroactively qualify a sub-threshold payload
+    // outside approve(), so a sweep is blocked for a settling period afterwards
+    // — giving ops time to release the now-qualifying payload first.
+    function test_ThresholdCutBlocksSweepDuringSettling() public {
+        uint256 settle = vault.SWEEP_SETTLING_PERIOD();
+        address treasury = makeAddr("treasury");
+
+        // A payload sits at 2 approvals under threshold 3 — sub-threshold, so
+        // nothing is reserved in pendingApprovedAmount.
+        approveAs(0, 5, recipient, 5e12);
+        approveAs(1, 5, recipient, 5e12);
+        assertEq(vault.pendingApprovedAmount(), 0);
+
+        // Reach the sweep window, then lower the threshold within it.
+        vm.warp(earliestSweep);
+        vm.prank(admin);
+        vault.setThreshold(2);
+        uint256 reducedAt = block.timestamp;
+
+        // The sweep is blocked during settling, even though earliestSweep passed.
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(MigrationVault.SweepSettlingAfterThresholdCut.selector, reducedAt + settle)
+        );
+        vault.sweepRemainder(treasury, 1e18);
+
+        // Ops release the now-qualifying payload during settling (permissionless).
+        vault.release(5, recipient, 5e12);
+        assertEq(pen.balanceOf(recipient), 5e18);
+
+        // After settling, the sweep proceeds normally.
+        vm.warp(reducedAt + settle);
+        vm.prank(admin);
+        vault.sweepRemainder(treasury, 1e18);
+        assertEq(pen.balanceOf(treasury), 1e18);
     }
 
     // ---------------------------------------------------------------- fuzz

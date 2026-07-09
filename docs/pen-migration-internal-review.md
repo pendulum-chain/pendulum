@@ -239,6 +239,66 @@ read gap) but is now removed outright: Base is read first, then the
 monotonically-growing `totalMigrated` at a strictly-later snapshot, so M2a cannot
 false-positive on an in-flight burn.
 
+## Round 6 (2026-07-09, review focused on outsider bricking of the off-chain fleet)
+
+The on-chain fund path (rounds 1–5) held up. The headline finding is the
+round-5 fix re-opening the round-2 DoS class one layer out, in the attestor.
+
+### C1(r6). CRITICAL — A 1-PEN migration to the vault address crash-loops the whole attestor fleet
+Round 5 made `MigrationVault.approve` revert `RecipientIsVault` on a
+vault-recipient tuple (closing the monitor surplus-wedge). But the attestor's
+`isUnreleasable` gate — which skips permanently-reverting tuples so the fleet
+never crash-loops on them — was not updated in lockstep: it flagged only the
+zero address and zero amount. The pallet cannot reject the vault address (it has
+no knowledge of Base state), so `migrate(1 PEN, <vault address>)` reaches every
+attestor as a well-formed event, its `approve` reverts deterministically, the
+daemon treats the revert as fatal and exits, and — the checkpoint never having
+advanced past the block — reprocesses the same block on restart, forever. All
+five attestors hit the same finalized block and crash-loop together, halting
+every migration behind it for the price of one 1-PEN transaction. Same class as
+round-2 C1 (zero-address DoS).
+
+**Resolution (fixed):** `isUnreleasable` now also flags `recipient ==
+vaultAddress` (case-insensitively), so a vault-recipient event is skipped with a
+distinct CRITICAL alert instead of crash-looping — the vault-aware attestor is
+the *only* component that can defend against this, since the pallet can't see
+the Base address and the portal check is bypassable by calling the extrinsic
+directly. The predicate was extracted to `attestor/src/checks.ts` and
+unit-tested (`attestor/src/checks.test.ts`, mirroring the monitor's `checks.ts`);
+the attestor previously had no unit tests, which is why the coupling gap slipped
+through. **Architectural note for the external audit:** the set of deterministic
+`approve` reverts and the attestor's `isUnreleasable` set must stay in exact
+lockstep — this is the third round a vault-side "reject bad tuple" change
+reopened a fleet-crash hole. A shared, tested enumeration of the reverting
+preconditions would end this recurrence.
+
+### M1(r6). MEDIUM — Minimum migration amount was below the fleet's per-migration gas cost
+`MinimumMigrationAmount` was 1 PEN (~$0.0086 at $0.00858/PEN), below the ~3 Base
+`approve` txs (~$0.01–$1 depending on Base gas) the fleet spends per migration,
+making dust-spam a cheap asymmetric gas-drain grief on all five operators.
+**Fixed:** raised to 100 PEN (~$0.86), which dominates fleet gas cost across
+normal Base conditions while staying negligible for real holders. Tunable via
+runtime upgrade; revisit if the PEN price or Base gas regime shifts materially.
+
+### L1(r6). LOW — Monitor re-fired liveness alerts every poll for a stalled or unreleasable nonce
+The M4 liveness check paged for every past-grace unconsumed nonce on every poll,
+so a pause backlog — or a burn to a structurally-unreleasable address (zero or
+the vault, which never consumes) — produced an unbounded alert storm, training
+on-call to ignore the highest-severity page. **Fixed:** liveness re-alerts are
+throttled to at most once per grace period per nonce (cleared on consumption),
+preserving outage visibility without the storm.
+
+### Round 6 explicitly verified as not vulnerable
+Monitor auto-pause cannot be weaponised by an outsider (M2b fires only on a
+deficit, unreachable without stealing from the vault; M2a can't false-positive
+given the Base-first read ordering); the vault's opportunistic-release path
+defers rather than reverts on pause/caps/insufficient-balance, so only a
+vault-side *input* revert (now fully enumerated in `isUnreleasable`) can reach
+the attestor's fatal path; `pendingApprovedAmount` is not inflatable by an
+outsider (pending entries require three real attestations of real burns);
+`migrate` correctly refuses locked/staked/vesting balance and the dust/ED
+remainder check is sound.
+
 ## Follow-ups for the external audit
 - These round-4 fixes touch the fund-release path and have **not** had a
   subsequent internal round; they are the first thing the external audit should

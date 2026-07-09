@@ -121,6 +121,13 @@ async function pauseVault(): Promise<void> {
 /** Timestamps (ms) at which the monitor first saw each pallet nonce count. */
 const nonceFirstSeen = new Map<bigint, number>();
 
+/** Timestamp (ms) of the last liveness alert per nonce. Re-alerts are throttled
+ *  to at most once per grace period, so a pause backlog — or a burn to a
+ *  structurally-unreleasable address (zero / the vault, which never consumes) —
+ *  does not re-fire the highest-severity page on every single poll and train
+ *  on-call to ignore it. Cleared when the nonce is finally consumed. */
+const livenessAlertedAt = new Map<bigint, number>();
+
 let multicallUnavailable = false;
 
 /** Read `nonceConsumed` for many nonces, batched through Multicall3.
@@ -243,11 +250,20 @@ async function check(api: ApiPromise): Promise<void> {
 			const nonce = pendingNonces[i];
 			if (consumedFlags[i]) {
 				nonceFirstSeen.delete(nonce);
+				livenessAlertedAt.delete(nonce);
 			} else if (isStale(nonceFirstSeen.get(nonce) ?? now, now, config.graceSeconds)) {
-				await alert(
-					"LIVENESS: migration not released",
-					`nonce ${nonce} unreleased for over ${config.graceSeconds}s — attestor outage, cap deferral or pause?`,
-				);
+				// Throttle: page immediately on first staleness, then at most once
+				// per grace period, so an ongoing outage stays visible without
+				// storming (a permanently-unreleasable nonce would otherwise page
+				// every poll forever).
+				const lastAlerted = livenessAlertedAt.get(nonce);
+				if (lastAlerted === undefined || now - lastAlerted >= config.graceSeconds * 1000) {
+					livenessAlertedAt.set(nonce, now);
+					await alert(
+						"LIVENESS: migration not released",
+						`nonce ${nonce} unreleased for over ${config.graceSeconds}s — attestor outage, cap deferral, pause, or a burn to an unreleasable address?`,
+					);
+				}
 			}
 		}
 	}

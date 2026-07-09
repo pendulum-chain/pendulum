@@ -1118,8 +1118,13 @@ impl pallet_xcm_teleport::Config for Runtime {
 }
 
 parameter_types! {
-	// 1 PEN; keeps dust-sized migrations from spamming the attestor pipeline.
-	pub const MinimumMigrationAmount: Balance = UNIT;
+	// 100 PEN (~$0.86 at $0.00858/PEN). The minimum must exceed the marginal
+	// Base-gas cost the five-attestor fleet spends per migration (~3 `approve`
+	// txs, roughly $0.01–$1 depending on Base gas), or spamming dust migrations
+	// becomes a cheap asymmetric gas-drain grief on every operator. 100 PEN
+	// dominates that cost across normal Base conditions while staying negligible
+	// for any real holder. Tunable via runtime upgrade.
+	pub const MinimumMigrationAmount: Balance = 100 * UNIT;
 }
 
 impl token_migration::Config for Runtime {

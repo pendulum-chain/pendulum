@@ -122,6 +122,81 @@ optimistic oracle) can post the Snapshot outcome on-chain so that — if
 unchallenged — it becomes directly executable by the Safe, turning "the Safe
 should comply" into an economic guarantee rather than a social one.
 
+## The treasury: where the money lives and how it's spent
+
+Example 2 was a treasury spend, so it's worth making the treasury structure
+explicit — because the most common wrong assumption is that "the Base treasury"
+is a smart contract you build and wire into the others. It isn't.
+
+**A treasury on Base is just an address that holds tokens.** PEN is a plain
+ERC-20 — nothing gets registered or connected to it; whoever holds a balance
+spends it by calling `transfer`. So you don't author a treasury contract. You
+already have the right address: the `TimelockController`. In the OpenZeppelin
+Governor pattern the timelock *is* the treasury and the executor at once — it
+holds the reserve, and a passed proposal makes it call `transfer`.
+
+The recommended shape is a **split, tiered treasury** that maps straight onto
+the three organs:
+
+| Money for… | Lives on | Held / spent by | How |
+|---|---|---|---|
+| Running the parachain (collators, coretime, Pendulum ops) | Pendulum | `py/trsry`, 3/5 council | existing treasury proposal, pays a Pendulum account in PEN |
+| Strategic / large Base spends (reserves, partnerships, big LP) | Base | the `TimelockController` | token-holder proposal → 48h timelock → `transfer` (trustless) |
+| Routine Base payouts (grants, MM retainer, small ops) | Base | an elected operating Safe with a delegated budget | Safe multisig tx, optionally Snapshot-signaled (fast) |
+
+The important discipline: **don't route every payout through the full
+Governor.** A 48-hour timelocked proposal for a 3,000-PEN contributor grant is
+governance theater. Instead, governance grants the operating Safe a periodic
+budget in one action ("500k PEN + 200k USDC this quarter"); day-to-day grants
+are then Safe transactions inside that mandate, and governance tops it up (or
+claws it back) as needed. For recurring payments, fund a stream (Sablier or
+Superfluid) so it doesn't need repeated approvals. None of these are bespoke
+contracts — the Safe and the streaming tools are standard, audited, and created
+through their own apps, not written by us.
+
+### Getting the treasury's PEN to Base
+
+The Pendulum treasury (`py/trsry`) is a keyless account, and the user-facing
+`migrate` extrinsic needs a signed origin — so the treasury can't migrate
+itself the ordinary way. The `token-migration` pallet therefore has a
+governance-gated path, built as two deliberately separate steps:
+
+1. `set_treasury_destination(base_address)` — sets the fixed Base destination
+   (the timelock) **once**, as its own reviewed governance action. This is the
+   single security anchor: the routine migration call carries no address and so
+   cannot be sent to the wrong place by a typo.
+2. `migrate_treasury(amount)` — burns `amount` from the treasury account and
+   emits the **same** `MigrationInitiated` event as a user migration (with
+   `who` = the treasury), so the attestors, vault and monitor handle it
+   identically. It always goes to the pre-set destination.
+
+Both are gated by the same authority that already approves treasury spends
+(root or 3/5 council), and `migrate_treasury` respects the pallet pause and
+keeps the treasury account alive (it can't accidentally reap itself).
+
+Three operational notes when you actually run it:
+
+- **Mind the daily cap.** A large treasury tranche competes with user
+  migrations for the vault's rolling daily-cap headroom and may be deferred
+  (delayed, never lost — it's marked pending and recoverable). Migrate in
+  tranches, or pass a proposal to temporarily raise the cap.
+- **Circulating supply doesn't move.** Pendulum-treasury and Base-treasury are
+  both non-circulating, so shifting reserves between them changes nothing for
+  DefiLlama/CoinGecko — just add the Base treasury address to their excluded
+  list alongside the vault.
+- **Do it inside the migration window**, coordinated, so the reserve isn't
+  stranded if the window later closes.
+
+### The quietly big win
+
+Once the reserve is on Base, the treasury can hold and pay **USDC and other
+Base-native assets**, not just PEN — which is what contributors and market
+makers usually want to be paid in, and which the Pendulum treasury structurally
+cannot do today (it is native-PEN-only). You also gain the option to park
+reserves in Base DeFi or provide protocol-owned liquidity. That, more than the
+payout mechanics, is the real reason to move the strategic reserve to Base
+rather than bridging per payout.
+
 ## The routing rule, and three things that trip people up
 
 The whole model collapses to one question: **can the decision be expressed as a

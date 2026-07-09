@@ -27,7 +27,7 @@ watched by an independent monitor that can auto-pause. One-way by design.
 
 | Component | Location | Status |
 |---|---|---|
-| `token-migration` pallet | `pallets/token-migration/` | Burn-and-emit extrinsic, unique nonces, dust/ED + lock handling, pause origin; 10 unit tests + benchmark test suite (frame-benchmarking v2) |
+| `token-migration` pallet | `pallets/token-migration/` | Burn-and-emit `migrate` (user) + `migrate_treasury`/`set_treasury_destination` (governance, fixed Base destination) extrinsics sharing one nonce space and event; unique nonces, dust/ED + lock handling, KeepAlive treasury withdraw, pause origin; 20 unit tests + benchmark test suite (frame-benchmarking v2) |
 | Runtime wiring | `runtime/pendulum/src/lib.rs` | Pallet index 102, min amount 1 PEN, pause = root/half-council or 2/3 technical committee, added to `BaseFilter` whitelist and `define_benchmarks`; compiles with and without `runtime-benchmarks` (Foucoco intentionally skipped — production-direct decision) |
 | `PEN.sol` | `contracts/src/` | Fixed-supply `ERC20 + ERC20Permit + ERC20Votes`, EIP-6372 timestamp clock, full supply minted to vault, no owner/mint/proxy |
 | `MigrationVault.sol` | `contracts/src/` | 3-of-5 on-chain approvals per exact tuple, permanent nonce consumption, 12→18 decimal conversion in one place, per-release + daily caps (defer, not kill), guardian pause (approvals recorded while paused), rotation retroactively invalidates removed attestors, two-step admin, pending-release accounting protecting the timelocked remainder sweep |

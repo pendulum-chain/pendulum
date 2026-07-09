@@ -20,6 +20,11 @@
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { createPublicClient, createWalletClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { isStale, releasedExceedsMigrated, vaultConservationDeficit } from "./checks.js";
+
+// Canonical Multicall3 deployment (same address on Base and every major chain),
+// used to batch the per-nonce liveness reads into a handful of RPC round-trips.
+const MULTICALL3_ADDRESS = "0xcA11bde05977b3631167028862bE2a173976CA11" as const;
 
 const vaultAbi = [
 	{ type: "function", name: "totalReleased", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
@@ -72,6 +77,7 @@ const baseChain = defineChain({
 	name: "base",
 	nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
 	rpcUrls: { default: { http: [config.baseRpcUrl] } },
+	contracts: { multicall3: { address: MULTICALL3_ADDRESS } },
 });
 const publicClient = createPublicClient({ chain: baseChain, transport: http(config.baseRpcUrl) });
 
@@ -115,17 +121,65 @@ async function pauseVault(): Promise<void> {
 /** Timestamps (ms) at which the monitor first saw each pallet nonce count. */
 const nonceFirstSeen = new Map<bigint, number>();
 
-async function check(api: ApiPromise): Promise<void> {
-	// --- Pendulum side, at the finalized head ---
-	const finalizedHash = await api.rpc.chain.getFinalizedHead();
-	const apiAt = await api.at(finalizedHash);
-	const totalMigrated = BigInt((await apiAt.query.tokenMigration.totalMigrated()).toString());
-	const nextNonce = BigInt((await apiAt.query.tokenMigration.nextNonce()).toString());
+let multicallUnavailable = false;
 
-	// --- Base side ---
-	// All reads are pinned to one block: a release landing between unpinned
-	// reads would skew totalReleased vs. vaultBalance and trigger a false
-	// conservation alert (and auto-pause).
+/** Read `nonceConsumed` for many nonces, batched through Multicall3.
+ *
+ *  Falls back to plain concurrent reads if the batch call fails — e.g. on a
+ *  chain where Multicall3 is not deployed at the canonical address, or a
+ *  provider that rejects the batch. The fallback still works (just chattier),
+ *  so a misconfigured multicall degrades liveness detection rather than
+ *  crashing the whole check cycle and blinding the conservation alerts. */
+async function readNonceConsumed(nonces: bigint[]): Promise<boolean[]> {
+	if (!multicallUnavailable) {
+		try {
+			return (await publicClient.multicall({
+				allowFailure: false,
+				contracts: nonces.map((nonce) => ({
+					address: config.vaultAddress,
+					abi: vaultAbi,
+					functionName: "nonceConsumed",
+					args: [nonce],
+				})),
+			})) as boolean[];
+		} catch (multicallError) {
+			// Latch so we do not re-attempt (and re-log) the batch every poll.
+			multicallUnavailable = true;
+			await alert(
+				"multicall unavailable, using per-nonce reads",
+				`liveness reads fall back to individual calls; verify Multicall3 at ${MULTICALL3_ADDRESS}: ${multicallError}`,
+			);
+		}
+	}
+
+	// Fallback: read in bounded concurrent batches to avoid a request storm.
+	const CHUNK = 100;
+	const flags: boolean[] = [];
+	for (let start = 0; start < nonces.length; start += CHUNK) {
+		const chunk = nonces.slice(start, start + CHUNK);
+		const chunkFlags = await Promise.all(
+			chunk.map((nonce) =>
+				publicClient.readContract({
+					address: config.vaultAddress,
+					abi: vaultAbi,
+					functionName: "nonceConsumed",
+					args: [nonce],
+				}),
+			),
+		);
+		flags.push(...chunkFlags);
+	}
+	return flags;
+}
+
+async function check(api: ApiPromise): Promise<void> {
+	// --- Base side, pinned to one block ---
+	// Read Base FIRST, then Pendulum's monotonically-growing totalMigrated at a
+	// strictly-later snapshot: this guarantees totalMigrated >= what any Base
+	// release could have been attested against, so the M2a check can never
+	// false-positive on a burn that finalized between the two reads. Pinning
+	// every Base read to one block keeps totalReleased and vaultBalance from
+	// skewing against each other (a release landing mid-cycle).
 	const blockNumber = await publicClient.getBlockNumber();
 	const [totalReleased, totalSwept, conversionFactor, tokenAddress] = await Promise.all([
 		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalReleased", blockNumber }),
@@ -144,52 +198,57 @@ async function check(api: ApiPromise): Promise<void> {
 		}),
 	]);
 
+	// --- Pendulum side, at the finalized head (read after Base, see above) ---
+	const finalizedHash = await api.rpc.chain.getFinalizedHead();
+	const apiAt = await api.at(finalizedHash);
+	const totalMigrated = BigInt((await apiAt.query.tokenMigration.totalMigrated()).toString());
+	const nextNonce = BigInt((await apiAt.query.tokenMigration.nextNonce()).toString());
+
 	// (M2a) Nothing may leave the vault that was not burned on Pendulum.
-	// totalMigrated lags totalReleased only via finality delay, never the
-	// other way around: releases require attestations of finalized burns.
-	const migratedInTokenUnits = totalMigrated * conversionFactor;
-	if (totalReleased > migratedInTokenUnits) {
+	if (releasedExceedsMigrated(totalReleased, totalMigrated, conversionFactor)) {
 		await alert(
 			"CONSERVATION VIOLATION",
-			`released ${totalReleased} > migrated ${migratedInTokenUnits} (token units)`,
+			`released ${totalReleased} > migrated ${totalMigrated * conversionFactor} (token units)`,
 		);
 		await pauseVault();
 		return;
 	}
 
-	// (M2b) Vault-internal conservation. totalSwept accounts for the intended
-	// end-of-window sweep, which moves tokens out without touching
-	// totalReleased — omitting it would fire a guaranteed false positive (and
-	// auto-pause) on the first legitimate sweep.
-	if (vaultBalance + totalReleased + totalSwept !== totalSupply) {
+	// (M2b) Vault-internal conservation. Only a DEFICIT signals real loss; a
+	// surplus is a harmless inbound transfer (donation, or a migration whose
+	// recipient is the vault) and must not trip the check — otherwise a dust
+	// transfer would pause the vault every poll until the window-close sweep.
+	// totalSwept accounts for the intended end-of-window sweep.
+	if (vaultConservationDeficit(vaultBalance, totalReleased, totalSwept, totalSupply)) {
 		await alert(
-			"VAULT BALANCE MISMATCH",
-			`balance ${vaultBalance} + released ${totalReleased} + swept ${totalSwept} != supply ${totalSupply}`,
+			"VAULT BALANCE DEFICIT",
+			`balance ${vaultBalance} + released ${totalReleased} + swept ${totalSwept} < supply ${totalSupply}`,
 		);
 		await pauseVault();
 		return;
 	}
 
 	// (M4) Liveness: nonces the monitor has known about for longer than the
-	// grace period must be consumed on Base.
+	// grace period must be consumed on Base. Batch the per-nonce reads through
+	// Multicall3 so a large release backlog (e.g. during a pause) cannot make a
+	// cycle outrun the poll interval and starve the conservation checks above.
 	const now = Date.now();
 	for (let nonce = 0n; nonce < nextNonce; nonce++) {
 		if (!nonceFirstSeen.has(nonce)) nonceFirstSeen.set(nonce, now);
 	}
-	for (const [nonce, firstSeen] of nonceFirstSeen) {
-		const consumed = await publicClient.readContract({
-			address: config.vaultAddress,
-			abi: vaultAbi,
-			functionName: "nonceConsumed",
-			args: [nonce],
-		});
-		if (consumed) {
-			nonceFirstSeen.delete(nonce);
-		} else if (now - firstSeen > config.graceSeconds * 1000) {
-			await alert(
-				"LIVENESS: migration not released",
-				`nonce ${nonce} unreleased for over ${config.graceSeconds}s — attestor outage, cap deferral or pause?`,
-			);
+	const pendingNonces = [...nonceFirstSeen.keys()];
+	if (pendingNonces.length > 0) {
+		const consumedFlags = await readNonceConsumed(pendingNonces);
+		for (let i = 0; i < pendingNonces.length; i++) {
+			const nonce = pendingNonces[i];
+			if (consumedFlags[i]) {
+				nonceFirstSeen.delete(nonce);
+			} else if (isStale(nonceFirstSeen.get(nonce) ?? now, now, config.graceSeconds)) {
+				await alert(
+					"LIVENESS: migration not released",
+					`nonce ${nonce} unreleased for over ${config.graceSeconds}s — attestor outage, cap deferral or pause?`,
+				);
+			}
 		}
 	}
 

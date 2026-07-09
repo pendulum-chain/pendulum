@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/main.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsc && node --test dist/checks.test.js"
   },
   "dependencies": {
     "@polkadot/api": "^11.3.1",

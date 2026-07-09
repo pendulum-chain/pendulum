@@ -57,7 +57,14 @@ period) or an attestor's own restart-loop/low-gas alerts.
 ## RB-3: Conservation invariant violation
 
 **Trigger:** monitor alert `CONSERVATION VIOLATION` or `VAULT BALANCE
-MISMATCH`. This is the highest-severity alert the system can produce.
+DEFICIT`. This is the highest-severity alert the system can produce.
+
+**Note:** the monitor only alerts on a *deficit* (tokens missing), never on a
+surplus. A plain inbound transfer of PEN into the vault (a donation, or a
+migration whose recipient is the vault) raises the balance above the
+conservation identity but is harmless and is deliberately ignored — it can no
+longer false-trigger an auto-pause (round-5 fix). The vault also rejects the
+vault address as a release recipient at `approve`.
 
 1. Auto-pause should already have fired; **verify `vault.paused() == true`**
    and pause manually if not. Do not unpause until step 5.
@@ -139,8 +146,9 @@ first.
    The call reverts (`ExceedsSweepable`) if the amount exceeds
    `balance − pendingApprovedAmount`, as a last-line guard.
 6. **Verify:** `totalSwept` increased by `amount`; the monitor's conservation
-   check (`balance + totalReleased + totalSwept == totalSupply`) still holds
-   and does **not** alert (it accounts for `totalSwept`).
+   check (`balance + totalReleased + totalSwept >= totalSupply`, alerting only
+   on a deficit) still holds and does **not** alert (it accounts for
+   `totalSwept`).
 
 **If a still-in-flight migration was swept anyway:** its release defers with
 `InsufficientVaultBalance` and is marked pending. To make the user whole,

@@ -27,6 +27,7 @@ contract MigrationVault {
     error NotAttestor();
     error NotPendingAdmin();
     error ZeroAddress();
+    error RecipientIsVault();
     error TokenAlreadySet();
     error TokenNotSet();
     error VaultMustHoldFullSupply();
@@ -222,6 +223,13 @@ contract MigrationVault {
     ///         resume without re-attestation after an unpause.
     function approve(uint64 nonce, address recipient, uint256 palletAmount) external onlyAttestor {
         if (recipient == address(0)) revert ZeroAddress();
+        // Releasing to the vault itself is a self-transfer: it leaves
+        // balanceOf(this) unchanged while bumping totalReleased, permanently
+        // breaking the monitor's conservation identity
+        // (balance + released + swept == totalSupply) and, with auto-pause on,
+        // wedging releases. It is never a legitimate migration target, so
+        // reject it at the single point where approvals are recorded.
+        if (recipient == address(this)) revert RecipientIsVault();
         if (palletAmount == 0) revert ZeroAmount();
         if (nonceConsumed[nonce]) revert NonceAlreadyConsumed(nonce);
 

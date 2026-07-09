@@ -9,8 +9,8 @@ Checks every poll:
 | Check | Meaning | Reaction |
 |---|---|---|
 | M2a: `totalReleased <= TotalMigrated × conversionFactor` | Tokens may never leave the vault without a corresponding finalized burn on Pendulum. A violation is the signature of attestor-quorum compromise. | Alert + auto-pause the vault (if `GUARDIAN_PRIVATE_KEY` is set) |
-| M2b: `balanceOf(vault) + totalReleased == totalSupply` | Vault-internal conservation. | Alert + auto-pause |
-| M4: every nonce older than `GRACE_SECONDS` is consumed on Base | Liveness of the attestor fleet (outage, cap deferral, pause). | Alert |
+| M2b: `balanceOf(vault) + totalReleased + totalSwept >= totalSupply` | Vault-internal conservation. Only a **deficit** alerts: a surplus is a harmless inbound transfer (donation, or a migration whose recipient is the vault) and is ignored, so it cannot false-trigger a pause. | Alert + auto-pause on a deficit |
+| M4: every nonce older than `GRACE_SECONDS` is consumed on Base | Liveness of the attestor fleet (outage, cap deferral, pause). Per-nonce reads are batched via Multicall3 so a large backlog cannot starve the checks above. | Alert |
 
 ## Configuration (environment)
 

@@ -437,6 +437,32 @@ contract MigrationVaultTest is Test {
         assertEq(vault.pendingApprovedAmount(), 0);
     }
 
+    // Releasing to the vault itself is a self-transfer that would break the
+    // monitor's conservation identity (balance unchanged, totalReleased bumped)
+    // and, with auto-pause on, wedge releases. It must be rejected at approve.
+    function test_ApproveRejectsVaultRecipient() public {
+        vm.prank(attestors[0]);
+        vm.expectRevert(MigrationVault.RecipientIsVault.selector);
+        vault.approve(0, address(vault), 5e12);
+    }
+
+    // Guarding at approve() is sufficient: no approvals can ever accrue for a
+    // vault-recipient tuple, so release() can never satisfy the threshold and
+    // the conservation identity the monitor watches is preserved.
+    function test_VaultRecipientNeverReleasesAndPreservesInvariant() public {
+        for (uint256 i = 0; i < 3; i++) {
+            vm.prank(attestors[i]);
+            vm.expectRevert(MigrationVault.RecipientIsVault.selector);
+            vault.approve(7, address(vault), 5e12);
+        }
+        assertFalse(vault.nonceConsumed(7));
+        assertEq(
+            pen.balanceOf(address(vault)) + vault.totalReleased() + vault.totalSwept(),
+            pen.totalSupply(),
+            "conservation identity intact"
+        );
+    }
+
     function test_HasApprovedFalseForRemovedAttestor() public {
         bytes32 payload = vault.payloadHash(0, recipient, 5e12);
         approveAs(0, 0, recipient, 5e12);

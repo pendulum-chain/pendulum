@@ -193,6 +193,52 @@ boundary. Covered by `test_DailyCapRefillsGraduallyOverRollingWindow` and
 full bucket plus full refill still totals up to ~2× `dailyCap`, but spread over
 24h rather than instantaneous — size `dailyCap` accordingly.
 
+## Round 5 (2026-07-09, in-depth review focused on bricking the pipeline)
+
+Adversarial pass over the whole stack asking specifically where an outsider
+could brick releases. The on-chain fund path (rounds 1–4) held up; the finding
+was in the off-chain monitor.
+
+### H1(r5). HIGH — A dust PEN transfer to the vault permanently tripped the monitor's M2b check
+The M2b conservation check used strict equality
+(`balance + totalReleased + totalSwept != totalSupply`). Under all legitimate
+contract logic that sum is *exactly* `totalSupply`, so equality could only ever
+break *upward* — via tokens arriving in the vault outside the release path.
+Anyone could do that permissionlessly: `PEN.transfer(vault, 1 wei)`, or a
+`migrate(_, <vault address>)` whose 3rd approval self-transfers into the vault.
+The break is permanent (the surplus can only leave via the post-window
+`sweepRemainder`), so every poll re-fired the highest-severity alert and —
+with `GUARDIAN_PRIVATE_KEY` set — re-paused the vault every cycle, wedging all
+releases for the rest of the window while burns kept accruing on Pendulum.
+
+**Resolution (fixed):**
+- M2b now alerts only on a **deficit** (`balance + released + swept <
+  totalSupply`); a surplus is ignored. A deficit is the only direction that can
+  signal real loss (a genuine unauthorized release keeps the sum equal and is
+  caught by M2a). Alert renamed `VAULT BALANCE DEFICIT`.
+- Defense in depth on-chain: `MigrationVault.approve` rejects `recipient ==
+  address(this)` (`RecipientIsVault`), closing the self-migration variant at the
+  single point approvals are recorded.
+- The conservation/liveness predicates were extracted to `monitor/src/checks.ts`
+  and unit-tested (`checks.test.ts`): surplus-does-not-fire, deficit-fires,
+  exact-holds. Vault side covered by `test_ApproveRejectsVaultRecipient` and
+  `test_VaultRecipientNeverReleasesAndPreservesInvariant`.
+
+### M1(r5). MEDIUM — Monitor liveness scan could starve the conservation checks
+M4 read `nonceConsumed` one nonce at a time, sequentially, every poll. During a
+pause or cap-deferral every migration stays unconsumed, so the scan grew with
+the backlog and could push a cycle past the poll interval — starving the M2a/M2b
+checks exactly when they matter most. **Fixed:** per-nonce reads are batched
+through Multicall3.
+
+### L1(r5). LOW — M2a read ordering made safe by construction, not just by latency
+The monitor read Pendulum `totalMigrated` before the Base totals. A burn
+finalizing between the two reads and released before the Base read could momentarily
+show `released > migrated`. It was unreachable in practice (release latency ≫ the
+read gap) but is now removed outright: Base is read first, then the
+monotonically-growing `totalMigrated` at a strictly-later snapshot, so M2a cannot
+false-positive on an in-flight burn.
+
 ## Follow-ups for the external audit
 - These round-4 fixes touch the fund-release path and have **not** had a
   subsequent internal round; they are the first thing the external audit should

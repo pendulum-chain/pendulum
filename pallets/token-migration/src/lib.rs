@@ -63,6 +63,14 @@ pub mod pallet {
 		/// Origin allowed to pause and unpause migrations (incident response).
 		type PauseOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
+		/// The keyless treasury account whose funds `migrate_treasury` moves to
+		/// Base. Set in the runtime to the treasury pallet account.
+		type TreasuryAccount: Get<Self::AccountId>;
+
+		/// Origin allowed to set the treasury's Base destination and trigger a
+		/// treasury migration (root or a council majority in the runtime).
+		type TreasuryMigrateOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+
 		type WeightInfo: WeightInfo;
 	}
 
@@ -80,6 +88,8 @@ pub mod pallet {
 		},
 		/// Migrations were paused or unpaused by the pause origin.
 		MigrationPauseSet { paused: bool },
+		/// The fixed Base destination for treasury migrations was set.
+		TreasuryDestinationSet { base_address: H160 },
 	}
 
 	#[pallet::error]
@@ -97,6 +107,9 @@ pub mod pallet {
 		/// The vault on Base would reject the release, permanently stranding
 		/// the burned tokens and stalling the attestor pipeline.
 		InvalidBaseAddress,
+		/// A treasury migration was attempted before the Base destination was
+		/// set via `set_treasury_destination`.
+		NoTreasuryDestination,
 	}
 
 	/// Nonce of the next migration. Monotonically increasing, never reused;
@@ -112,6 +125,11 @@ pub mod pallet {
 	/// Whether migrations are paused.
 	#[pallet::storage]
 	pub type Paused<T> = StorageValue<_, bool, ValueQuery>;
+
+	/// The fixed Base destination for treasury migrations. `migrate_treasury`
+	/// always sends here; `None` until set by `set_treasury_destination`.
+	#[pallet::storage]
+	pub type TreasuryDestination<T> = StorageValue<_, H160, OptionQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -157,13 +175,9 @@ pub mod pallet {
 			// withdrawn amount, i.e. total issuance decreases by `amount`.
 			drop(imbalance);
 
-			let nonce = NextNonce::<T>::get();
-			let next = nonce.checked_add(1).ok_or(ArithmeticError::Overflow)?;
-			NextNonce::<T>::put(next);
-			TotalMigrated::<T>::mutate(|total| *total = total.saturating_add(amount));
-
-			Self::deposit_event(Event::MigrationInitiated { nonce, who, base_address, amount });
-			Ok(())
+			// Shared accounting + event (identical to a treasury migration, so
+			// the attestor set decodes both the same way).
+			Self::emit_migration(who, base_address, amount)
 		}
 
 		/// Pause or unpause migrations. Callable by the pause origin only.
@@ -173,6 +187,78 @@ pub mod pallet {
 			T::PauseOrigin::ensure_origin(origin)?;
 			Paused::<T>::put(paused);
 			Self::deposit_event(Event::MigrationPauseSet { paused });
+			Ok(())
+		}
+
+		/// Set the fixed Base destination for treasury migrations.
+		///
+		/// Callable by the treasury-migrate origin (root or a council majority).
+		/// This is the single security anchor for treasury migrations: once set,
+		/// `migrate_treasury` always sends here, so the routine call carries no
+		/// address and cannot be sent to the wrong place by a typo.
+		#[pallet::call_index(2)]
+		#[pallet::weight(<T as Config>::WeightInfo::set_treasury_destination())]
+		pub fn set_treasury_destination(origin: OriginFor<T>, base_address: H160) -> DispatchResult {
+			T::TreasuryMigrateOrigin::ensure_origin(origin)?;
+			ensure!(base_address != H160::zero(), Error::<T>::InvalidBaseAddress);
+			TreasuryDestination::<T>::put(base_address);
+			Self::deposit_event(Event::TreasuryDestinationSet { base_address });
+			Ok(())
+		}
+
+		/// Burn `amount` of the treasury's native tokens for migration to the
+		/// pre-set Base destination.
+		///
+		/// Callable by the treasury-migrate origin. Requires a destination to
+		/// have been set. Emits the same `MigrationInitiated` event as a user
+		/// migration (with `who` = the treasury account), so the attestor set,
+		/// vault and monitor process it identically.
+		#[pallet::call_index(3)]
+		#[pallet::weight(<T as Config>::WeightInfo::migrate_treasury())]
+		pub fn migrate_treasury(
+			origin: OriginFor<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
+		) -> DispatchResult {
+			T::TreasuryMigrateOrigin::ensure_origin(origin)?;
+			ensure!(!Paused::<T>::get(), Error::<T>::MigrationsPaused);
+			ensure!(
+				amount >= T::MinimumMigrationAmount::get(),
+				Error::<T>::AmountBelowMinimum
+			);
+			let base_address =
+				TreasuryDestination::<T>::get().ok_or(Error::<T>::NoTreasuryDestination)?;
+
+			let treasury = T::TreasuryAccount::get();
+			ensure!(
+				T::Currency::free_balance(&treasury) >= amount,
+				Error::<T>::InsufficientBalance
+			);
+
+			// KeepAlive: the treasury is a persistent system account and must
+			// never be reaped by a migration.
+			let imbalance = T::Currency::withdraw(
+				&treasury,
+				amount,
+				WithdrawReasons::TRANSFER,
+				ExistenceRequirement::KeepAlive,
+			)?;
+			drop(imbalance);
+
+			Self::emit_migration(treasury, base_address, amount)
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		/// Shared tail of every migration: consume a unique nonce, update the
+		/// cumulative total, and emit `MigrationInitiated`. The caller must have
+		/// already burned `amount` from `who`.
+		fn emit_migration(who: T::AccountId, base_address: H160, amount: BalanceOf<T>) -> DispatchResult {
+			let nonce = NextNonce::<T>::get();
+			let next = nonce.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+			NextNonce::<T>::put(next);
+			TotalMigrated::<T>::mutate(|total| *total = total.saturating_add(amount));
+
+			Self::deposit_event(Event::MigrationInitiated { nonce, who, base_address, amount });
 			Ok(())
 		}
 	}

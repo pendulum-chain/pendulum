@@ -1131,6 +1131,9 @@ impl token_migration::Config for Runtime {
 		EnsureRootOrHalfCouncil,
 		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>,
 	>;
+	type TreasuryAccount = PendulumTreasuryAccount;
+	// Same authority that approves treasury spends: root or 3/5 council.
+	type TreasuryMigrateOrigin = TreasuryApproveOrigin;
 	type WeightInfo = token_migration::default_weights::SubstrateWeight<Runtime>;
 }
 

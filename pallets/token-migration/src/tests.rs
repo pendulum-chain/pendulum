@@ -1,4 +1,4 @@
-use crate::{mock::*, Error, Event, NextNonce, Paused, TotalMigrated};
+use crate::{mock::*, Error, Event, NextNonce, Paused, TotalMigrated, TreasuryDestination};
 use frame_support::{
 	assert_noop, assert_ok,
 	traits::{LockableCurrency, WithdrawReasons},
@@ -123,7 +123,8 @@ fn migrate_entire_balance_works() {
 			base_address()
 		));
 		assert_eq!(Balances::free_balance(USER), 0);
-		assert_eq!(Balances::total_issuance(), 0);
+		// Only the treasury's balance remains in issuance after the user's is burned.
+		assert_eq!(Balances::total_issuance(), TREASURY_INITIAL_BALANCE);
 		assert_eq!(TotalMigrated::<Test>::get(), USER_INITIAL_BALANCE);
 	});
 }
@@ -179,5 +180,135 @@ fn set_paused_requires_pause_origin() {
 			TokenMigration::set_paused(RuntimeOrigin::signed(USER), true),
 			DispatchError::BadOrigin
 		);
+	});
+}
+
+// ---------------------------------------------------------------- treasury migration
+
+#[test]
+fn set_treasury_destination_stores_and_emits() {
+	run_test(|| {
+		assert_ok!(TokenMigration::set_treasury_destination(RuntimeOrigin::root(), base_address()));
+		assert_eq!(TreasuryDestination::<Test>::get(), Some(base_address()));
+		System::assert_last_event(Event::TreasuryDestinationSet { base_address: base_address() }.into());
+	});
+}
+
+#[test]
+fn set_treasury_destination_rejects_zero_and_bad_origin() {
+	run_test(|| {
+		assert_noop!(
+			TokenMigration::set_treasury_destination(RuntimeOrigin::root(), H160::zero()),
+			Error::<Test>::InvalidBaseAddress
+		);
+		assert_noop!(
+			TokenMigration::set_treasury_destination(RuntimeOrigin::signed(USER), base_address()),
+			DispatchError::BadOrigin
+		);
+	});
+}
+
+#[test]
+fn migrate_treasury_burns_from_treasury_and_emits_same_event_shape() {
+	run_test(|| {
+		let amount = 10 * UNIT;
+		let issuance_before = Balances::total_issuance();
+		assert_ok!(TokenMigration::set_treasury_destination(RuntimeOrigin::root(), base_address()));
+
+		assert_ok!(TokenMigration::migrate_treasury(RuntimeOrigin::root(), amount));
+
+		// Burned from the treasury account, issuance down by exactly `amount`.
+		assert_eq!(Balances::total_issuance(), issuance_before - amount);
+		assert_eq!(Balances::free_balance(TREASURY), TREASURY_INITIAL_BALANCE - amount);
+		assert_eq!(Balances::free_balance(USER), USER_INITIAL_BALANCE);
+		assert_eq!(TotalMigrated::<Test>::get(), amount);
+		assert_eq!(NextNonce::<Test>::get(), 1);
+
+		// Same event shape as a user migration, with who = the treasury account.
+		System::assert_last_event(
+			Event::MigrationInitiated { nonce: 0, who: TREASURY, base_address: base_address(), amount }.into(),
+		);
+	});
+}
+
+#[test]
+fn treasury_and_user_migrations_share_the_nonce_space() {
+	run_test(|| {
+		assert_ok!(TokenMigration::set_treasury_destination(RuntimeOrigin::root(), base_address()));
+		assert_ok!(TokenMigration::migrate(RuntimeOrigin::signed(USER), UNIT, base_address()));
+		assert_ok!(TokenMigration::migrate_treasury(RuntimeOrigin::root(), UNIT));
+		assert_ok!(TokenMigration::migrate(RuntimeOrigin::signed(USER), UNIT, base_address()));
+
+		// Nonces are globally unique across both paths.
+		assert_eq!(NextNonce::<Test>::get(), 3);
+		assert_eq!(TotalMigrated::<Test>::get(), 3 * UNIT);
+	});
+}
+
+#[test]
+fn migrate_treasury_fails_without_destination() {
+	run_test(|| {
+		assert_noop!(
+			TokenMigration::migrate_treasury(RuntimeOrigin::root(), UNIT),
+			Error::<Test>::NoTreasuryDestination
+		);
+	});
+}
+
+#[test]
+fn migrate_treasury_requires_authorized_origin() {
+	run_test(|| {
+		assert_ok!(TokenMigration::set_treasury_destination(RuntimeOrigin::root(), base_address()));
+		assert_noop!(
+			TokenMigration::migrate_treasury(RuntimeOrigin::signed(USER), UNIT),
+			DispatchError::BadOrigin
+		);
+	});
+}
+
+#[test]
+fn migrate_treasury_validates_amount() {
+	run_test(|| {
+		assert_ok!(TokenMigration::set_treasury_destination(RuntimeOrigin::root(), base_address()));
+		// Below the minimum.
+		assert_noop!(
+			TokenMigration::migrate_treasury(RuntimeOrigin::root(), UNIT - 1),
+			Error::<Test>::AmountBelowMinimum
+		);
+		// More than the treasury holds.
+		assert_noop!(
+			TokenMigration::migrate_treasury(RuntimeOrigin::root(), TREASURY_INITIAL_BALANCE + 1),
+			Error::<Test>::InsufficientBalance
+		);
+	});
+}
+
+#[test]
+fn migrate_treasury_keeps_treasury_alive() {
+	run_test(|| {
+		assert_ok!(TokenMigration::set_treasury_destination(RuntimeOrigin::root(), base_address()));
+		// Draining the whole balance would reap the account; KeepAlive rejects it.
+		assert_noop!(
+			TokenMigration::migrate_treasury(RuntimeOrigin::root(), TREASURY_INITIAL_BALANCE),
+			pallet_balances::Error::<Test>::Expendability
+		);
+		// Leaving at least the existential deposit works.
+		let keep = TREASURY_INITIAL_BALANCE - ExistentialDeposit::get();
+		assert_ok!(TokenMigration::migrate_treasury(RuntimeOrigin::root(), keep));
+		assert_eq!(Balances::free_balance(TREASURY), ExistentialDeposit::get());
+	});
+}
+
+#[test]
+fn migrate_treasury_respects_pause() {
+	run_test(|| {
+		assert_ok!(TokenMigration::set_treasury_destination(RuntimeOrigin::root(), base_address()));
+		assert_ok!(TokenMigration::set_paused(RuntimeOrigin::root(), true));
+		assert_noop!(
+			TokenMigration::migrate_treasury(RuntimeOrigin::root(), UNIT),
+			Error::<Test>::MigrationsPaused
+		);
+		// Setting the destination is still allowed while paused (configuration).
+		assert_ok!(TokenMigration::set_treasury_destination(RuntimeOrigin::root(), base_address()));
 	});
 }

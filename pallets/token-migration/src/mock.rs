@@ -84,6 +84,7 @@ impl pallet_balances::Config for Test {
 
 parameter_types! {
 	pub const MinimumMigrationAmount: Balance = UNIT;
+	pub const TreasuryAccount: AccountId = 999;
 }
 
 impl Config for Test {
@@ -91,6 +92,8 @@ impl Config for Test {
 	type Currency = Balances;
 	type MinimumMigrationAmount = MinimumMigrationAmount;
 	type PauseOrigin = EnsureRoot<AccountId>;
+	type TreasuryAccount = TreasuryAccount;
+	type TreasuryMigrateOrigin = EnsureRoot<AccountId>;
 	type WeightInfo = SubstrateWeight<Test>;
 }
 
@@ -98,6 +101,8 @@ impl Config for Test {
 
 pub const USER: AccountId = 1;
 pub const USER_INITIAL_BALANCE: Balance = 100 * UNIT;
+pub const TREASURY: AccountId = 999;
+pub const TREASURY_INITIAL_BALANCE: Balance = 1000 * UNIT;
 
 pub struct ExtBuilder;
 
@@ -106,7 +111,10 @@ impl ExtBuilder {
 		let mut storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
 		pallet_balances::GenesisConfig::<Test> {
-			balances: vec![(USER, USER_INITIAL_BALANCE)],
+			balances: vec![
+				(USER, USER_INITIAL_BALANCE),
+				(TREASURY, TREASURY_INITIAL_BALANCE),
+			],
 		}
 		.assimilate_storage(&mut storage)
 		.unwrap();

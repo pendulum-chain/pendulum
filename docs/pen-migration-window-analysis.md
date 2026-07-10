@@ -1,111 +1,115 @@
-# PEN Migration: is a 6-month window enough?
+# PEN Migration: the 3-month window — analysis and conditions
 
 | | |
 |---|---|
-| **Question** | Can the migration window be 6 months instead of 12, so attestor + monitoring infrastructure can be scaled down sooner? |
-| **Answer** | **Yes — with ~1.5 months of margin, even at Pendulum's current degraded block time.** |
+| **Decision** | Migration window target: **3 months**. Block time will be improved toward the 12s target; if any vesting hasn't finished by close, a **referendum force-unlocks the rest**. |
+| **Verdict of this analysis** | Workable — but *conditional*. At the 12s target, all vesting finishes in ~2.3 months (fits). At today's measured ~23.6s it takes ~4.5 months (does not fit). The deciding variable is when the block-time fix lands; the referendum is the safety net that makes the plan sound either way. |
 | **Data source** | Pendulum mainnet, live query at ~block 7,384,000 (2026-07-10) via `rpc-pendulum.prd.pendulumchain.tech` |
 
-## TL;DR
+## Why the window length is a vesting question
 
-The only thing that can *force* a longer window is genuinely time-locked
-vesting, because everything else can be unlocked on demand. **All real vesting
-completes in ~4.5 months at the current block rate**, so a 6-month window
-clears every locked token with room to spare. The window length is really an
-*adoption* question, not a lock question — and 6 months is a healthy buffer.
-
-## The supply, and why locks are the only calendar constraint
-
-Supply is **fixed at 149.93M PEN** (confirmed: no inflation). At the snapshot:
+Supply is **fixed at 149.93M PEN** (no inflation, confirmed). Every locked
+bucket except one can be freed *on demand*, with no calendar dependency:
 
 | Bucket | Amount | How it becomes migratable | Calendar-gated? |
 |---|---|---|---|
 | Freely transferable | ~110.45M | already is | no — day one |
 | Vesting lock, **already vested** (stale) | ~23.9M | one `vest()` call | no — instant |
-| Staked (`parachain-staking`) | ~3.75M | unstake, ~8h unbond at current block time | no — hours |
+| Staked (`parachain-staking`) | ~3.75M | unstake, 2-round unbond (hours) | no |
 | Governance (democracy locks) | ~1.16M | remove vote / conviction expiry | holder-managed, short |
-| Reserved (identity/proxy deposits) | ~0.0005M (484) | release the deposit | no — instant |
-| **Vesting, genuinely still vesting** | **~11.87M** | **wait for the schedule** | **yes — the only real constraint** |
+| Reserved (identity/proxy deposits) | ~484 PEN | release the deposit | no — instant |
+| **Vesting, genuinely still vesting** | **~11.87M** | **wait for the schedule (per block)** | **yes — the only real constraint** |
 
-(Locks overlap — an account is frozen by the *max* of its locks, not the sum —
-so the net non-transferable figure is ~39.48M, and the rows above are gross.)
+So "is 3 months enough?" reduces to: does the ~11.87M of genuine vesting
+finish within 3 months?
 
-Only the last row is time-locked. So the whole "6 vs 12 months" decision
-reduces to: **how long until that ~11.87M of vesting finishes?**
+## The block-time dependency, quantified
 
-## The vesting timeline — computed at the *actual* block time
+Vesting releases **per block**, so wall-clock completion depends directly on
+block time. The last real schedule completes **505,375 blocks** from the
+snapshot. That is:
 
-Vesting releases **per block**, not per wall-clock second, so the answer
-depends on block time. Pendulum's target is 12s, but it is **currently running
-at a measured ~23.6s** (averaged over the last 10,000 blocks). We compute at
-that slower, real rate so the argument is conservative — a faster block time
-only shortens these numbers.
+| Average block time over the window | Vesting completes in | Fits 3 months? |
+|---|---|---|
+| 12s (target) | **~2.3 months** | yes, ~0.7 months margin |
+| ~15.6s | ~3.0 months | exactly the break-even |
+| 20s | ~3.8 months | no |
+| ~23.6s (measured today, 10k-block avg) | ~4.5 months | no |
 
-Still-vesting balance remaining, in wall-clock months at the measured ~23.6s:
+Two concrete planning numbers fall out of this:
 
-| Horizon | Still vesting |
-|---|---|
-| +1 month | ~11.13M |
-| +2 months | ~9.39M |
-| +3 months | ~8.64M |
-| +4 months | **~0.40M** |
-| +5 months | **0** |
-| +6 months | **0** |
+- **Break-even: the window-average block time must be ≤ ~15.6s.**
+- **If the chain jumps from today's ~23.6s straight to 12s, the fix must be
+  live within ~6 weeks of the window opening** for vesting to finish inside
+  3 months (each week at the slow rate consumes roughly half a week of the
+  margin).
 
-The last real vesting schedule ends at **+505,375 blocks from now**, which is:
+So: improve block time *early* in the window, not toward the end.
 
-- **~4.5 months** at the current measured ~23.6s block time,
-- ~3.8 months at 20s,
-- ~2.3 months at the 12s target.
+## The fallback that makes 3 months safe anyway
 
-So even at today's degraded rate, **every vesting schedule finishes roughly
-1.5 months before a 6-month window would close.** If block production recovers
-toward target, the margin only grows. The block-time concern does not threaten
-the conclusion across its entire plausible range (12s → 24s).
+If block production doesn't recover fast enough, some residue of the 11.87M is
+still vesting at close. This is covered — with on-chain machinery that
+**already exists in this runtime**:
 
-## The one permanent exception (irrelevant to 6 vs 12)
+- The `vesting-manager` pallet exposes a **root-gated
+  `remove_vesting_schedule(who, index)`**. A referendum (or the same
+  governance track that authorizes the window close) can remove the remaining
+  schedules, which unlocks the tokens immediately; holders then migrate
+  normally before the final sweep.
+- The same mechanism cleanly handles the **~30,000 PEN in 6 permanent
+  "never-starts" schedules** (`u32::MAX` start block) that would otherwise be
+  stranded under *any* finite window — 3, 6, or 12 months alike. These 6
+  accounts need the referendum (or case-by-case outreach) regardless of the
+  window length, so they are not an argument for a longer window.
 
-**30,000 PEN** sits in **6 vesting schedules of 5,000 PEN each with a
-`u32::MAX` start block** — "never-starts" locks that don't vest under *any*
-finite window. They are stranded whether the window is 6 months or 12. That's
-0.02% of supply; handle those 6 accounts case-by-case (contact the holders, or
-accept them as a permanent Pendulum-side residue). They are not an argument for
-a longer window.
+And structurally, the close is **operational, not a hard cliff**: the sequence
+is pause the pallet → settle in-flight migrations → reconcile → sweep
+(runbook RB-7). If adoption or vesting lags, the infrastructure simply runs a
+few weeks longer — a 3-month *target* with the option to extend, not a
+contract.
 
-## The real constraint is adoption, not locks
+## What the shorter window changes operationally
 
-Because locks clear in ~4.5 months, the window length is fundamentally about
-giving **holders, exchanges, and custodians** time to *act* — unstake,
-`vest()`, and migrate. A 6-month window is ~4.5 months of unlocking plus ~1.5
-months of buffer, which is ample for a well-communicated migration.
+1. **`earliestSweepTimestamp` ≈ deploy + 3 months.** It is immutable and marks
+   the *earliest* allowed sweep — setting it at 3 months preserves the option
+   to wind down on schedule while never forcing it.
+2. **Daily-cap throughput now matters.** Migrating ~150M PEN within ~90 days
+   needs an *average* release throughput of ~1.7M PEN/day. The PRD's
+   initial-cap guidance (~1–2% of vault per day = 1.5–3M/day) is compatible,
+   but the deliberately conservative soft-launch caps must be **raised
+   promptly via governance** once the launch is verified — cap raises are on
+   the critical path of a 3-month plan in a way they weren't at 6–12 months.
+3. **Comms compress.** Holders' checklist (call `vest()`, unstake ~hours,
+   remove governance votes, migrate) is quick per holder, but exchanges and
+   passive holders need the announcement, reminders, and deadline pressure
+   inside a much shorter arc. The ~23.9M of *already-vested-but-stale* locks
+   (holders who never called `vest()`) is the strongest evidence that passive
+   holders exist and need active prodding.
+4. **Referendum lead time counts against the window.** A Pendulum referendum
+   has voting + enactment periods (weeks). If block time hasn't recovered by
+   ~month 2, *start the unlock referendum then* — don't wait until the window
+   ends to begin a multi-week governance process.
 
-And a 6-month target is **low-risk**, because the close is operational, not a
-hard cliff:
+## Recommendation (under the 3-month decision)
 
-- Set the vault's `earliestSweepTimestamp` to **~6 months**. It is immutable
-  and marks the *earliest* the remainder can be swept, so 6 months is exactly
-  what *preserves the option to wind down early*. Setting it to 12 would force
-  the remainder to stay locked until then even if migration finishes fast.
-- The actual close is a runbook, driven by migration progress: pause the
-  pallet (stop new burns) → let in-flight migrations settle → sweep the
-  remainder → shut down the 4 attestors + monitor.
-- If adoption lags, you keep the infrastructure running longer — nothing forces
-  you to stop at 6 months. You are setting a target, not signing a contract.
-
-## Recommendation
-
-- **Plan a 6-month window** and size the attestor + monitoring commitment to
-  ~6 months.
-- Set `earliestSweepTimestamp ≈ deploy + 6 months`.
-- Actively manage the two non-lock items: a **comms plan** so holders migrate
-  in time, and outreach to the **6 permanent-lock holders**.
-
-Nothing in the on-chain lock data argues for 12 months.
+- Set `earliestSweepTimestamp ≈ deploy + 3 months`.
+- Land the block-time improvement **within the first ~6 weeks** of the window;
+  track window-average block time against the ~15.6s break-even.
+- Pre-draft the vesting-unlock referendum so it can be submitted at ~month 2
+  if vesting is projected to overrun — it is also the vehicle for the 30k
+  sentinel-lock tail either way.
+- Verify launch caps quickly and raise `dailyCap` early; ~1.7M PEN/day average
+  throughput is required arithmetic, not an optimization.
+- Size the attestor + monitoring commitment to ~3 months with a soft option to
+  extend a few weeks.
 
 ## Caveats
 
-- This is a live snapshot from a public RPC at one block; the vesting curve
-  shifts slightly as schedules progress. Re-run against an internal node at
-  deploy time for an exact, fresh figure — but the *shape* (all real vesting
-  done by ~4.5 months at current block time) is stable.
-- Numbers are rounded; treat them as decision-grade, not accounting-grade.
+- Live snapshot from a public RPC at one block; re-run against an internal
+  node at deploy time (the shape is stable, exact figures drift as schedules
+  progress).
+- Block-time projections assume the improvement is a step change to ~12s; a
+  gradual ramp lands between the table rows. The break-even framing
+  (window-average ≤ ~15.6s) is the robust way to track it.
+- Numbers are decision-grade, not accounting-grade.

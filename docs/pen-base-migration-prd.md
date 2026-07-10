@@ -62,7 +62,7 @@ The migration is **one-way**. No reverse flow (Base → Pendulum) will be built.
 | D2 | Decimals on Base | Keep **12** vs. scale to **18** (×10⁶) | **18** (DeFi convention, avoids integration friction), provided max-issuance ×10⁶ arithmetic is verified exact end-to-end and dust-rounding is impossible by construction (12→18 is exact; only relevant if any 18→12 display path exists) |
 | D3 | Exact max issuance figure | Confirm the canonical number from tokenomics (including whether any never-minted allocation counts) | Must match what trackers/documentation state today |
 | D4 | Attestor set composition | 5 team-operated keys vs. 3 team + 2 external partners | At least 1–2 external/independent operators |
-| D5 | Migration window end policy | Open indefinitely vs. close at date T; disposition of vault remainder (burn / DAO treasury) | Announce ≥ 12-month window; decide remainder disposition via governance vote before T |
+| D5 | Migration window end policy | Open indefinitely vs. close at date T; disposition of vault remainder (burn / DAO treasury) | **DECIDED: 3-month window** (`earliestSweepTimestamp ≈ deploy + 3 months`), conditional on the planned block-time improvement toward 12s; a referendum (`vesting-manager.remove_vesting_schedule`) force-unlocks any vesting residue and the permanent sentinel locks before close. Remainder disposition via governance vote before T. See [window analysis](pen-migration-window-analysis.md) |
 | D6 | Encumbered balances policy | Handling of staked (`parachain-staking`), vesting (`vesting-manager`), governance-locked, and sub-ED balances | Require unstake/unlock first (migration accepts only transferable balance); publish this clearly since unstaking delay gates user migration speed |
 
 ## 5. System overview
@@ -204,7 +204,7 @@ Ranked by where the risk actually lives:
 
 ## 11. Risks and open questions
 
-- **Adoption risk:** slow migration leaves circulating supply small and Snapshot quorums awkward — mitigate with a long window, clear comms, and quorum defined on circulating supply (G1).
+- **Adoption risk:** slow migration leaves circulating supply small and Snapshot quorums awkward — heightened by the 3-month window (D5): mitigate with front-loaded comms, early governance cap raises (≥ ~1.7M PEN/day average throughput is required arithmetic), quorum defined on circulating supply (G1), and the option to run the infrastructure a few weeks longer if needed.
 - **Unstaking delay friction (D6):** staked holders face the staking unbond period before they can migrate; comms must set expectations.
 - **Attestor operational maturity:** the honest hard part is ops, not code. External operators (D4) need onboarding, SLAs, and gas-funding agreements.
 - **Exchange coordination:** any CEX listing PEN needs a supported path (they migrate custody balances themselves via the same mechanism); start conversations in phase 1.

@@ -84,8 +84,11 @@ attestor → monitor → runbooks → benchmarks → security fixes → env temp
 
 ## Still open (cannot be done from the repo)
 
-1. **Decisions D1–D6** (PRD §4.2) — most urgently max issuance (D3) and
-   decimals (D2), both baked into immutable contracts at deployment.
+1. **Decisions D1–D6** (PRD §4.2) — D5 is decided (3-month window,
+   `earliestSweepTimestamp ≈ deploy + 3 months`, block-time improvement +
+   referendum fallback; see the [window analysis](pen-migration-window-analysis.md));
+   the others are answered in principle but not yet recorded/wired (notably
+   the 4-attestor set, D4).
 2. External audits (PRD §9) — the internal review doc is the starting brief.
 3. Benchmark run on reference hardware → replace manual weights.
 4. Attestor operator onboarding + key ceremonies; Safe setups (D4).

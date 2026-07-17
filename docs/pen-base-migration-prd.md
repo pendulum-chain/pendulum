@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Status** | Draft v1 |
-| **Date** | 2026-07-07 |
+| **Status** | Draft v2 — all D-decisions recorded; window (D5) subject to the community discussion |
+| **Date** | 2026-07-10 |
 | **Owner** | Pendulum / SatoshiPay team |
 | **Scope** | One-way migration of the native PEN token from the Pendulum parachain (Polkadot) to an ERC-20 on Base, plus post-migration governance |
 
@@ -11,7 +11,7 @@
 
 ## 1. Summary
 
-We will migrate the PEN token — the native token of the Pendulum Substrate parachain — to Base as a **fixed-supply ERC-20**. The full maximum issuance is pre-minted at deployment into a **MigrationVault** contract; the token contract has **no mint function**. Users migrate by calling a `migrate` extrinsic on Pendulum that removes their PEN from circulation and emits an event carrying their Base address. A **3-of-5 set of independent attestors**, each running their own Pendulum node, observes relay-chain-finalized events and submits matching **on-chain approvals** to the vault on Base; the third matching approval releases the tokens from the vault to the user.
+We will migrate the PEN token — the native token of the Pendulum Substrate parachain — to Base as a **fixed-supply ERC-20** (150,000,000 PEN, 18 decimals). The full maximum issuance is pre-minted at deployment into a **MigrationVault** contract; the token contract has **no mint function**. Users migrate by calling a `migrate` extrinsic on Pendulum that burns their PEN and emits an event carrying their Base address. A **3-of-4 attestor set** — initially team-operated, each attestor on its own Pendulum node (D4) — observes relay-chain-finalized events and submits matching **on-chain approvals** to the vault on Base; the third matching approval releases the tokens from the vault to the user.
 
 Post-migration governance is **hybrid**: an OpenZeppelin Governor + Timelock on Base for on-chain control of Base-side contracts and treasury, Snapshot for off-chain/cross-chain decisions, executed by an elected Safe multisig, with a technical committee retained for Pendulum-side runtime actions for as long as the chain runs.
 
@@ -27,7 +27,7 @@ The migration is **one-way**. No reverse flow (Base → Pendulum) will be built.
 ## 3. Goals
 
 1. A live ERC-20 PEN token on Base whose `totalSupply()` equals the PEN maximum issuance from the moment of deployment.
-2. A live MigrationVault on Base holding all unmigrated supply, releasing tokens only on 3-of-5 attestor agreement.
+2. A live MigrationVault on Base holding all unmigrated supply, releasing tokens only on 3-of-4 attestor agreement.
 3. A `token-migration` pallet on Pendulum allowing any holder to migrate transferable PEN to a Base address of their choice.
 4. Trackers (DefiLlama, CoinGecko, CoinMarketCap) display correct total and circulating supply (vault balance excluded from circulating).
 5. Worst-case loss from full attestor-quorum compromise is bounded by rate caps and detected by independent monitoring within minutes.
@@ -50,20 +50,20 @@ The migration is **one-way**. No reverse flow (Base → Pendulum) will be built.
 | Supply model on Base | Entire max issuance pre-minted to vault at deployment; token has no mint function, no owner, no upgradeability | Correct tracker stats from day one; eliminates infinite-mint attack surface; worst case bounded by vault balance |
 | Migration direction | One-way only | Halves the attack surface; no Base-side event attestation needed |
 | Attestation transport | **On-chain approvals**: each attestor sends its own `approve` transaction to the vault; the k-th matching approval executes the release | No off-chain signature-coordination infrastructure; the chain is the coordinator; attestors are fully independent processes |
-| Attestor threshold | 3-of-5 | Tolerates 2 offline/compromised attestors without halting or without theft, respectively |
+| Attestor threshold | 3-of-4 | Theft requires 3 simultaneously compromised keys; releases tolerate 1 offline attestor. The set is initially team-operated (D4), so the load-bearing compensations are caps, monitoring, pause, and separation of duties — not organizational independence |
 | Governance | Hybrid: OZ Governor + Timelock (Base contracts/treasury) + Snapshot + executor Safe + Pendulum technical committee | On-chain teeth where the assets live; pragmatic elsewhere |
 | Token extensions | `ERC20Permit` + `ERC20Votes` included at deployment | `ERC20Votes` cannot be retrofitted into an immutable token; required for future Governor voting |
 
-### 4.2 Open — must be resolved before implementation freeze
+### 4.2 Decided (formerly open; recorded 2026-07-09/10)
 
-| # | Decision | Options | Recommendation |
-|---|---|---|---|
-| D1 | Pendulum-side effect of `migrate` | **Burn** vs. lock in keyless pallet account | **Burn.** Migration is one-way; burning keeps the invariant `PEN on Pendulum + released on Base = max issuance` trivially auditable and leaves no honeypot |
-| D2 | Decimals on Base | Keep **12** vs. scale to **18** (×10⁶) | **18** (DeFi convention, avoids integration friction), provided max-issuance ×10⁶ arithmetic is verified exact end-to-end and dust-rounding is impossible by construction (12→18 is exact; only relevant if any 18→12 display path exists) |
-| D3 | Exact max issuance figure | Confirm the canonical number from tokenomics (including whether any never-minted allocation counts) | Must match what trackers/documentation state today |
-| D4 | Attestor set composition | 5 team-operated keys vs. 3 team + 2 external partners | At least 1–2 external/independent operators |
-| D5 | Migration window end policy | Open indefinitely vs. close at date T; disposition of vault remainder (burn / DAO treasury) | **DECIDED: 3-month window** (`earliestSweepTimestamp ≈ deploy + 3 months`), conditional on the planned block-time improvement toward 12s; a referendum (`vesting-manager.remove_vesting_schedule`) force-unlocks any vesting residue and the permanent sentinel locks before close. Remainder disposition via governance vote before T. See [window analysis](pen-migration-window-analysis.md) |
-| D6 | Encumbered balances policy | Handling of staked (`parachain-staking`), vesting (`vesting-manager`), governance-locked, and sub-ED balances | Require unstake/unlock first (migration accepts only transferable balance); publish this clearly since unstaking delay gates user migration speed |
+| # | Decision | Outcome |
+|---|---|---|
+| D1 | Pendulum-side effect of `migrate` | **Burn.** Keeps the invariant `PEN on Pendulum + released on Base = max issuance` trivially auditable and leaves no honeypot. (Implemented.) |
+| D2 | Decimals on Base | **18** (scale ×10⁶ at release, in the vault only — V7). Exact conversion; no change to holder amounts, ownership share, or max supply. (Implemented.) |
+| D3 | Max issuance | **150,000,000 PEN**, pending final cross-check against canonical tokenomics/tracker figures at deployment. Live total issuance is ~149.93M with no inflation, so 150M fully covers all migrations. |
+| D4 | Attestor set composition | **4 attestors, all initially team-operated**, one per internal RPC node, threshold **3-of-4**. Rationale: Pendulum currently has no external node operators, and onboarding them means asking outsiders to fund + run a node for the whole window. Honest consequence: organizational independence is *not* claimed — blast-radius controls (caps, monitoring, guardian pause, ≥48h timelock) and **separation of duties** (guardian + monitor operated by someone other than the attestor-key holder) carry the security. Preferred direction: add genuinely independent external operators as the system matures. |
+| D5 | Migration window end policy | Internal working target: **3-month earliest close** (`earliestSweepTimestamp ≈ deploy + 3 months`), conditional on the planned block-time improvement toward 12s; a referendum (`vesting-manager.remove_vesting_schedule`) force-unlocks any vesting residue and the permanent sentinel locks before close ([window analysis](pen-migration-window-analysis.md)). **Final window length is deliberately left to the community discussion / formal governance proposal** (the discussion post solicits 6-month / 12-month / open-ended feedback). An earliest close date is *not* an automatic sweep: moving any remainder requires a separate governance decision + timelocked execution. |
+| D6 | Encumbered balances policy | **Only unstaked, freely transferable PEN migrates** (enforced by the pallet). Staked/vesting/governance-locked balances must be freed first; UI and docs surface this. No vesting locks should extend beyond the window — residue handled per D5's referendum path. |
 
 ## 5. System overview
 
@@ -72,25 +72,25 @@ The migration is **one-way**. No reverse flow (Base → Pendulum) will be built.
 ┌─────────────────────────────┐                   ┌──────────────────────────────┐
 │ token-migration pallet      │                   │ PEN ERC-20 (immutable)       │
 │  migrate(amount, h160)      │                   │  totalSupply = max issuance  │
-│  → burn/lock PEN            │                   │  no mint, no owner           │
+│  → burn PEN                 │                   │  no mint, no owner           │
 │  → event {nonce, h160, amt} │                   ├──────────────────────────────┤
 └──────────┬──────────────────┘                   │ MigrationVault               │
            │ finalized events                     │  holds unmigrated supply     │
            ▼                                      │  approve(nonce, to, amt)     │
-   5 × attestor daemon ──────── Base txs ───────▶ │  3rd matching approval       │
+   4 × attestor daemon ──────── Base txs ───────▶ │  3rd matching approval       │
    (own full node each,                           │  → transfer to user          │
     relay-finality only)                          │  caps · pause · timelock     │
                                                   └──────────────────────────────┘
    invariant monitor (independent): Σ burned on Pendulum == Σ released on Base
 ```
 
-**Happy path:** user calls `migrate(amount, base_address)` on Pendulum → PEN burned/locked, event with unique `nonce` emitted → block reaches relay-chain finality → each attestor independently decodes the event and submits `approve(nonce, recipient, amount)` on Base → on the 3rd identical approval the vault transfers `amount` (decimal-adjusted) to `recipient` and marks `nonce` consumed.
+**Happy path:** user calls `migrate(amount, base_address)` on Pendulum → PEN burned, event with unique `nonce` emitted → block reaches relay-chain finality → each attestor independently decodes the event and submits `approve(nonce, recipient, amount)` on Base → on the 3rd identical approval the vault transfers `amount` (decimal-adjusted) to `recipient` and marks `nonce` consumed.
 
 ## 6. Component requirements
 
 ### 6.1 Pendulum: `token-migration` pallet
 
-- **P1** — Extrinsic `migrate(amount: Balance, base_address: H160)`; atomically removes `amount` of transferable native PEN from the caller (per D1: burn or transfer to keyless pallet account) and emits `MigrationInitiated { nonce: u64, base_address: H160, amount: Balance }`.
+- **P1** — Extrinsic `migrate(amount: Balance, base_address: H160)`; atomically **burns** `amount` of transferable native PEN from the caller (D1) and emits `MigrationInitiated { nonce: u64, base_address: H160, amount: Balance }`.
 - **P2** — `nonce` is a monotonically increasing storage counter; globally unique across the pallet's lifetime; never reused, including across runtime upgrades.
 - **P3** — Rejects: `amount` below a configurable minimum (dust threshold ≥ existential-deposit-scale), non-transferable balance (staked, vesting-locked, reserved), and `amount` that would leave the caller between 0 and the existential deposit (must migrate to exactly 0 or stay ≥ ED).
 - **P4** — Pallet is pausable via a privileged origin (technical committee / root) to halt new migrations during incidents.
@@ -116,11 +116,11 @@ The migration is **one-way**. No reverse flow (Base → Pendulum) will be built.
 - **V8** — Not upgradeable. All flexibility comes from parameters + pause. Emits full event history (`Approved`, `Released`, `Paused`, `CapsUpdated`, `AttestorSetUpdated`) for the monitor and for public auditability.
 - **V9** — End-of-window handling per D5: a timelocked function to sweep the remainder to a governance-designated destination (or burn), callable only after a hard-coded earliest timestamp.
 
-### 6.4 Attestor daemon (×5 independent instances)
+### 6.4 Attestor daemon (×4 instances, initially team-operated per D4)
 
-- **A1** — Connects **only to its own Pendulum full node** (never public RPC); subscribes to **relay-chain-finalized** heads; decodes `MigrationInitiated` events. Never acts on best/unfinalized blocks.
+- **A1** — Connects **only to its own Pendulum full node** (never a shared/public RPC — one malicious or faulty node must not be able to feed all attestors wrong block data); subscribes to **relay-chain-finalized** heads; decodes `MigrationInitiated` events. Never acts on best/unfinalized blocks.
 - **A2** — For each event, submits `approve(nonce, recipient, amount)` to the vault on Base, with idempotent retry (safe to resubmit; duplicates revert harmlessly) and crash-recovery from a persisted checkpoint (last processed finalized block).
-- **A3** — Each instance: separate operator, separate infrastructure, separate secp256k1 key (HSM or equivalent isolation), separately funded Base gas wallet with balance alerting.
+- **A3** — Each instance: separate infrastructure, separate secp256k1 key (HSM or equivalent isolation), separately funded Base gas wallet with balance alerting. Operators are initially team members (D4), so **separation of duties is mandatory**: the guardian Safe and the invariant monitor must be operated by people who do not hold attestor keys — otherwise the pause button and the alarm are held by the same hands they guard against.
 - **A4** — No shared code paths for event *interpretation* where avoidable is nice-to-have; at minimum, no shared runtime infrastructure or key storage. No communication between attestors — the vault contract is the only coordination point.
 - **A5** — Handles runtime upgrades on Pendulum gracefully (metadata refresh) and alerts on decode failures rather than skipping events silently.
 
@@ -150,9 +150,9 @@ The migration is **one-way**. No reverse flow (Base → Pendulum) will be built.
 
 1. **Supply correctness:** immediately after deployment, `PEN.totalSupply()` on Base equals the confirmed max issuance (D3) and 100% sits in the vault; DefiLlama/CoinGecko display total supply = max issuance and circulating supply excluding the vault.
 2. **End-to-end migration:** a user migrating X PEN on Pendulum receives exactly X (decimal-adjusted) PEN on Base after relay finality + 3 approvals, with no manual intervention, on testnet and mainnet.
-3. **Conservation invariant:** at all times, Σ burned/locked on Pendulum ≥ Σ released on Base, and vault balance + Σ released = max issuance; the monitor demonstrably alerts (staging drill) on injected violation.
+3. **Conservation invariant:** at all times, Σ burned on Pendulum ≥ Σ released on Base, and vault balance + Σ released = max issuance; the monitor demonstrably alerts (staging drill) on injected violation.
 4. **Replay safety:** a consumed nonce can never release twice (unit + fork-test proof); an attestor submitting the same approval twice has no effect.
-5. **Quorum safety:** 2 colluding attestors cannot release anything; 2 offline attestors do not halt migrations.
+5. **Quorum safety:** 2 colluding attestors cannot release anything; 1 offline attestor does not halt migrations.
 6. **Caps and pause:** releases above per-tx or daily caps revert; guardian pause takes effect in one transaction and blocks all releases; every parameter change is observably delayed ≥ 48h by the timelock.
 7. **No mint surface:** verified absence of any code path that increases `totalSupply()` post-constructor (audit assertion).
 8. **Governance live:** Snapshot space operational with vault excluded from strategy; Governor + Timelock deployed, delegation working, and admin of the vault transferred per rollout plan.
@@ -161,22 +161,22 @@ The migration is **one-way**. No reverse flow (Base → Pendulum) will be built.
 
 ## 8. Security requirements and threat model
 
-**Trust assumptions:** correctness reduces to (a) ≤ 2 of 5 attestor keys compromised at any time, (b) Polkadot relay finality is honest, (c) the vault contract is correct. There is no cryptographic verification of Pendulum state on Base; the design compensates with independence, caps, monitoring, and pause.
+**Trust assumptions:** correctness reduces to (a) ≤ 2 of the 4 attestor keys compromised at any time, (b) Polkadot relay finality is honest, (c) the vault contract is correct. There is no cryptographic verification of Pendulum state on Base. With an initially team-operated set (D4) the honest framing is: this is a **trusted, damage-bounded** design, not a trustless one — the compensations are per-key isolation, caps, independent monitoring, fast pause, and separation of duties.
 
 | Threat | Mitigation |
 |---|---|
-| Attestor key compromise (< quorum) | 3-of-5 threshold; conflicting tuples never merge; monitor flags approvals without matching Pendulum events |
-| Attestor quorum compromise (≥ 3 keys) | Rate caps bound daily loss (V4); independent monitor + guardian pause (M3, V5); key isolation & operator independence (A3, D4) make simultaneous compromise unlikely |
+| Attestor key compromise (< quorum) | 3-of-4 threshold; conflicting tuples never merge; monitor flags approvals without matching Pendulum events |
+| Attestor quorum compromise (≥ 3 keys) | Rate caps bound daily loss (V4); independent monitor + guardian pause (M3, V5) operated under separation of duties (A3); per-key HSM isolation. Because operators are initially one organization, caps + monitoring + pause are the primary defense, not operator independence |
 | Fake/reorged Pendulum events | Attestors act only on relay-finalized blocks from their own nodes (A1); post-finality reorgs are not possible on Polkadot |
 | Replay / double release | Permanent consumed-nonce mapping (V2); per-attestor per-tuple dedup (V3) |
 | Malicious/typo destination address | UI checksum + contract-address warnings (U1, U2); irreversibility messaging; documented test-migration pattern |
 | Infinite mint on Base | Structurally impossible — no mint function (T2) |
 | Governance capture of vault params | 48h timelock on all changes (V5) gives holders and the monitor time to react; guardian can pause during the window |
 | Pallet abuse (griefing with dust, nonce games) | Minimum amount (P3); nonce is pallet-internal, not user-supplied (P2) |
-| Attestor gas exhaustion / outage | Funded-wallet alerting (A3); liveness monitoring (M4); 2-of-5 outage tolerance |
+| Attestor gas exhaustion / outage | Funded-wallet alerting (A3); liveness monitoring (M4); 1-of-4 outage tolerance |
 | RPC/supply-chain trust | Own full nodes only (A1); pinned dependencies and reproducible builds for daemon and contracts |
 
-**Standing security requirements:** all privileged Base keys in Safes or HSMs; no single human can both approve and change the attestor set; public disclosure/bug-bounty channel before mainnet; all contracts verified on the Base explorer.
+**Standing security requirements:** all privileged Base keys in Safes or HSMs; no single human can both approve and change the attestor set; the guardian Safe and the invariant monitor are operated by people who hold no attestor keys (separation of duties, D4); public disclosure/bug-bounty channel before mainnet; all contracts verified on the Base explorer.
 
 ## 9. Audit scope
 
@@ -194,8 +194,8 @@ Ranked by where the risk actually lives:
 
 | Phase | Contents | Gate to next phase |
 |---|---|---|
-| **0 — Decisions & spec** | Resolve D1–D6; finalize this PRD; publish tokenomics/max-issuance statement | All open decisions signed off |
-| **1 — Build & testnet** | Pallet on Foucoco; contracts on Base Sepolia; 5 test attestors; monitor; UI; internal adversarial testing incl. chaos drills (kill attestors, inject bad approvals) | All acceptance criteria pass on testnet |
+| **0 — Decisions & spec** | Resolve D1–D6 (done — §4.2); community discussion + formal governance proposal fixing the final window and parameters; publish tokenomics/max-issuance statement | Proposal approved |
+| **1 — Build & testnet** | Pallet on Foucoco; contracts on Base Sepolia; 4 test attestors; monitor; UI; internal adversarial testing incl. chaos drills (kill attestors, inject bad approvals) | All acceptance criteria pass on testnet |
 | **2 — Audits** | §9 tracks in parallel; fix and re-verify; publish reports | No open critical/high findings |
 | **3 — Mainnet soft launch** | Deploy token + vault (full supply minted); production attestor ceremony; **conservative caps**; team-only + invited large-holder migrations for 1–2 weeks; vault admin held by bootstrap Safe | Soft-launch volume clean, monitor green |
 | **4 — Public launch** | Runtime upgrade enabling `migrate` for all; UI public; raise caps to target; tracker submissions (DefiLlama/CoinGecko: supply endpoints, vault as non-circulating); exchange & community comms | ≥ agreed % supply migrated or T reached |
@@ -206,7 +206,7 @@ Ranked by where the risk actually lives:
 
 - **Adoption risk:** slow migration leaves circulating supply small and Snapshot quorums awkward — heightened by the 3-month window (D5): mitigate with front-loaded comms, early governance cap raises (≥ ~1.7M PEN/day average throughput is required arithmetic), quorum defined on circulating supply (G1), and the option to run the infrastructure a few weeks longer if needed.
 - **Unstaking delay friction (D6):** staked holders face the staking unbond period before they can migrate; comms must set expectations.
-- **Attestor operational maturity:** the honest hard part is ops, not code. External operators (D4) need onboarding, SLAs, and gas-funding agreements.
+- **Attestor key concentration (D4):** with a team-operated set, a single organization holds all attestor keys — separation of duties (guardian/monitor held by non-key-holders) is the load-bearing control and must be verifiable, not aspirational. Adding independent external operators as the system matures remains the preferred direction; onboarding them needs node-funding agreements and SLAs.
 - **Exchange coordination:** any CEX listing PEN needs a supported path (they migrate custody balances themselves via the same mechanism); start conversations in phase 1.
 - **Legal/regulatory review** of the migration mechanics and any public statements about supply — not covered by this PRD, must run in parallel.
 - **Pendulum chain end-state** (full sunset vs. minimal maintenance) is deliberately out of scope but interacts with D1 and G4; schedule that decision before phase 6.

@@ -10,7 +10,7 @@ import {PENGovernor} from "../src/PENGovernor.sol";
 import {MigrationVault} from "../src/MigrationVault.sol";
 
 contract PENGovernorTest is Test {
-    uint256 internal constant MAX_ISSUANCE = 160_000_000e18;
+    uint256 internal constant MAX_ISSUANCE = 150_000_000e18;
     uint256 internal constant TIMELOCK_DELAY = 2 days;
     uint48 internal constant VOTING_DELAY = 1 days;
     uint32 internal constant VOTING_PERIOD = 5 days;

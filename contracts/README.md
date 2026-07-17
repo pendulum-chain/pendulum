@@ -22,7 +22,7 @@ to Base. Design and requirements: [PRD](../docs/pen-base-migration-prd.md),
 
 The token and vault reference each other, so:
 
-1. Deploy `MigrationVault(admin, guardian, attestors[5], threshold=3, conversionFactor=1e6, perReleaseCap, dailyCap, earliestSweepTimestamp)`
+1. Deploy `MigrationVault(admin, guardian, attestors[4], threshold=3, conversionFactor=1e6, perReleaseCap, dailyCap, earliestSweepTimestamp)`
 2. Deploy `PEN(vault, maxIssuance)` — mints the full supply into the vault
 3. `vault.setToken(pen)` (admin, one-time; verifies the vault holds 100% of supply)
 

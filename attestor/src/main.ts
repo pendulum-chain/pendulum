@@ -129,7 +129,7 @@ async function migrationEventsInBlock(api: ApiPromise, blockNumber: number): Pro
 }
 
 /** True when this migration no longer needs our approval (released, or we
- *  already approved). Rechecked after failures: with 5 independent attestors
+ *  already approved). Rechecked after failures: with 4 attestors
  *  racing to the same event, losing the race is the NORMAL case, not an error. */
 async function alreadyHandled(event: MigrationEvent): Promise<boolean> {
 	const consumed = await publicClient.readContract({

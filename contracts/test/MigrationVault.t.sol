@@ -7,7 +7,7 @@ import {MigrationVault} from "../src/MigrationVault.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MigrationVaultTest is Test {
-    uint256 internal constant MAX_ISSUANCE = 160_000_000e18;
+    uint256 internal constant MAX_ISSUANCE = 150_000_000e18;
     // Pallet amounts are 12-decimal; the vault scales to the 18-decimal token.
     uint256 internal constant CONVERSION_FACTOR = 1e6;
     uint256 internal constant PER_RELEASE_CAP = 1_000_000e18;
@@ -23,7 +23,8 @@ contract MigrationVaultTest is Test {
     uint256 internal earliestSweep;
 
     function setUp() public {
-        for (uint256 i = 0; i < 5; i++) {
+        // Decision D4: 4 attestors, threshold 3-of-4.
+        for (uint256 i = 0; i < 4; i++) {
             attestors.push(makeAddr(string(abi.encodePacked("attestor", i))));
         }
         earliestSweep = block.timestamp + 365 days;
@@ -112,7 +113,8 @@ contract MigrationVaultTest is Test {
 
     function test_ConflictingTuplesNeverMerge() public {
         address mallory = makeAddr("mallory");
-        // Two attestors approve the honest tuple, two approve a conflicting one.
+        // Two attestors approve the honest tuple, two approve a conflicting one
+        // for the same nonce. Neither tuple reaches the 3-of-4 threshold.
         approveAs(0, 0, recipient, 5e12);
         approveAs(1, 0, recipient, 5e12);
         approveAs(2, 0, mallory, 5e12);
@@ -120,8 +122,9 @@ contract MigrationVaultTest is Test {
         assertEq(pen.balanceOf(recipient), 0);
         assertEq(pen.balanceOf(mallory), 0);
 
-        // The honest tuple reaches threshold and wins; the nonce is consumed.
-        approveAs(4, 0, recipient, 5e12);
+        // An attestor may approve both tuples (distinct payloads): the honest
+        // tuple reaches threshold and wins; the nonce is consumed.
+        approveAs(2, 0, recipient, 5e12);
         assertEq(pen.balanceOf(recipient), 5e18);
         assertEq(pen.balanceOf(mallory), 0);
     }
@@ -282,9 +285,8 @@ contract MigrationVaultTest is Test {
     function test_CannotRemoveAttestorBelowThreshold() public {
         vm.startPrank(admin);
         vault.removeAttestor(attestors[0]);
-        vault.removeAttestor(attestors[1]);
         vm.expectRevert(MigrationVault.ThresholdWouldExceedAttestors.selector);
-        vault.removeAttestor(attestors[2]);
+        vault.removeAttestor(attestors[1]);
         vm.stopPrank();
     }
 

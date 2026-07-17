@@ -6,7 +6,7 @@ import {PEN} from "../src/PEN.sol";
 
 contract PENTest is Test {
     // Placeholder until PRD decision D3 confirms the exact figure.
-    uint256 internal constant MAX_ISSUANCE = 160_000_000e18;
+    uint256 internal constant MAX_ISSUANCE = 150_000_000e18;
 
     PEN internal pen;
     address internal vault = makeAddr("vault");

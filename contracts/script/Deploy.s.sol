@@ -16,7 +16,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// Environment:
 ///   ADMIN_SAFE            bootstrap Safe that becomes vault admin
 ///   GUARDIAN_SAFE         fast pause guardian
-///   ATTESTOR_1..5         attestor transaction-sender addresses
+///   ATTESTOR_1..4         attestor transaction-sender addresses (D4: 3-of-4)
 ///   MAX_ISSUANCE          max issuance in 18-decimal units (decision D3)
 ///   PER_RELEASE_CAP       initial per-release cap, 18-decimal units
 ///   DAILY_CAP             initial daily cap, 18-decimal units
@@ -34,12 +34,11 @@ contract Deploy is Script {
         uint256 dailyCap = vm.envUint("DAILY_CAP");
         uint256 earliestSweepTs = vm.envUint("EARLIEST_SWEEP_TS");
 
-        address[] memory attestors = new address[](5);
+        address[] memory attestors = new address[](4);
         attestors[0] = vm.envAddress("ATTESTOR_1");
         attestors[1] = vm.envAddress("ATTESTOR_2");
         attestors[2] = vm.envAddress("ATTESTOR_3");
         attestors[3] = vm.envAddress("ATTESTOR_4");
-        attestors[4] = vm.envAddress("ATTESTOR_5");
 
         vm.startBroadcast();
 

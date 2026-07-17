@@ -1,6 +1,7 @@
 # PEN Migration Attestor
 
-Daemon run by each of the five independent attestor operators (PRD §6.4).
+Daemon run by each of the four attestor operators (3-of-4, initially
+team-operated — PRD §6.4 / D4).
 Watches **relay-finalized** blocks on the operator's **own** Pendulum node for
 `tokenMigration.MigrationInitiated` events and submits the matching
 `approve(nonce, recipient, palletAmount)` transaction to the MigrationVault on

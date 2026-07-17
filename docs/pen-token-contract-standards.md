@@ -56,4 +56,4 @@ contract PEN is ERC20, ERC20Permit, ERC20Votes {
 }
 ```
 
-Every behavioral line is OpenZeppelin's audited code — which is precisely the property that makes the token cheap to audit (PRD §9) and easy for third parties to verify.
+Every behavioral line is OpenZeppelin's audited code — which is precisely the property that makes the token cheap to review (PRD §9) and easy for third parties to verify.

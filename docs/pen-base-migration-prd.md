@@ -154,9 +154,9 @@ The migration is **one-way**. No reverse flow (Base → Pendulum) will be built.
 4. **Replay safety:** a consumed nonce can never release twice (unit + fork-test proof); an attestor submitting the same approval twice has no effect.
 5. **Quorum safety:** 2 colluding attestors cannot release anything; 1 offline attestor does not halt migrations.
 6. **Caps and pause:** releases above per-tx or daily caps revert; guardian pause takes effect in one transaction and blocks all releases; every parameter change is observably delayed ≥ 48h by the timelock.
-7. **No mint surface:** verified absence of any code path that increases `totalSupply()` post-constructor (audit assertion).
+7. **No mint surface:** verified absence of any code path that increases `totalSupply()` post-constructor (review assertion).
 8. **Governance live:** Snapshot space operational with vault excluded from strategy; Governor + Timelock deployed, delegation working, and admin of the vault transferred per rollout plan.
-9. **Audits complete:** all critical/high findings from all audit tracks (see §9) resolved or formally accepted before mainnet vault funding.
+9. **Security reviews complete:** all critical/high findings from the internal adversarial review rounds (§9) resolved or formally risk-accepted before mainnet vault funding.
 10. **Ops readiness:** runbooks exist and have been drill-tested for: attestor key compromise, attestor outage, invariant violation, pause/unpause, and Pendulum runtime upgrade.
 
 ## 8. Security requirements and threat model
@@ -178,17 +178,33 @@ The migration is **one-way**. No reverse flow (Base → Pendulum) will be built.
 
 **Standing security requirements:** all privileged Base keys in Safes or HSMs; no single human can both approve and change the attestor set; the guardian Safe and the invariant monitor are operated by people who hold no attestor keys (separation of duties, D4); public disclosure/bug-bounty channel before mainnet; all contracts verified on the Base explorer.
 
-## 9. Audit scope
+## 9. Security assurance (decision: no external audit)
 
-Ranked by where the risk actually lives:
+**Decision:** no external audit is commissioned. The residual risk is
+consciously accepted and carried by the threat-model mitigations of §8 — rate
+caps bounding worst-case daily loss, independent monitoring with auto-pause,
+the fast guardian, the ≥48h timelock on every sensitive change, separation of
+duties, and the conservative-caps soft launch. This trade-off is judged
+acceptable because the migration is finite, damage-bounded and pausable, and
+the permanent artifact (the token) is an unmodified OpenZeppelin composition
+with no mint surface.
+
+**What is done instead:** repeated **independent internal adversarial review
+rounds** over the full stack, each documented with findings and resolutions in
+the [internal security review log](pen-migration-internal-review.md), with all
+critical/high findings fixed and regression-tested before mainnet vault
+funding. Standing practice: every change to the fund-release path triggers a
+fresh review round before deployment.
+
+Review focus, ranked by where the risk actually lives:
 
 1. **MigrationVault contract (highest priority):** approval counting and tuple hashing (V1–V3), nonce consumption, cap accounting across the 24h window, pause/timelock/role wiring, attestor-set rotation edge cases (V6), decimal conversion (V7), end-of-window sweep (V9).
-2. **`token-migration` pallet:** atomicity of burn/lock + event emission, nonce monotonicity across upgrades, balance-encumbrance checks (P3), pause origin, weight/benchmarking correctness.
+2. **`token-migration` pallet:** atomicity of burn + event emission, nonce monotonicity across upgrades, balance-encumbrance checks (P3), pause origin, weight/benchmarking correctness.
 3. **Attestor daemon:** event decoding against runtime metadata (including post-upgrade), finality handling (proof that it cannot act pre-finality), checkpoint/crash-recovery correctness, key handling.
-4. **End-to-end trust-boundary review:** an adversarial walkthrough of the full pipeline (extrinsic → event → daemon → approval → release), explicitly attempting cross-component exploits that no single-component audit would catch (e.g., decode ambiguity producing divergent tuples).
+4. **End-to-end trust-boundary review:** an adversarial walkthrough of the full pipeline (extrinsic → event → daemon → approval → release), explicitly attempting cross-component exploits that no single-component review would catch (e.g., decode ambiguity producing divergent tuples).
 5. **Operational review (lighter):** key-management ceremony, Safe configurations, timelock parameters, monitor independence.
 
-**Out of audit scope:** OpenZeppelin library internals, Base/OP-stack infrastructure, Polkadot finality itself, the ERC-20 beyond confirming it is an unmodified OZ composition (a cheap assertion worth paying for). Token + vault ≈ 300–400 lines of Solidity total — solicit fixed bids from 2 firms; the pallet and daemon likely need a Substrate-literate auditor (may be a different firm).
+**Out of review scope:** OpenZeppelin library internals, Base/OP-stack infrastructure, Polkadot finality itself, the ERC-20 beyond confirming it is an unmodified OZ composition.
 
 ## 10. Rollout plan
 
@@ -196,7 +212,7 @@ Ranked by where the risk actually lives:
 |---|---|---|
 | **0 — Decisions & spec** | Resolve D1–D6 (done — §4.2); community discussion + formal governance proposal fixing the final window and parameters; publish tokenomics/max-issuance statement | Proposal approved |
 | **1 — Build & testnet** | Pallet on Foucoco; contracts on Base Sepolia; 4 test attestors; monitor; UI; internal adversarial testing incl. chaos drills (kill attestors, inject bad approvals) | All acceptance criteria pass on testnet |
-| **2 — Audits** | §9 tracks in parallel; fix and re-verify; publish reports | No open critical/high findings |
+| **2 — Security reviews & drills** | Internal adversarial review rounds per §9; fix and re-verify; publish the review log; chaos + runbook drills | No open critical/high findings |
 | **3 — Mainnet soft launch** | Deploy token + vault (full supply minted); production attestor ceremony; **conservative caps**; team-only + invited large-holder migrations for 1–2 weeks; vault admin held by bootstrap Safe | Soft-launch volume clean, monitor green |
 | **4 — Public launch** | Runtime upgrade enabling `migrate` for all; UI public; raise caps to target; tracker submissions (DefiLlama/CoinGecko: supply endpoints, vault as non-circulating); exchange & community comms | ≥ agreed % supply migrated or T reached |
 | **5 — Governance handover** | Snapshot space live from phase 4; deploy Governor + Timelock; transfer vault admin from bootstrap Safe to timelock; elect executor Safe | — |
@@ -220,5 +236,5 @@ Ranked by where the risk actually lives:
 - [ ] Migration web UI
 - [ ] Governor + Timelock deployment scripts; Snapshot space config (vault-excluded strategy)
 - [ ] Runbooks: key compromise, attestor outage, invariant breach, pause/unpause, runtime upgrade
-- [ ] Audit reports (published) and fix log
+- [ ] Internal security-review log (published; findings and resolutions)
 - [ ] Tracker submissions and public migration documentation

@@ -171,12 +171,17 @@ vault explicitly excluded, in both Snapshot and on-chain governance. See the
 1. Community discussion (the post this document accompanies).
 2. Team response + formal governance proposal fixing the final parameters.
 3. Testnet deployment and end-to-end testing (Foucoco + Base Sepolia).
-4. External audits, key ceremonies, monitoring and operational drills.
+4. Security reviews, key-management ceremonies, monitoring setup, and
+   operational drills.
 5. Mainnet soft launch with conservative caps (team + invited large holders).
 6. Public launch of the migration UI; caps raised via governance.
 7. Tracker updates (total vs. circulating supply methodology).
-8. Handover of Base-side controls from the bootstrap setup to the agreed
-   governance structure.
+8. Admin handover to token holders: during launch, the vault's settings
+   (caps, attestor set, pause/unpause) are administered by a team multisig so
+   the system can be wired and verified quickly. As the final step, that admin
+   power is transferred to the community governance structure — the
+   token-holder Governor behind the 48-hour timelock — after which no
+   sensitive parameter can change without a public on-chain vote.
 
-Nothing is irreversible until the formal proposal is approved and the audited
+Nothing is irreversible until the formal proposal is approved and the reviewed
 contracts and operational setup are live.

@@ -29,7 +29,7 @@ Post-migration governance is **hybrid** (Option G4 below): OZ Governor + Timeloc
 
 | Dimension | Assessment |
 |---|---|
-| Complexity | Medium — ~150-line pallet, ~300-line vault, 5 small daemons; 3–6 weeks + audit |
+| Complexity | Medium — ~150-line pallet, ~300-line vault, 4 small daemons; 3–6 weeks + security review |
 | Trust model | 3-of-4 designated attestors (initially team-operated, PRD D4); damage bounded by rate caps + pause + independent monitor + separation of duties |
 | Meets supply requirement | Yes, by construction (pre-mint to vault) |
 | UX | One extrinsic on Pendulum, tokens arrive on Base automatically |
@@ -45,7 +45,7 @@ Post-migration governance is **hybrid** (Option G4 below): OZ Governor + Timeloc
 **Cons:**
 - The attestor set is a real trust assumption (mitigated by independence, caps, monitoring, pause — see PRD §8).
 - We own the operational burden: key ceremonies, monitoring, runbooks, gas funding.
-- Custom code must be audited (though the surface is small and standard).
+- Custom code needs careful adversarial review (though the surface is small and standard).
 
 ### Option B1: Ride existing infrastructure — AssetHub → Snowbridge → Ethereum → Base standard bridge
 
@@ -136,7 +136,7 @@ The decisive requirement was **day-one supply correctness**, which only a self-d
 
 ## Consequences
 
-**Easier:** tracker/investor-facing supply story (correct from day one); audits (small, standard surfaces); incident response (caps + pause + single trusted component); eventual decommissioning (turn off attestors, sweep vault per governance vote).
+**Easier:** tracker/investor-facing supply story (correct from day one); security review (small, standard surfaces); incident response (caps + pause + single trusted component); eventual decommissioning (turn off attestors, sweep vault per governance vote).
 
 **Harder:** we own attestor operations (key ceremonies, monitoring, gas funding, external-operator onboarding); users must trust the attestor set during the window (mitigated, not eliminated); no reverse path if anyone regrets migrating.
 
@@ -146,5 +146,5 @@ The decisive requirement was **day-one supply correctness**, which only a self-d
 
 1. [ ] Resolve PRD open decisions D1–D6 (see [PRD §4.2](pen-base-migration-prd.md))
 2. [ ] Spec the `token-migration` pallet in this repo
-3. [ ] Draft `PEN.sol` + `MigrationVault.sol` and select audit firms (PRD §9)
+3. [ ] Draft `PEN.sol` + `MigrationVault.sol` and run internal adversarial reviews (PRD §9)
 4. [ ] Open attestor-operator conversations (D4) and exchange coordination (PRD §11)

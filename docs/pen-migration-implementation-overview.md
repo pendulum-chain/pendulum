@@ -70,12 +70,14 @@ restricted to consumed nonces. Details and verified-not-vulnerable list in
 - Attestor & monitor: `tsc --noEmit` clean.
 - Portal: `yarn build` (tsc + vite) clean against `main`; committed through lint-staged.
 
-Four internal audit rounds have run; each found real issues (twice in a prior
-round's own fix), all fixed and recorded in
-[pen-migration-internal-review.md](pen-migration-internal-review.md). The
-round-4 fixes touch the fund-release path and have not had a subsequent
-internal round — the external audit (PRD §9) is the right next step and a hard
-gate before mainnet, not more internal iteration.
+Seven internal adversarial review rounds have run; each found real issues
+(sometimes in a prior round's own fix), all fixed with regression tests and
+recorded in [pen-migration-internal-review.md](pen-migration-internal-review.md).
+**Decision (PRD §9): no external audit is commissioned** — the residual risk is
+consciously accepted and carried by the threat-model mitigations (caps,
+independent monitoring + auto-pause, guardian, ≥48h timelock, separation of
+duties) plus the conservative soft launch. Standing practice: any change to the
+fund-release path triggers a fresh internal review round before deployment.
 
 ## Commit map (this repo)
 
@@ -90,7 +92,9 @@ attestor → monitor → runbooks → benchmarks → security fixes → env temp
    team-operated attestors, 3-month internal window target subject to the
    community discussion, transferable-only migration). The final window and
    parameters are fixed by the formal governance proposal.
-2. External audits (PRD §9) — the internal review doc is the starting brief.
+2. Security sign-off before mainnet funding: no external audit will be
+   commissioned (PRD §9) — a final internal review pass over the shipped
+   revision, plus the operational drills.
 3. Benchmark run on reference hardware → replace manual weights.
 4. Attestor operator onboarding + key ceremonies; Safe setups (D4).
 5. Exchange coordination, DefiLlama/CoinGecko supply endpoints, comms.

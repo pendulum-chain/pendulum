@@ -14,9 +14,10 @@ extension decisions in [token standards](pen-token-contract-standards.md).
 
 PEN holders call `tokenMigration.migrate(amount, base_address)` on Pendulum;
 the amount is burned and a `MigrationInitiated` event with a unique nonce is
-emitted. Five independent attestor daemons watch relay-finalized blocks (each
-on its own node) and submit `approve(nonce, recipient, amount)` to the
-MigrationVault on Base; the 3rd matching approval releases pre-minted tokens.
+emitted. Four attestor daemons (initially team-operated, PRD D4) watch
+relay-finalized blocks — each on its own node — and submit
+`approve(nonce, recipient, amount)` to the MigrationVault on Base; the 3rd
+matching approval releases pre-minted tokens.
 The PEN ERC-20 has its entire max issuance minted to the vault at deployment
 and no mint function — worst-case loss is bounded by the vault's rate caps,
 watched by an independent monitor that can auto-pause. One-way by design.
@@ -30,7 +31,7 @@ watched by an independent monitor that can auto-pause. One-way by design.
 | `token-migration` pallet | `pallets/token-migration/` | Burn-and-emit `migrate` (user) + `migrate_treasury`/`set_treasury_destination` (governance, fixed Base destination) extrinsics sharing one nonce space and event; unique nonces, dust/ED + lock handling, KeepAlive treasury withdraw, pause origin; 20 unit tests + benchmark test suite (frame-benchmarking v2) |
 | Runtime wiring | `runtime/pendulum/src/lib.rs` | Pallet index 102, min amount 1 PEN, pause = root/half-council or 2/3 technical committee, added to `BaseFilter` whitelist and `define_benchmarks`; compiles with and without `runtime-benchmarks` (Foucoco intentionally skipped — production-direct decision) |
 | `PEN.sol` | `contracts/src/` | Fixed-supply `ERC20 + ERC20Permit + ERC20Votes`, EIP-6372 timestamp clock, full supply minted to vault, no owner/mint/proxy |
-| `MigrationVault.sol` | `contracts/src/` | 3-of-5 on-chain approvals per exact tuple, permanent nonce consumption, 12→18 decimal conversion in one place, per-release + daily caps (defer, not kill), guardian pause (approvals recorded while paused), rotation retroactively invalidates removed attestors, two-step admin, pending-release accounting protecting the timelocked remainder sweep |
+| `MigrationVault.sol` | `contracts/src/` | 3-of-4 on-chain approvals per exact tuple, permanent nonce consumption, 12→18 decimal conversion in one place, per-release + daily caps (defer, not kill), guardian pause (approvals recorded while paused), rotation retroactively invalidates removed attestors, two-step admin, pending-release accounting protecting the timelocked remainder sweep |
 | `PENGovernor.sol` | `contracts/src/` | OZ Governor composition through a TimelockController (hybrid governance, timestamp clock) |
 | Deploy scripts | `contracts/script/` | `Deploy.s.sol` (vault→token→setToken dance, admin handover to bootstrap Safe), `DeployGovernance.s.sol` (timelock+governor role wiring, deployer admin renounced); parameters documented in `contracts/.env.example` |
 | Contract tests | `contracts/test/` | 30 Foundry tests incl. fuzz (supply invariant), full Governor proposal lifecycle, replay/race/rotation/caps/pause/sweep-pending scenarios |
@@ -53,7 +54,7 @@ watched by an independent monitor that can auto-pause. One-way by design.
 ## Internal security review — summary
 
 Adversarial review of the whole stack found and fixed: (1) attestor daemons
-crash-looping on the *normal* 3-of-5 approval race — now a benign re-checked
+crash-looping on the *normal* k-of-n approval race — now a benign re-checked
 skip; (2) monitor reads not pinned to one block — could false-positive a
 conservation alert and auto-pause the vault; (3) `sweepRemainder` could
 strand quorum-approved-but-deferred releases — now excluded via
@@ -84,11 +85,11 @@ attestor → monitor → runbooks → benchmarks → security fixes → env temp
 
 ## Still open (cannot be done from the repo)
 
-1. **Decisions D1–D6** (PRD §4.2) — D5 is decided (3-month window,
-   `earliestSweepTimestamp ≈ deploy + 3 months`, block-time improvement +
-   referendum fallback; see the [window analysis](pen-migration-window-analysis.md));
-   the others are answered in principle but not yet recorded/wired (notably
-   the 4-attestor set, D4).
+1. **Decisions D1–D6** (PRD §4.2) — all recorded as decided (burn, 18
+   decimals, 150M with the rounding delta to the treasury, 3-of-4
+   team-operated attestors, 3-month internal window target subject to the
+   community discussion, transferable-only migration). The final window and
+   parameters are fixed by the formal governance proposal.
 2. External audits (PRD §9) — the internal review doc is the starting brief.
 3. Benchmark run on reference hardware → replace manual weights.
 4. Attestor operator onboarding + key ceremonies; Safe setups (D4).

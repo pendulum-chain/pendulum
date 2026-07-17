@@ -19,7 +19,7 @@ Additional constraints: sr25519 signatures cannot be affordably verified on the 
 
 ## Decision
 
-**Option A — a purpose-built one-way migration:** a small `token-migration` pallet on Pendulum (burn/lock + event with a unique nonce and target H160), a fixed-supply ERC-20 on Base with the entire max issuance pre-minted into a MigrationVault, and a 3-of-5 set of independent attestors that watch relay-finalized Pendulum events and submit **on-chain approvals** to the vault; the third matching approval releases the tokens.
+**Option A — a purpose-built one-way migration:** a small `token-migration` pallet on Pendulum (burn + event with a unique nonce and target H160), a fixed-supply ERC-20 on Base with the entire max issuance pre-minted into a MigrationVault, and a 3-of-4 attestor set (initially team-operated, each on its own node — PRD D4) that watches relay-finalized Pendulum events and submits **on-chain approvals** to the vault; the third matching approval releases the tokens.
 
 Post-migration governance is **hybrid** (Option G4 below): OZ Governor + Timelock for Base-side contracts and treasury, Snapshot + executor Safe for off-chain/cross-chain matters, technical committee retained for Pendulum runtime actions.
 
@@ -30,7 +30,7 @@ Post-migration governance is **hybrid** (Option G4 below): OZ Governor + Timeloc
 | Dimension | Assessment |
 |---|---|
 | Complexity | Medium — ~150-line pallet, ~300-line vault, 5 small daemons; 3–6 weeks + audit |
-| Trust model | 3-of-5 designated attestors; damage bounded by rate caps + pause + independent monitor |
+| Trust model | 3-of-4 designated attestors (initially team-operated, PRD D4); damage bounded by rate caps + pause + independent monitor + separation of duties |
 | Meets supply requirement | Yes, by construction (pre-mint to vault) |
 | UX | One extrinsic on Pendulum, tokens arrive on Base automatically |
 | Ongoing burden | Attestor ops for the migration window only; nothing permanent |

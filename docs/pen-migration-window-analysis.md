@@ -8,7 +8,9 @@
 
 ## Why the window length is a vesting question
 
-Supply is **fixed at 149.93M PEN** (no inflation, confirmed). Every locked
+Live Pendulum issuance is **fixed at ~149.93M PEN** (no inflation, confirmed;
+the Base token's clean 150M includes a ~67k rounding delta that stays in the
+vault and goes to the treasury at the sweep — PRD D3). Every locked
 bucket except one can be freed *on demand*, with no calendar dependency:
 
 | Bucket | Amount | How it becomes migratable | Calendar-gated? |

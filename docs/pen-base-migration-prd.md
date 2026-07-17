@@ -58,10 +58,10 @@ The migration is **one-way**. No reverse flow (Base → Pendulum) will be built.
 
 | # | Decision | Outcome |
 |---|---|---|
-| D1 | Pendulum-side effect of `migrate` | **Burn.** Keeps the invariant `PEN on Pendulum + released on Base = max issuance` trivially auditable and leaves no honeypot. (Implemented.) |
+| D1 | Pendulum-side effect of `migrate` | **Burn.** Keeps the invariant `Σ burned on Pendulum = Σ releasable on Base` trivially auditable and leaves no honeypot. (Implemented.) |
 | D2 | Decimals on Base | **18** (scale ×10⁶ at release, in the vault only — V7). Exact conversion; no change to holder amounts, ownership share, or max supply. (Implemented.) |
-| D3 | Max issuance | **150,000,000 PEN**, pending final cross-check against canonical tokenomics/tracker figures at deployment. Live total issuance is ~149.93M with no inflation, so 150M fully covers all migrations. |
-| D4 | Attestor set composition | **4 attestors, all initially team-operated**, one per internal RPC node, threshold **3-of-4**. Rationale: Pendulum currently has no external node operators, and onboarding them means asking outsiders to fund + run a node for the whole window. Honest consequence: organizational independence is *not* claimed — blast-radius controls (caps, monitoring, guardian pause, ≥48h timelock) and **separation of duties** (guardian + monitor operated by someone other than the attestor-key holder) carry the security. Preferred direction: add genuinely independent external operators as the system matures. |
+| D3 | Max issuance | **Exactly 150,000,000 PEN — deliberately rounded up from the live Pendulum issuance (~149.93M, no inflation).** The live figure is an untidy artifact of the chain's history (fee burns etc.), not a meaningful tokenomics number; a clean canonical 150M is what trackers, integrators and the immutable constructor should carry, and it stays valid even as small fee burns keep nudging the live figure. Consequence: the **rounding delta (~67k PEN, ~0.045%) can never be released by migration** — no matching burns can ever exist for it — so it sits inert in the vault, is excluded from circulating supply, and at window close moves to the **community treasury via the governed, timelocked sweep (D5)**. It is not allocated to any person or team; only a governance decision can ever spend it. Per-holder conversion remains exactly 1:1. |
+| D4 | Attestor set composition | **4 attestors, all initially team-operated**, one per internal RPC node, threshold **3-of-4**. Rationale: Pendulum currently has no external node operators, and onboarding them means asking outsiders to fund + run a node for the whole window. Honest consequence: organizational independence is *not* claimed — blast-radius controls (caps, monitoring, guardian pause, ≥48h timelock) and **separation of duties** (guardian + monitor operated by someone other than the attestor-key holder) carry the security. |
 | D5 | Migration window end policy | Internal working target: **3-month earliest close** (`earliestSweepTimestamp ≈ deploy + 3 months`), conditional on the planned block-time improvement toward 12s; a referendum (`vesting-manager.remove_vesting_schedule`) force-unlocks any vesting residue and the permanent sentinel locks before close ([window analysis](pen-migration-window-analysis.md)). **Final window length is deliberately left to the community discussion / formal governance proposal** (the discussion post solicits 6-month / 12-month / open-ended feedback). An earliest close date is *not* an automatic sweep: moving any remainder requires a separate governance decision + timelocked execution. |
 | D6 | Encumbered balances policy | **Only unstaked, freely transferable PEN migrates** (enforced by the pallet). Staked/vesting/governance-locked balances must be freed first; UI and docs surface this. No vesting locks should extend beyond the window — residue handled per D5's referendum path. |
 
@@ -206,7 +206,7 @@ Ranked by where the risk actually lives:
 
 - **Adoption risk:** slow migration leaves circulating supply small and Snapshot quorums awkward — heightened by the 3-month window (D5): mitigate with front-loaded comms, early governance cap raises (≥ ~1.7M PEN/day average throughput is required arithmetic), quorum defined on circulating supply (G1), and the option to run the infrastructure a few weeks longer if needed.
 - **Unstaking delay friction (D6):** staked holders face the staking unbond period before they can migrate; comms must set expectations.
-- **Attestor key concentration (D4):** with a team-operated set, a single organization holds all attestor keys — separation of duties (guardian/monitor held by non-key-holders) is the load-bearing control and must be verifiable, not aspirational. Adding independent external operators as the system matures remains the preferred direction; onboarding them needs node-funding agreements and SLAs.
+- **Attestor key concentration (D4):** with a team-operated set, a single organization holds all attestor keys — separation of duties (guardian/monitor held by non-key-holders) is the load-bearing control and must be verifiable, not aspirational.
 - **Exchange coordination:** any CEX listing PEN needs a supported path (they migrate custody balances themselves via the same mechanism); start conversations in phase 1.
 - **Legal/regulatory review** of the migration mechanics and any public statements about supply — not covered by this PRD, must run in parallel.
 - **Pendulum chain end-state** (full sunset vs. minimal maintenance) is deliberately out of scope but interacts with D1 and G4; schedule that decision before phase 6.
@@ -215,7 +215,7 @@ Ranked by where the risk actually lives:
 
 - [ ] `token-migration` pallet (+ benchmarks, tests) in this repo, deployed to Foucoco then Pendulum
 - [ ] `PEN.sol`, `MigrationVault.sol` (+ Foundry test suite incl. fork tests and invariant tests)
-- [ ] Attestor daemon (open-sourced) + deployment guide for external operators
+- [ ] Attestor daemon (open-sourced) + operator deployment guide
 - [ ] Invariant monitor + alerting integration
 - [ ] Migration web UI
 - [ ] Governor + Timelock deployment scripts; Snapshot space config (vault-excluded strategy)

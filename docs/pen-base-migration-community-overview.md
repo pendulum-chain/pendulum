@@ -15,9 +15,9 @@ For the full engineering specification, see the
 
 ## The design in one paragraph
 
-PEN becomes a **fixed-supply ERC-20 on Base**: 150,000,000 PEN (pending final
-confirmation against canonical tokenomics), 18 decimals, with the **entire
-supply minted exactly once at deployment** into a migration vault. The token
+PEN becomes a **fixed-supply ERC-20 on Base**: exactly 150,000,000 PEN,
+18 decimals, with the **entire supply minted exactly once at deployment** into
+a migration vault. The token
 has **no mint function, no owner authority, and no upgradeable proxy** — its
 supply can never be increased by anyone. Holders migrate one-way: transferable
 PEN is removed from circulation on Pendulum (the working design burns it), and
@@ -48,9 +48,9 @@ governance votes). The UI shows your locked balance and what to do about it.
 
 Moving from 12 decimals (Pendulum) to 18 decimals (Base) is an exact technical
 conversion of base units by 10⁶. **1 PEN on Pendulum = 1 PEN on Base.** Your
-amount, your share of supply, and the maximum supply are unchanged.
+amount and your share of supply are unchanged.
 
-## Supply transparency
+## Supply transparency — and why exactly 150 million
 
 - `totalSupply()` on Base equals the full maximum supply from day one.
 - The vault's balance is **excluded from circulating supply** — only migrated
@@ -59,6 +59,29 @@ amount, your share of supply, and the maximum supply are unchanged.
   burn; an independent monitor continuously checks that
   `vault balance + released = total supply` and that nothing was ever released
   without a matching burn.
+
+One detail we want to state explicitly rather than have discovered later:
+Pendulum's live on-chain issuance today is slightly **below** 150 million
+(~149.93M) — an untidy artifact of the chain's history (fee burns and similar),
+not a meaningful tokenomics figure, and one that keeps drifting slightly as
+fees continue to be burned. The Base token is deliberately set to a **clean,
+canonical 150,000,000**, which is the right constant for trackers,
+integrations, and an immutable token contract.
+
+What happens to the difference (~67,000 PEN, about 0.045% of supply):
+
+- It **cannot be released by the migration** — releases require a matching
+  burn on Pendulum, and no burns can ever exist for tokens that were never in
+  circulation there. It sits inert in the vault.
+- It is **excluded from circulating supply** for the entire migration.
+- At window close it moves — together with any unmigrated remainder — to the
+  **community treasury**, via the same governed, timelocked sweep. It is not
+  allocated to the team or any individual; only a public governance decision
+  can ever spend it.
+
+Net effect: every holder's conversion stays exactly 1:1, and the rounding
+delta ends up under community control rather than as a strange decimal baked
+into the token forever.
 
 ## Security model, stated honestly
 
@@ -73,8 +96,7 @@ limits**:
   tuple; each key is isolated on separate infrastructure.
 - The attestors may initially be **team-operated** (Pendulum currently has no
   external node operators). **This is a meaningful trust trade-off, not a claim
-  of trustlessness.** The preferred direction is to add genuinely independent
-  external operators as the system matures.
+  of trustlessness.**
 
 Because operator independence is limited at the start, the protections that
 actually carry the security are:

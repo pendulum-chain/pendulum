@@ -40,8 +40,8 @@ manual observation), or an operator reports infrastructure compromise.
 **Trigger:** monitor M4 liveness alert (nonce unreleased past the grace
 period) or an attestor's own restart-loop/low-gas alerts.
 
-1. Determine how many attestors are down. With ≤ 2 of 5 down, releases
-   continue — treat as routine ops. With 3+ down, migrations queue up
+1. Determine how many attestors are down. With 1 of 4 down, releases
+   continue — treat as routine ops. With 2+ down, migrations queue up
    harmlessly (approvals missing, nothing to roll back) — escalate to the
    affected operators.
 2. Common causes, in order of frequency: Base gas wallet empty (fund it; the
@@ -113,7 +113,7 @@ Before the upgrade is enacted:
    doesn't.
 
 After enactment:
-4. Watch the fleet: all five daemons progressing past the upgrade block, test
+4. Watch the fleet: all four daemons progressing past the upgrade block, test
    migration of a small amount end-to-end, monitor `ok` lines resuming.
 5. If daemons exit on the upgrade block: they hold position (checkpoint stays
    put) — fix decoding, redeploy, they resume without loss.

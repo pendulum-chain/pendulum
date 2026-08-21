@@ -23,6 +23,8 @@ mod benchmarks {
 		T::Currency::make_free_balance_be(&caller, BalanceOf::<T>::max_value() / 2u32.into());
 		let amount = T::MinimumMigrationAmount::get().saturating_mul(10u32.into());
 		let base_address = H160::repeat_byte(0xBE);
+		// The pallet ships paused; benchmark the live path.
+		Paused::<T>::put(false);
 
 		#[extrinsic_call]
 		migrate(RawOrigin::Signed(caller.clone()), amount, base_address);
@@ -62,6 +64,7 @@ mod benchmarks {
 		T::Currency::make_free_balance_be(&treasury, BalanceOf::<T>::max_value() / 2u32.into());
 		let amount = T::MinimumMigrationAmount::get().saturating_mul(10u32.into());
 		TreasuryDestination::<T>::put(H160::repeat_byte(0xBE));
+		Paused::<T>::put(false);
 		let origin = T::TreasuryMigrateOrigin::try_successful_origin()
 			.map_err(|_| BenchmarkError::Weightless)?;
 

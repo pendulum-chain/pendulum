@@ -1,0 +1,213 @@
+# PEN Migration — Local Test Plan
+
+A runbook for validating the full migration stack on a laptop, with no public
+testnet involved. Work through the phases in order; each has explicit pass
+criteria. Phases 1–2 are independent and can be done in either order; phase 3
+needs both.
+
+**Tooling, and what each one actually proves**
+
+| Tool | Stands in for | Proves |
+|---|---|---|
+| **Anvil** (Foundry) | Base | Contract behaviour, deploy script, attestor/monitor wiring |
+| **Chopsticks** | Pendulum mainnet | Runtime upgrade + pallet against **real** balances, locks, vesting, treasury |
+| **Zombienet** | Relay + parachain | The **relay-chain finality** path — attestors only act on finalized blocks, which Chopsticks cannot faithfully reproduce |
+
+Chopsticks gives realistic *state*; Zombienet gives realistic *finality*. You
+need both, for different reasons. Neither requires Paseo or Foucoco.
+
+> Note: the public discussion post commits to testing on "Foucoco and Base
+> Sepolia". Local testing does not discharge that commitment — either wire the
+> pallet into the Foucoco runtime for a public run, or amend the messaging.
+
+---
+
+## Phase 0 — Prerequisites
+
+```bash
+# Build the runtime wasm that will be tested as the upgrade
+cargo build --release -p pendulum-runtime
+# -> target/release/wbuild/pendulum-runtime/pendulum_runtime.compact.compressed.wasm
+
+# Contracts + services
+cd contracts && forge build
+cd ../attestor && npm install && npm run build
+cd ../monitor && npm install && npm run build
+```
+
+Confirm the baseline is green before starting:
+
+```bash
+cargo test -p token-migration --features runtime-benchmarks
+cd contracts && forge test
+cd ../attestor && npm test
+cd ../monitor && npm test
+```
+
+**Pass:** all suites green.
+
+---
+
+## Phase 1 — Base side on Anvil
+
+Goal: the contracts behave as specified against a real EVM, and the deploy
+script works with realistic parameters.
+
+```bash
+anvil --port 8545          # terminal 1
+cd contracts
+cp .env.example .env       # fill in: 4 attestor addrs, Safes, caps, MAX_ISSUANCE, EARLIEST_SWEEP_TS
+forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --broadcast
+```
+
+Then verify, with `cast`:
+
+1. `PEN.totalSupply()` == `MAX_ISSUANCE`, and `PEN.balanceOf(vault)` == the same.
+2. `vault.threshold()` == 3, `vault.attestorCount()` == 4.
+3. `vault.paused()` == false; `vault.token()` == the PEN address.
+4. Approve one migration from 3 attestor keys → recipient receives
+   `palletAmount × 1e6`; `nonceConsumed(nonce)` == true.
+5. Approve from only 2 → nothing released.
+6. **Cap deferral:** approve an amount above `perReleaseCap` from 3 attestors →
+   no release, `pendingApprovedAmount` increases, `ReleasePending` emitted.
+   Then `setCaps` higher and call `release(...)` → succeeds.
+7. **Rolling cap:** consume the full `dailyCap`, confirm
+   `availableDailyAllowance()` == 0, warp 12h (`evm_increaseTime`), confirm it
+   has refilled by half.
+8. **Guardian pause:** pause from the guardian key → `release` reverts;
+   unpause is rejected from the guardian and accepted from admin.
+9. `sweepRemainder` reverts before `earliestSweepTimestamp`.
+
+**Pass:** all nine behave as described. (These mirror the Foundry suite, but
+run against the deployed bytecode and the real deploy script — that is the
+point.)
+
+---
+
+## Phase 2 — Pendulum side on Chopsticks (real mainnet state)
+
+Goal: the runtime upgrade applies cleanly, ships **paused**, and the pallet
+behaves correctly against genuine holder state — locked, vesting, staked and
+whale accounts as they exist today.
+
+`chopsticks.yml`:
+
+```yaml
+endpoint: wss://rpc-pendulum.prd.pendulumchain.tech
+mock-signature-host: true
+db: ./chopsticks-db.sqlite
+port: 8000
+```
+
+```bash
+npx @acala-network/chopsticks@latest --config chopsticks.yml \
+  --wasm-override target/release/wbuild/pendulum-runtime/pendulum_runtime.compact.compressed.wasm
+```
+
+Produce a block (`dev_newBlock`) so the upgrade takes effect, then check:
+
+1. **Ships paused (the critical one).** `tokenMigration.paused()` == `true`
+   immediately after the upgrade, with no storage written. Any `migrate` call
+   fails `MigrationsPaused`.
+2. `tokenMigration.nextNonce()` == 0, `totalMigrated()` == 0,
+   `treasuryDestination()` == None.
+3. Unpause via sudo/root (`setPaused(false)`), then run the cases below.
+4. **Happy path:** fund a dev account via `dev_setStorage`, `migrate(amount,
+   0x…)` → balance drops, total issuance drops by the same amount,
+   `MigrationInitiated` carries `{nonce, who, base_address, amount}` in that
+   field order (the attestor decodes positionally — this is the check that
+   catches event drift).
+5. **Encumbered balances, against real accounts.** Pick a genuinely staked
+   account and a genuinely vesting account from mainnet state and confirm
+   `migrate` of the locked portion fails; the transferable portion succeeds.
+6. **Dust/ED rule:** migrating all-but-a-sliver fails `WouldLeaveDust`;
+   migrating the entire free balance succeeds.
+7. **Zero address:** `migrate(amount, 0x000…0)` fails `InvalidBaseAddress`.
+8. **Treasury path:** `setTreasuryDestination` then `migrateTreasury` from
+   root — burns from the real `py/trsry` account, keeps it alive, and emits an
+   event identical in shape to a user migration.
+9. **Nonce continuity:** several migrations across both paths share one
+   monotonic nonce sequence with no gaps or reuse.
+
+**Pass:** 1–9 all hold. Item 1 is the launch-safety property; do not proceed if
+it fails.
+
+---
+
+## Phase 3 — End-to-end with real finality (Zombienet + Anvil)
+
+Goal: the whole pipeline works when the Substrate side has genuine
+relay-chain finality — the condition the attestors depend on.
+
+You already have `zombienet-macos-arm64` in the repo root. Spin up a relay
+plus the Pendulum parachain with the new runtime, and run Anvil alongside with
+the contracts from phase 1.
+
+Then start the **four attestors and the monitor**, each with its own
+`.env` — separate keys, separate checkpoint files, all pointed at the same
+vault:
+
+```bash
+PENDULUM_WS=ws://127.0.0.1:9944 BASE_RPC_URL=http://localhost:8545 \
+VAULT_ADDRESS=0x… ATTESTOR_PRIVATE_KEY=0x… CHECKPOINT_FILE=./cp1.json \
+npm start   # repeat for attestors 2–4 with distinct keys/checkpoints
+```
+
+Checks:
+
+1. **Full path:** unpause the pallet, `migrate` from a funded account → within
+   a block or two of finality, 3 approvals land and the recipient's PEN
+   balance on Anvil equals `amount × 1e6`.
+2. **The race is benign.** All four attestors see the same event; the two that
+   lose the race log a skip and **stay running**. No crash-loop, no fatal
+   alert. (This is the failure mode that took three review rounds to get
+   right — verify it explicitly.)
+3. **Restart safety:** kill an attestor mid-run, restart it → it resumes from
+   its checkpoint, re-derives nothing twice, no duplicate release.
+4. **Outage tolerance:** stop one attestor → migrations still release (3 of 4
+   remain). Stop a second → releases stop cleanly, nothing is lost, and the
+   monitor raises a liveness alert. Restart both → the backlog drains.
+5. **Monitor invariants:** the monitor logs `ok` with
+   `balance + released + swept == totalSupply` holding continuously.
+6. **Conservation alarm:** manually transfer PEN out of the vault on Anvil to
+   create a deficit → the monitor alerts and (if `GUARDIAN_PRIVATE_KEY` is
+   set) auto-pauses the vault. **Then verify the reverse:** send PEN *into*
+   the vault → surplus is tolerated, no false alert.
+7. **Portal:** run the portal against the local chain with
+   `VITE_MIGRATION_VAULT_ADDRESS` set to the Anvil vault; migrate through the
+   UI and watch the status card go 0/3 → 3/3 → released.
+
+**Pass:** 1–7 all hold.
+
+---
+
+## Phase 4 — Failure drills (the runbooks)
+
+Rehearse each runbook once against the local stack, so the first time you run
+them is not during an incident:
+
+| Runbook | Drill |
+|---|---|
+| RB-1 key compromise | Remove an attestor mid-flight; confirm its recorded approvals stop counting and a replacement can complete the quorum |
+| RB-2 outage | Covered by phase 3 item 4 |
+| RB-3 invariant breach | Covered by phase 3 item 6 — including the auto-pause and the recovery path |
+| RB-4 pause/unpause | Pause the pallet *and* the vault; confirm the correct resume order |
+| RB-5 runtime upgrade | Apply a second runtime upgrade while attestors run; confirm they keep decoding (or fail loudly rather than silently skipping) |
+| RB-6 attestor rotation | Add a 5th attestor, remove an old one, confirm a re-added address must approve again |
+| RB-7 window close | Warp past `earliestSweepTimestamp`, reconcile, sweep, confirm `totalSwept` and that the monitor does not false-alarm |
+
+---
+
+## Phase 5 — Exit criteria before mainnet
+
+- [ ] Phases 1–4 pass end to end.
+- [ ] The upgrade ships paused, verified on a Chopsticks fork of **live**
+      mainnet state (not a fresh chain).
+- [ ] A cap-deferred release recovers correctly without manual contract
+      surgery.
+- [ ] All four attestors survive a full run without a fatal exit.
+- [ ] The monitor alerts on a real injected deficit and tolerates a surplus.
+- [ ] Benchmarks re-run on reference hardware and the generated weights
+      replace the manual estimates.
+- [ ] A dry run of the deploy script with the **final** production parameters,
+      reviewed by someone other than whoever wrote the `.env`.

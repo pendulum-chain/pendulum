@@ -173,6 +173,32 @@ fn pause_blocks_migrations_and_unpause_restores_them() {
 	});
 }
 
+// Fail-safe launch property: a runtime upgrade that adds this pallet must not
+// enable migrations. Holders could otherwise burn PEN before the Base vault and
+// attestor set are live, with nothing able to release it.
+#[test]
+fn migrations_ship_paused_until_governance_enables_them() {
+	ExtBuilder::build().execute_with(|| {
+		System::set_block_number(1);
+
+		// No storage written yet — exactly the state after a runtime upgrade.
+		assert!(Paused::<Test>::get(), "the pallet must ship paused");
+		assert_noop!(
+			TokenMigration::migrate(RuntimeOrigin::signed(USER), UNIT, base_address()),
+			Error::<Test>::MigrationsPaused
+		);
+		assert_ok!(TokenMigration::set_treasury_destination(RuntimeOrigin::root(), base_address()));
+		assert_noop!(
+			TokenMigration::migrate_treasury(RuntimeOrigin::root(), UNIT),
+			Error::<Test>::MigrationsPaused
+		);
+
+		// Going live is an explicit, separate governance act.
+		assert_ok!(TokenMigration::set_paused(RuntimeOrigin::root(), false));
+		assert_ok!(TokenMigration::migrate(RuntimeOrigin::signed(USER), UNIT, base_address()));
+	});
+}
+
 #[test]
 fn set_paused_requires_pause_origin() {
 	run_test(|| {

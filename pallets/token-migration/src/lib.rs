@@ -122,9 +122,26 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type TotalMigrated<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
-	/// Whether migrations are paused.
+	/// Migrations ship **paused**. A runtime upgrade that adds this pallet
+	/// writes no storage, so the pallet reads as paused until governance
+	/// explicitly enables it with `set_paused(false)`.
+	///
+	/// This is deliberately fail-safe rather than a one-shot storage
+	/// migration: the runtime upgrade that enables `migrate` and the decision
+	/// to go live are separate acts. If `migrate` were live on enactment, a
+	/// referendum enacting before the Base vault and attestor set are
+	/// operational would let holders burn PEN with nothing able to release it.
+	/// Making it a property of the storage default means it cannot be
+	/// defeated by forgetting to wire a migration into `Executive`, and it
+	/// re-arms if the value is ever cleared.
+	#[pallet::type_value]
+	pub fn DefaultPaused<T: Config>() -> bool {
+		true
+	}
+
+	/// Whether migrations are paused. Defaults to `true` — see [`DefaultPaused`].
 	#[pallet::storage]
-	pub type Paused<T> = StorageValue<_, bool, ValueQuery>;
+	pub type Paused<T> = StorageValue<_, bool, ValueQuery, DefaultPaused<T>>;
 
 	/// The fixed Base destination for treasury migrations. `migrate_treasury`
 	/// always sends here; `None` until set by `set_treasury_destination`.

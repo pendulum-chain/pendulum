@@ -129,6 +129,11 @@ where
 {
 	ExtBuilder::build().execute_with(|| {
 		System::set_block_number(1);
+		// The pallet ships paused; governance unpauses once the Base side is
+		// live. Mirror that here so tests exercise the normal running state.
+		// `migrations_ship_paused_until_governance_enables_them` covers the
+		// default itself, without this helper.
+		crate::Paused::<Test>::put(false);
 		test();
 	});
 }

@@ -73,9 +73,14 @@ contract.
 
 ## What the shorter window changes operationally
 
-1. **`earliestSweepTimestamp` ≈ deploy + 3 months.** It is immutable and marks
-   the *earliest* allowed sweep — setting it at 3 months preserves the option
-   to wind down on schedule while never forcing it.
+1. **The advertised window and the on-chain floor are separate numbers.** We
+   aim to complete migration in ~3 months, but `earliestSweepTimestamp` — the
+   immutable moment before which the remainder provably cannot move — is set
+   to **2027-03-01**, roughly six months out. A later floor costs nothing
+   operationally: closing the window, pausing the pallet and shutting down the
+   attestors are all independent of sweeping, so the remainder simply waits in
+   the vault. A shorter floor would be the only irrecoverable choice, since it
+   cannot be extended afterwards.
 2. **Daily-cap throughput now matters.** Migrating ~150M PEN within ~90 days
    needs an *average* release throughput of ~1.7M PEN/day. The PRD's
    initial-cap guidance (~1–2% of vault per day = 1.5–3M/day) is compatible,
@@ -95,7 +100,7 @@ contract.
 
 ## Recommendation (under the 3-month decision)
 
-- Set `earliestSweepTimestamp ≈ deploy + 3 months`.
+- Set `earliestSweepTimestamp` = **1803859200** (2027-03-01 00:00 UTC).
 - Land the block-time improvement **within the first ~6 weeks** of the window;
   track window-average block time against the ~15.6s break-even.
 - Pre-draft the vesting-unlock referendum so it can be submitted at ~month 2

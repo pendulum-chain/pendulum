@@ -1,0 +1,20 @@
+{
+  "name": "pen-migration-releaser",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Retries deferred PEN migration releases on Base: watches ReleasePending and calls the permissionless release() once capacity allows",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "test": "tsc && node --test dist/checks.test.js"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  }
+}

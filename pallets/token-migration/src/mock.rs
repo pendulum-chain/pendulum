@@ -1,0 +1,139 @@
+use crate::{self as token_migration, default_weights::SubstrateWeight, Config};
+use frame_support::{
+	parameter_types,
+	traits::{ConstU32, Everything},
+};
+use frame_system::EnsureRoot;
+use sp_core::H256;
+use sp_runtime::{
+	traits::{BlakeTwo256, IdentityLookup},
+	BuildStorage,
+};
+
+type Block = frame_system::mocking::MockBlock<Test>;
+
+pub const UNIT: Balance = 1_000_000_000_000;
+
+frame_support::construct_runtime!(
+	pub enum Test
+	{
+		System: frame_system,
+		Balances: pallet_balances,
+		TokenMigration: token_migration,
+	}
+);
+
+pub type AccountId = u64;
+pub type Balance = u128;
+pub type Nonce = u64;
+
+parameter_types! {
+	pub const BlockHashCount: u64 = 250;
+	pub const SS58Prefix: u8 = 42;
+}
+
+impl frame_system::Config for Test {
+	type Block = Block;
+	type BaseCallFilter = Everything;
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type Nonce = Nonce;
+	type Hash = H256;
+	type Hashing = BlakeTwo256;
+	type AccountId = AccountId;
+	type Lookup = IdentityLookup<Self::AccountId>;
+	type RuntimeEvent = RuntimeEvent;
+	type BlockHashCount = BlockHashCount;
+	type Version = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = pallet_balances::AccountData<Balance>;
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
+	type SystemWeightInfo = ();
+	type SS58Prefix = SS58Prefix;
+	type OnSetCode = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type RuntimeTask = RuntimeTask;
+}
+
+parameter_types! {
+	pub const MaxLocks: u32 = 50;
+	pub const ExistentialDeposit: Balance = 1000;
+	pub const MaxReserves: u32 = 50;
+}
+
+impl pallet_balances::Config for Test {
+	type MaxLocks = MaxLocks;
+	type Balance = Balance;
+	type RuntimeEvent = RuntimeEvent;
+	type DustRemoval = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
+	type MaxReserves = MaxReserves;
+	type ReserveIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxFreezes = ();
+	type MaxHolds = ConstU32<1>;
+	type RuntimeHoldReason = RuntimeHoldReason;
+	type RuntimeFreezeReason = RuntimeFreezeReason;
+}
+
+parameter_types! {
+	pub const MinimumMigrationAmount: Balance = UNIT;
+	pub const TreasuryAccount: AccountId = 999;
+}
+
+impl Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type MinimumMigrationAmount = MinimumMigrationAmount;
+	type PauseOrigin = EnsureRoot<AccountId>;
+	type TreasuryAccount = TreasuryAccount;
+	type TreasuryMigrateOrigin = EnsureRoot<AccountId>;
+	type WeightInfo = SubstrateWeight<Test>;
+}
+
+// ------- Constants and Genesis Config ------ //
+
+pub const USER: AccountId = 1;
+pub const USER_INITIAL_BALANCE: Balance = 100 * UNIT;
+pub const TREASURY: AccountId = 999;
+pub const TREASURY_INITIAL_BALANCE: Balance = 1000 * UNIT;
+
+pub struct ExtBuilder;
+
+impl ExtBuilder {
+	pub fn build() -> sp_io::TestExternalities {
+		let mut storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+
+		pallet_balances::GenesisConfig::<Test> {
+			balances: vec![
+				(USER, USER_INITIAL_BALANCE),
+				(TREASURY, TREASURY_INITIAL_BALANCE),
+			],
+		}
+		.assimilate_storage(&mut storage)
+		.unwrap();
+
+		sp_io::TestExternalities::from(storage)
+	}
+}
+
+pub fn run_test<T>(test: T)
+where
+	T: FnOnce(),
+{
+	ExtBuilder::build().execute_with(|| {
+		System::set_block_number(1);
+		// The pallet ships paused; governance unpauses once the Base side is
+		// live. Mirror that here so tests exercise the normal running state.
+		// `migrations_ship_paused_until_governance_enables_them` covers the
+		// default itself, without this helper.
+		crate::Paused::<Test>::put(false);
+		test();
+	});
+}

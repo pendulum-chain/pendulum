@@ -1,12 +1,14 @@
-# PEN Migration — Internal Security Review (pre-audit)
+# PEN Migration — Internal Security Review (running log)
 
 **Date:** 2026-07-07
 **Scope:** MigrationVault.sol, PEN.sol, PENGovernor.sol, deploy scripts,
 token-migration pallet, attestor daemon, invariant monitor.
 **Method:** adversarial review by an independent reviewer agent against the
 PRD requirements (P1–P9, V1–V9, A1–A5, M1–M4), cross-checked against the test
-suite. This is an *internal* pass — it precedes and does not replace the
-external audits (PRD §9).
+suite. This log is the project's security-assurance record (PRD §9): **no
+external audit is commissioned** — the residual risk is consciously accepted
+and carried by the threat-model mitigations (PRD §8) and the review rounds
+recorded here.
 
 ## Findings and resolutions
 
@@ -266,7 +268,7 @@ the Base address and the portal check is bypassable by calling the extrinsic
 directly. The predicate was extracted to `attestor/src/checks.ts` and
 unit-tested (`attestor/src/checks.test.ts`, mirroring the monitor's `checks.ts`);
 the attestor previously had no unit tests, which is why the coupling gap slipped
-through. **Architectural note for the external audit:** the set of deterministic
+through. **Architectural note for all future review rounds:** the set of deterministic
 `approve` reverts and the attestor's `isUnreleasable` set must stay in exact
 lockstep — this is the third round a vault-side "reject bad tuple" change
 reopened a fleet-crash hole. A shared, tested enumeration of the reverting
@@ -299,11 +301,91 @@ outsider (pending entries require three real attestations of real burns);
 `migrate` correctly refuses locked/staked/vesting balance and the dust/ED
 remainder check is sound.
 
-## Follow-ups for the external audit
-- These round-4 fixes touch the fund-release path and have **not** had a
-  subsequent internal round; they are the first thing the external audit should
-  re-derive. Four internal rounds have each found an issue (twice in a prior
-  round's own fix) — continued internal iteration shows diminishing returns
-  against real external review.
+## Round 7 (2026-07-09, review focused on outsider exploit/brick across the full stack)
+
+The on-chain fund path (rounds 1–6) held up under an independent re-derivation.
+The core invariant — a release threshold can only ever be crossed inside
+`approve()` (the sole exception, a `setThreshold` *decrease*, is governance-gated
+and settling-period-guarded) — was re-confirmed, so `pendingApprovedAmount` is a
+complete reservation against `sweepRemainder` and no outsider can strand or
+double-release. The `isUnreleasable` ⇄ `approve()` revert lockstep is currently
+consistent (zero recipient / vault recipient / zero amount; the nonce-consumed
+and already-approved reverts are absorbed by the daemon's `alreadyHandled`
+re-check). The one novel finding is off-chain, in the monitor.
+
+### M1(r7). MEDIUM — Monitor liveness scan re-read every nonce ever created, every poll
+The round-5 fix batched the per-nonce `nonceConsumed` reads through Multicall3 to
+stop the liveness scan from outrunning the poll interval. But the scan still
+rebuilt its working set from scratch each poll: `for (nonce = 0; nonce <
+nextNonce) if (!nonceFirstSeen.has(nonce)) set(nonce, now)` re-added *every* nonce
+not currently in the map — including nonces already consumed and pruned. So each
+poll re-inserted and re-read all consumed nonces via Multicall, making the scan
+O(all migrations ever created) rather than O(pending backlog) and growing without
+bound for the whole migration window. At high migration volume this lengthens each
+check cycle (so the M2a/M2b conservation checks, which run first, fire less often)
+and eventually risks the liveness Multicall failing outright. It is not a
+fund-loss or correctness bug — genuinely-pending nonces keep their original
+first-seen time, so no missed or false liveness alerts — but it silently negated a
+fix the team believed was in place, worst exactly as the migration succeeds.
+
+**Resolution (fixed):** the monitor tracks a high-water mark
+(`nextNonceIncorporated`) and stamps only nonces in `[nextNonceIncorporated,
+nextNonce)` each poll (`newNonces` in `monitor/src/checks.ts`), so a
+consumed-and-pruned nonce is never re-added and the scan is O(pending backlog) as
+round 5 intended. Covered by a new `checks.test.ts` regression asserting a
+consumed nonce does not reappear on the following poll.
+
+### C1(r7). LOW — A migration above the per-release cap looks stuck to the user
+A single migration whose released amount exceeds `perReleaseCap` is burned on
+Pendulum and reaches quorum, but its release defers (marked pending) until
+governance raises the cap — recoverable, yet potentially a long, opaque wait. The
+pallet cannot bound this (it has no knowledge of the Base-side cap).
+**Resolution (fixed):** the portal migration page reads the vault's live
+`perReleaseCap` and, before submission, warns that an above-cap amount will be
+held until governance raises the cap, requiring an explicit confirmation and
+recommending the user split into sub-cap migrations (`getPerReleaseCap` in
+`src/helpers/ethereum.ts`; warning + confirmation checkbox in the migration page).
+
+### Round 7 — deployment / ops notes (no code change)
+- **Guardian slot vs. monitor auto-pause.** The vault has a single `guardian`
+  address and `pause()` accepts only `guardian`/`admin`. PRD G5 wants the guardian
+  to be a fast human Safe; PRD M3 wants the monitor to hold a guardian key for
+  auto-pause. One slot cannot be both (a Safe can't be driven by the monitor's
+  single EOA). Decide consciously at the key ceremony (D4). Post-handover
+  consequence: a monitor-EOA guardian whose key leaks can pause, and `unpause` is
+  then a ≥48h-timelocked governance action — a bounded but real griefing halt (the
+  documented "guardian can at worst halt" trade-off).
+- **Max issuance vs. staking inflation (PRD D3).** `MAX_ISSUANCE` is minted once
+  and is immutable; if Pendulum total issuance ever grew past it (e.g. via staking
+  inflation) during the window, late migrants could burn against a drained vault.
+  Confirmed **non-applicable**: staking rewards/inflation are set to zero on-chain
+  (`set_inflation`), so issuance is static — the genesis `InflationInfo` in
+  `node/src/chain_spec.rs` is historical. Because the parameter is immutable,
+  re-confirm at deploy time that `MAX_ISSUANCE` covers live issuance and that
+  rewards remain zero for the window's duration.
+- **Two-step admin handover window.** `Deploy.s.sol` calls
+  `transferAdmin(adminSafe)`, but the deployer stays admin until the Safe calls
+  `acceptAdmin()`. Correct (two-step prevents a wrong-address handover), yet the
+  deployer key is a live admin during the gap — treat it as sensitive and complete
+  `acceptAdmin` promptly.
+
+### Round 7 explicitly verified as not vulnerable
+Replay/double-release, conflicting-tuple non-merging, reentrancy (CEI + hook-free
+token), attestor generations (no threshold crossing outside `approve()`),
+`_approvers` bounded even under repeated rotation (`_inApprovers` dedup),
+`palletAmount * conversionFactor` cannot overflow uint256, `clearStalePending`
+underflow-safe and consumed-nonce-restricted; pallet burn atomicity, nonce
+monotonicity/overflow guard, dust/ED check against the `withdraw(TRANSFER)` lock
+enforcement, and the new `migrate_treasury`/`set_treasury_destination` pair
+(origin-gated, `KeepAlive`, shared nonce space, zero-address rejection); governor
+deploy-script role wiring (deployer admin renounced, executor = anyone,
+self-administered timelock) and PEN↔Governor clock-mode consistency; monitor
+auto-pause not weaponisable by an outsider (unchanged from round 6).
+
+## Residual risks and standing practices (no external audit — risk accepted)
+- Every change to the fund-release path (vault release/approve/sweep logic,
+  pallet burn path) gets a fresh independent adversarial review round before
+  deployment — rounds 5–7 re-derived the round-4 fixes and the full outsider
+  surface, and this practice replaces the external-audit backstop.
 - The attestor's positional event decode is shape-checked but still assumes
   field order; re-verify against metadata after any runtime upgrade (RB-5).

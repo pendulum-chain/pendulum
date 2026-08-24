@@ -53,3 +53,23 @@ export function vaultConservationDeficit(
 export function isStale(firstSeenMs: number, nowMs: number, graceSeconds: number): boolean {
 	return nowMs - firstSeenMs > graceSeconds * 1000;
 }
+
+/**
+ * Nonces observed for the first time this poll: the half-open range
+ * [incorporatedUpTo, nextNonce). The caller advances its high-water mark to
+ * `nextNonce` after stamping these, so each nonce enters the liveness set
+ * EXACTLY ONCE. A nonce already seen — and possibly since consumed and pruned
+ * from the pending set — is never re-added.
+ *
+ * This is what keeps the per-poll `nonceConsumed` scan O(pending backlog)
+ * rather than O(all migrations ever created). The earlier scan re-added every
+ * nonce `0..nextNonce` each poll (any nonce not currently in the map), so a
+ * consumed-and-pruned nonce was re-inserted and re-read via Multicall every
+ * poll forever — silently defeating the round-5 batching optimisation and
+ * letting the scan grow without bound for the whole migration window (round 7).
+ */
+export function newNonces(incorporatedUpTo: bigint, nextNonce: bigint): bigint[] {
+	const fresh: bigint[] = [];
+	for (let nonce = incorporatedUpTo; nonce < nextNonce; nonce++) fresh.push(nonce);
+	return fresh;
+}

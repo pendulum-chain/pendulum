@@ -20,7 +20,7 @@
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { createPublicClient, createWalletClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { isStale, releasedExceedsMigrated, vaultConservationDeficit } from "./checks.js";
+import { isStale, newNonces, releasedExceedsMigrated, vaultConservationDeficit } from "./checks.js";
 
 // Canonical Multicall3 deployment (same address on Base and every major chain),
 // used to batch the per-nonce liveness reads into a handful of RPC round-trips.
@@ -127,6 +127,15 @@ const nonceFirstSeen = new Map<bigint, number>();
  *  does not re-fire the highest-severity page on every single poll and train
  *  on-call to ignore it. Cleared when the nonce is finally consumed. */
 const livenessAlertedAt = new Map<bigint, number>();
+
+/** High-water mark: exclusive upper bound of nonces already incorporated into
+ *  `nonceFirstSeen`. Only nonces at or beyond this are stamped each poll, so a
+ *  nonce that was consumed and pruned from the pending set is never re-added.
+ *  Without it the scan re-inserted every `0..nextNonce` nonce every poll (any
+ *  not currently in the map), re-reading consumed ones via Multicall forever
+ *  and making the scan O(all migrations ever) instead of O(pending) — silently
+ *  defeating the round-5 batching (round 7). */
+let nextNonceIncorporated = 0n;
 
 let multicallUnavailable = false;
 
@@ -240,9 +249,10 @@ async function check(api: ApiPromise): Promise<void> {
 	// Multicall3 so a large release backlog (e.g. during a pause) cannot make a
 	// cycle outrun the poll interval and starve the conservation checks above.
 	const now = Date.now();
-	for (let nonce = 0n; nonce < nextNonce; nonce++) {
-		if (!nonceFirstSeen.has(nonce)) nonceFirstSeen.set(nonce, now);
+	for (const nonce of newNonces(nextNonceIncorporated, nextNonce)) {
+		nonceFirstSeen.set(nonce, now);
 	}
+	nextNonceIncorporated = nextNonce;
 	const pendingNonces = [...nonceFirstSeen.keys()];
 	if (pendingNonces.length > 0) {
 		const consumedFlags = await readNonceConsumed(pendingNonces);

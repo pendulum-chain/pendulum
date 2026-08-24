@@ -121,6 +121,7 @@ dia-oracle-runtime-api = { workspace = true }
 # Pendulum Pallets
 vesting-manager = { path = "../../pallets/vesting-manager", default-features = false }
 pallet-xcm-teleport = { path = "../../pallets/xcm-teleport", default-features = false }
+token-migration = { path = "../../pallets/token-migration", default-features = false }
 
 # Polkadot
 pallet-xcm = { workspace = true }
@@ -257,6 +258,7 @@ std = [
 	"parachain-staking/std",
 	"vesting-manager/std",
 	"pallet-xcm-teleport/std",
+	"token-migration/std",
 	"price-chain-extension/std",
 	"token-chain-extension/std",
 	"treasury-buyout-extension/std",
@@ -333,6 +335,7 @@ runtime-benchmarks = [
 	"staking/runtime-benchmarks",
 	"vesting-manager/runtime-benchmarks",
 	"pallet-xcm-teleport/runtime-benchmarks",
+	"token-migration/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -390,6 +393,7 @@ try-runtime = [
 	"orml-currencies-allowance-extension/try-runtime",
 	"vesting-manager/try-runtime",
 	"pallet-xcm-teleport/try-runtime",
+	"token-migration/try-runtime",
 	"bifrost-farming/try-runtime",
 	"zenlink-protocol/try-runtime",
 	"treasury-buyout-extension/try-runtime",

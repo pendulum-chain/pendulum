@@ -143,7 +143,7 @@ You already have `zombienet-macos-arm64` in the repo root. Spin up a relay
 plus the Pendulum parachain with the new runtime, and run Anvil alongside with
 the contracts from phase 1.
 
-Then start the **four attestors and the monitor**, each with its own
+Then start the **four attestors, the monitor and the releaser**, each with its own
 `.env` — separate keys, separate checkpoint files, all pointed at the same
 vault:
 
@@ -151,6 +151,14 @@ vault:
 PENDULUM_WS=ws://127.0.0.1:9944 BASE_RPC_URL=http://localhost:8545 \
 VAULT_ADDRESS=0x… ATTESTOR_PRIVATE_KEY=0x… CHECKPOINT_FILE=./cp1.json \
 npm start   # repeat for attestors 2–4 with distinct keys/checkpoints
+```
+
+The releaser needs only a gas-funded key and the Base endpoint — no Pendulum
+connection, and no privileges over the vault:
+
+```bash
+BASE_RPC_URL=http://localhost:8545 VAULT_ADDRESS=0x… \
+RELEASER_PRIVATE_KEY=0x… START_BLOCK=0 npm start
 ```
 
 Checks:
@@ -167,17 +175,22 @@ Checks:
 4. **Outage tolerance:** stop one attestor → migrations still release (3 of 4
    remain). Stop a second → releases stop cleanly, nothing is lost, and the
    monitor raises a liveness alert. Restart both → the backlog drains.
-5. **Monitor invariants:** the monitor logs `ok` with
+5. **Deferred releases drain by themselves.** Set a low `dailyCap`, migrate
+   enough to exhaust it, and confirm the excess is marked pending
+   (`ReleasePending`) rather than reverting — then that the releaser picks it
+   up and completes it as the bucket refills, with **no manual intervention**.
+   Restart the releaser mid-backlog and confirm it resumes from its state file.
+6. **Monitor invariants:** the monitor logs `ok` with
    `balance + released + swept == totalSupply` holding continuously.
-6. **Conservation alarm:** manually transfer PEN out of the vault on Anvil to
+7. **Conservation alarm:** manually transfer PEN out of the vault on Anvil to
    create a deficit → the monitor alerts and (if `GUARDIAN_PRIVATE_KEY` is
    set) auto-pauses the vault. **Then verify the reverse:** send PEN *into*
    the vault → surplus is tolerated, no false alert.
-7. **Portal:** run the portal against the local chain with
+8. **Portal:** run the portal against the local chain with
    `VITE_MIGRATION_VAULT_ADDRESS` set to the Anvil vault; migrate through the
    UI and watch the status card go 0/3 → 3/3 → released.
 
-**Pass:** 1–7 all hold.
+**Pass:** 1–8 all hold.
 
 ---
 

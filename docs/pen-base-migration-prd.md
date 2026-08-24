@@ -233,6 +233,7 @@ Review focus, ranked by where the risk actually lives:
 - [ ] `PEN.sol`, `MigrationVault.sol` (+ Foundry test suite incl. fork tests and invariant tests)
 - [ ] Attestor daemon (open-sourced) + operator deployment guide
 - [ ] Invariant monitor + alerting integration
+- [ ] Releaser service (drains cap-deferred releases; run 2 instances)
 - [ ] Migration web UI
 - [ ] Governor + Timelock deployment scripts; Snapshot space config (vault-excluded strategy)
 - [ ] Runbooks: key compromise, attestor outage, invariant breach, pause/unpause, runtime upgrade

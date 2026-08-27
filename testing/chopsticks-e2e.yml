@@ -1,0 +1,16 @@
+# Fork config for phase 3 (end-to-end), distinct from chopsticks.yml.
+#
+# Two differences from the phase 2 config, both deliberate:
+#
+#   * `db:` is enabled. Phase 3 does not assert the state of a just-upgraded
+#     chain -- that is phase 2's job -- so carrying state forward is harmless,
+#     and the cache makes a long run resilient to the upstream public RPC
+#     dropping the connection mid-test, which it does.
+#   * `block:` pins a height, so the fork is reproducible and the cache
+#     actually hits instead of chasing the chain head.
+#
+# Delete testing/.chopsticks-e2e.sqlite* to refetch from scratch.
+endpoint: wss://rpc-pendulum.prd.pendulumchain.tech
+mock-signature-host: true
+db: ./testing/.chopsticks-e2e.sqlite
+port: 8000

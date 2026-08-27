@@ -45,7 +45,59 @@ There is no sudo pallet on Pendulum, so root-only calls (`migrate_treasury`,
 `dev_setStorage`; the extrinsics themselves are covered by the pallet's unit
 tests.
 
-## Still to add
+## Phase 1 — contracts on Anvil
 
-Phase 1 (contracts on Anvil) and phase 3 (end-to-end with Zombienet, four
-attestors, the monitor and the releaser) are still manual — see the test plan.
+Deploys with the **real** `script/Deploy.s.sol`, including its two-step admin
+handover, then asserts against the deployed bytecode. Unit tests exercise the
+contract; this exercises the thing we ship and the script that ships it.
+
+```bash
+anvil --port 8545
+node testing/src/phase1-base.mjs
+```
+
+The daily cap is a **rolling leaky bucket and is shared state across checks**.
+It refills proportionally to the *current* `dailyCap`, so lowering the cap
+slows the decay of consumption already recorded — always `setCaps` first and
+warp afterwards, never the reverse.
+
+## Phase 3 — the whole pipeline together
+
+Runs four attestors, the monitor and the releaser against Chopsticks and Anvil,
+and asserts that a burn on the Substrate side arrives on Base with no manual
+step, that the fleet tolerates outages, and that a cap-deferred release drains
+itself.
+
+```bash
+anvil --port 8545
+npx @acala-network/chopsticks@latest --config testing/chopsticks-e2e.yml \
+  --wasm-override target/release/wbuild/pendulum-runtime/pendulum_runtime.compact.compressed.wasm
+# build the services once: (cd attestor && npm run build), same for monitor/ and releaser/
+node testing/src/phase3-e2e.mjs
+```
+
+Chopsticks stands in for Pendulum rather than Zombienet: it reports finalized
+heads, which is what the attestors subscribe to, and it carries real state.
+What it does **not** reproduce is genuine relay-chain finality timing — lag,
+and the possibility of a fork before finality. That remains a manual Zombienet
+exercise.
+
+Phase 3 uses `chopsticks-e2e.yml`, which *does* cache to a `db`: unlike phase 2
+it makes no claims about a just-upgraded chain, and the cache keeps a long run
+alive when the upstream public RPC drops the connection, which it does.
+
+### Things that cost real debugging time here
+
+- **Never reuse a wasm built with `--features runtime-benchmarks`.** It
+  references host functions Chopsticks does not provide and fails with
+  `Unresolved function ext_benchmarking_add_to_whitelist_version_1`. Building
+  the node with that feature silently overwrites the runtime wasm, so rebuild
+  with `cargo build --release -p pendulum-runtime` afterwards.
+- **`START_BLOCK` for the attestors must be the chain head**, not 0. A fork
+  sits at ~7.6M blocks and a daemon starting from 0 walks every one of them.
+  The same applies in production: it is the block the pallet went live at.
+- **Kill stray daemons between runs.** An aborted run leaves processes that
+  keep writing the same checkpoint files, so a fresh attestor loads a stale
+  checkpoint moments after the harness cleared it. `killStrays()` handles this,
+  and `stopAndWait` is used wherever a test depends on a daemon really being
+  down — signalling alone lets it land one more transaction.

@@ -35,6 +35,11 @@ interface Checkpoint {
 	lastProcessedBlock: number;
 }
 
+/** Multiplier applied to the estimated gas for `approve`. See the note at the
+ *  call site: the same call can take the cheap record path or the expensive
+ *  threshold-crossing release path. */
+const GAS_LIMIT_MULTIPLIER = 4n;
+
 interface MigrationEvent {
 	nonce: bigint;
 	recipient: `0x${string}`;
@@ -169,7 +174,23 @@ async function approve(event: MigrationEvent): Promise<void> {
 			functionName: "approve",
 			args: [event.nonce, event.recipient, event.palletAmount],
 		});
-		const txHash = await walletClient.writeContract(request);
+		// Pad the gas limit generously. The SAME approve call executes one of two
+		// very different paths depending on what has landed by the time it is
+		// mined: either it merely records an approval, or it is the one that
+		// crosses the threshold and therefore performs the release, including an
+		// ERC-20 transfer. Gas estimated while the cheap path applied is not
+		// enough for the expensive one, and with several attestors racing the
+		// same migration that reordering is the normal case, not an edge case.
+		// An under-estimate reverts OutOfGas, which reads as an unexplained
+		// failure and takes the daemon down.
+		const gasLimit = (request.gas ?? (await publicClient.estimateContractGas({
+			account,
+			address: config.vaultAddress,
+			abi: vaultAbi,
+			functionName: "approve",
+			args: [event.nonce, event.recipient, event.palletAmount],
+		}))) * GAS_LIMIT_MULTIPLIER;
+		const txHash = await walletClient.writeContract({ ...request, gas: gasLimit });
 		const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 		if (receipt.status !== "success") {
 			throw new Error(`approve transaction reverted: ${txHash} (${label})`);

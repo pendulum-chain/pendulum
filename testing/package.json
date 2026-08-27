@@ -1,0 +1,15 @@
+{
+  "name": "pen-migration-testing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local validation harness for the PEN migration: automates the checks in docs/pen-migration-local-test-plan.md",
+  "type": "module",
+  "scripts": {
+    "phase2": "node src/phase2-pendulum.mjs"
+  },
+  "dependencies": {
+    "@polkadot/api": "^11.3.1",
+    "@polkadot/keyring": "^12.6.2",
+    "@polkadot/util-crypto": "^12.6.2"
+  }
+}

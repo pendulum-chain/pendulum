@@ -40,12 +40,22 @@ interface PersistedState {
 	pending: Array<{ nonce: string; recipient: string; palletAmount: string }>;
 }
 
+/** Canonical Multicall3, deployed at the same address on Base and every major
+ *  chain. viem refuses to batch unless the chain definition declares it, even
+ *  when the contract is present on-chain, so it has to be named here. */
+const MULTICALL3 = "0xcA11bde05977b3631167028862bE2a173976CA11" as const;
+
 const baseChain = defineChain({
 	id: config.baseChainId,
 	name: "base",
 	nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
 	rpcUrls: { default: { http: [config.baseRpcUrl] } },
+	contracts: { multicall3: { address: MULTICALL3 } },
 });
+
+/** Set once Multicall3 turns out to be unavailable (a local devnet without the
+ *  predeploy), after which reads fall back to one call per nonce. */
+let multicallUnavailable = false;
 
 const account = privateKeyToAccount(config.releaserPrivateKey);
 const publicClient = createPublicClient({ chain: baseChain, transport: http(config.baseRpcUrl) });
@@ -125,23 +135,52 @@ async function ingestNewPending(toBlock: bigint, conversionFactor: bigint): Prom
 	}
 }
 
+/** Read `nonceConsumed` for many nonces, batched where possible.
+ *
+ *  Batching is an optimisation, never a requirement: a chain without the
+ *  Multicall3 predeploy must degrade to individual reads rather than failing
+ *  the cycle. Before this fallback existed a missing predeploy threw on every
+ *  cycle that had anything pending -- which is precisely when the releaser
+ *  matters -- so it silently never drained a single deferred release. */
+async function readConsumed(nonces: bigint[]): Promise<boolean[]> {
+	const single = (nonce: bigint) =>
+		publicClient.readContract({
+			address: config.vaultAddress,
+			abi: vaultAbi,
+			functionName: "nonceConsumed",
+			args: [nonce],
+		});
+
+	if (!multicallUnavailable) {
+		try {
+			const results = await publicClient.multicall({
+				contracts: nonces.map((nonce) => ({
+					address: config.vaultAddress,
+					abi: vaultAbi,
+					functionName: "nonceConsumed" as const,
+					args: [nonce] as const,
+				})),
+				allowFailure: true,
+			});
+			return results.map((r) => r.status === "success" && r.result === true);
+		} catch (error) {
+			multicallUnavailable = true;
+			await alert(
+				"multicall unavailable, using per-nonce reads",
+				`verify Multicall3 at ${MULTICALL3}: ${error}`,
+			);
+		}
+	}
+	return Promise.all(nonces.map(single));
+}
+
 /** Drop entries the vault has already consumed (by us, a peer, or a rival tuple). */
 async function pruneConsumed(): Promise<void> {
 	const entries = [...pending.values()];
 	if (entries.length === 0) return;
-	const results = await publicClient.multicall({
-		contracts: entries.map((p) => ({
-			address: config.vaultAddress,
-			abi: vaultAbi,
-			functionName: "nonceConsumed" as const,
-			args: [p.nonce] as const,
-		})),
-		allowFailure: true,
-	});
-	results.forEach((result, i) => {
-		if (result.status === "success" && result.result === true) {
-			pending.delete(entries[i].nonce);
-		}
+	const consumed = await readConsumed(entries.map((p) => p.nonce));
+	entries.forEach((entry, i) => {
+		if (consumed[i]) pending.delete(entry.nonce);
 	});
 }
 

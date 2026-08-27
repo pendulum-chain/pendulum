@@ -16,9 +16,10 @@ needs both.
 Chopsticks gives realistic *state*; Zombienet gives realistic *finality*. You
 need both, for different reasons. Neither requires Paseo or Foucoco.
 
-> Note: the public discussion post commits to testing on "Foucoco and Base
-> Sepolia". Local testing does not discharge that commitment — either wire the
-> pallet into the Foucoco runtime for a public run, or amend the messaging.
+> Foucoco is **not** used: that chain is no longer live. Validation is this
+> local stack plus a public run on Base Sepolia for the contracts. The
+> discussion post's reference to Foucoco should be corrected when the formal
+> proposal is published.
 
 ---
 

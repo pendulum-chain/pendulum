@@ -1,9 +1,7 @@
 # PEN → Base Migration — Implementation Overview
 
-**Date:** 2026-07-07
-**Branches:** `feat/pen-base-migration` in this repo and in the portal repo
-(`~/Documents/portal`, based on the React 19 branch `fix-issues-with-new-ss58format`;
-note: `origin/staging` there is still the older Preact codebase).
+**Branches:** `feat/pen-to-base-migration` in this repo (PR #559) and
+`feat/pen-base-migration` in the portal repo (PR #655).
 
 This document is the map of everything built for the migration. Design and
 requirements live in the [PRD](pen-base-migration-prd.md); the approach
@@ -24,27 +22,29 @@ watched by an independent monitor that can auto-pause. One-way by design.
 
 ## Components delivered
 
-### Pendulum repo (`feat/pen-base-migration`)
+### Pendulum repo (`feat/pen-to-base-migration`)
 
 | Component | Location | Status |
 |---|---|---|
-| `token-migration` pallet | `pallets/token-migration/` | Burn-and-emit `migrate` (user) + `migrate_treasury`/`set_treasury_destination` (governance, fixed Base destination) extrinsics sharing one nonce space and event; unique nonces, dust/ED + lock handling, KeepAlive treasury withdraw, pause origin; 20 unit tests + benchmark test suite (frame-benchmarking v2) |
-| Runtime wiring | `runtime/pendulum/src/lib.rs` | Pallet index 102, min amount 1 PEN, pause = root/half-council or 2/3 technical committee, added to `BaseFilter` whitelist and `define_benchmarks`; compiles with and without `runtime-benchmarks` (Foucoco intentionally skipped — production-direct decision) |
+| `token-migration` pallet | `pallets/token-migration/` | Burn-and-emit `migrate` (user) + `migrate_treasury`/`set_treasury_destination` (governance, fixed Base destination) extrinsics sharing one nonce space and event; unique nonces, dust/ED + lock handling, KeepAlive treasury withdraw, ships paused, pause origin; 21 unit tests + benchmark test suite (frame-benchmarking v2) |
+| Runtime wiring | `runtime/pendulum/src/lib.rs` | Pallet index 102, minimum migration amount 100 PEN (sized to dominate the attestor fleet's per-migration Base gas, so dust spam cannot grief it), pause = root/half-council or 2/3 technical committee, added to `BaseFilter` whitelist and `define_benchmarks`; compiles with and without `runtime-benchmarks` (Foucoco intentionally skipped — that chain is no longer live; validation is local plus Base Sepolia) |
 | `PEN.sol` | `contracts/src/` | Fixed-supply `ERC20 + ERC20Permit + ERC20Votes`, EIP-6372 timestamp clock, full supply minted to vault, no owner/mint/proxy |
 | `MigrationVault.sol` | `contracts/src/` | 3-of-4 on-chain approvals per exact tuple, permanent nonce consumption, 12→18 decimal conversion in one place, per-release + daily caps (defer, not kill), guardian pause (approvals recorded while paused), rotation retroactively invalidates removed attestors, two-step admin, pending-release accounting protecting the timelocked remainder sweep |
 | `PENGovernor.sol` | `contracts/src/` | OZ Governor composition through a TimelockController (hybrid governance, timestamp clock) |
 | Deploy scripts | `contracts/script/` | `Deploy.s.sol` (vault→token→setToken dance, admin handover to bootstrap Safe), `DeployGovernance.s.sol` (timelock+governor role wiring, deployer admin renounced); parameters documented in `contracts/.env.example` |
-| Contract tests | `contracts/test/` | 30 Foundry tests incl. fuzz (supply invariant), full Governor proposal lifecycle, replay/race/rotation/caps/pause/sweep-pending scenarios |
+| Contract tests | `contracts/test/` | 37 Foundry tests incl. fuzz (supply invariant), full Governor proposal lifecycle, replay/race/rotation/caps/pause/sweep-pending scenarios |
 | Attestor daemon | `attestor/` | TypeScript; finalized-heads-only, strictly ordered blocks, crash-safe checkpoint, idempotent + race-tolerant approvals, fail-fast on decode errors (4-field shape asserted), startup set-membership check, low-gas/webhook alerts; ops guide in its README |
-| Invariant monitor | `monitor/` | Independent watchdog: conservation checks (block-pinned reads) + per-nonce liveness; webhook alerts; optional guardian auto-pause |
-| Runbooks | `docs/pen-migration-runbooks.md` | RB-1…RB-6: key compromise, outage, invariant breach, pause/unpause, runtime upgrade, attestor rotation |
-| Internal security review | `docs/pen-migration-internal-review.md` | Independent adversarial pass; 2 high + 1 medium findings, all fixed (see below) |
+| Invariant monitor | `monitor/` | Independent watchdog: conservation checks (block-pinned reads) + per-nonce liveness batched via Multicall3; webhook alerts; optional guardian auto-pause |
+| Releaser | `releaser/` | Drains cap-deferred releases via the permissionless `release()`; unprivileged gas-only key; classifies self-healing vs governance-blocked failures |
+| Test harness | `testing/` | Automates phase 2 of the local test plan against a Chopsticks fork of live mainnet state |
+| Runbooks | `docs/pen-migration-runbooks.md` | RB-1…RB-7: key compromise, outage, invariant breach, pause/unpause, runtime upgrade, attestor rotation, window close |
+| Internal security review | `docs/pen-migration-internal-review.md` | The project's security-assurance record across seven adversarial rounds |
 
-### Portal repo (`feat/pen-base-migration`)
+### Portal repo (`feat/pen-base-migration`, PR #655)
 
 | Component | Location | Status |
 |---|---|---|
-| Migration page | `src/pages/migration/` | Amount validation (transferable, minimum, migrate-all-or-leave-ED), EIP-55 address validation with checksummed preview, `eth_getCode` contract-destination warning + extra confirmation, irreversibility confirmation, pause banner, locked-balance hint, post-finalization release tracking (approvals x/3 → released, BaseScan link) |
+| Migration page | `src/pages/migration/` | Amount validation (transferable, minimum, migrate-all-or-leave-ED, per-release-cap warning), EIP-55 address validation with checksummed preview, `eth_getCode` contract-destination warning + extra confirmation, irreversibility confirmation, pause banner, locked-balance hint, post-finalization release tracking (approvals x/3 → released, BaseScan link) |
 | Pallet hook | `src/hooks/migration/useMigrationPallet.tsx` | Extrinsic submission resolving at finality with the emitted nonce; pause query; on-chain constants |
 | Base status hook | `src/hooks/migration/useBaseReleaseStatus.ts` | Polls the vault over plain JSON-RPC (no EVM dependency; selectors precomputed, keccak via `@polkadot/util-crypto`) |
 | EVM helpers | `src/helpers/ethereum.ts` | EIP-55 checksum, payload-hash mirroring the vault's `abi.encode`, minimal `eth_call`/`eth_getCode` client |
@@ -64,11 +64,14 @@ restricted to consumed nonces. Details and verified-not-vulnerable list in
 
 ## Verification status
 
-- Pallet: `cargo test -p token-migration` 11/11 (incl. benchmark suite).
-- Runtime: `cargo check -p pendulum-runtime` clean, both feature sets.
-- Contracts: `forge test` 35/35 (incl. 512-run fuzz).
-- Attestor & monitor: `tsc --noEmit` clean.
-- Portal: `yarn build` (tsc + vite) clean against `main`; committed through lint-staged.
+| Suite | Result |
+|---|---|
+| `cargo test -p token-migration` | 21 (22 with `runtime-benchmarks`) |
+| `cargo check -p pendulum-runtime` | clean, both feature sets |
+| `forge test` | 37, incl. 512-run fuzz and a full Governor lifecycle |
+| `attestor` / `monitor` / `releaser` | 6 / 7 / 7 |
+| Portal `yarn build` (tsc + vite) | clean against `main` |
+| `testing/src/phase2-pendulum.mjs` | 14/14 against a Chopsticks fork of live mainnet state |
 
 Seven internal adversarial review rounds have run; each found real issues
 (sometimes in a prior round's own fix), all fixed with regression tests and
@@ -78,12 +81,6 @@ consciously accepted and carried by the threat-model mitigations (caps,
 independent monitoring + auto-pause, guardian, ≥48h timelock, separation of
 duties) plus the conservative soft launch. Standing practice: any change to the
 fund-release path triggers a fresh internal review round before deployment.
-
-## Commit map (this repo)
-
-`docs → pallet → contracts(core) → runtime wiring → contracts(governance) →
-attestor → monitor → runbooks → benchmarks → security fixes → env template`
-— see `git log` on the branch for hashes.
 
 ## Still open (cannot be done from the repo)
 
@@ -95,7 +92,7 @@ attestor → monitor → runbooks → benchmarks → security fixes → env temp
 2. Security sign-off before mainnet funding: no external audit will be
    commissioned (PRD §9) — a final internal review pass over the shipped
    revision, plus the operational drills.
-3. Benchmark run on reference hardware → replace manual weights.
+3. Benchmark weights generated locally; regenerate on production hardware if the launch timeline allows.
 4. Attestor operator onboarding + key ceremonies; Safe setups (D4).
 5. Exchange coordination, DefiLlama/CoinGecko supply endpoints, comms.
 6. Portal deploy config: set `VITE_MIGRATION_VAULT_ADDRESS` once deployed;

@@ -1,0 +1,29 @@
+# Zombienet: real relay-chain finality for the PEN migration attestors.
+# Derived from the repo-root config.toml, with absolute binary paths (zombienet
+# does not expand `~`) and RPC ports pinned so the harness can attach.
+[settings]
+timeout = 1000
+
+[relaychain]
+default_command = "/Users/marcel/Documents/polkadot/target/testnet/polkadot"
+default_args = ["-lparachain=debug"]
+chain = "rococo-local"
+
+  [[relaychain.nodes]]
+  name = "validator01"
+  validator = true
+
+  [[relaychain.nodes]]
+  name = "validator02"
+  validator = true
+
+[[parachains]]
+id = 2094
+cumulus_based = true
+chain_spec_path = "/Users/marcel/Documents/pendulum/testing/.zombienet-pendulum-raw.json"
+
+  [parachains.collator]
+  name = "alice"
+  command = "/Users/marcel/Documents/pendulum/target/release/pendulum-node"
+  rpc_port = 9944
+  args = ["-lparachain=info", "-lruntime=info"]

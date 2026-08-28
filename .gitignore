@@ -16,3 +16,5 @@
 .DS_Store
 .idea
 .vscode
+# Locally generated Zombienet chain spec (13MB, rebuilt by make-zombienet-spec.mjs)
+testing/.zombienet-pendulum-raw.json*

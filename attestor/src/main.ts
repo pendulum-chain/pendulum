@@ -40,6 +40,11 @@ interface Checkpoint {
  *  threshold-crossing release path. */
 const GAS_LIMIT_MULTIPLIER = 4n;
 
+/** How persistently to confirm that a failed approval was merely a lost race
+ *  before treating it as fatal. See `alreadyHandledSettled`. */
+const RACE_RECHECK_ATTEMPTS = 5;
+const RACE_RECHECK_DELAY_MS = 3000;
+
 interface MigrationEvent {
 	nonce: bigint;
 	recipient: `0x${string}`;
@@ -150,6 +155,31 @@ async function alreadyHandled(event: MigrationEvent): Promise<boolean> {
 		functionName: "hasApproved",
 		args: [payloadHash(event), account.address],
 	});
+}
+
+/**
+ * `alreadyHandled`, but tolerant of an RPC that has not caught up yet.
+ *
+ * Public endpoints are load-balanced across nodes and give no read-after-write
+ * consistency guarantee, so immediately after our transaction reverts the
+ * state proving WHY it reverted may not be visible yet. A single read that
+ * happens to hit a lagging node reports "not handled", which turns the most
+ * ordinary event in this system — losing the k-of-n race — into an
+ * unexplained failure and takes the daemon down. Re-check with backoff before
+ * concluding anything is actually wrong.
+ */
+async function alreadyHandledSettled(event: MigrationEvent): Promise<boolean> {
+	for (let attempt = 0; attempt < RACE_RECHECK_ATTEMPTS; attempt++) {
+		try {
+			if (await alreadyHandled(event)) return true;
+		} catch (error) {
+			log("recheck failed, retrying", error);
+		}
+		if (attempt < RACE_RECHECK_ATTEMPTS - 1) {
+			await new Promise((resolve) => setTimeout(resolve, RACE_RECHECK_DELAY_MS));
+		}
+	}
+	return false;
 }
 
 /** Submit the approval for one migration event, skipping work already done. */

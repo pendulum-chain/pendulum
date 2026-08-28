@@ -248,6 +248,14 @@ async function main() {
 	});
 
 	await check("admin accepts the two-step handover", async () => {
+		// Wait for the deploy's transferAdmin to be visible before acting on it.
+		// Base Sepolia's public RPC is load-balanced and gives no read-after-write
+		// guarantee, so a read issued straight after the deploy can hit a node
+		// that has not caught up and report pendingAdmin as unset.
+		await waitFor(
+			async () => (await read(V, "pendingAdmin", [])).toLowerCase() === ctx.roles.admin.address.toLowerCase(),
+			{ timeoutMs: 120_000, intervalMs: 3000, label: "pendingAdmin to be visible on the RPC" },
+		);
 		await send(ctx, ctx.roles.admin, { ...V, functionName: "acceptAdmin", args: [] });
 		assertEq((await read(V, "admin", [])).toLowerCase(), ctx.roles.admin.address.toLowerCase(), "admin");
 	});

@@ -18,3 +18,7 @@
 .vscode
 # Locally generated Zombienet chain spec (13MB, rebuilt by make-zombienet-spec.mjs)
 testing/.zombienet-pendulum-raw.json*
+
+# Rehearsal secrets and run artifacts (throwaway keys, but never commit them)
+testing/.env.rehearsal
+testing/.rehearsal/

@@ -11,7 +11,7 @@ needs both.
 |---|---|---|
 | **Anvil** (Foundry) | Base | Contract behaviour, deploy script, attestor/monitor wiring |
 | **Chopsticks** | Pendulum mainnet | Runtime upgrade + pallet against **real** balances, locks, vesting, treasury |
-| **Zombienet** | Relay + parachain | The **relay-chain finality** path — attestors only act on finalized blocks, which Chopsticks cannot faithfully reproduce |
+| **Zombienet** | Relay + parachain | The **relay-chain finality** path — attestors only act on finalized blocks, which Chopsticks cannot faithfully reproduce (phase 4) |
 
 Chopsticks gives realistic *state*; Zombienet gives realistic *finality*. You
 need both, for different reasons. Neither requires Paseo or Foucoco.
@@ -155,10 +155,7 @@ carries real state. Use `testing/chopsticks-e2e.yml`, which caches to a `db` —
 unlike phase 2 it makes no claim about a just-upgraded chain, and the cache
 keeps a long run alive when the upstream public RPC drops the connection.
 
-**Still manual: Zombienet.** What Chopsticks does not reproduce is genuine
-relay-chain finality timing — lag, and the possibility of a fork before
-finality. Running the same fleet against `zombienet-macos-arm64` with a relay
-plus the Pendulum parachain remains an exercise to do before mainnet.
+Genuine relay-chain finality is covered separately in phase 4.
 
 The script starts the four attestors, the monitor and the releaser itself,
 each with its own key and checkpoint file. To run them by hand instead:
@@ -217,7 +214,66 @@ rewriting the checkpoint files a fresh run just cleared.
 
 ---
 
-## Phase 4 — Failure drills (the runbooks)
+## Phase 4 — real relay-chain finality (Zombienet)
+
+Goal: prove the finality gate is real. Chopsticks finalises every block it
+authors, so an attestor reading finalized heads there is indistinguishable from
+one reading best heads — the safety property is untested by construction. This
+phase runs a genuine relay chain, where finalized lags best.
+
+```bash
+node testing/src/make-zombienet-spec.mjs     # generates testing/.zombienet-pendulum-raw.json
+./zombienet-macos-arm64 spawn testing/zombienet.toml --provider native
+node testing/src/phase4-zombienet.mjs        # auto-discovers the collator RPC
+```
+
+Checks:
+
+1. The collator serves the **Pendulum** runtime (not the relay — the collator
+   exposes an embedded relay client too, and a fixed port is as likely to hit
+   Rococo).
+2. `tokenMigration` is in the runtime metadata with all four extrinsics.
+3. **Ships paused** on a chain that never wrote the storage — the same
+   fail-safe default phase 2 checks against forked mainnet state, here on a
+   chain built from genesis.
+4. The parachain is authoring blocks.
+5. **Finalized advances and lags best.** This is the phase: it proves both that
+   the relay is finalising parachain blocks at all, and that finality is not
+   instant.
+6. The lag is strictly positive at least once — i.e. genuinely relay-driven.
+7. `subscribeFinalizedHeads` delivers monotonically increasing heads, which is
+   the exact subscription the attestor uses.
+
+**Pass:** 7/7. Observed: a steady ~2-block parachain finality lag (best #9 /
+finalized #7) behind a relay running its own ~3-block lag — against mainnet the
+measured figure is ~2 blocks / ~47s, comfortably inside the monitor's
+`GRACE_SECONDS` default of 1800.
+
+Three traps here cost real debugging time:
+
+- **A benchmarking build breaks the relay, not the node.** `cargo build
+  --features runtime-benchmarks` rewrites the runtime wasm embedded in the node
+  binary, `build-spec` propagates it into the chain spec, and the result
+  decompresses past the relay's `VALIDATION_CODE_BOMB_LIMIT`
+  (`MAX_CODE_SIZE * 4` = 12 MiB). The relay then rejects every candidate with
+  `PossibleBomb` and the parachain stalls at its own block #1 while the relay
+  looks perfectly healthy. `make-zombienet-spec.mjs` swaps in the shipped
+  artifact to avoid this.
+- **The collator must be named `alice`.** Zombienet only derives `//Alice` for a
+  node with that name, and genesis pins the authority to that key. A collator
+  renamed by a collision (`alice-1`) silently gets a key that is not in genesis
+  and never authors. Hence the relay validators being `validator01`/`02`.
+- **`build-spec` cannot read back its own output**, so Zombienet cannot build
+  this spec itself; see `fix-chainspec.mjs`.
+
+An older relay is fine. This ran against polkadot **0.9.40** driving a
+**1.6.0** collator; the version gap does not affect finality behaviour, and the
+only incompatibility encountered was the code-size limit above, which is our
+artifact's problem rather than the relay's.
+
+---
+
+## Phase 5 — Failure drills (the runbooks)
 
 Rehearse each runbook once against the local stack, so the first time you run
 them is not during an incident:
@@ -234,9 +290,9 @@ them is not during an incident:
 
 ---
 
-## Phase 5 — Exit criteria before mainnet
+## Phase 6 — Exit criteria before mainnet
 
-- [ ] Phases 1–4 pass end to end.
+- [ ] Phases 1–5 pass end to end.
 - [ ] The upgrade ships paused, verified on a Chopsticks fork of **live**
       mainnet state (not a fresh chain).
 - [ ] A cap-deferred release recovers correctly without manual contract

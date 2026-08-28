@@ -237,7 +237,24 @@ async function main() {
 	log(`PEN   ${pen}`);
 	const V = { address: vault, abi: vaultAbi };
 	const P = { address: pen, abi: erc20Abi };
-	const read = (c, fn, args) => ctx.pub.readContract({ ...c, functionName: fn, args });
+	/** Contract read that rides out a throttled or flaky endpoint.
+	 *  These reads run inside polling loops, so a single transient failure would
+	 *  otherwise abort a wait that was progressing perfectly well — the same
+	 *  mistake the attestor made by treating a rate limit as fatal. */
+	async function read(c, fn, args) {
+		let last;
+		for (let attempt = 0; attempt < 5; attempt++) {
+			try {
+				return await ctx.pub.readContract({ ...c, functionName: fn, args });
+			} catch (error) {
+				last = error;
+				const text = `${error?.details ?? ""} ${error?.shortMessage ?? ""} ${error?.message ?? ""}`;
+				if (!/rate limit|too many requests|timeout|fetch failed|50[234]/i.test(text)) throw error;
+				await sleep(3000 * (attempt + 1));
+			}
+		}
+		throw last;
+	}
 
 	/** Retry an assertion until it holds. Base Sepolia's public RPC is
 	 *  load-balanced and eventually consistent, so a read issued right after a

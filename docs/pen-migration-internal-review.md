@@ -382,6 +382,53 @@ deploy-script role wiring (deployer admin renounced, executor = anyone,
 self-administered timelock) and PEN↔Governor clock-mode consistency; monitor
 auto-pause not weaponisable by an outsider (unchanged from round 6).
 
+## Full-stack rehearsal on Base Sepolia (2026-08-28)
+
+Two defects that no prior round could reach. Both are failures of an assumption
+the local harness cannot violate: Anvil is a single node with instant inclusion,
+so it always reads its own writes and never throttles. A public, load-balanced
+endpoint does neither.
+
+### C1(rehearsal). CRITICAL — An attestor exited on the ordinary k-of-n race
+
+Losing the approval race is the most common event in this system: with four
+attestors watching the same migration, three win and one loses every time. The
+loser's transaction reverts, and the daemon re-reads the vault to confirm the
+revert was benign before deciding what to do.
+
+That confirming read hit a node that had not yet imported the block, reported
+"not handled", and the benign race was escalated to a fatal exit. Verified
+rather than inferred: replaying the reverted transaction one block earlier
+succeeds, and it consumed 26k of 500k gas — an early custom-error revert, not
+OutOfGas.
+
+This is the same failure class as C1(r6) and the gas under-estimation before it,
+reached by a third route. **Fixed:** the confirmation now re-checks with backoff
+before concluding anything is wrong.
+
+### C2(rehearsal). CRITICAL — Any transient RPC failure killed an attestor
+
+The endpoint rate-limited the fleet and the attestor exited, because every
+transport-level failure was handled identically to a decode failure.
+
+The distinction matters. PRD A5 requires dying rather than silently skipping an
+event, and a decode failure still does exactly that. But a rate limit or a
+dropped socket carries no information about the event, and the checkpoint is
+only advanced once a block is fully handled — so leaving the block unprocessed
+is safe, and the next finalized head re-processes it. In production the previous
+behaviour meant any momentary endpoint problem cost an attestor, and two such
+blips put the fleet below quorum with releases stalling silently.
+
+**Fixed:** transport failures are retried; decode failures remain fatal.
+
+### Operational consequence (no code change)
+
+Any procedure that writes and then immediately reads carries the same hazard
+against a public RPC — RB-4 and RB-6 both do. Confirm state by re-reading until
+it settles, not once. Each attestor should also run against its own node rather
+than a shared public endpoint; the rehearsal reproduced the rate limit precisely
+because six daemons shared one.
+
 ## Residual risks and standing practices (no external audit — risk accepted)
 - Every change to the fund-release path (vault release/approve/sweep logic,
   pallet burn path) gets a fresh independent adversarial review round before

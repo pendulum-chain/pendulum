@@ -11,6 +11,14 @@ tech lead → guardian Safe signers → admin Safe signers.
 
 ---
 
+> **Confirming state against a public RPC.** Public endpoints are load-balanced
+> and give no read-after-write guarantee: a read issued straight after a
+> confirmed transaction can land on a node that has not imported that block yet,
+> and report the old value. Every verification step below means "re-read until
+> it settles", not "read once" — a single read showing the old value is not
+> evidence the transaction failed. This bit the rehearsal twice, on a correctly
+> executed admin handover and a correctly executed pause.
+
 ## RB-1: Suspected attestor key compromise
 
 **Trigger:** an `Approved` event from an attestor for a tuple that does not

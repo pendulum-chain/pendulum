@@ -75,6 +75,7 @@ restricted to consumed nonces. Details and verified-not-vulnerable list in
 | `testing/src/phase2-pendulum.mjs` | 14/14 against a Chopsticks fork of live mainnet state |
 | `testing/src/phase3-e2e.mjs` | 7/7 end to end, four attestors + monitor + releaser |
 | `testing/src/phase4-zombienet.mjs` | 7/7 against a real relay (~2-block parachain finality lag) |
+| `testing/src/rehearsal.mjs` | 15/15 full stack: local Zombienet Pendulum + Base Sepolia |
 
 Seven internal adversarial review rounds have run; each found real issues
 (sometimes in a prior round's own fix), all fixed with regression tests and

@@ -36,7 +36,7 @@ watched by an independent monitor that can auto-pause. One-way by design.
 | Attestor daemon | `attestor/` | TypeScript; finalized-heads-only, strictly ordered blocks, crash-safe checkpoint, idempotent + race-tolerant approvals, fail-fast on decode errors (4-field shape asserted), startup set-membership check, low-gas/webhook alerts; ops guide in its README |
 | Invariant monitor | `monitor/` | Independent watchdog: conservation checks (block-pinned reads) + per-nonce liveness batched via Multicall3; webhook alerts; optional guardian auto-pause |
 | Releaser | `releaser/` | Drains cap-deferred releases via the permissionless `release()`; unprivileged gas-only key; classifies self-healing vs governance-blocked failures |
-| Test harness | `testing/` | Automates phase 2 of the local test plan against a Chopsticks fork of live mainnet state |
+| Test harness | `testing/` | Automates all four phases of the local test plan: contracts on Anvil, the pallet against a Chopsticks fork of live mainnet state, the full attestor/monitor/releaser pipeline end to end, and relay-chain finality under Zombienet |
 | Runbooks | `docs/pen-migration-runbooks.md` | RB-1…RB-7: key compromise, outage, invariant breach, pause/unpause, runtime upgrade, attestor rotation, window close |
 | Internal security review | `docs/pen-migration-internal-review.md` | The project's security-assurance record across seven adversarial rounds |
 
@@ -71,7 +71,10 @@ restricted to consumed nonces. Details and verified-not-vulnerable list in
 | `forge test` | 37, incl. 512-run fuzz and a full Governor lifecycle |
 | `attestor` / `monitor` / `releaser` | 6 / 7 / 7 |
 | Portal `yarn build` (tsc + vite) | clean against `main` |
+| `testing/src/phase1-base.mjs` | 11/11 against the real deploy script on Anvil |
 | `testing/src/phase2-pendulum.mjs` | 14/14 against a Chopsticks fork of live mainnet state |
+| `testing/src/phase3-e2e.mjs` | 7/7 end to end, four attestors + monitor + releaser |
+| `testing/src/phase4-zombienet.mjs` | 7/7 against a real relay (~2-block parachain finality lag) |
 
 Seven internal adversarial review rounds have run; each found real issues
 (sometimes in a prior round's own fix), all fixed with regression tests and

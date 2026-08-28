@@ -298,6 +298,8 @@ them is not during an incident:
 - [ ] A cap-deferred release recovers correctly without manual contract
       surgery.
 - [ ] All four attestors survive a full run without a fatal exit.
+- [ ] Finality gating confirmed against a real relay: finalized lags best, and
+      the attestors act only on the finalized stream.
 - [ ] The monitor alerts on a real injected deficit and tolerates a surplus.
 - [ ] Benchmarks re-run on reference hardware and the generated weights
       replace the manual estimates.

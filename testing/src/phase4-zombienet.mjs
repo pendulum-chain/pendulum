@@ -10,58 +10,16 @@
  * Assumes a network spawned from testing/zombienet.toml with the collator RPC
  * on 9944. Run: node testing/src/phase4-zombienet.mjs
  */
-import { execSync } from "node:child_process";
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { check, summarise } from "./harness.mjs";
+import { discoverCollator } from "./zombienet.mjs";
 
 const SAMPLE_SECONDS = Number(process.env.SAMPLE_SECONDS ?? 90);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Find the collator's RPC endpoint. Zombienet reassigns ports on every spawn,
- * and the collator also runs an embedded relay client, so a fixed port is as
- * likely to land on Rococo as on Pendulum. Probe the listening ports and keep
- * the one that reports the Pendulum runtime.
- */
-async function connectToCollator() {
-	if (process.env.PENDULUM_WS) {
-		return ApiPromise.create({ provider: new WsProvider(process.env.PENDULUM_WS), noInitWarn: true });
-	}
-	const listening = execSync(
-		"lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null | grep pendulum | awk '{print $9}' | sed 's/.*://' | sort -un",
-	)
-		.toString()
-		.trim()
-		.split("\n")
-		.filter(Boolean);
-	for (const port of listening) {
-		const url = `ws://127.0.0.1:${port}`;
-		// Hold the provider separately: several of these ports are not RPC at
-		// all (prometheus, p2p), and a provider left behind by a failed probe
-		// keeps retrying for the rest of the run.
-		const provider = new WsProvider(url, 1000);
-		let api;
-		try {
-			api = await Promise.race([
-				ApiPromise.create({ provider, noInitWarn: true, throwOnConnect: true }),
-				new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 8000)),
-			]);
-			const chain = (await api.rpc.system.chain()).toString();
-			if (/pendulum/i.test(chain)) {
-				console.log(`collator RPC discovered on ${url} (${chain})`);
-				return api;
-			}
-			await api.disconnect();
-		} catch {
-			if (api) await api.disconnect().catch(() => {});
-			else await provider.disconnect().catch(() => {});
-		}
-	}
-	throw new Error(`no Pendulum collator RPC among listening ports: ${listening.join(", ")}`);
-}
+const api = await discoverCollator(ApiPromise, WsProvider, { log: (m) => console.log(`  ${m}`) });
 
-const api = await connectToCollator();
 
 await check("collator is a parachain running the Pendulum runtime", async () => {
 	const chain = (await api.rpc.system.chain()).toString();

@@ -285,12 +285,21 @@ production bugs found during this work actually lived.
 ```bash
 cp testing/.env.rehearsal.example testing/.env.rehearsal   # fill in throwaway keys
 node testing/src/rehearsal.mjs --preflight                 # lists what needs funding
+# claim Base Sepolia ETH once into the deployer address, then:
+node testing/src/rehearsal.mjs --fund                      # fans gas out to the other seven
 node testing/src/rehearsal.mjs
 ```
+
+Gas is sized against measured cost: a whole run — two deployments plus ~20
+approvals — is about **0.00005 ETH** on Base Sepolia, so the ~0.014 ETH the
+roles hold between them covers many runs. Faucets are rate-limited per address,
+which is why `--fund` exists: claim once into the deployer rather than eight
+times.
 
 | Flag | Effect |
 |---|---|
 | `--preflight` | Check prerequisites and role funding, deploy nothing |
+| `--fund` | Top up any underfunded role from the deployer; idempotent |
 | `--keep` | Leave the network and fleet running for manual poking |
 | `--attach` | Use an already-running Zombienet instead of spawning one |
 | `--skip-slow` | Skip the wall-clock cap-refill scenario |

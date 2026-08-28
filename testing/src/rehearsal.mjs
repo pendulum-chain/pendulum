@@ -15,6 +15,7 @@
  * Usage:
  *   node src/rehearsal.mjs                 full run, then tear down
  *   node src/rehearsal.mjs --preflight     check prerequisites and funding only
+ *   node src/rehearsal.mjs --fund          fan gas out from the deployer to the other roles
  *   node src/rehearsal.mjs --keep          leave everything running afterwards
  *   node src/rehearsal.mjs --attach        use an already-running Zombienet
  *   node src/rehearsal.mjs --skip-slow     skip the wall-clock cap-refill test
@@ -37,6 +38,7 @@ import { deployToSepolia, rehearsalParams } from "./rehearsal-deploy.mjs";
 import { discoverCollator, killMatching, generateSpec, sleep, spawnNetwork, teardown, waitForFinality } from "./zombienet.mjs";
 
 const flags = new Set(process.argv.slice(2));
+const FUND = flags.has("--fund");
 const KEEP = flags.has("--keep");
 const ATTACH = flags.has("--attach");
 const SKIP_SLOW = flags.has("--skip-slow");
@@ -47,9 +49,80 @@ const stamp = started.toISOString().replace(/[:.]/g, "-");
 const runDir = path.join(TESTING, ".rehearsal", stamp);
 const log = (m) => console.log(`  ${m}`);
 
-// Minimum gas each role needs to complete a run. The attestors submit several
-// approvals each; the deployer pays for two contract creations.
-const FUNDING_MINIMUMS = { deployer: 30_000_000_000_000_000n, attestor: 5_000_000_000_000_000n, other: 2_000_000_000_000_000n };
+// Gas each role needs. Sized against measured cost, not guesswork: a whole run
+// — two contract deployments plus ~20 approvals — comes to roughly 0.00005 ETH
+// on Base Sepolia, so these carry about two orders of magnitude of headroom for
+// gas spikes and the L1 data fee. Small enough that one faucet claim into the
+// deployer covers many runs.
+const FUNDING = {
+	deployer: { min: 3_000_000_000_000_000n, target: 3_000_000_000_000_000n },  // 0.003 ETH, the source
+	attestor: { min: 1_000_000_000_000_000n, target: 2_000_000_000_000_000n },  // 0.001 / 0.002
+	other: { min: 500_000_000_000_000n, target: 1_000_000_000_000_000n },       // 0.0005 / 0.001
+};
+
+const eth = (wei) => `${(Number(wei) / 1e18).toFixed(6)} ETH`;
+
+/** Every funded role, with what it needs and what `--fund` tops it up to. */
+function roleTable(ctx) {
+	return [
+		["deployer", ctx.roles.deployer, FUNDING.deployer],
+		...ctx.roles.attestors.map((a, i) => [`attestor${i + 1}`, a, FUNDING.attestor]),
+		["guardian", ctx.roles.guardian, FUNDING.other],
+		["admin", ctx.roles.admin, FUNDING.other],
+		["releaser", ctx.roles.releaser, FUNDING.other],
+	];
+}
+
+/**
+ * Distribute gas from the deployer to the other roles.
+ *
+ * Base Sepolia faucets are rate-limited per address, so claiming for eight
+ * addresses is tedious and slow. Claim once into the deployer and fan out from
+ * here. Idempotent: only roles below their minimum are topped up, and only to
+ * their target, so re-running after a few rehearsals costs nothing.
+ */
+async function fundRoles(ctx) {
+	section("Funding");
+	await assertTestnet(ctx, null);
+
+	const deployerBalance = await ctx.pub.getBalance({ address: ctx.roles.deployer.address });
+	const needy = [];
+	for (const [name, acct, limits] of roleTable(ctx).slice(1)) {
+		const balance = await ctx.pub.getBalance({ address: acct.address });
+		if (balance < limits.min) needy.push({ name, acct, top: limits.target - balance });
+	}
+
+	if (needy.length === 0) {
+		log(`every role is already funded; deployer holds ${eth(deployerBalance)}`);
+		return true;
+	}
+
+	const total = needy.reduce((sum, n) => sum + n.top, 0n);
+	// Leave the deployer enough to actually deploy after funding everyone else.
+	const reserve = FUNDING.deployer.min;
+	log(`deployer holds ${eth(deployerBalance)}; distributing ${eth(total)} to ${needy.length} role(s)`);
+	if (deployerBalance < total + reserve) {
+		console.log(
+			`
+  deployer is short. It needs ${eth(total + reserve)} ` +
+			`(${eth(total)} to distribute + ${eth(reserve)} to deploy with) but holds ${eth(deployerBalance)}.
+` +
+			`
+  Claim Base Sepolia ETH into ${ctx.roles.deployer.address} from a faucet, then re-run --fund.`,
+		);
+		return false;
+	}
+
+	const wallet = ctx.wallet(ctx.roles.deployer);
+	for (const { name, acct, top } of needy) {
+		const hash = await wallet.sendTransaction({ to: acct.address, value: top });
+		const receipt = await ctx.pub.waitForTransactionReceipt({ hash });
+		if (receipt.status !== "success") throw new Error(`funding ${name} reverted: ${hash}`);
+		log(`  ${name.padEnd(10)} +${eth(top)}  ${hash}`);
+	}
+	log("done; re-run --preflight to confirm");
+	return true;
+}
 
 let network = null;
 let api = null;
@@ -81,22 +154,15 @@ async function preflight(ctx) {
 	});
 
 	await check("every role is funded", async () => {
-		const rows = [
-			["deployer", ctx.roles.deployer, FUNDING_MINIMUMS.deployer],
-			...ctx.roles.attestors.map((a, i) => [`attestor${i + 1}`, a, FUNDING_MINIMUMS.attestor]),
-			["guardian", ctx.roles.guardian, FUNDING_MINIMUMS.other],
-			["admin", ctx.roles.admin, FUNDING_MINIMUMS.other],
-			["releaser", ctx.roles.releaser, FUNDING_MINIMUMS.other],
-		];
 		const underfunded = [];
-		for (const [name, acct, minimum] of rows) {
+		for (const [name, acct, limits] of roleTable(ctx)) {
 			const balance = await ctx.pub.getBalance({ address: acct.address });
-			const eth = (Number(balance) / 1e18).toFixed(5);
-			console.log(`        ${name.padEnd(10)} ${acct.address}  ${eth} ETH`);
-			if (balance < minimum) underfunded.push(`${name} (${acct.address}) has ${eth} ETH`);
+			console.log(`        ${name.padEnd(10)} ${acct.address}  ${eth(balance)}`);
+			if (balance < limits.min) underfunded.push(`${name} (${acct.address}) has ${eth(balance)}`);
 		}
 		assert(underfunded.length === 0,
-			`fund these from a Base Sepolia faucet:\n        ${underfunded.join("\n        ")}`);
+			`underfunded:\n        ${underfunded.join("\n        ")}\n\n        ` +
+			"Claim once into the deployer from a Base Sepolia faucet, then run --fund to fan out.");
 	});
 }
 
@@ -127,6 +193,11 @@ async function main() {
 	console.log(`Phase 5 — full-stack rehearsal (Zombienet + Base Sepolia)\n  run ${stamp}`);
 	const env = loadEnv();
 	const ctx = buildContext(env);
+
+	if (FUND) {
+		const ok = await fundRoles(ctx);
+		process.exit(ok ? 0 : 1);
+	}
 
 	await preflight(ctx);
 	if (PREFLIGHT_ONLY) {

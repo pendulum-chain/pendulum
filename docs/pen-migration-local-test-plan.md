@@ -61,7 +61,8 @@ cp .env.example .env       # fill in: 4 attestor addrs, Safes, caps, MAX_ISSUANC
 forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --broadcast
 ```
 
-Then verify, with `cast`:
+Automated by `testing/src/phase1-base.mjs` (`node testing/src/phase1-base.mjs`),
+which deploys with the real script and then asserts:
 
 1. `PEN.totalSupply()` == `MAX_ISSUANCE`, and `PEN.balanceOf(vault)` == the same.
 2. `vault.threshold()` == 3, `vault.attestorCount()` == 4.
@@ -79,9 +80,13 @@ Then verify, with `cast`:
    unpause is rejected from the guardian and accepted from admin.
 9. `sweepRemainder` reverts before `earliestSweepTimestamp`.
 
-**Pass:** all nine behave as described. (These mirror the Foundry suite, but
-run against the deployed bytecode and the real deploy script — that is the
-point.)
+**Pass:** 11/11 from the script. These mirror the Foundry suite, but run
+against the deployed bytecode and the real deploy script — that is the point.
+
+Note the daily cap is a rolling bucket and is **shared state across checks**,
+refilling proportionally to the *current* `dailyCap`. Always `setCaps` first
+and warp afterwards; warping first and lowering the cap leaves the earlier
+consumption largely undecayed.
 
 ---
 
@@ -135,18 +140,28 @@ it fails.
 
 ---
 
-## Phase 3 — End-to-end with real finality (Zombienet + Anvil)
+## Phase 3 — the whole pipeline together (Chopsticks + Anvil)
 
-Goal: the whole pipeline works when the Substrate side has genuine
-relay-chain finality — the condition the attestors depend on.
+Goal: a burn on the Substrate side reaches Base with no manual step, driven by
+four attestor processes, the monitor and the releaser running as a system.
+This is the only place the components race each other, and it is where the
+remaining risk lives — both production bugs found during this work (attestor
+gas under-estimation, releaser Multicall) were invisible to unit tests and
+appeared here.
 
-You already have `zombienet-macos-arm64` in the repo root. Spin up a relay
-plus the Pendulum parachain with the new runtime, and run Anvil alongside with
-the contracts from phase 1.
+Automated by `testing/src/phase3-e2e.mjs`. Chopsticks stands in for Pendulum:
+it reports finalized heads, which is what the attestors subscribe to, and it
+carries real state. Use `testing/chopsticks-e2e.yml`, which caches to a `db` —
+unlike phase 2 it makes no claim about a just-upgraded chain, and the cache
+keeps a long run alive when the upstream public RPC drops the connection.
 
-Then start the **four attestors, the monitor and the releaser**, each with its own
-`.env` — separate keys, separate checkpoint files, all pointed at the same
-vault:
+**Still manual: Zombienet.** What Chopsticks does not reproduce is genuine
+relay-chain finality timing — lag, and the possibility of a fork before
+finality. Running the same fleet against `zombienet-macos-arm64` with a relay
+plus the Pendulum parachain remains an exercise to do before mainnet.
+
+The script starts the four attestors, the monitor and the releaser itself,
+each with its own key and checkpoint file. To run them by hand instead:
 
 ```bash
 PENDULUM_WS=ws://127.0.0.1:9944 BASE_RPC_URL=http://localhost:8545 \
@@ -191,7 +206,14 @@ Checks:
    `VITE_MIGRATION_VAULT_ADDRESS` set to the Anvil vault; migrate through the
    UI and watch the status card go 0/3 → 3/3 → released.
 
-**Pass:** 1–8 all hold.
+**Pass:** 7/7 from the script.
+
+Three traps cost real debugging time and are worth knowing before you run it:
+a wasm built with `--features runtime-benchmarks` cannot be used as a
+Chopsticks override (building the node for benchmarks silently overwrites the
+runtime wasm); the attestors' `START_BLOCK` must be the chain head, not 0, or
+each daemon walks ~7.6M historical blocks; and strays from an aborted run keep
+rewriting the checkpoint files a fresh run just cleared.
 
 ---
 

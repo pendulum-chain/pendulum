@@ -281,7 +281,12 @@ async function main() {
 		BASE_RPC_URL: env.BASE_SEPOLIA_RPC_URL,
 		VAULT_ADDRESS: vault,
 		BASE_CHAIN_ID: "84532",
-		POLL_INTERVAL_MS: "5000",
+		// Six daemons sharing one public endpoint is what tripped Base Sepolia's
+		// rate limiter on an earlier run. Poll no faster than the parachain
+		// produces blocks — there is nothing new to see in between — and stagger
+		// the starts so they do not align into bursts. In production each
+		// attestor has its own node and this pressure does not arise.
+		POLL_INTERVAL_MS: "12000",
 	};
 	const pendulumHead = (await api.query.system.number()).toString();
 	const baseHead = String(await ctx.pub.getBlockNumber());
@@ -291,6 +296,7 @@ async function main() {
 			ATTESTOR_PRIVATE_KEY: env[`ATTESTOR_${i + 1}_PRIVATE_KEY`],
 			CHECKPOINT_FILE: `./cp${i + 1}.json`, START_BLOCK: pendulumHead,
 		});
+		await sleep(3000);
 	}
 	start("monitor", "monitor", { ...baseEnv, PENDULUM_WS: pendulumWs, GRACE_SECONDS: "300" });
 	start("releaser", "releaser", { ...baseEnv, RELEASER_PRIVATE_KEY: env.RELEASER_PRIVATE_KEY, START_BLOCK: baseHead });

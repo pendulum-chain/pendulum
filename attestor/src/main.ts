@@ -40,6 +40,28 @@ interface Checkpoint {
  *  threshold-crossing release path. */
 const GAS_LIMIT_MULTIPLIER = 4n;
 
+/**
+ * Transport-level failures that say nothing about the migration itself.
+ *
+ * PRD A5 requires this daemon to die rather than silently skip an event, and a
+ * decode failure still does exactly that. But a rate limit or a dropped socket
+ * is not a decode failure: it carries no information about the event, and
+ * exiting on one turns every transient RPC hiccup into an attestor outage. The
+ * checkpoint is only advanced once a block is fully handled, so leaving the
+ * block unprocessed is safe — the next finalized head simply re-processes it.
+ */
+function isTransientRpcError(error: unknown): boolean {
+	const parts = [
+		(error as { message?: string })?.message,
+		(error as { details?: string })?.details,
+		(error as { shortMessage?: string })?.shortMessage,
+		(error as { cause?: { details?: string } })?.cause?.details,
+	];
+	const text = parts.filter(Boolean).join(" ");
+	return /rate limit|too many requests|timeout|timed out|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|socket hang up|fetch failed|502|503|504|service unavailable|internal error/i
+		.test(text);
+}
+
 /** How persistently to confirm that a failed approval was merely a lost race
  *  before treating it as fatal. See `alreadyHandledSettled`. */
 const RACE_RECHECK_ATTEMPTS = 5;
@@ -275,6 +297,12 @@ async function main(): Promise<void> {
 				saveCheckpoint(checkpoint);
 			}
 		}).catch(async (error) => {
+			if (isTransientRpcError(error)) {
+				// Not a statement about the event — leave the checkpoint where it is
+				// and let the next finalized head re-process this block.
+				await alert("transient RPC failure, retrying on the next finalized head", error);
+				return;
+			}
 			// PRD A5: never skip an event silently. Alert and exit; the process
 			// manager restarts us and the checkpoint retries the failing block.
 			await alert("fatal error, exiting", error);

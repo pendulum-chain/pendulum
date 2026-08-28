@@ -230,7 +230,7 @@ async function approve(event: MigrationEvent): Promise<void> {
 		// Expected race: the release landed (or our own retried tx landed)
 		// between our pre-check and the transaction. Benign — anything else
 		// is a genuine failure and propagates to the fatal handler.
-		if (await alreadyHandled(event)) {
+		if (await alreadyHandledSettled(event)) {
 			log(`skip (raced, resolved on-chain): ${label}`);
 			return;
 		}

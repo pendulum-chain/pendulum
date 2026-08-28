@@ -12,6 +12,7 @@ needs both.
 | **Anvil** (Foundry) | Base | Contract behaviour, deploy script, attestor/monitor wiring |
 | **Chopsticks** | Pendulum mainnet | Runtime upgrade + pallet against **real** balances, locks, vesting, treasury |
 | **Zombienet** | Relay + parachain | The **relay-chain finality** path — attestors only act on finalized blocks, which Chopsticks cannot faithfully reproduce (phase 4) |
+| **Base Sepolia** | Base | Real gas estimation, block times and RPC behaviour, against a public chain (phase 5) |
 
 Chopsticks gives realistic *state*; Zombienet gives realistic *finality*. You
 need both, for different reasons. Neither requires Paseo or Foucoco.
@@ -273,7 +274,68 @@ artifact's problem rather than the relay's.
 
 ---
 
-## Phase 5 — Failure drills (the runbooks)
+## Phase 5 — full-stack rehearsal (Zombienet + Base Sepolia)
+
+Goal: run the whole system against real infrastructure on both sides at once,
+with no real value at stake. Phases 1–4 each hold one half still — Anvil is
+instant and single-node, Chopsticks fakes finality. This is the only phase
+where genuine relay finality and a public EVM meet, which is where both
+production bugs found during this work actually lived.
+
+```bash
+cp testing/.env.rehearsal.example testing/.env.rehearsal   # fill in throwaway keys
+node testing/src/rehearsal.mjs --preflight                 # lists what needs funding
+node testing/src/rehearsal.mjs
+```
+
+| Flag | Effect |
+|---|---|
+| `--preflight` | Check prerequisites and role funding, deploy nothing |
+| `--keep` | Leave the network and fleet running for manual poking |
+| `--attach` | Use an already-running Zombienet instead of spawning one |
+| `--skip-slow` | Skip the wall-clock cap-refill scenario |
+
+It brings up Zombienet, waits for genuine parachain finality, unpauses the
+pallet **through the technical-committee origin** (this chain has no sudo, so
+unlike phase 2 there is no storage poke — the rehearsal drives the same origin
+that will unpause mainnet), deploys the contracts to Base Sepolia with the real
+`Deploy.s.sol`, starts four attestors plus the monitor and releaser, and runs
+the scenarios. Every run writes `testing/.rehearsal/<timestamp>/` containing a
+manifest (addresses, ports, block heights, commit) and each daemon's log, so a
+failed run stays diagnosable after teardown.
+
+Four design decisions worth knowing before you change it:
+
+- **Contracts are redeployed every run, deliberately.** The Zombienet chain is
+  ephemeral and restarts its nonce sequence at zero on each spawn, while the
+  vault's `nonceConsumed` mapping is permanent. Reusing a vault means the second
+  run re-emits nonce 0, every attestor's pre-check returns "already handled",
+  and the pipeline logs skips while testing nothing. A guard asserts this
+  explicitly rather than trusting the convention. Redeploying also exercises the
+  deploy script on every cycle.
+- **Caps are sized for wall clock, not for production.** There is no
+  `evm_increaseTime` on a public chain, so the rolling bucket has to refill in
+  real minutes: at `DAILY_CAP` = 28,800 PEN it returns 100 PEN (the on-chain
+  minimum migration) every ~5 minutes. The production cap values remain
+  validated only in phase 1, where time can be warped — the two phases are
+  complementary and neither is sufficient alone.
+- **It refuses to run anywhere that could cost money.** Base mainnet (chain
+  8453) is rejected outright, any chain other than Sepolia needs an explicit
+  override, and the Substrate endpoint must self-report as the local chain.
+  Checked before anything is deployed or signed.
+- **Teardown is part of the contract.** Stray daemons from an aborted run
+  rewrite the checkpoint files a fresh run just cleared, so processes are killed
+  by reading the process table rather than `pkill -f` — a shell running
+  `pkill -f <pattern>` matches its own command line, which is exactly how an
+  earlier session produced three waiter shells that could never terminate.
+
+**Pass:** all scenarios green. Keys are throwaway and testnet-only;
+`testing/.env.rehearsal` is gitignored and must never hold a key that will see
+mainnet.
+
+---
+
+## Phase 6 — Failure drills (the runbooks)
 
 Rehearse each runbook once against the local stack, so the first time you run
 them is not during an incident:
@@ -290,9 +352,9 @@ them is not during an incident:
 
 ---
 
-## Phase 6 — Exit criteria before mainnet
+## Phase 7 — Exit criteria before mainnet
 
-- [ ] Phases 1–5 pass end to end.
+- [ ] Phases 1–6 pass end to end.
 - [ ] The upgrade ships paused, verified on a Chopsticks fork of **live**
       mainnet state (not a fresh chain).
 - [ ] A cap-deferred release recovers correctly without manual contract
@@ -305,3 +367,4 @@ them is not during an incident:
       replace the manual estimates.
 - [ ] A dry run of the deploy script with the **final** production parameters,
       reviewed by someone other than whoever wrote the `.env`.
+- [ ] The phase 5 rehearsal green on Base Sepolia against the shipped revision.

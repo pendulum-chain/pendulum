@@ -25,3 +25,6 @@ function abiOf(file, name) {
 
 export const vaultAbi = abiOf("MigrationVault.sol", "MigrationVault");
 export const erc20Abi = abiOf("PEN.sol", "PEN");
+
+export const governorAbi = abiOf("PENGovernor.sol", "PENGovernor");
+export const timelockAbi = abiOf("TimelockController.sol", "TimelockController");

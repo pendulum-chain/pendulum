@@ -71,3 +71,53 @@ export function deployToSepolia({ env, roles, log }) {
 	if (!vault || !pen) throw new Error("could not locate deployed addresses in the broadcast record");
 	return { vault, pen, params, sweepTs };
 }
+
+/** Drill-scale governance timings: long enough that each stage is observable
+ *  and the ETA gate can be asserted, short enough that two full proposal
+ *  lifecycles fit in one sitting. Production values are validated by the
+ *  Foundry suite; QUORUM_FRACTION=0 makes mechanics testable with drill-scale
+ *  voting power — quorum SIZING is deliberately not rehearsed here. */
+export function governanceDrillParams(env) {
+	return {
+		timelockDelay: Number(env.GOV_TIMELOCK_DELAY ?? "180"),
+		votingDelay: Number(env.GOV_VOTING_DELAY ?? "60"),
+		votingPeriod: Number(env.GOV_VOTING_PERIOD ?? "240"),
+		proposalThreshold: BigInt(env.GOV_PROPOSAL_THRESHOLD_PEN ?? "1000") * PEN_18,
+		quorumFraction: Number(env.GOV_QUORUM_FRACTION ?? "0"),
+	};
+}
+
+/** Runs the real DeployGovernance.s.sol — its first execution anywhere. */
+export function deployGovernanceToSepolia({ env, pen, log }) {
+	const params = governanceDrillParams(env);
+	const scriptEnv = {
+		...process.env,
+		PEN_TOKEN: pen,
+		TIMELOCK_DELAY: String(params.timelockDelay),
+		VOTING_DELAY: String(params.votingDelay),
+		VOTING_PERIOD: String(params.votingPeriod),
+		PROPOSAL_THRESHOLD: params.proposalThreshold.toString(),
+		QUORUM_FRACTION: String(params.quorumFraction),
+	};
+	log(`deploying governance (timelock ${params.timelockDelay}s, voting ${params.votingDelay}s+${params.votingPeriod}s, quorum ${params.quorumFraction}%) ...`);
+	execFileSync(
+		"forge",
+		[
+			"script", "script/DeployGovernance.s.sol",
+			"--rpc-url", env.BASE_SEPOLIA_RPC_URL,
+			"--broadcast",
+			"--private-key", env.DEPLOYER_PRIVATE_KEY,
+			"--slow",
+		],
+		{ cwd: CONTRACTS, env: scriptEnv, stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 },
+	);
+	const file = path.join(
+		CONTRACTS, "broadcast", "DeployGovernance.s.sol", String(BASE_SEPOLIA_CHAIN_ID), "run-latest.json",
+	);
+	const run = JSON.parse(readFileSync(file, "utf8"));
+	const creations = run.transactions.filter((t) => t.transactionType === "CREATE");
+	const timelock = creations.find((t) => t.contractName === "TimelockController")?.contractAddress;
+	const governor = creations.find((t) => t.contractName === "PENGovernor")?.contractAddress;
+	if (!timelock || !governor) throw new Error("could not locate governance addresses in the broadcast record");
+	return { timelock, governor, params };
+}

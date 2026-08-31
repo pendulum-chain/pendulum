@@ -344,6 +344,63 @@ mainnet.
 
 ---
 
+## Phase 5b — governance rehearsal (Governor + Timelock on Base Sepolia)
+
+Goal: everything the Foundry suite cannot reach. The unit tests cover the
+governance *logic* (full proposal lifecycle, threshold, quorum arithmetic,
+timestamp clock); what had never run before this phase: `DeployGovernance.s.sol`
+itself, the vault-admin → timelock **handover** — whose acceptance is itself a
+governance proposal — and any proposal against deployed contracts on a public
+chain.
+
+```bash
+node testing/src/phase5b-governance.mjs             # full automated run (~25 min)
+node testing/src/phase5b-governance.mjs --manual    # deploy + fund + wiring, then
+                                                    # stop for a by-hand walkthrough
+```
+
+Purely Base-side — no Zombienet, no daemon fleet. Voter PEN is released
+through the real 3-of-4 `approve()` path, driven directly by the attestor keys.
+Checks: role wiring (governor proposes/cancels, execution open, deployer's
+timelock admin renounced), delegation-gates-power, the handover by proposal,
+a caps raise end to end through the timelock — **asserting execute reverts
+before the ETA and succeeds after** — and the negatives: below-threshold
+proposals rejected, the old admin powerless, the guardian able to pause but
+nobody able to unpause without a proposal. The run deliberately ends with the
+vault paused: post-handover, unpausing takes a full proposal (≥ 48h in
+production) — that latency is the design's cost, made tangible.
+
+Drill parameters are wall-clock-sized (3 min timelock, 1+4 min voting, quorum
+fraction 0). **Quorum sizing is deliberately not rehearsed** — production
+quorum is ~3M delegated PEN — and stays covered by the unit tests, as do the
+production timing values.
+
+### Manual walkthrough (after `--manual`, or against any run's contracts)
+
+Every run prints a handoff card and writes `manifest.json` with all addresses.
+Contracts are verified on Blockscout (`base-sepolia.blockscout.com`), so every
+address has working Read/Write tabs. To drive a proposal yourself:
+
+1. Import the voter key from `testing/.env.rehearsal` into MetaMask
+   (testnet-only keys) and add Base Sepolia.
+2. Optionally add the DAO to Tally (tally.xyz → Add a DAO → Base Sepolia →
+   the governor address); Tally then handles delegate/propose/vote/queue/execute
+   as UI actions.
+3. **Order matters**: delegate *first* — voting power snapshots at proposal
+   creation, and a proposal made before delegating can never pass.
+4. Propose → wait the voting delay → vote → wait out the period → queue →
+   try executing early (it must revert) → execute after the timelock delay.
+
+Two traps the automated run hit that a manual run will too: `approve()` gas
+must be set manually when releasing voter PEN (the threshold-crossing call
+executes the release inline and estimates against the cheap path — the same
+bimodal-gas bug the attestor daemon pads for), and reads immediately after
+writes can hit a lagging node (a `state()` read for a fresh proposal *reverts*
+`GovernorNonexistentProposal` on a node that has not seen it yet — retry
+before concluding anything).
+
+---
+
 ## Phase 6 — Failure drills (the runbooks)
 
 Rehearse each runbook against a real stack, so the first time anyone runs them

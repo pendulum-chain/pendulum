@@ -77,6 +77,7 @@ restricted to consumed nonces. Details and verified-not-vulnerable list in
 | `testing/src/phase4-zombienet.mjs` | 7/7 against a real relay (~2-block parachain finality lag) |
 | `testing/src/rehearsal.mjs` | 15/15 full stack: local Zombienet Pendulum + Base Sepolia |
 | `testing/src/drills.mjs` | 13/13 failure drills (RB-1/3/4/6/7) on the Sepolia stack |
+| `testing/src/phase5b-governance.mjs` | 10/10 governance: DeployGovernance.s.sol first execution, vault-admin→timelock handover by proposal, caps raise through the timelock with the ETA gate asserted |
 | `testing/src/drill-rb5-upgrade.mjs` | 5/5 — the real spec-26 upgrade enacted under a live fleet on a mainnet fork |
 
 Seven internal adversarial review rounds have run; each found real issues

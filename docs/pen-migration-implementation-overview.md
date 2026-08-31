@@ -76,6 +76,8 @@ restricted to consumed nonces. Details and verified-not-vulnerable list in
 | `testing/src/phase3-e2e.mjs` | 7/7 end to end, four attestors + monitor + releaser |
 | `testing/src/phase4-zombienet.mjs` | 7/7 against a real relay (~2-block parachain finality lag) |
 | `testing/src/rehearsal.mjs` | 15/15 full stack: local Zombienet Pendulum + Base Sepolia |
+| `testing/src/drills.mjs` | 13/13 failure drills (RB-1/3/4/6/7) on the Sepolia stack |
+| `testing/src/drill-rb5-upgrade.mjs` | 5/5 — the real spec-26 upgrade enacted under a live fleet on a mainnet fork |
 
 Seven internal adversarial review rounds have run; each found real issues
 (sometimes in a prior round's own fix), all fixed with regression tests and

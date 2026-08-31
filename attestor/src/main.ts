@@ -58,7 +58,7 @@ function isTransientRpcError(error: unknown): boolean {
 		(error as { cause?: { details?: string } })?.cause?.details,
 	];
 	const text = parts.filter(Boolean).join(" ");
-	return /rate limit|too many requests|timeout|timed out|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|socket hang up|fetch failed|502|503|504|service unavailable|internal error/i
+	return /rate limit|too many requests|timeout|timed out|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|socket hang up|fetch failed|\b50[234]\b|service unavailable|internal error/i
 		.test(text);
 }
 

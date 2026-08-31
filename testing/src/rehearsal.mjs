@@ -249,7 +249,7 @@ async function main() {
 			} catch (error) {
 				last = error;
 				const text = `${error?.details ?? ""} ${error?.shortMessage ?? ""} ${error?.message ?? ""}`;
-				if (!/rate limit|too many requests|timeout|fetch failed|50[234]/i.test(text)) throw error;
+				if (!/rate limit|too many requests|timeout|fetch failed|\b50[234]\b/i.test(text)) throw error;
 				await sleep(3000 * (attempt + 1));
 			}
 		}

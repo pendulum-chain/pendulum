@@ -429,6 +429,42 @@ it settles, not once. Each attestor should also run against its own node rather
 than a shared public endpoint; the rehearsal reproduced the rate limit precisely
 because six daemons shared one.
 
+## Post-drills review pass (2026-08-31)
+
+Scope: the fund-release-path changes made since the rehearsal findings (the
+race-recheck backoff and the transient-RPC classification), per the standing
+practice, plus the drill scripts themselves.
+
+### L1(drills). LOW — Status codes matched as bare substrings
+
+The transient-error classifiers matched `502|503|504` anywhere in the error
+text, and error messages embed transaction parameters — an amount containing
+`502` could misclassify a genuine failure as transient. The consequence was a
+noisy stall (alert every head, checkpoint frozen, liveness alert eventually)
+rather than anything silent, but it is now anchored on word boundaries, and
+`429` was added for endpoints that return only the numeric code. **Fixed.**
+
+### Verified, no change needed
+
+- The monitor and releaser were checked for the attestor's die-on-transient
+  defect and do not have it: both wrap their poll/cycle bodies in a
+  loop-level catch that alerts and continues, and only startup failures exit.
+- The recheck backoff cannot convert a permanent failure into a silent skip:
+  it returns true only on positive on-chain confirmation, and errors inside
+  the recheck retry rather than resolve.
+
+### Drill outcomes (phase 6)
+
+All seven runbooks are now rehearsed: `drills.mjs` 13/13 on the Sepolia stack
+(RB-1, RB-3 surplus, RB-4, RB-6, RB-7; RB-2 in phase 5; RB-3 deficit in
+phase 3), and `drill-rb5-upgrade.mjs` 5/5 — the actual spec-26 upgrade enacted
+on a fork of pre-upgrade mainnet under a live fleet, which also proved the
+referendum's version bump compiles. The RB-5 script's header records the
+Chopsticks limitations that shaped it; the significant one is that a
+post-upgrade extrinsic cannot be submitted through Chopsticks at all, because
+it serves pre-fork metadata even across `--resume` while executing the new
+runtime, which rejects the stale-metadata signature as `badProof`.
+
 ## Residual risks and standing practices (no external audit — risk accepted)
 - Every change to the fund-release path (vault release/approve/sweep logic,
   pallet burn path) gets a fresh independent adversarial review round before

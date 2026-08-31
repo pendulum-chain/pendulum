@@ -346,18 +346,25 @@ mainnet.
 
 ## Phase 6 — Failure drills (the runbooks)
 
-Rehearse each runbook once against the local stack, so the first time you run
-them is not during an incident:
+Rehearse each runbook against a real stack, so the first time anyone runs them
+is not during an incident. Automated:
 
-| Runbook | Drill |
+```bash
+node testing/src/drills.mjs        # RB-1, RB-3 (surplus), RB-4, RB-6, RB-7 on the Sepolia stack
+# RB-5 needs Chopsticks (the one place a runtime can be swapped) and a
+# spec-bumped wasm; see the header of drill-rb5-upgrade.mjs:
+UPGRADE_WASM=/path/to/spec+1.wasm node testing/src/drill-rb5-upgrade.mjs
+```
+
+| Runbook | Where it is drilled |
 |---|---|
-| RB-1 key compromise | Remove an attestor mid-flight; confirm its recorded approvals stop counting and a replacement can complete the quorum |
-| RB-2 outage | Covered by phase 3 item 4 |
-| RB-3 invariant breach | Covered by phase 3 item 6 — including the auto-pause and the recovery path |
-| RB-4 pause/unpause | Pause the pallet *and* the vault; confirm the correct resume order |
-| RB-5 runtime upgrade | Apply a second runtime upgrade while attestors run; confirm they keep decoding (or fail loudly rather than silently skipping) |
-| RB-6 attestor rotation | Add a 5th attestor, remove an old one, confirm a re-added address must approve again |
-| RB-7 window close | Warp past `earliestSweepTimestamp`, reconcile, sweep, confirm `totalSwept` and that the monitor does not false-alarm |
+| RB-1 key compromise | `drills.mjs`: attestor removed with its approval recorded on a paused, exactly-at-threshold payload — the vote stops counting and nobody can complete the release below quorum |
+| RB-2 outage | Phase 5 rehearsal (one down still releases; two down stops cleanly) |
+| RB-3 invariant breach | Deficit + auto-pause: phase 3 on Anvil (a deficit **cannot be created** on Sepolia — nothing but the vault can move its tokens, which is the security property). Surplus tolerance: `drills.mjs` |
+| RB-4 pause/unpause | `drills.mjs`: pallet then vault, resumed in reverse, pipeline recovers |
+| RB-5 runtime upgrade | `drill-rb5-upgrade.mjs` on Chopsticks: release, write `:code` (what an enacted upgrade does), confirm the fleet keeps decoding and releasing. The shape-change half — fail loudly, never skip — is the attestor's unit-tested 4-field assertion |
+| RB-6 attestor rotation | `drills.mjs`: re-add bumps the generation so the old vote stays dead; the documented recovery (rewind checkpoint, restart, re-approve) completes the quorum; a 5th attestor adds and removes cleanly |
+| RB-7 window close | `drills.mjs`: pallet paused, `pendingApprovedAmount` drained, conservation reconciled exactly, sweep executed, monitor quiet. Deploys with a ~90s sweep floor since Sepolia time cannot be warped; the threshold is never reduced, so the 7-day settling gate stays unarmed |
 
 ---
 

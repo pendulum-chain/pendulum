@@ -465,6 +465,344 @@ post-upgrade extrinsic cannot be submitted through Chopsticks at all, because
 it serves pre-fork metadata even across `--resume` while executing the new
 runtime, which rejects the stale-metadata signature as `badProof`.
 
+## Round 8 (2026-08-31, independent reviewer over the round-7+ commits and the uncommitted durable-state/finality work)
+
+Scope per the round-8 handover: the six attestor/releaser commits since round
+7, the uncommitted working-tree changes (durable state in all three daemons,
+the monitor's per-tuple reconciliation, Base-finality gating, the pallet's
+one-time treasury anchor), governance wiring, runtime wiring, and the portal.
+No fund-loss bug was found; the on-chain invariants of rounds 1–7 held under
+re-derivation. The significant findings were all in the newest, uncommitted
+daemon code — and notably in code that had **never run under real Base
+safe-lag**: Anvil serves `safe == latest`, so the phase-3 harness exercises
+the finality gating as a no-op, and the 2026-08-28 Sepolia rehearsal predates
+it.
+
+### H1(r8). HIGH — Finality gating made every lost race an alert storm and serialized fleet throughput
+The uncommitted change pointed the benign-race recheck (`alreadyHandled`/
+`alreadyHandledSettled`) at the Base `safe` block and put a
+`waitForBaseFinality` inline in `approve()`. Consequences: (a) the guaranteed
+per-migration race loser saw "not handled" at `safe` for the whole safe-lag
+(minutes), fell through to a synthetic "pending finality" transient error, and
+re-alerted on every finalized head until `safe` caught up — an alert storm on
+the *normal* k-of-n race, the fifth instance of the round-1 class; (b) each
+winner blocked serially on its own transaction reaching `safe` before touching
+the next event, collapsing per-attestor throughput to roughly one migration
+per Base batch interval — hours of backlog under launch-day load, with the
+monitor's liveness grace then paging for everything queued.
+
+**Resolution (fixed, restructured):** processing and durability are decoupled.
+Blocks are processed strictly in order against **latest** Base state (lost
+races conclude benign from latest, as the rehearsal fix intended), while the
+durable checkpoint trails separately: it advances past a block only once every
+releasable event in it reads as handled at the `safe`/`finalized` boundary
+(`advanceCheckpoint` in `attestor/src/main.ts`). Event-less blocks checkpoint
+with zero Base reads. A block whose approvals refuse to settle (reorged away
+with nothing replacing them) is re-approved idempotently after
+`BASE_FINALITY_TIMEOUT_MS` with a single alert — which also makes reorg
+recovery automatic where the previous design needed a restart. Crash recovery
+re-processes exactly the non-durable suffix. Transient alerts are throttled to
+one per minute (everything still logged).
+
+### M1(r8). MEDIUM — Unmatched-event grace could false-pause on a stalled source node, and hid a real attack for its duration
+Two failure modes of one mechanism: (a) a monitor whose own Pendulum node
+served a live-but-stalled finalized view for longer than
+`UNMATCHED_EVENT_GRACE_SECONDS` (default 600s) — a stuck peer set or a slow
+restart-sync — turned every fresh legitimate approval into `MIGRATION TUPLE
+VIOLATION` and auto-paused the vault (post-handover unpause: quorum + ≥48h
+timelock); (b) during the grace the monitor only *logged*, and `awaitingSource`
+returned before the M2a aggregate check, so a genuinely fabricated tuple
+(compromised quorum, high nonce) got up to 600s of cap-bounded releases with
+zero paging — a ~10× dwell regression versus the pre-rewrite monitor.
+
+**Resolution (fixed):** three changes in `monitor/src/`. (1) The first sighting
+of an unmatched event **pages immediately** (`UNVERIFIED BASE EVENT`,
+deduplicated through the persisted first-seen map), so operators get the whole
+grace window. (2) A **fabrication proof** short-circuits the grace: a burn is
+relay-finalized strictly before any attestor approves, and Substrate
+timestamps are monotone — so once the finalized source view's timestamp passes
+the Base event's own block timestamp (plus `SOURCE_CLOCK_SKEW_MARGIN_SECONDS`,
+default 120s) and the nonce still does not exist, the event is provably
+fabricated and pauses at once (`provablyUnsourced` in `checks.ts`, unit
+tested). A merely-lagging source can never satisfy the proof, so node lag
+cannot fast-path a false pause. (3) A finalized source view older than
+`SOURCE_STALE_ALERT_SECONDS` (default 300s) pages `PENDULUM SOURCE VIEW
+STALLED` on its own — before any grace deadline can force a cannot-verify
+pause. The grace-expiry pause itself is retained deliberately: a monitor blind
+past its grace with unverified releases flowing is a pause-worthy state, and it
+now arrives announced.
+
+### M2(r8). MEDIUM — Full-supply quorum denominator could deadlock governance into a permanent pause
+`PENGovernor` quorum was a fraction of *total* past supply — including the
+vault's unmigrated ~150M — while only migrated-and-delegated PEN can vote.
+Post-handover, a pause (guardian key compromise, monitor false positive, or a
+legitimate incident) with quorum unreachable would be **permanent**: unpause,
+`setCaps`, `clearStalePending` and `sweepRemainder` are all admin actions
+behind the timelock, the paused vault freezes releases, so circulating voting
+supply can never grow to quorum — a self-locking deadlock with no alternate
+admin path. (Mitigating: the handover-acceptance proposal itself proves quorum
+once; the deadlock needed participation to decay afterwards.)
+
+**Resolution (fixed, design change — needs explicit sign-off):** quorum now
+tracks **circulating** supply. `MigrationVault.setToken` one-time-delegates the
+vault's balance to a constant dead-address vote sink
+(`MigrationVault.VOTE_SINK` == `PENGovernor.QUORUM_SINK`, lockstep asserted in
+tests), which checkpoints the unmigrated supply in the token's vote history;
+`PENGovernor.quorum()` subtracts the sink's past votes from the denominator and
+applies an absolute `quorumFloor` (new constructor/deploy parameter,
+`QUORUM_FLOOR`) so early proposals are not trivially cheap. Third parties
+delegating to the sink only forfeit their own voting power (strictly dominated
+by voting), so the mechanism is not abusable to raise or unfairly drop quorum
+below the floor. Release gas grows ~10k for the sink checkpoint update.
+Covered by `test_QuorumTracksCirculatingSupplyWithFloor`,
+`test_QuorumSinkMatchesVaultVoteSink`, `test_SetTokenParksVaultVotesInSink`.
+Handover should still be gated on measured delegated voting power
+comfortably exceeding `max(floor, fraction × circulating)`.
+
+### M3(r8). MEDIUM — Daemon catch-up requires archive state; a >51-minute outage wedged them on default-pruned nodes
+Monitor and attestor catch up block by block via `api.at()` +
+`system.events()`, which needs per-block state; a default Substrate node prunes
+state to 256 blocks (~51 min). Any daemon outage past the horizon wedged the
+restart loudly but indefinitely, and the (correct) "never edit the state file"
+rule left no sanctioned recovery. **Resolution (documented):** both READMEs now
+require `--state-pruning archive` (or `archive-canonical`) and name the
+recovery path — point `PENDULUM_WS` at an archive node, never edit state.
+
+### L1(r8). LOW — Load-balanced `eth_getLogs` could silently truncate a scan range
+A pool node behind the `safe` head can serve a truncated log range without
+erroring on some providers, letting the monitor/releaser cursor advance past
+events never seen (stale pending entries, lost per-tuple evidence; aggregates
+unaffected). **Resolution (fixed):** both daemons probe each range's end block
+(`getBlock({blockNumber: end})`) before scanning — a lagging node now fails the
+cycle loudly and the range replays — and both READMEs recommend a single
+dedicated Base endpoint.
+
+### L2(r8). LOW — Releaser re-paged governance-blocked releases every poll
+`ExceedsPerReleaseCap`/`InsufficientVaultBalance` need a ≥48h timelocked action
+to clear but alerted every 60s (~2,900 identical pages per timelock period).
+**Resolution (fixed):** per-nonce throttling (`BLOCKED_ALERT_INTERVAL_MS`,
+default 6h), cleared when the nonce resolves.
+
+### L3(r8). LOW — Bare numeric status codes in the transient classifier collided with nonce labels
+The drills-round word-boundary fix did not cover `nonce=429` (and 502/503/504)
+embedded in error labels: a genuine failure at those nonces classified as
+transient — an infinite noisy retry instead of the PRD-A5 exit. **Resolution
+(fixed):** classification is structural first — `HttpRequestError.status`,
+`TimeoutError`, socket error codes, walked through the error `cause` chain —
+with a word-only text fallback (bare digit patterns removed entirely, WebSocket
+disconnect phrasing added). Extracted to `attestor/src/checks.ts` and unit
+tested, including the `nonce=429` regression. The releaser's synthetic
+"PendingFinality" message channel was removed along with the inline waits.
+
+### L4(r8). LOW — Config footguns
+`BASE_FINALITY_TAG=finalized` with the 15-minute default timeout guaranteed at
+least one spurious timeout per approval; unvalidated numeric envs became NaN
+silently (turning backoffs into busy-loops or disabling graces). **Resolution
+(fixed):** all numeric envs are validated at startup across the three daemons,
+and finality-related defaults scale with the chosen tag (45 min for
+`finalized`). The releaser's inline finality wait was removed outright: a
+successful `release()` now leaves the durable pending set only when
+`pruneConsumed` sees the nonce consumed at the boundary, which is both durable
+against reorgs and stall-free.
+
+### Noted, not fixed (INFO)
+Portal: a daily-cap-deferred release shows "waiting for approvals (3/3) …
+normally a few minutes" indefinitely (detect `approvals ≥ threshold &&
+!released` and say it is queued behind the cap); migrate-entire-balance can
+fail post-fee (`InsufficientBalance`/`WouldLeaveDust`) because the max button
+uses the display float and fees are withdrawn first. Repo hygiene: ~420MB of
+untracked local artifacts at the repo root are one `git add .` from landing in
+the PR. `spec_version` is still 25 at HEAD; the bump to 26 stays on the
+release checklist.
+
+### Round 8 explicitly verified as not vulnerable
+The one-time treasury-destination anchor (origin-gated, zero-address-checked,
+tested; root can still reset it via `killStorage`, an accepted bar-raise from
+council-majority to root); treasury migrations share the `MigrationInitiated`
+event and nonce sequence, so the monitor's contiguous-nonce cursor handles
+them; pallet burn atomicity, lock/vesting enforcement, dust/ED, KeepAlive and
+the paused-by-default storage default (the Executive migration tuple touches
+only xcmp-queue/identity); the `isUnreleasable` ⇄ `approve()` input-revert
+lockstep (unchanged, three conditions); generation accounting cannot
+double-add `pendingApprovedAmount` across remove/re-add/re-approve; the leaky
+bucket under `setCaps` changes; ABI/event parity across vault, attestor,
+monitor, releaser and portal (indexing verified field by field); payload-hash
+parity incl. the portal's manual `abi.encode` mirror; monitor draft/persist
+crash consistency and M2a read ordering; deploy-script role wiring; the vault's
+PEN cannot vote (and after r8 is provably parked at the sink).
+
+### Round 8 fix verification
+All local suites pass post-fix: pallet 22, Foundry 40 (3 new), attestor 14
+(6 new classifier tests), monitor 14 (1 new), releaser 11. The attestor/
+monitor/releaser changes are on the fund-release path: per the standing
+practice they need a fresh adversarial pass, and phases 3/5/6 must be re-run —
+phase 3 cannot exercise the finality trailing (Anvil's `safe == latest`), so
+the Sepolia rehearsal is the first environment where the new checkpoint
+behavior actually runs under real safe-lag. The M2(r8) governance change
+(circulating-supply quorum + floor) alters deployed-parameter semantics and
+needs an explicit team decision on `QUORUM_FRACTION`/`QUORUM_FLOOR` values
+before phase 5b re-runs.
+
+## Round 9 (2026-09-05, multi-agent audit over the round-8 tree; fresh angles)
+
+**Method.** Ten independent finder agents, one lens each — an adversarial pass
+over the round-8 fixes, daemon concurrency, fresh-eyes Solidity, and seven
+angles no earlier round had taken (economic/MEV, substrate-runtime
+interactions, supply chain, secrets/ops hygiene, portal web security,
+cross-component drift, test gaps) — followed by dedup against this log, two
+adversarial refuters per finding (code-truth and exploitability), a
+completeness critic that added four lenses (source-chain inflation, release
+artifact drift, governance-capture economics, runbook drift), and a second
+targeted round. 37 agents, 45 raw findings; the funnel's own triage was then
+re-judged by hand, because it had dropped several material items. Three
+findings are defects in round-8 fixes, which is exactly what the standing
+practice predicted.
+
+### H1(r9). HIGH — Nobody could stop a passed hostile proposal during the timelock delay
+`DeployGovernance.s.sol` granted `CANCELLER_ROLE` only to the Governor, and
+OZ Governor lets only the proposer cancel, only before voting starts. So once
+a proposal with quorum-clearing stake passed, the 48h delay was not a
+reaction window: one executor transaction could batch `unpause`,
+`addAttestor`×3, an unbounded `setCaps`, and three fabricated approvals — the
+guardian's pause (the PRD's stated mitigation for this threat) is undone
+inside the same batch. **Resolution (fixed, decision pending):** the script
+takes an optional `TIMELOCK_CANCELLER` (intended: the guardian or council
+Safe) and grants it `CANCELLER_ROLE`; `test_CancellerCanVetoAQueuedProposalDuringTheDelay`
+proves the veto against a queued proposal. **The team must set that address
+at phase 5** — the env example now says so.
+
+### H2(r9). HIGH — Governance capture is cheap by construction; no quorum floor prices it out
+Quorum stake is bought, not burned, and the prize is the unmigrated vault.
+Round 8's circulating-supply quorum was necessary (a full-supply denominator
+deadlocks unpause) but makes early capture cheaper still; no floor value
+reconciles "honestly reachable soon after launch" with "unprofitable to
+capture". No production `QUORUM_FLOOR` was decided anywhere, the env example
+still described a total-supply quorum, and the only in-repo value was the
+rehearsal's 0. **Resolution:** capture resistance is re-assigned explicitly to
+H1's canceller, the guardian pause and the vault caps — not to the floor —
+and `contracts/.env.example` now records both parameters as decisions to make
+before phase 5. Also noted: the round-8 handover gate ("measured delegated
+voting power exceeds quorum") is satisfiable by an attacker's own stake —
+measure *diverse* participation.
+
+### H3(r9). HIGH — Minted-then-burned PEN drains the vault with every check satisfied
+A passed Pendulum referendum (1 PEN deposit, `EnsureSigned` submission, root
+enactment — the exact vector of the real July 2026 proposal #2) or an
+unexpected teleport-in mints PEN; migrating it is a genuine finalized burn,
+honestly attested, tuple-matched, and within M2a/M2b — while the immutable
+150M vault drains ahead of late honest migrators. No component read Pendulum
+issuance; round 7 had cleared only staking inflation. **Resolution (fixed,
+alert-only):** the monitor anchors `totalIssuance + TotalMigrated` on first
+observation (persisted; that sum cannot grow under any legitimate flow, since
+teleport-in can only restore what teleport-out burned) and pages
+`SOURCE SUPPLY GREW` on growth beyond `ISSUANCE_TOLERANCE`; RB-3 gained the
+response (pause the *pallet*). Pausing is deliberately a human decision. The
+governance-side mitigation — council/technical-committee vigilance on opaque
+preimage proposals for the window's duration — is a Pendulum governance
+matter recorded here as an open decision.
+
+### M1(r9). MEDIUM — Quorum-approved-but-unreleased migrations were silent everywhere
+Three causes, one symptom. (a) Nothing enforced `perReleaseCap ≤ dailyCap`, so
+an amount in between passes the per-release check but can never fit the daily
+allowance — the rehearsal config itself had that shape (50,000 > 28,800).
+(b) The leaky bucket is first-come-first-served with no reservation, so
+sustained small self-migrations can starve a large deferred release at
+near-zero net cost. (c) A threshold cut can make a payload releasable without
+a `ReleasePending`, invisible to the releaser. In all three the releaser
+retried quietly, the monitor's liveness loop skipped anything at quorum, and
+the portal said "a few minutes". **Resolution (fixed):** the vault enforces
+`perReleaseCap ≤ dailyCap` (`CapsInverted`) in the constructor and `setCaps`;
+the monitor pages `LIVENESS: quorum reached but not released` after the grace;
+the releaser classifies an amount above `dailyCap` itself as blocked
+(`ExceedsDailyCapPermanently`) rather than a refill wait; RB-6 step 4 no
+longer claims a listing that did not exist. Residual: (b) is now *visible*,
+not prevented — a reservation scheme is a vault design change, recorded as a
+decision.
+
+### M2(r9). MEDIUM — Round 8's fabrication proof was unsound under Base timestamp lag
+The proof anchored on the Base block timestamp of the unmatched event. OP-stack
+L2 timestamps trail real time by the length of a sequencer outage while it
+catches up, so after such an outage a merely-lagging monitor node could
+"prove" a legitimate event fabricated and pause without grace. **Resolution
+(fixed):** `provablyUnsourced` anchors on the monitor's own first-observation
+time (the burn is finalized before the approval can be observed at all), and a
+future-dated source view (collator clock ahead) proves nothing. Regression
+tests cover both; the Base-timestamp fetch is gone.
+
+### M3(r9). MEDIUM — Monitor catch-up was all-or-nothing per cycle
+After a long outage the whole replay ran inside one `check()` and persisted
+only at the end; one transient RPC error discarded hours of progress, and a
+flaky endpoint could keep it blind indefinitely. **Resolution (fixed):** the
+Pendulum-side cursor (self-consistent on its own; the Base cursor only ever
+trails it) is checkpointed every 200 blocks during ingest.
+
+### M4(r9). MEDIUM — `setCaps(type(uint256).max, …)` would brick approve() and release()
+`_decayedConsumed` multiplies elapsed seconds by `dailyCap` under checked
+arithmetic; an "uncap" overflowed it, reverting every threshold-crossing
+`approve()` (a deterministic revert outside `isUnreleasable`, i.e. the
+fleet-halt class) until a second timelocked `setCaps`. **Resolution (fixed):**
+`MAX_DAILY_CAP = 2^128` enforced with the caps invariant; tested at the bound.
+
+### Lower-severity, all fixed
+- Releaser: a `NonceAlreadyConsumed` decoded from a *latest*-state simulation
+  could delete a pending entry before consumption was confirmed at the
+  boundary (round-8 regression) — now classified as pending finality; a mined
+  revert (no revert data) no longer pages as "unexpected" but is re-evaluated
+  next cycle.
+- Monitor: `securityViolation` awaited the alert webhook *before* pausing, with
+  no timeout — now pauses first; every daemon's webhook call has a 10s
+  timeout and redacts URLs (viem error texts quote the RPC endpoint, which
+  commonly embeds an API key).
+- Attestor: a push-driven loop with no watchdog idled silently when the node
+  stopped finalizing — `HEAD_STALL_ALERT_MS` watchdog added; state reads at
+  the `safe` block outside a node's retained window (`missing trie node`
+  while the batcher lags) are classified transient instead of fatal.
+- Monitor: a burn to the zero/vault address kept the pending count non-zero
+  forever (paging liveness every grace period and making RB-7's precondition
+  unsatisfiable) — paged once as `CRITICAL: unreleasable migration burned`
+  and excluded from reconciliation; RB-7 step 3 accounts for them.
+- Vault constructor rejects an `earliestSweepTimestamp` in the past.
+- The RB-6 drill rewound a checkpoint by writing the legacy shape the round-8
+  loader rejects — fixed; the sanctioned rewind procedure is now in RB-6.
+- Runbooks re-aligned with post-round-8 behaviour: alert vocabulary table,
+  RB-1 trigger, RB-2 recovery (archive node, never edit the checkpoint,
+  `START_BLOCK` applies only without a checkpoint), RB-3 step 6, RB-6 steps 3–4.
+
+### Noted, not fixed — decisions and other repos
+- **Spam economics (MEDIUM):** the 100 PEN minimum is retained capital, not a
+  cost — a self-migration returns it on Base — so spam is bounded only by the
+  spammer's Pendulum holdings and the daily cap, which the spam then consumes
+  (feeding M1(b)). Options: a burned-only fee on `migrate`, a per-account rate
+  limit, or accepting it with the monitor's new paging. Decision.
+- **Portal (separate repo):** `NumericInput` paste strips commas as thousands
+  separators, so a pasted `500,5` migrates 5005 PEN (to the user's own Base
+  address — not lost, but 10× and irreversible; the same paste path predates
+  the numora switch); the smart-contract and above-cap warnings fail open
+  while their RPC reads are loading or failed; confirmation checkboxes do not
+  reset when the address or amount changes; the headline copy says "3-of-5"
+  where the deployed set is 3-of-4.
+- **Process:** no CI job runs the Foundry or daemon suites; testing scripts
+  pass the deployer key on the forge argv (throwaway keys — use `--account`/a
+  keystore for production deploys); phase 4's header claims to prove attestor
+  finality gating but starts no attestor; the phase-3 fabricated-approval
+  drill passes through the grace-expiry path (grace 0), never the proof path.
+
+### Round 9 explicitly refuted
+The live PEN teleport channel does not invalidate `MAX_ISSUANCE` (teleports are
+supply-conserving; 150M was rounded up from ~149.93M live issuance, and
+AssetHub's PEN can only originate from Pendulum burns). A compromised quorum
+cannot permanently brick `sweepRemainder`: the fabricated nonce is consumable
+by the rotated honest quorum, after which `clearStalePending` clears it (its
+documented purpose, tested).
+
+### Round 9 fix verification
+Local suites after the fixes: pallet 22, Foundry 44 (4 new), attestor 14,
+monitor 16 (2 new), releaser 12 (1 new). The same standing practice applies
+as after round 8 — these changes touch the vault (caps invariants, sweep
+guard), the governance deployment, and all three daemons, so they need a
+fresh adversarial pass and the Sepolia re-run, with `REHEARSAL_PER_RELEASE_CAP_PEN`
+now equal to the daily cap and `TIMELOCK_CANCELLER`/`QUORUM_FLOOR` set.
+
 ## Residual risks and standing practices (no external audit — risk accepted)
 - Every change to the fund-release path (vault release/approve/sweep logic,
   pallet burn path) gets a fresh independent adversarial review round before

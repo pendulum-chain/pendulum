@@ -26,19 +26,19 @@ watched by an independent monitor that can auto-pause. One-way by design.
 
 | Component | Location | Status |
 |---|---|---|
-| `token-migration` pallet | `pallets/token-migration/` | Burn-and-emit `migrate` (user) + `migrate_treasury`/`set_treasury_destination` (governance, fixed Base destination) extrinsics sharing one nonce space and event; unique nonces, dust/ED + lock handling, KeepAlive treasury withdraw, ships paused, pause origin; 21 unit tests + benchmark test suite (frame-benchmarking v2) |
+| `token-migration` pallet | `pallets/token-migration/` | Burn-and-emit `migrate` (user) + one-time-destination `migrate_treasury` path sharing one nonce space and event; unique nonces, dust/ED + lock handling, KeepAlive treasury withdraw, ships paused, pause origin; 22 unit tests + benchmark test suite (frame-benchmarking v2) |
 | Runtime wiring | `runtime/pendulum/src/lib.rs` | Pallet index 102, minimum migration amount 100 PEN (sized to dominate the attestor fleet's per-migration Base gas, so dust spam cannot grief it), pause = root/half-council or 2/3 technical committee, added to `BaseFilter` whitelist and `define_benchmarks`; compiles with and without `runtime-benchmarks` (Foucoco intentionally skipped — that chain is no longer live; validation is local plus Base Sepolia) |
 | `PEN.sol` | `contracts/src/` | Fixed-supply `ERC20 + ERC20Permit + ERC20Votes`, EIP-6372 timestamp clock, full supply minted to vault, no owner/mint/proxy |
 | `MigrationVault.sol` | `contracts/src/` | 3-of-4 on-chain approvals per exact tuple, permanent nonce consumption, 12→18 decimal conversion in one place, per-release + daily caps (defer, not kill), guardian pause (approvals recorded while paused), rotation retroactively invalidates removed attestors, two-step admin, pending-release accounting protecting the timelocked remainder sweep |
-| `PENGovernor.sol` | `contracts/src/` | OZ Governor composition through a TimelockController (hybrid governance, timestamp clock) |
+| `PENGovernor.sol` | `contracts/src/` | OZ Governor composition through a TimelockController (hybrid governance, timestamp clock); quorum is a fraction of **circulating** supply (total minus the vault's unmigrated balance, parked at a vote sink by `setToken`) bounded below by an absolute `quorumFloor` — a full-supply denominator could make quorum unreachable early and permanently deadlock an unpause (round 8) |
 | Deploy scripts | `contracts/script/` | `Deploy.s.sol` (vault→token→setToken dance, admin handover to bootstrap Safe), `DeployGovernance.s.sol` (timelock+governor role wiring, deployer admin renounced); parameters documented in `contracts/.env.example` |
-| Contract tests | `contracts/test/` | 37 Foundry tests incl. fuzz (supply invariant), full Governor proposal lifecycle, replay/race/rotation/caps/pause/sweep-pending scenarios |
-| Attestor daemon | `attestor/` | TypeScript; finalized-heads-only, strictly ordered blocks, crash-safe checkpoint, idempotent + race-tolerant approvals, fail-fast on decode errors (4-field shape asserted), startup set-membership check, low-gas/webhook alerts; ops guide in its README |
-| Invariant monitor | `monitor/` | Independent watchdog: conservation checks (block-pinned reads) + per-nonce liveness batched via Multicall3; webhook alerts; optional guardian auto-pause |
+| Contract tests | `contracts/test/` | 44 Foundry tests incl. fuzz (supply invariant), full Governor proposal lifecycle and a canceller veto, circulating-supply quorum, caps invariants, replay/race/rotation/caps/pause/sweep-pending scenarios |
+| Attestor daemon | `attestor/` | TypeScript; finalized-heads-only, strictly ordered blocks processed at latest Base state with the durable checkpoint trailing at the `safe`/`finalized` boundary (round 8: processing and durability decoupled, so lost races never alert and throughput is submission latency), idempotent + race-tolerant approvals, structural transient-error classification, fail-fast on decode errors (4-field shape asserted), startup set-membership check, low-gas/webhook alerts; ops guide in its README |
+| Invariant monitor | `monitor/` | Independent watchdog: durable finalized-Pendulum ↔ safe-Base tuple reconciliation, aggregate conservation, active-approval liveness batched via Multicall3, and receipt/state-confirmed guardian auto-pause. Unmatched Base events page on first sight; a fabricated one is proven (source view past the event's timestamp) and pauses immediately, while a lagging source gets a bounded grace and its own stall paging (round 8) |
 | Releaser | `releaser/` | Drains cap-deferred releases via the permissionless `release()`; unprivileged gas-only key; classifies self-healing vs governance-blocked failures |
 | Test harness | `testing/` | Automates all four phases of the local test plan: contracts on Anvil, the pallet against a Chopsticks fork of live mainnet state, the full attestor/monitor/releaser pipeline end to end, and relay-chain finality under Zombienet |
 | Runbooks | `docs/pen-migration-runbooks.md` | RB-1…RB-7: key compromise, outage, invariant breach, pause/unpause, runtime upgrade, attestor rotation, window close |
-| Internal security review | `docs/pen-migration-internal-review.md` | The project's security-assurance record across seven adversarial rounds |
+| Internal security review | `docs/pen-migration-internal-review.md` | The project's security-assurance record across nine adversarial rounds (round 9: multi-agent, fresh angles — governance capture, source-chain inflation, economics, supply chain, runbook drift) |
 
 ### Portal repo (`feat/pen-base-migration`, PR #655)
 
@@ -66,14 +66,14 @@ restricted to consumed nonces. Details and verified-not-vulnerable list in
 
 | Suite | Result |
 |---|---|
-| `cargo test -p token-migration` | 21 (22 with `runtime-benchmarks`) |
+| `cargo test -p token-migration` | 22 (23 with `runtime-benchmarks`) |
 | `cargo check -p pendulum-runtime` | clean, both feature sets |
 | `forge test` | 37, incl. 512-run fuzz and a full Governor lifecycle |
-| `attestor` / `monitor` / `releaser` | 6 / 7 / 7 |
+| `attestor` / `monitor` / `releaser` | 8 / 13 / 11 |
 | Portal `yarn build` (tsc + vite) | clean against `main` |
 | `testing/src/phase1-base.mjs` | 11/11 against the real deploy script on Anvil |
 | `testing/src/phase2-pendulum.mjs` | 14/14 against a Chopsticks fork of live mainnet state |
-| `testing/src/phase3-e2e.mjs` | 7/7 end to end, four attestors + monitor + releaser |
+| `testing/src/phase3-e2e.mjs` | 9 checks defined, including injected deficit + confirmed auto-pause and fabricated-approval tuple rejection; expanded suite requires a running Chopsticks instance and is pending a full rerun |
 | `testing/src/phase4-zombienet.mjs` | 7/7 against a real relay (~2-block parachain finality lag) |
 | `testing/src/rehearsal.mjs` | 15/15 full stack: local Zombienet Pendulum + Base Sepolia |
 | `testing/src/drills.mjs` | 13/13 failure drills (RB-1/3/4/6/7) on the Sepolia stack |

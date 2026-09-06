@@ -15,7 +15,8 @@ daemons watch relay-**finalized** blocks and submit
 `approve(nonce, recipient, amount)` to a vault on Base; the 3rd matching
 approval releases pre-minted fixed-supply ERC-20 PEN (12→18 decimals, ×1e6,
 converted in exactly one place). Rate caps bound worst-case loss; an
-independent monitor holds a conservation invariant and can auto-pause; a
+independent monitor reconciles every safe Base tuple to its finalized Pendulum
+source, holds aggregate conservation invariants, and can auto-pause; a
 permissionless releaser drains cap-deferred releases. Governance: OZ Governor
 + Timelock on Base, with the vault admin handed to the timelock by proposal.
 
@@ -72,8 +73,8 @@ Every real bug found post-unit-tests belongs to one of these. The most likely
 
 Try to falsify these directly — each is load-bearing:
 
-- `vault.balanceOf + totalReleased + totalSwept == PEN.totalSupply`, with
-  surplus tolerated and only deficit alarming.
+- `vault.balanceOf + totalReleased + totalSwept >= PEN.totalSupply`, with
+  equality under vault-controlled flows, surplus tolerated, and only a deficit alarming.
 - A nonce releases at most once, ever, across user AND treasury migrations
   (one shared sequence); no tuple `(nonce, recipient, amount)` can be
   released with different arguments than were approved.
@@ -102,19 +103,20 @@ Try to falsify these directly — each is load-bearing:
    classifier): newest fund-release-path code, reviewed once, by the author.
    Specifically: can `isTransientRpcError` misclassify anything fatal as
    transient (silent-stall) or vice versa (fleet death)? Can the
-   `alreadyHandledSettled` backoff interact badly with checkpointing or the
-   serialized block-processing promise chain?
+   safe/finalized `alreadyHandledSettled` recheck and latest-state pending
+   detection interact badly with durable checkpointing or the serialized
+   block-processing promise chain?
 2. **The portal UI** — one full-diff pass (r4) only. Amount parsing and
    decimal display, EIP-55 handling in `src/helpers/ethereum.ts`, the
    payload-hash mirror of the vault's `abi.encode`, and what the status card
    does on RPC lag or a deferred release.
 3. **`migrate_treasury` / `set_treasury_destination`** — the governance-only
    burn path; less exercised than user `migrate`. Check origin gating, the
-   fixed-destination logic, KeepAlive semantics against the real treasury
+   one-time destination anchor, KeepAlive semantics against the real treasury
    account.
-4. **Monitor liveness (M4)** — `nonceFirstSeen` map growth, alert
-   deduplication, GRACE_SECONDS interaction with finality lag; r5/r7 touched
-   it twice, which historically predicts a third issue.
+4. **Monitor reconciliation/liveness** — durable two-chain cursor and pending
+   tuple growth, active-approval alert deduplication, and the bounded
+   `UNMATCHED_EVENT_GRACE_SECONDS` interaction with independently lagging RPCs.
 5. **Governance wiring** — `PENGovernor.sol` composition and
    `DeployGovernance.s.sol` ran on-chain for the first time on 2026-08-31.
    Quorum counts For+Abstain against **full** `totalSupply` (the unreleased
@@ -138,9 +140,9 @@ Try to falsify these directly — each is load-bearing:
 ## Running things
 
 ```bash
-cargo test -p token-migration            # 21 (22 with --features runtime-benchmarks)
-cd contracts && forge test               # 37
-cd attestor  && npm test                 # 6   (monitor: 7, releaser: 7)
+cargo test -p token-migration            # 22 (23 with --features runtime-benchmarks)
+cd contracts && forge test               # 44
+cd attestor  && npm test                 # 14  (monitor: 16, releaser: 12)
 node testing/src/phase1-base.mjs         # needs: anvil --port 8545
 node testing/src/phase2-pendulum.mjs     # needs: chopsticks per docs/pen-migration-local-test-plan.md
 ```

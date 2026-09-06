@@ -175,6 +175,17 @@ BASE_RPC_URL=http://localhost:8545 VAULT_ADDRESS=0x… \
 RELEASER_PRIVATE_KEY=0x… START_BLOCK=0 npm start
 ```
 
+The monitor's first-run boundaries are mandatory: use the first Pendulum block
+that can contain a migration (plus the nonce expected there) and the vault's
+Base deployment block. Afterwards its atomic state file owns both cursors:
+
+```bash
+PENDULUM_WS=ws://127.0.0.1:9944 BASE_RPC_URL=http://localhost:8545 \
+VAULT_ADDRESS=0x… GUARDIAN_PRIVATE_KEY=0x… \
+PENDULUM_START_BLOCK=123 PENDULUM_START_NONCE=0 BASE_START_BLOCK=45 \
+STATE_FILE=./monitor-state.json npm start
+```
+
 Checks:
 
 1. **Full path:** unpause the pallet, `migrate` from a funded account → within
@@ -204,7 +215,10 @@ Checks:
    `VITE_MIGRATION_VAULT_ADDRESS` set to the Anvil vault; migrate through the
    UI and watch the status card go 0/3 → 3/3 → released.
 
-**Pass:** 7/7 from the script.
+**Pass criterion:** 9/9 from the script. The final two checks impersonate the vault on
+Anvil to inject a real deficit and confirm the guardian pause through Base
+finality/state verification, then submit a fabricated one-attestor approval to
+prove the monitor rejects a tuple mismatch before it can reach quorum.
 
 Three traps cost real debugging time and are worth knowing before you run it:
 a wasm built with `--features runtime-benchmarks` cannot be used as a

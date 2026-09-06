@@ -39,6 +39,9 @@ contract PENGovernorTest is Test {
 
         timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
         timelock.grantRole(timelock.CANCELLER_ROLE(), address(governor));
+        // The human veto during the timelock delay (DeployGovernance's
+        // optional TIMELOCK_CANCELLER): the guardian Safe.
+        timelock.grantRole(timelock.CANCELLER_ROLE(), guardian);
         timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0));
         timelock.renounceRole(timelock.DEFAULT_ADMIN_ROLE(), address(this));
 
@@ -92,6 +95,40 @@ contract PENGovernorTest is Test {
 
         assertEq(vault.perReleaseCap(), 5e24);
         assertEq(vault.dailyCap(), 9e24);
+    }
+
+    function test_CancellerCanVetoAQueuedProposalDuringTheDelay() public {
+        // A passed proposal is the one thing OZ Governor cannot cancel itself
+        // (only the proposer, only before voting). The timelock delay is a
+        // reaction window only if someone holds CANCELLER_ROLE on the timelock.
+        address[] memory targets = new address[](1);
+        targets[0] = address(vault);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = abi.encodeCall(MigrationVault.setCaps, (5e24, 9e24));
+        string memory description = "Hostile: raise caps before a drain";
+        bytes32 descriptionHash = keccak256(bytes(description));
+
+        vm.prank(alice);
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
+        vm.prank(alice);
+        governor.castVote(proposalId, 1);
+        vm.warp(block.timestamp + VOTING_PERIOD + 1);
+        governor.queue(targets, values, calldatas, descriptionHash);
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Queued));
+
+        // GovernorTimelockControl salts the operation with the governor address.
+        bytes32 salt = bytes20(address(governor)) ^ descriptionHash;
+        bytes32 operationId = timelock.hashOperationBatch(targets, values, calldatas, 0, salt);
+        vm.prank(guardian);
+        timelock.cancel(operationId);
+
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Canceled));
+        vm.warp(block.timestamp + TIMELOCK_DELAY + 1);
+        vm.expectRevert();
+        governor.execute(targets, values, calldatas, descriptionHash);
+        assertEq(vault.perReleaseCap(), 1e24, "caps unchanged after veto");
     }
 
     function test_QuorumSinkMatchesVaultVoteSink() public view {

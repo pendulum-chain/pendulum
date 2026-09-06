@@ -143,7 +143,7 @@ Try to falsify these directly — each is load-bearing:
 cargo test -p token-migration            # 22 (23 with --features runtime-benchmarks)
 cd contracts && forge test               # 44
 cd attestor  && npm test                 # 14  (monitor: 16, releaser: 12)
-node testing/src/phase1-base.mjs         # needs: anvil --port 8545
+node testing/src/phase1-base.mjs         # needs: anvil --port 8545 --slots-in-an-epoch 0
 node testing/src/phase2-pendulum.mjs     # needs: chopsticks per docs/pen-migration-local-test-plan.md
 ```
 

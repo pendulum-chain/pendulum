@@ -56,7 +56,7 @@ Goal: the contracts behave as specified against a real EVM, and the deploy
 script works with realistic parameters.
 
 ```bash
-anvil --port 8545          # terminal 1
+anvil --port 8545 --slots-in-an-epoch 0          # terminal 1
 cd contracts
 cp .env.example .env       # fill in: 4 attestor addrs, Safes, caps, MAX_ISSUANCE, EARLIEST_SWEEP_TS
 forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --broadcast

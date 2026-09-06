@@ -1,3 +1,4 @@
 node_modules/
 .chopsticks-db.sqlite*
 .chopsticks-e2e.sqlite*
+.logs/

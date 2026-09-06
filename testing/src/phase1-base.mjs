@@ -6,7 +6,7 @@
  * handover. That is the point: unit tests exercise the contract, this
  * exercises the thing we will actually ship and the script that ships it.
  *
- *   anvil --port 8545
+ *   anvil --port 8545 --slots-in-an-epoch 0
  *   node testing/src/phase1-base.mjs
  */
 

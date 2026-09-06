@@ -35,6 +35,21 @@ export const anvilChain = defineChain({
 });
 
 export const pub = createPublicClient({ chain: anvilChain, transport: http(RPC) });
+
+// The daemons pin their durability reads to Base `safe`/`finalized`. Anvil
+// resolves those tags to GENESIS until the chain is an epoch (32 blocks) deep,
+// so a default Anvil hands every attestor a pre-vault block on its first
+// checkpoint and the fleet dies silently (found the hard way). Refuse to run
+// against an Anvil started without `--slots-in-an-epoch 0`.
+{
+	const [latest, safe] = await Promise.all([pub.getBlock({ blockTag: "latest" }), pub.getBlock({ blockTag: "safe" })]);
+	if (safe.number !== latest.number) {
+		throw new Error(
+			`Anvil at ${RPC} resolves "safe" to block ${safe.number} while latest is ${latest.number}; ` +
+				"start it with `anvil --port 8545 --slots-in-an-epoch 0` so the daemons' finality-boundary reads see the vault",
+		);
+	}
+}
 export const wallet = (account) => createWalletClient({ account, chain: anvilChain, transport: http(RPC) });
 
 /** Send a contract call and wait for it to land, returning the receipt. */

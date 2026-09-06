@@ -4,7 +4,7 @@
  */
 
 import { execSync, spawn } from "node:child_process";
-import { rmSync } from "node:fs";
+import { createWriteStream, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,20 +14,28 @@ const running = new Map();
 /** Start a built service. Output is captured so a crash is diagnosable, and
  *  `exited` records whether the process died -- the attestor race regression
  *  is precisely "a daemon that should have kept running did not". */
+const LOG_DIR = path.join(ROOT, "testing", ".logs");
+
 export function start(name, dir, env) {
 	const proc = spawn("node", ["dist/main.js"], {
 		cwd: path.join(ROOT, dir),
 		env: { ...process.env, ...env },
 		stdio: ["ignore", "pipe", "pipe"],
 	});
+	// Tee every daemon's output to testing/.logs/<name>.log as well: the
+	// in-memory ring buffer dies with the harness, which left a silent attestor
+	// exit during a phase-3 run with no stderr to read afterwards.
+	mkdirSync(LOG_DIR, { recursive: true });
+	const file = createWriteStream(path.join(LOG_DIR, `${name}.log`), { flags: "a" });
 	const rec = { proc, name, out: [], exited: null };
 	const capture = (chunk) => {
+		file.write(chunk);
 		for (const line of String(chunk).split("\n")) if (line.trim()) rec.out.push(line);
 		if (rec.out.length > 500) rec.out.splice(0, rec.out.length - 500);
 	};
 	proc.stdout.on("data", capture);
 	proc.stderr.on("data", capture);
-	proc.on("exit", (code) => { rec.exited = code ?? -1; });
+	proc.on("exit", (code) => { rec.exited = code ?? -1; file.end(`\n[harness] ${name} exited with code ${code}\n`); });
 	running.set(name, rec);
 	return rec;
 }

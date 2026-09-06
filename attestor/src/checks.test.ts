@@ -10,7 +10,8 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isUnreleasable, ZERO_ADDRESS } from "./checks.js";
+import { HttpRequestError, TimeoutError } from "viem";
+import { isTransientRpcError, isUnreleasable, ZERO_ADDRESS } from "./checks.js";
 
 const VAULT = "0x1111111111111111111111111111111111111111";
 const NORMAL = "0x00000000000000000000000000000000deadbeef";
@@ -45,4 +46,47 @@ test("a zero amount is unreleasable (vault reverts ZeroAmount)", () => {
 test("an unreleasable condition still wins when combined with a normal one", () => {
 	assert.equal(isUnreleasable(ZERO_ADDRESS, 0n, VAULT), true);
 	assert.equal(isUnreleasable(VAULT, 0n, VAULT), true);
+});
+
+test("a fatal error whose label embeds nonce 429/502 stays fatal", () => {
+	// Nonces are sequential, so 429, 502, 503 and 504 all occur. An error text
+	// embedding them (every submission error carries the tuple label) must not
+	// be reclassified as an endpoint failure — the post-drills L1 class.
+	assert.equal(
+		isTransientRpcError(new Error("approve transaction reverted: 0xabc (nonce=429 recipient=0x11 amount=1000)")),
+		false,
+	);
+	assert.equal(isTransientRpcError(new Error("unexpected state for nonce=502")), false);
+});
+
+test("HTTP-status endpoint failures are transient, matched structurally", () => {
+	assert.equal(isTransientRpcError(new HttpRequestError({ url: "https://rpc", status: 429 })), true);
+	assert.equal(isTransientRpcError(new HttpRequestError({ url: "https://rpc", status: 503 })), true);
+	assert.equal(isTransientRpcError(new HttpRequestError({ url: "https://rpc", status: 403 })), false);
+});
+
+test("transient causes are found anywhere in the error chain", () => {
+	const wrapped = new Error("request failed", { cause: new HttpRequestError({ url: "https://rpc", status: 502 }) });
+	assert.equal(isTransientRpcError(wrapped), true);
+	assert.equal(isTransientRpcError(new TimeoutError({ body: {}, url: "https://rpc" })), true);
+});
+
+test("socket-level failures are transient via their structured code", () => {
+	const refused = new Error("connect failed") as Error & { code: string };
+	refused.code = "ECONNREFUSED";
+	assert.equal(isTransientRpcError(refused), true);
+});
+
+test("text-only transport failures (polkadot-js) are still recognized", () => {
+	assert.equal(isTransientRpcError(new Error("WebSocket is not connected")), true);
+	assert.equal(isTransientRpcError(new Error("disconnected from wss://node:443: 1006")), true);
+	assert.equal(isTransientRpcError(new Error("fetch failed")), true);
+	assert.equal(isTransientRpcError(new Error("socket hang up")), true);
+	// A safe-block state read outside the node's retained window heals as the
+	// safe head catches up; it must wait, not exit.
+	assert.equal(isTransientRpcError(new Error("missing trie node 0xabc (path ) <nil>")), true);
+});
+
+test("a decode failure is never transient", () => {
+	assert.equal(isTransientRpcError(new Error("MigrationInitiated in block 7 has 5 fields, expected 4")), false);
 });

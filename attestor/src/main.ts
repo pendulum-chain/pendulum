@@ -8,15 +8,19 @@
  *
  * Design invariants:
  * - Only finalized blocks are read; blocks are processed strictly in order.
- * - The checkpoint file is advanced only after every event in a block has
- *   been handled, so a crash re-processes at most one block (idempotent:
- *   duplicate approvals revert harmlessly and are skipped by the pre-check).
+ * - Processing acts on the LATEST Base state (submission, race detection);
+ *   the durable checkpoint advances only once every releasable event of a
+ *   block is resolved inside the configured Base `safe`/`finalized` boundary.
+ *   Splitting the two keeps throughput at submission latency — while every
+ *   lost k-of-n race stays what it is, the most ordinary event in the system,
+ *   never an alert — yet a crash can only ever re-process blocks whose
+ *   approvals were not durable, which is idempotent (duplicate approvals
+ *   revert harmlessly and are skipped by the pre-check).
  * - A decode failure is FATAL by design (PRD A5): the daemon alerts and
  *   exits rather than silently skipping an event; the checkpoint keeps the
  *   failing block next in line for after the operator intervenes.
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import {
 	createPublicClient,
@@ -27,50 +31,41 @@ import {
 	keccak256,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { isUnreleasable } from "./checks.js";
+import { isTransientRpcError, isUnreleasable } from "./checks.js";
 import { config } from "./config.js";
+import { assertCheckpointIdentity, loadCheckpoint, saveCheckpoint, type Checkpoint } from "./state.js";
 import { vaultAbi } from "./vaultAbi.js";
-
-interface Checkpoint {
-	lastProcessedBlock: number;
-}
 
 /** Multiplier applied to the estimated gas for `approve`. See the note at the
  *  call site: the same call can take the cheap record path or the expensive
  *  threshold-crossing release path. */
 const GAS_LIMIT_MULTIPLIER = 4n;
 
-/**
- * Transport-level failures that say nothing about the migration itself.
- *
- * PRD A5 requires this daemon to die rather than silently skip an event, and a
- * decode failure still does exactly that. But a rate limit or a dropped socket
- * is not a decode failure: it carries no information about the event, and
- * exiting on one turns every transient RPC hiccup into an attestor outage. The
- * checkpoint is only advanced once a block is fully handled, so leaving the
- * block unprocessed is safe — the next finalized head simply re-processes it.
- */
-function isTransientRpcError(error: unknown): boolean {
-	const parts = [
-		(error as { message?: string })?.message,
-		(error as { details?: string })?.details,
-		(error as { shortMessage?: string })?.shortMessage,
-		(error as { cause?: { details?: string } })?.cause?.details,
-	];
-	const text = parts.filter(Boolean).join(" ");
-	return /rate limit|too many requests|timeout|timed out|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|socket hang up|fetch failed|\b(?:429|50[234])\b|service unavailable|internal error/i
-		.test(text);
-}
-
 /** How persistently to confirm that a failed approval was merely a lost race
  *  before treating it as fatal. See `alreadyHandledSettled`. */
 const RACE_RECHECK_ATTEMPTS = 5;
 const RACE_RECHECK_DELAY_MS = 3000;
 
+/** Repeated transient failures (a sustained RPC outage) page at most this
+ *  often; every occurrence is still logged. */
+const TRANSIENT_ALERT_INTERVAL_MS = 60_000;
+
 interface MigrationEvent {
 	nonce: bigint;
 	recipient: `0x${string}`;
 	palletAmount: bigint;
+}
+
+/** A block processed against the latest Base state whose releasable events are
+ *  not yet confirmed inside the finality boundary. The checkpoint may not
+ *  advance past it until they are. */
+interface UnconfirmedBlock {
+	block: number;
+	/** Events awaiting durability. Unreleasable tuples are excluded: they are
+	 *  permanently skipped (with a critical alert) and never resolve on Base. */
+	events: MigrationEvent[];
+	/** When this block's approvals were last (re-)submitted. */
+	lastAttemptMs: number;
 }
 
 const baseChain = defineChain({
@@ -92,6 +87,12 @@ function log(message: string, extra?: unknown): void {
 	console.log(`${new Date().toISOString()} ${message}`, extra ?? "");
 }
 
+/** Strip URLs before anything leaves the process: RPC endpoints commonly embed
+ *  API keys, and viem error texts quote the endpoint verbatim. */
+function redact(text: string): string {
+	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
+}
+
 async function alert(subject: string, detail: unknown): Promise<void> {
 	console.error(`${new Date().toISOString()} ALERT: ${subject}`, detail);
 	if (!config.alertWebhookUrl) return;
@@ -99,23 +100,12 @@ async function alert(subject: string, detail: unknown): Promise<void> {
 		await fetch(config.alertWebhookUrl, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ service: "pen-attestor", attestor: account.address, subject, detail: `${detail}` }),
+			body: JSON.stringify({ service: "pen-attestor", attestor: account.address, subject, detail: redact(`${detail}`) }),
+			signal: AbortSignal.timeout(10_000),
 		});
 	} catch (webhookError) {
 		console.error("alert webhook failed", webhookError);
 	}
-}
-
-function loadCheckpoint(): Checkpoint {
-	try {
-		return JSON.parse(readFileSync(config.checkpointFile, "utf8")) as Checkpoint;
-	} catch {
-		return { lastProcessedBlock: config.startBlock - 1 };
-	}
-}
-
-function saveCheckpoint(checkpoint: Checkpoint): void {
-	writeFileSync(config.checkpointFile, JSON.stringify(checkpoint));
 }
 
 function payloadHash(event: MigrationEvent): `0x${string}` {
@@ -161,14 +151,14 @@ async function migrationEventsInBlock(api: ApiPromise, blockNumber: number): Pro
 }
 
 /** True when this migration no longer needs our approval (released, or we
- *  already approved). Rechecked after failures: with 4 attestors
- *  racing to the same event, losing the race is the NORMAL case, not an error. */
-async function alreadyHandled(event: MigrationEvent): Promise<boolean> {
+ *  already approved) at the given Base block, or at latest when omitted. */
+async function alreadyHandledAt(event: MigrationEvent, blockNumber?: bigint): Promise<boolean> {
 	const consumed = await publicClient.readContract({
 		address: config.vaultAddress,
 		abi: vaultAbi,
 		functionName: "nonceConsumed",
 		args: [event.nonce],
+		...(blockNumber === undefined ? {} : { blockNumber }),
 	});
 	if (consumed) return true;
 	return publicClient.readContract({
@@ -176,7 +166,16 @@ async function alreadyHandled(event: MigrationEvent): Promise<boolean> {
 		abi: vaultAbi,
 		functionName: "hasApproved",
 		args: [payloadHash(event), account.address],
+		...(blockNumber === undefined ? {} : { blockNumber }),
 	});
+}
+
+/** Latest-state view: with 4 attestors racing to the same event, losing the
+ *  race is the NORMAL case, not an error, and concluding that needs no
+ *  finality — durability is enforced separately before the checkpoint moves
+ *  (see `advanceCheckpoint`). */
+async function alreadyHandled(event: MigrationEvent): Promise<boolean> {
+	return alreadyHandledAt(event);
 }
 
 /**
@@ -204,18 +203,21 @@ async function alreadyHandledSettled(event: MigrationEvent): Promise<boolean> {
 	return false;
 }
 
-/** Submit the approval for one migration event, skipping work already done. */
-async function approve(event: MigrationEvent): Promise<void> {
+/** Submit the approval for one migration event, skipping work already done.
+ *  Returns true when the event must later be confirmed durable at the Base
+ *  finality boundary (submitted, raced, or already handled), false when it is
+ *  permanently unreleasable and excluded from durability tracking. */
+async function approve(event: MigrationEvent): Promise<boolean> {
 	const label = `nonce=${event.nonce} recipient=${event.recipient} amount=${event.palletAmount}`;
 
 	if (isUnreleasable(event.recipient, event.palletAmount, config.vaultAddress)) {
 		await alert("CRITICAL: unreleasable migration event skipped permanently", label);
-		return;
+		return false;
 	}
 
 	if (await alreadyHandled(event)) {
 		log(`skip (already released or approved): ${label}`);
-		return;
+		return true;
 	}
 
 	try {
@@ -254,10 +256,11 @@ async function approve(event: MigrationEvent): Promise<void> {
 		// is a genuine failure and propagates to the fatal handler.
 		if (await alreadyHandledSettled(event)) {
 			log(`skip (raced, resolved on-chain): ${label}`);
-			return;
+			return true;
 		}
 		throw error;
 	}
+	return true;
 }
 
 async function checkGasBalance(): Promise<void> {
@@ -280,31 +283,103 @@ async function main(): Promise<void> {
 	await checkGasBalance();
 
 	const api = await ApiPromise.create({ provider: new WsProvider(config.pendulumWs) });
-	const checkpoint = loadCheckpoint();
+	const pendulumGenesisHash = api.genesisHash.toHex();
+	const checkpoint = loadCheckpoint(config.checkpointFile) ?? {
+		version: 1,
+		baseChainId: config.baseChainId,
+		vaultAddress: config.vaultAddress,
+		pendulumGenesisHash,
+		lastProcessedBlock: config.startBlock - 1,
+	} satisfies Checkpoint;
+	assertCheckpointIdentity(checkpoint, { ...config, pendulumGenesisHash });
 	log(`attestor ${account.address} starting after block ${checkpoint.lastProcessedBlock}`);
 
+	/** Blocks processed at the latest Base state, oldest first, that the
+	 *  checkpoint has not yet passed. Bounded by the Base finality lag. */
+	const unconfirmed: UnconfirmedBlock[] = [];
+	let processedThrough = checkpoint.lastProcessedBlock;
+	let lastTransientAlertMs = 0;
+
+	/** All releasable events of `entry` are resolved at `blockNumber` — either
+	 *  the nonce is consumed (released) or our approval is recorded there. */
+	async function eventsDurableAt(entry: UnconfirmedBlock, blockNumber: bigint): Promise<boolean> {
+		for (const event of entry.events) {
+			if (!(await alreadyHandledAt(event, blockNumber))) return false;
+		}
+		return true;
+	}
+
+	/** Advance the durable checkpoint through every leading block whose events
+	 *  are resolved inside the Base finality boundary. A block that refuses to
+	 *  settle (our approval reorged out and nothing replaced it) is re-approved
+	 *  after `baseFinalityTimeoutMs` rather than waited on forever — the
+	 *  checkpoint cannot pass it until it settles, so nothing is ever skipped. */
+	async function advanceCheckpoint(): Promise<void> {
+		let confirmedNumber: bigint | undefined;
+		let advanced = false;
+		while (unconfirmed.length > 0) {
+			const head = unconfirmed[0];
+			if (head.events.length > 0) {
+				if (confirmedNumber === undefined) {
+					const confirmed = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
+					if (confirmed.number === null) throw new Error(`${config.baseFinalityTag} Base block has no number`);
+					confirmedNumber = confirmed.number;
+				}
+				if (!(await eventsDurableAt(head, confirmedNumber))) {
+					if (Date.now() - head.lastAttemptMs >= config.baseFinalityTimeoutMs) {
+						await alert(
+							"approvals not durable at the Base finality boundary, re-submitting",
+							`Pendulum block ${head.block} (${head.events.length} event(s), boundary ${config.baseFinalityTag})`,
+						);
+						head.lastAttemptMs = Date.now();
+						for (const event of head.events) {
+							await approve(event);
+						}
+					}
+					break;
+				}
+			}
+			checkpoint.lastProcessedBlock = head.block;
+			unconfirmed.shift();
+			advanced = true;
+		}
+		if (advanced) saveCheckpoint(config.checkpointFile, checkpoint);
+	}
+
+	let lastHeadAt = Date.now();
+	let lastHeadStallAlertMs = 0;
 	let processing = Promise.resolve();
 	await api.rpc.chain.subscribeFinalizedHeads((head) => {
+		lastHeadAt = Date.now();
 		const finalized = head.number.toNumber();
 		// Serialize: a slow Base transaction must not let block processing overlap.
 		processing = processing.then(async () => {
-			for (let block = checkpoint.lastProcessedBlock + 1; block <= finalized; block++) {
+			for (let block = processedThrough + 1; block <= finalized; block++) {
 				const events = await migrationEventsInBlock(api, block);
+				const tracked: MigrationEvent[] = [];
 				for (const event of events) {
-					await approve(event);
+					if (await approve(event)) tracked.push(event);
 				}
-				checkpoint.lastProcessedBlock = block;
-				saveCheckpoint(checkpoint);
+				unconfirmed.push({ block, events: tracked, lastAttemptMs: Date.now() });
+				processedThrough = block;
 			}
+			await advanceCheckpoint();
 		}).catch(async (error) => {
 			if (isTransientRpcError(error)) {
-				// Not a statement about the event — leave the checkpoint where it is
-				// and let the next finalized head re-process this block.
-				await alert("transient RPC failure, retrying on the next finalized head", error);
+				// Not a statement about any event — resume from the in-memory
+				// position on the next finalized head. Sustained outages page
+				// at a bounded rate instead of once per head.
+				if (Date.now() - lastTransientAlertMs >= TRANSIENT_ALERT_INTERVAL_MS) {
+					lastTransientAlertMs = Date.now();
+					await alert("transient RPC failure, retrying on the next finalized head", error);
+				} else {
+					log("transient RPC failure, retrying on the next finalized head", error);
+				}
 				return;
 			}
 			// PRD A5: never skip an event silently. Alert and exit; the process
-			// manager restarts us and the checkpoint retries the failing block.
+			// manager restarts us and the checkpoint retries from the last block
+			// whose approvals were durable.
 			await alert("fatal error, exiting", error);
 			process.exit(1);
 		});
@@ -314,6 +389,17 @@ async function main(): Promise<void> {
 		() => void checkGasBalance().catch((error) => console.error("gas balance check failed", error)),
 		10 * 60 * 1000,
 	);
+	// Liveness watchdog for the push-driven loop above: silence is the one
+	// failure the subscription cannot report on its own.
+	setInterval(() => {
+		const silentMs = Date.now() - lastHeadAt;
+		if (silentMs < config.headStallAlertMs || Date.now() - lastHeadStallAlertMs < config.headStallAlertMs) return;
+		lastHeadStallAlertMs = Date.now();
+		void alert(
+			"no finalized Pendulum head received",
+			`${Math.round(silentMs / 1000)}s since the last finalized head; the node may have stopped finalizing or the subscription silently died`,
+		);
+	}, 60_000);
 }
 
 main().catch(async (error) => {

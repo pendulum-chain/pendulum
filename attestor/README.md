@@ -12,7 +12,13 @@ point.
 ## Non-negotiable operational rules (PRD A1–A5)
 
 1. **Run your own Pendulum full node** and point `PENDULUM_WS` at it. Using a
-   public RPC means trusting that RPC with release authority.
+   public RPC means trusting that RPC with release authority. Run the node
+   with **`--state-pruning archive`** (or `archive-canonical`): the daemon
+   catches up block by block through historical state, and a default-pruned
+   node (256 blocks ≈ 51 min) cannot serve that after any daemon outage
+   longer than the pruning horizon — the daemon then wedges loudly on
+   restart. Recovery from that state is pointing `PENDULUM_WS` at an archive
+   node, never editing the checkpoint.
 2. **Key isolation:** the attestor key signs only vault `approve` calls. Keep
    it in an HSM/KMS signer where possible; never reuse it elsewhere. The same
    address pays gas — keep it funded with Base ETH (the daemon alerts below
@@ -37,6 +43,9 @@ point.
 | `MIN_GAS_BALANCE_WEI` | Low-gas alert threshold (default 0.01 ETH) |
 | `ALERT_WEBHOOK_URL` | Optional webhook receiving JSON alerts |
 | `BASE_CHAIN_ID` | Default 8453 (Base mainnet) |
+| `BASE_FINALITY_TAG` | Base confirmation boundary the checkpoint waits for: `safe` (default) or `finalized` |
+| `BASE_FINALITY_TIMEOUT_MS` | How long a block's approvals may stay outside that boundary before an alert + idempotent re-submission (default 15 min for `safe`, 45 min for `finalized`) |
+| `HEAD_STALL_ALERT_MS` | Page when no finalized Pendulum head has arrived for this long (default 5 min): the daemon is push-driven, so a node that stops finalizing would otherwise idle undetected |
 
 ## Run
 
@@ -66,10 +75,21 @@ WantedBy=multi-user.target
 
 ## Behavior details
 
-- Blocks are processed strictly in order; the checkpoint advances only after
-  every event in a block is handled. A crash re-processes at most one block —
-  safe, because approvals are idempotent (`nonceConsumed`/`hasApproved` are
-  checked first, and duplicate submissions revert harmlessly).
+- Blocks are processed strictly in order against the **latest** Base state
+  (submission, race detection), so throughput is submission latency and a
+  lost k-of-n race — the most ordinary event in the system — is a log line,
+  never an alert. The durable **checkpoint trails separately** at the Base
+  finality boundary: it advances past a block only once every releasable
+  event in it is resolved inside `safe`/`finalized` state. A crash therefore
+  re-processes only the blocks whose approvals were not yet durable — safe,
+  because approvals are idempotent (`nonceConsumed`/`hasApproved` are checked
+  first, and duplicate submissions revert harmlessly). If a block's approvals
+  refuse to settle (a reorg dropped them), they are re-submitted after
+  `BASE_FINALITY_TIMEOUT_MS` with an alert; the checkpoint never passes an
+  unsettled block.
+- Checkpoints are atomically replaced, bound to the Pendulum genesis plus the
+  configured Base chain and vault, and malformed files are fatal. Never delete or replace one merely to
+  clear an alert; reconcile it against both chains first.
 - The daemon verifies at startup that its address is in the vault's attestor
   set and refuses to run otherwise.
 - After a Pendulum **runtime upgrade**, verify event decoding against the new

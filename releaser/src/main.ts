@@ -232,7 +232,19 @@ async function drainPending(conversionFactor: bigint, dailyCap: bigint): Promise
 				functionName: "release",
 				args: [p.nonce, p.recipient, p.palletAmount],
 			});
-			const txHash = await walletClient.writeContract(request);
+			// Pad the gas limit: a release writes an ERC20Votes checkpoint for the
+			// vault's vote sink, and whether that is an overwrite or a new entry
+			// depends on the block timestamp the transaction lands in — a state
+			// the estimate cannot know. An exact estimate can run out of gas in
+			// that write (seen in phase 3); doubling it is cheap insurance.
+			const gasLimit = (await publicClient.estimateContractGas({
+				account,
+				address: config.vaultAddress,
+				abi: vaultAbi,
+				functionName: "release",
+				args: [p.nonce, p.recipient, p.palletAmount],
+			})) * 2n;
+			const txHash = await walletClient.writeContract({ ...request, gas: gasLimit });
 			const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 			if (receipt.status !== "success") {
 				throw new MinedRevert(`release reverted on-chain: ${txHash}`);

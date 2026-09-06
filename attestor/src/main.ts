@@ -23,6 +23,8 @@
 
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import {
+	BaseError,
+	ContractFunctionZeroDataError,
 	createPublicClient,
 	createWalletClient,
 	defineChain,
@@ -301,12 +303,23 @@ async function main(): Promise<void> {
 	let lastTransientAlertMs = 0;
 
 	/** All releasable events of `entry` are resolved at `blockNumber` — either
-	 *  the nonce is consumed (released) or our approval is recorded there. */
+	 *  the nonce is consumed (released) or our approval is recorded there. A
+	 *  boundary block that predates the vault (a fresh deployment on a chain
+	 *  whose safe head still trails it) cannot have anything durable in it:
+	 *  the read returns no data, which means "not yet", never "fatal". */
 	async function eventsDurableAt(entry: UnconfirmedBlock, blockNumber: bigint): Promise<boolean> {
-		for (const event of entry.events) {
-			if (!(await alreadyHandledAt(event, blockNumber))) return false;
+		try {
+			for (const event of entry.events) {
+				if (!(await alreadyHandledAt(event, blockNumber))) return false;
+			}
+			return true;
+		} catch (error) {
+			if (error instanceof BaseError && error.walk((e) => e instanceof ContractFunctionZeroDataError)) {
+				log(`vault has no state at ${config.baseFinalityTag} block ${blockNumber} yet; checkpoint waits`);
+				return false;
+			}
+			throw error;
 		}
-		return true;
 	}
 
 	/** Advance the durable checkpoint through every leading block whose events

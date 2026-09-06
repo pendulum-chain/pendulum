@@ -11,6 +11,14 @@ import { privateKeyToAccount } from "viem/accounts";
 
 export const RPC = process.env.BASE_RPC_URL ?? "http://127.0.0.1:8545";
 
+/** Explicit gas for every harness transaction. Anvil fills a missing limit
+ *  from eth_estimateGas, which runs at the current wall-clock second; the
+ *  vault delegates its votes to the sink, so a PEN transfer touching the vault
+ *  writes an ERC20Votes checkpoint keyed by block timestamp — an OVERWRITE at
+ *  estimation time becomes a NEW entry when the block lands one second later,
+ *  and the exact estimate runs out of gas in the checkpoint write. */
+const HARNESS_GAS = 1_000_000n;
+
 const KEYS = [
 	"0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // 0 deployer
 	"0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", // 1 attestor A
@@ -55,7 +63,7 @@ export const wallet = (account) => createWalletClient({ account, chain: anvilCha
 /** Send a contract call and wait for it to land, returning the receipt. */
 export async function send(account, params) {
 	const { request } = await pub.simulateContract({ account, ...params });
-	const hash = await wallet(account).writeContract(request);
+	const hash = await wallet(account).writeContract({ ...request, gas: HARNESS_GAS });
 	return pub.waitForTransactionReceipt({ hash });
 }
 
@@ -67,7 +75,7 @@ export async function sendImpersonated(address, params) {
 	await pub.request({ method: "anvil_setBalance", params: [address, "0x8ac7230489e80000"] }); // 10 ETH
 	const impersonated = createWalletClient({ account: address, chain: anvilChain, transport: http(RPC) });
 	try {
-		const hash = await impersonated.writeContract({ ...params, account: address });
+		const hash = await impersonated.writeContract({ gas: HARNESS_GAS, ...params, account: address });
 		return await pub.waitForTransactionReceipt({ hash });
 	} finally {
 		await pub.request({ method: "anvil_stopImpersonatingAccount", params: [address] });

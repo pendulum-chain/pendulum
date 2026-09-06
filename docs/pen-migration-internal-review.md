@@ -803,6 +803,37 @@ guard), the governance deployment, and all three daemons, so they need a
 fresh adversarial pass and the Sepolia re-run, with `REHEARSAL_PER_RELEASE_CAP_PEN`
 now equal to the daily cap and `TIMELOCK_CANCELLER`/`QUORUM_FLOOR` set.
 
+### Phase 3 re-run on the round-9 revision (2026-09-06)
+
+Phase 1 passed 11/11 on the first attempt. Phase 3 (Chopsticks mainnet fork
+with the runtime wasm override + Anvil; four attestors, monitor, releaser)
+reached 9/9 after three findings that only a live fleet could produce:
+
+- **Every attestor exited on its first checkpoint** — silently, because the
+  harness kept daemon output only in memory. Cause: the durability read at
+  the `safe` block hit a block that predates the vault. Anvil resolves
+  `safe`/`finalized` to genesis until the chain is 32 blocks deep (the round-8
+  claim "Anvil's safe equals latest" was wrong — it holds only with
+  `--slots-in-an-epoch 0`, which the harness now requires and documents). The
+  attestor now treats a zero-data read at the boundary as "not yet durable"
+  rather than fatal, which is also the right behaviour for a fresh testnet
+  deployment whose safe head still trails the vault. Daemon output is teed to
+  `testing/.logs/`.
+- **`setCaps(perRelease > daily)` in the cap-deferral drill** now reverts
+  `CapsInverted`, as intended; the drill uses equal caps.
+- **An exact gas estimate ran out of gas inside the ERC20Votes checkpoint
+  write.** The vault's vote-sink delegation (round 8) makes every transfer
+  touching the vault write a checkpoint keyed by block timestamp; an estimate
+  computed in one second (overwrite) undershoots execution in the next (new
+  entry). The harness passes an explicit gas limit, and the releaser now
+  doubles its `release()` estimate like the attestor does for `approve()`.
+  On Base the estimate runs at the pending block's timestamp and is
+  conservative, but the buffer costs nothing.
+
+Note for later drills: `--slots-in-an-epoch 1` makes Anvil trail `safe` by one
+block, which would exercise the checkpoint trailing locally; the drills would
+then need to mine an extra block after each action.
+
 ## Residual risks and standing practices (no external audit — risk accepted)
 - Every change to the fund-release path (vault release/approve/sweep logic,
   pallet burn path) gets a fresh independent adversarial review round before

@@ -8,7 +8,17 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isStale, newNonces, releasedExceedsMigrated, vaultConservationDeficit } from "./checks.js";
+import {
+	approvalMismatch,
+	blockRanges,
+	chunks,
+	isStale,
+	provablyUnsourced,
+	releaseMismatch,
+	releasedExceedsMigrated,
+	shouldAwaitSource,
+	vaultConservationDeficit,
+} from "./checks.js";
 
 const CF = 1_000_000n; // 12 -> 18 decimals
 const SUPPLY = 150_000_000n * 10n ** 18n;
@@ -50,30 +60,67 @@ test("M4: staleness respects the grace period", () => {
 	assert.equal(isStale(now - 1801 * 1000, now, grace), true); // just past grace
 });
 
-test("M4: newNonces incorporates each nonce exactly once (no re-add of consumed)", () => {
-	// Round-7 regression: the old scan re-added every nonce 0..nextNonce each
-	// poll, so a consumed-and-pruned nonce was re-read via Multicall forever,
-	// making the scan O(all migrations) instead of O(pending backlog).
-	const firstSeen = new Map<bigint, number>();
-	let incorporated = 0n;
+test("an unseen future source nonce gets bounded RPC-lag grace, never an old nonce", () => {
+	const now = 10_000_000;
+	assert.equal(shouldAwaitSource(8n, 8n, now, now, 600), true);
+	assert.equal(shouldAwaitSource(9n, 8n, now - 599_000, now, 600), true);
+	assert.equal(shouldAwaitSource(9n, 8n, now - 601_000, now, 600), false);
+	assert.equal(shouldAwaitSource(7n, 8n, now, now, 600), false);
+});
 
-	// Poll 1: five migrations exist — all freshly stamped.
-	for (const nonce of newNonces(incorporated, 5n)) firstSeen.set(nonce, 1_000);
-	incorporated = 5n;
-	assert.deepEqual([...firstSeen.keys()], [0n, 1n, 2n, 3n, 4n]);
+test("a fabricated event is proven unsourced once the source view passes its first observation", () => {
+	const firstSeen = 10_000_000;
+	const margin = 120_000;
+	const now = firstSeen + 600_000;
+	// Source finalized view has moved past the moment the event was first
+	// observed (plus skew margin): the burn would already have been ingested —
+	// fabricated, pause without waiting out the grace.
+	assert.equal(provablyUnsourced(firstSeen, firstSeen + margin, now, margin), true);
+	assert.equal(provablyUnsourced(firstSeen, firstSeen + margin + 1, now, margin), true);
+	// A lagging source view trails the observation: NOT proof, so the RPC-lag
+	// grace applies and node lag can never fast-path a false pause.
+	assert.equal(provablyUnsourced(firstSeen, firstSeen + margin - 1, now, margin), false);
+	assert.equal(provablyUnsourced(firstSeen, firstSeen - 300_000, now, margin), false);
+});
 
-	// Nonces 0,1,2 get consumed on Base and are pruned from the pending set.
-	firstSeen.delete(0n);
-	firstSeen.delete(1n);
-	firstSeen.delete(2n);
+test("a future-dated source view proves nothing", () => {
+	// A collator clock ahead of real time must not let the view "pass" an
+	// observation it has not genuinely caught up with.
+	const firstSeen = 10_000_000;
+	const margin = 120_000;
+	const now = firstSeen + 10_000;
+	assert.equal(provablyUnsourced(firstSeen, now + margin + 1, now, margin), false);
+	assert.equal(provablyUnsourced(firstSeen, now + margin, now, margin), true);
+});
 
-	// Poll 2: nextNonce unchanged — nothing to incorporate, and the consumed
-	// nonces must NOT reappear (the bug that this fix closes).
-	assert.deepEqual(newNonces(incorporated, 5n), []);
-	assert.deepEqual([...firstSeen.keys()], [3n, 4n]);
+test("the proof anchor is the observation time, not a Base block timestamp that may trail real time", () => {
+	// An event observed now whose Base block timestamp trails real time by a
+	// sequencer catch-up: the view being past that OLD timestamp is not proof
+	// (the predicate never sees it), only being past the observation is.
+	const firstSeen = 10_000_000;
+	const margin = 120_000;
+	assert.equal(provablyUnsourced(firstSeen, firstSeen + 60_000, firstSeen + 60_000, margin), false);
+});
 
-	// Poll 3: two new migrations arrive — only those are freshly incorporated.
-	for (const nonce of newNonces(incorporated, 7n)) firstSeen.set(nonce, 2_000);
-	incorporated = 7n;
-	assert.deepEqual([...firstSeen.keys()], [3n, 4n, 5n, 6n]);
+test("M2 tuple matching rejects missing, wrong-recipient and wrong-amount approvals", () => {
+	const expected = { nonce: 7n, recipient: "0x1111111111111111111111111111111111111111", palletAmount: 100n };
+	assert.match(approvalMismatch(undefined, expected)!, /no finalized/);
+	assert.match(
+		approvalMismatch(expected, { ...expected, recipient: "0x2222222222222222222222222222222222222222" })!,
+		/recipient/,
+	);
+	assert.match(approvalMismatch(expected, { ...expected, palletAmount: 99n })!, /pallet amount/);
+	assert.equal(approvalMismatch(expected, { ...expected, recipient: expected.recipient.toUpperCase() }), undefined);
+});
+
+test("M2 release matching includes the one-and-only decimal conversion", () => {
+	const expected = { nonce: 7n, recipient: "0x1111111111111111111111111111111111111111", palletAmount: 100n };
+	assert.equal(releaseMismatch(expected, { ...expected, tokenAmount: 100n * CF }, CF), undefined);
+	assert.match(releaseMismatch(expected, { ...expected, tokenAmount: 100n * CF + 1n }, CF)!, /token amount/);
+});
+
+test("RPC work is split into inclusive block ranges and bounded batches", () => {
+	assert.deepEqual(blockRanges(1n, 10n, 4n), [[1n, 4n], [5n, 8n], [9n, 10n]]);
+	assert.deepEqual(blockRanges(11n, 10n, 4n), []);
+	assert.deepEqual(chunks([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
 });

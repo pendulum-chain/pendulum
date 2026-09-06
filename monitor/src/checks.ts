@@ -55,21 +55,104 @@ export function isStale(firstSeenMs: number, nowMs: number, graceSeconds: number
 }
 
 /**
- * Nonces observed for the first time this poll: the half-open range
- * [incorporatedUpTo, nextNonce). The caller advances its high-water mark to
- * `nextNonce` after stamping these, so each nonce enters the liveness set
- * EXACTLY ONCE. A nonce already seen — and possibly since consumed and pruned
- * from the pending set — is never re-added.
- *
- * This is what keeps the per-poll `nonceConsumed` scan O(pending backlog)
- * rather than O(all migrations ever created). The earlier scan re-added every
- * nonce `0..nextNonce` each poll (any nonce not currently in the map), so a
- * consumed-and-pruned nonce was re-inserted and re-read via Multicall every
- * poll forever — silently defeating the round-5 batching optimisation and
- * letting the scan grow without bound for the whole migration window (round 7).
+ * A Base event whose nonce is at or beyond the source node's next nonce may be
+ * legitimate data observed through a temporarily faster RPC. Give that source
+ * view a bounded window to catch up. Older missing nonces cannot be explained
+ * by node lag and must fail immediately.
  */
-export function newNonces(incorporatedUpTo: bigint, nextNonce: bigint): bigint[] {
-	const fresh: bigint[] = [];
-	for (let nonce = incorporatedUpTo; nonce < nextNonce; nonce++) fresh.push(nonce);
-	return fresh;
+export function shouldAwaitSource(
+	eventNonce: bigint,
+	nextExpectedNonce: bigint,
+	firstSeenMs: number,
+	nowMs: number,
+	graceSeconds: number,
+): boolean {
+	return eventNonce >= nextExpectedNonce && !isStale(firstSeenMs, nowMs, graceSeconds);
+}
+
+/**
+ * A Base event is PROVABLY without a Pendulum source once the monitor's
+ * finalized source view has passed the wall-clock moment the monitor FIRST
+ * OBSERVED the event (plus a clock-skew margin) and the nonce still does not
+ * exist.
+ *
+ * Why this is sound: a legitimate release's burn is relay-FINALIZED strictly
+ * before any attestor submits an approval, so the burn block's timestamp
+ * precedes the real time at which the monitor could first observe that
+ * approval on Base. Substrate timestamps are strictly monotone, so a finalized
+ * head whose timestamp is past that observation time by more than any collator
+ * clock drift already contains every block the burn could live in. If the
+ * nonce is still unknown then, no amount of further waiting can reveal it —
+ * the event is fabricated, and the auto-pause must not sit out the RPC-lag
+ * grace period.
+ *
+ * The anchor is the monitor's own clock, deliberately NOT the Base block
+ * timestamp: OP-stack L2 block timestamps trail real time by the length of any
+ * sequencer outage while it catches up, and an artificially old event
+ * timestamp would let a merely-lagging source "prove" a legitimate event
+ * fabricated (review round 9). A lagging source never satisfies this predicate
+ * (its head timestamp trails the observation), and a future-dated source view
+ * (a collator clock ahead of real time) proves nothing either and is excluded,
+ * so neither can turn node lag into a false pause.
+ */
+export function provablyUnsourced(
+	firstSeenMs: number,
+	sourceFinalizedTsMs: number,
+	nowMs: number,
+	skewMarginMs: number,
+): boolean {
+	if (sourceFinalizedTsMs > nowMs + skewMarginMs) return false;
+	return sourceFinalizedTsMs >= firstSeenMs + skewMarginMs;
+}
+
+export interface MigrationTuple {
+	nonce: bigint;
+	recipient: string;
+	palletAmount: bigint;
+}
+
+function sameAddress(left: string, right: string): boolean {
+	return left.toLowerCase() === right.toLowerCase();
+}
+
+export function approvalMismatch(expected: MigrationTuple | undefined, actual: MigrationTuple): string | undefined {
+	if (!expected) return `nonce ${actual.nonce} has no finalized Pendulum migration`;
+	if (!sameAddress(expected.recipient, actual.recipient)) {
+		return `nonce ${actual.nonce} recipient ${actual.recipient} != finalized ${expected.recipient}`;
+	}
+	if (expected.palletAmount !== actual.palletAmount) {
+		return `nonce ${actual.nonce} pallet amount ${actual.palletAmount} != finalized ${expected.palletAmount}`;
+	}
+	return undefined;
+}
+
+export function releaseMismatch(
+	expected: MigrationTuple | undefined,
+	actual: MigrationTuple & { tokenAmount: bigint },
+	conversionFactor: bigint,
+): string | undefined {
+	const tupleMismatch = approvalMismatch(expected, actual);
+	if (tupleMismatch) return tupleMismatch;
+	const expectedTokenAmount = actual.palletAmount * conversionFactor;
+	if (actual.tokenAmount !== expectedTokenAmount) {
+		return `nonce ${actual.nonce} token amount ${actual.tokenAmount} != converted ${expectedTokenAmount}`;
+	}
+	return undefined;
+}
+
+export function blockRanges(fromBlock: bigint, toBlock: bigint, maxRange: bigint): Array<[bigint, bigint]> {
+	if (maxRange <= 0n) throw new Error(`invalid maxRange ${maxRange}`);
+	const result: Array<[bigint, bigint]> = [];
+	for (let start = fromBlock; start <= toBlock; start += maxRange) {
+		const end = start + maxRange - 1n;
+		result.push([start, end > toBlock ? toBlock : end]);
+	}
+	return result;
+}
+
+export function chunks<T>(items: T[], size: number): T[][] {
+	if (!Number.isSafeInteger(size) || size <= 0) throw new Error(`invalid chunk size ${size}`);
+	const result: T[][] = [];
+	for (let start = 0; start < items.length; start += size) result.push(items.slice(start, start + size));
+	return result;
 }

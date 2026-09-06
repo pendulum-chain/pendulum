@@ -44,6 +44,21 @@ export async function send(account, params) {
 	return pub.waitForTransactionReceipt({ hash });
 }
 
+/** Send as an arbitrary address on Anvil. This is intentionally isolated to
+ * local failure drills; it lets the harness model an impossible token outflow
+ * from the vault and prove the independent monitor catches it. */
+export async function sendImpersonated(address, params) {
+	await pub.request({ method: "anvil_impersonateAccount", params: [address] });
+	await pub.request({ method: "anvil_setBalance", params: [address, "0x8ac7230489e80000"] }); // 10 ETH
+	const impersonated = createWalletClient({ account: address, chain: anvilChain, transport: http(RPC) });
+	try {
+		const hash = await impersonated.writeContract({ ...params, account: address });
+		return await pub.waitForTransactionReceipt({ hash });
+	} finally {
+		await pub.request({ method: "anvil_stopImpersonatingAccount", params: [address] });
+	}
+}
+
 /** Attempt a call and return the revert reason instead of throwing. */
 export async function expectRevert(account, params) {
 	try {

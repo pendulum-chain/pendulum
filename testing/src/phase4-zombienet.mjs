@@ -110,4 +110,4 @@ await check("subscribeFinalizedHeads delivers monotonically increasing heads", a
 });
 
 await api.disconnect();
-summarise();
+process.exit(summarise() ? 0 : 1);

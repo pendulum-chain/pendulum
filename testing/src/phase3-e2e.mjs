@@ -21,7 +21,7 @@ import { ApiPromise, WsProvider } from "@polkadot/api";
 import { Keyring } from "@polkadot/keyring";
 import { cryptoWaitReady } from "@polkadot/util-crypto";
 import { assert, assertEq, check, section, summarise } from "./harness.mjs";
-import { accounts, attestors, keys, pub, releaser as releaserAcct, RPC, send } from "./anvil.mjs";
+import { accounts, attestors, keys, pub, releaser as releaserAcct, RPC, send, sendImpersonated } from "./anvil.mjs";
 import { erc20Abi, vaultAbi } from "./abi.mjs";
 import { deployStack, PARAMS } from "./deploy.mjs";
 import { alive, clearState, killStrays, logs, start, stopAll, stopAndWait, waitFor } from "./daemons.mjs";
@@ -70,13 +70,15 @@ async function migrate(amount, baseAddress) {
 // --- start the fleet -------------------------------------------------------
 killStrays();
 clearState(["attestor/cp1.json", "attestor/cp2.json", "attestor/cp3.json", "attestor/cp4.json",
-            "releaser/releaser-state.json"]);
+	"monitor/monitor-state.json", "releaser/releaser-state.json"]);
 const baseEnv = { BASE_RPC_URL: RPC, VAULT_ADDRESS: vault, BASE_CHAIN_ID: "31337", POLL_INTERVAL_MS: "2000" };
 const startBlock = String(await pub.getBlockNumber());
 // Where the attestors begin scanning Pendulum. Must be the current head: a
 // fork sits at ~7.4M blocks, and starting from 0 would have each daemon walk
 // every historical block before reaching anything under test.
 const pendulumHead = (await api.query.system.number()).toString();
+const monitorPendulumStart = (BigInt(pendulumHead) + 1n).toString();
+const monitorStartNonce = (await api.query.tokenMigration.nextNonce()).toString();
 console.log(`  attestors scan Pendulum from block ${pendulumHead}`);
 
 for (let i = 0; i < 4; i++) {
@@ -85,7 +87,17 @@ for (let i = 0; i < 4; i++) {
 		ATTESTOR_PRIVATE_KEY: keys[i + 1], CHECKPOINT_FILE: `./cp${i + 1}.json`, START_BLOCK: pendulumHead,
 	});
 }
-start("monitor", "monitor", { ...baseEnv, PENDULUM_WS: CHOPSTICKS, GRACE_SECONDS: "30" });
+start("monitor", "monitor", {
+	...baseEnv,
+	PENDULUM_WS: CHOPSTICKS,
+	GRACE_SECONDS: "30",
+	UNMATCHED_EVENT_GRACE_SECONDS: "0",
+	GUARDIAN_PRIVATE_KEY: keys[5],
+	PENDULUM_START_BLOCK: monitorPendulumStart,
+	PENDULUM_START_NONCE: monitorStartNonce,
+	BASE_START_BLOCK: startBlock,
+	STATE_FILE: "./monitor-state.json",
+});
 start("releaser", "releaser", { ...baseEnv, RELEASER_PRIVATE_KEY: keys[7], START_BLOCK: startBlock });
 
 const recipient = "0x000000000000000000000000000000000000beef";
@@ -188,6 +200,57 @@ await check("conservation holds across the whole run", async () => {
 		balanceOf(vault), read(V, "totalReleased"), read(V, "totalSwept"), read(P, "totalSupply"),
 	]);
 	assertEq(bal + released + swept, supply, "conservation identity");
+});
+
+await check("a real vault deficit alerts and reaches a confirmed automatic pause", async () => {
+	const deficit = 1n * 10n ** 18n;
+	const before = logs("monitor").length;
+	await sendImpersonated(vault, { ...P, functionName: "transfer", args: [admin.address, deficit] });
+	await waitFor(() => logs("monitor").slice(before).includes("VAULT BALANCE DEFICIT"), {
+		timeoutMs: 30_000,
+		label: "the monitor deficit alert",
+	});
+	await waitFor(async () => (await read(V, "paused")) === true, {
+		timeoutMs: 30_000,
+		label: "the vault to be paused",
+	});
+	await waitFor(() => logs("monitor").slice(before).includes("vault auto-pause confirmed"), {
+		timeoutMs: 30_000,
+		label: "confirmed auto-pause reporting",
+	});
+
+	// Restore the missing token, then add a harmless one-wei surplus from a
+	// migrated holder. The monitor must recover without treating the donation
+	// as another conservation failure.
+	await send(admin, { ...P, functionName: "transfer", args: [vault, deficit] });
+	await sendImpersonated(recipient, { ...P, functionName: "transfer", args: [vault, 1n] });
+	const restoredAt = logs("monitor").length;
+	await waitFor(() => logs("monitor").slice(restoredAt).includes("ok:"), {
+		timeoutMs: 30_000,
+		label: "the monitor to accept restored conservation plus a surplus",
+	});
+	await send(admin, { ...V, functionName: "unpause", args: [] });
+	const stableAt = logs("monitor").length;
+	await new Promise((resolve) => setTimeout(resolve, 5_000));
+	assert(!logs("monitor").slice(stableAt).includes("VAULT BALANCE DEFICIT"), "surplus retriggered deficit alarm");
+	assertEq(await read(V, "paused"), false, "vault remains unpaused after healthy checks");
+});
+
+await check("a mismatched Base approval is caught before it can reach quorum", async () => {
+	const before = logs("monitor").length;
+	await send(attestors[0], {
+		...V,
+		functionName: "approve",
+		args: [9_999_999n, admin.address, MIN],
+	});
+	await waitFor(() => logs("monitor").slice(before).includes("MIGRATION TUPLE VIOLATION"), {
+		timeoutMs: 30_000,
+		label: "the monitor to reject a fabricated approval tuple",
+	});
+	await waitFor(async () => (await read(V, "paused")) === true, {
+		timeoutMs: 30_000,
+		label: "the mismatched approval to trigger an automatic pause",
+	});
 });
 
 const ok = summarise();

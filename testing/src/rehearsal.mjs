@@ -292,7 +292,7 @@ async function main() {
 	section("Attestor fleet");
 	killMatching(["dist/main.js"]);
 	clearState(["attestor/cp1.json", "attestor/cp2.json", "attestor/cp3.json", "attestor/cp4.json",
-		"releaser/releaser-state.json"]);
+		"monitor/monitor-state.json", "releaser/releaser-state.json"]);
 	const pendulumWs = api._options?.provider?.endpoint ?? process.env.PENDULUM_WS;
 	const baseEnv = {
 		BASE_RPC_URL: env.BASE_SEPOLIA_RPC_URL,
@@ -307,6 +307,7 @@ async function main() {
 	};
 	const pendulumHead = (await api.query.system.number()).toString();
 	const baseHead = String(await ctx.pub.getBlockNumber());
+	const monitorStartNonce = (await api.query.tokenMigration.nextNonce()).toString();
 	for (let i = 0; i < 4; i++) {
 		start(`attestor${i + 1}`, "attestor", {
 			...baseEnv, PENDULUM_WS: pendulumWs,
@@ -315,7 +316,16 @@ async function main() {
 		});
 		await sleep(3000);
 	}
-	start("monitor", "monitor", { ...baseEnv, PENDULUM_WS: pendulumWs, GRACE_SECONDS: "300" });
+	start("monitor", "monitor", {
+		...baseEnv,
+		PENDULUM_WS: pendulumWs,
+		GRACE_SECONDS: "300",
+		GUARDIAN_PRIVATE_KEY: env.GUARDIAN_PRIVATE_KEY,
+		PENDULUM_START_BLOCK: (BigInt(pendulumHead) + 1n).toString(),
+		PENDULUM_START_NONCE: monitorStartNonce,
+		BASE_START_BLOCK: baseHead,
+		STATE_FILE: "./monitor-state.json",
+	});
 	start("releaser", "releaser", { ...baseEnv, RELEASER_PRIVATE_KEY: env.RELEASER_PRIVATE_KEY, START_BLOCK: baseHead });
 	log(`fleet started (Pendulum from #${pendulumHead}, Base from #${baseHead})`);
 

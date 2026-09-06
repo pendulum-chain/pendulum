@@ -22,7 +22,7 @@
  */
 
 import { execSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { Keyring } from "@polkadot/keyring";
@@ -131,7 +131,7 @@ async function main() {
 	section("Attestor fleet");
 	killMatching(["dist/main.js"]);
 	clearState(["attestor/cp1.json", "attestor/cp2.json", "attestor/cp3.json", "attestor/cp4.json",
-		"releaser/releaser-state.json"]);
+		"monitor/monitor-state.json", "releaser/releaser-state.json"]);
 	const pendulumWs = api._options?.provider?.endpoint ?? process.env.PENDULUM_WS;
 	const baseEnv = {
 		BASE_RPC_URL: env.BASE_SEPOLIA_RPC_URL, VAULT_ADDRESS: vault,
@@ -139,6 +139,7 @@ async function main() {
 	};
 	const pendulumHead = (await api.query.system.number()).toString();
 	const baseHead = String(await ctx.pub.getBlockNumber());
+	const monitorStartNonce = (await api.query.tokenMigration.nextNonce()).toString();
 	const attestorEnv = (i) => ({
 		...baseEnv, PENDULUM_WS: pendulumWs,
 		ATTESTOR_PRIVATE_KEY: env[`ATTESTOR_${i}_PRIVATE_KEY`],
@@ -148,7 +149,16 @@ async function main() {
 		start(`attestor${i}`, "attestor", attestorEnv(i));
 		await sleep(3000);
 	}
-	start("monitor", "monitor", { ...baseEnv, PENDULUM_WS: pendulumWs, GRACE_SECONDS: "300" });
+	start("monitor", "monitor", {
+		...baseEnv,
+		PENDULUM_WS: pendulumWs,
+		GRACE_SECONDS: "300",
+		GUARDIAN_PRIVATE_KEY: env.GUARDIAN_PRIVATE_KEY,
+		PENDULUM_START_BLOCK: (BigInt(pendulumHead) + 1n).toString(),
+		PENDULUM_START_NONCE: monitorStartNonce,
+		BASE_START_BLOCK: baseHead,
+		STATE_FILE: "./monitor-state.json",
+	});
 	start("releaser", "releaser", { ...baseEnv, RELEASER_PRIVATE_KEY: env.RELEASER_PRIVATE_KEY, START_BLOCK: baseHead });
 	log(`fleet up (Pendulum from #${pendulumHead}, Base from #${baseHead})`);
 
@@ -239,8 +249,11 @@ async function main() {
 		// RB-6's operator step: restart the re-added attestor with its checkpoint
 		// rewound to before the affected migrations, so it re-scans and re-signs.
 		await stopAndWait("attestor4");
-		writeFileSync(path.join(ROOT, "attestor/cp4.json"),
-			JSON.stringify({ lastProcessedBlock: held.atBlock - 1 }));
+		// Rewinding is the one sanctioned checkpoint edit (RB-6 step 3): lower
+		// lastProcessedBlock and keep the identity fields the loader requires —
+		// a bare { lastProcessedBlock } is rejected as a legacy schema.
+		const cp4 = path.join(ROOT, "attestor/cp4.json");
+		writeFileSync(cp4, JSON.stringify({ ...JSON.parse(readFileSync(cp4, "utf8")), lastProcessedBlock: held.atBlock - 1 }));
 		start("attestor4", "attestor", attestorEnv(4));
 		await waitReleased(held, "the held migration to release after re-approval");
 		assertEq(await read(V, "activeApprovals", [heldPayload]), 3n, "final active approvals");

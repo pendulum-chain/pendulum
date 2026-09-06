@@ -1,5 +1,32 @@
 /** Minimal MigrationVault ABI: only what the releaser needs. */
 export const vaultAbi = [
+	{ type: "error", name: "NonceAlreadyConsumed", inputs: [{ name: "nonce", type: "uint64" }] },
+	{
+		type: "error",
+		name: "NotEnoughApprovals",
+		inputs: [
+			{ name: "active", type: "uint256" },
+			{ name: "required", type: "uint256" },
+		],
+	},
+	{ type: "error", name: "EnforcedPause", inputs: [] },
+	{
+		type: "error",
+		name: "ExceedsPerReleaseCap",
+		inputs: [
+			{ name: "amount", type: "uint256" },
+			{ name: "cap", type: "uint256" },
+		],
+	},
+	{
+		type: "error",
+		name: "ExceedsDailyCap",
+		inputs: [
+			{ name: "requested", type: "uint256" },
+			{ name: "available", type: "uint256" },
+		],
+	},
+	{ type: "error", name: "InsufficientVaultBalance", inputs: [] },
 	{
 		type: "event",
 		name: "ReleasePending",
@@ -30,6 +57,13 @@ export const vaultAbi = [
 	{
 		type: "function",
 		name: "conversionFactor",
+		stateMutability: "view",
+		inputs: [],
+		outputs: [{ type: "uint256" }],
+	},
+	{
+		type: "function",
+		name: "dailyCap",
 		stateMutability: "view",
 		inputs: [],
 		outputs: [{ type: "uint256" }],

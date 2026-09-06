@@ -29,7 +29,7 @@ consumed nonce and drops it.
 
 | Variable | Meaning |
 |---|---|
-| `BASE_RPC_URL` | Base JSON-RPC endpoint |
+| `BASE_RPC_URL` | Base JSON-RPC endpoint — prefer a single dedicated node: each scan range's end block is probed first so a lagging load-balanced replica causes a loud replay instead of a silently skipped `ReleasePending` |
 | `VAULT_ADDRESS` | MigrationVault address |
 | `RELEASER_PRIVATE_KEY` | Gas-only signing key (no privileges) |
 | `START_BLOCK` | Vault deployment block — where log scanning begins on a first run |
@@ -39,6 +39,9 @@ consumed nonce and drops it.
 | `MIN_GAS_BALANCE_WEI` | Low-gas alert threshold |
 | `ALERT_WEBHOOK_URL` | Optional JSON alert webhook |
 | `BASE_CHAIN_ID` | Default 8453 |
+| `BASE_FINALITY_TAG` | `safe` (default) or `finalized`; the scan cursor stays inside this boundary and a pending entry is dropped only once its nonce is consumed there |
+| `BLOCKED_ALERT_INTERVAL_MS` | Re-page interval for governance-blocked releases (default 6h — the condition needs a ≥48h timelocked action, so per-poll paging would bury the signal) |
+| `READ_BATCH_SIZE` | Bound on Multicall calldata and individual fallback concurrency (default 100) |
 
 ## Run
 
@@ -56,13 +59,21 @@ Failures are classified rather than treated alike:
 
 | Revert | Outcome |
 |---|---|
-| `ExceedsDailyCap`, `EnforcedPause`, `InsufficientVaultBalance`, `NotEnoughApprovals` | **Retry quietly** — self-heals; this is the normal backlog case |
-| `NonceAlreadyConsumed` | **Done** — drop it |
-| `ExceedsPerReleaseCap` | **Alert** — cannot self-heal, needs a governance `setCaps` behind the timelock |
+| `ExceedsDailyCap`, `EnforcedPause`, `NotEnoughApprovals` | **Retry quietly** — expected temporary conditions |
+| `NonceAlreadyConsumed` (at the finality boundary) | **Done** — drop it |
+| `ExceedsPerReleaseCap`, `InsufficientVaultBalance` | **Alert, throttled** to `BLOCKED_ALERT_INTERVAL_MS` — cannot self-heal without governance or operator action |
 | anything else | **Alert** |
 
-State (scan checkpoint + pending set) is persisted, so a restart resumes
-without rescanning from the deployment block or losing pending work.
+A successful `release()` does **not** drop the entry immediately: it leaves the
+durable pending set only once the nonce reads as consumed at the
+`safe`/`finalized` boundary, so a reorged-away release is still ours to retry.
+Until then re-attempts are gas-free simulations classified as pending finality.
+
+State (safe/finalized scan checkpoint + pending set) is atomically persisted
+and bound to the configured chain and vault, so a restart resumes without
+trusting unsafe logs or losing pending work. Malformed state is fatal. Multicall
+is disabled permanently only when an on-chain code check proves it absent; a
+temporary provider error falls back in bounded batches for that cycle.
 
 **Known limitation:** the pending set is driven by `ReleasePending`, which the
 vault emits when a threshold is crossed inside `approve()`. A payload made

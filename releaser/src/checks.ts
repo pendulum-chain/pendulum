@@ -6,6 +6,8 @@
  * and `monitor/src/checks.ts`.
  */
 
+import { BaseError, ContractFunctionRevertedError } from "viem";
+
 /** What to do with a pending release whose `release()` attempt failed. */
 export type ReleaseOutcome =
 	/** Resolved on-chain — drop it from the pending set. */
@@ -32,21 +34,47 @@ export type ReleaseOutcome =
  *  - `NonceAlreadyConsumed` means somebody else got there first (another
  *    releaser instance, or a conflicting tuple winning the nonce). Benign.
  */
-export function classifyReleaseFailure(reason: string): ReleaseOutcome {
-	if (reason.includes("NonceAlreadyConsumed")) return "done";
+export function contractErrorName(error: unknown): string | undefined {
+	if (error instanceof ContractFunctionRevertedError) return error.data?.errorName;
+	if (!(error instanceof BaseError)) return undefined;
+	const reverted = error.walk((cause) => cause instanceof ContractFunctionRevertedError);
+	return reverted instanceof ContractFunctionRevertedError ? reverted.data?.errorName : undefined;
+}
+
+export function classifyReleaseFailure(errorName: string | undefined): ReleaseOutcome {
+	if (errorName === "NonceAlreadyConsumed") return "done";
 	if (
-		reason.includes("ExceedsDailyCap") ||
-		reason.includes("EnforcedPause") ||
-		reason.includes("InsufficientVaultBalance") ||
+		errorName === "ExceedsDailyCap" ||
+		errorName === "EnforcedPause" ||
+		errorName === "PendingFinality" ||
 		// The threshold can drop below the quorum again if an attestor is
 		// removed after ReleasePending was emitted; a replacement approving
 		// restores it.
-		reason.includes("NotEnoughApprovals")
+		errorName === "NotEnoughApprovals"
 	) {
 		return "retry";
 	}
-	if (reason.includes("ExceedsPerReleaseCap")) return "blocked";
+	if (
+		errorName === "ExceedsPerReleaseCap" ||
+		errorName === "InsufficientVaultBalance" ||
+		// Synthetic: ExceedsDailyCap for an amount LARGER than dailyCap itself.
+		// The allowance can never reach it, so this is a governance setCaps
+		// matter, not a refill wait (the vault rejects such cap pairs since
+		// round 9, but a live vault deployed earlier may still carry one).
+		errorName === "ExceedsDailyCapPermanently"
+	) {
+		return "blocked";
+	}
 	return "unexpected";
+}
+
+/** Divide work into bounded batches. Both Multicall calldata and individual
+ * fallback concurrency use the same explicit limit. */
+export function chunks<T>(items: T[], size: number): T[][] {
+	if (!Number.isSafeInteger(size) || size <= 0) throw new Error(`invalid chunk size ${size}`);
+	const result: T[][] = [];
+	for (let start = 0; start < items.length; start += size) result.push(items.slice(start, start + size));
+	return result;
 }
 
 /**

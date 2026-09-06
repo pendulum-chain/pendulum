@@ -75,6 +75,49 @@ contract MigrationVaultTest is Test {
         assertEq(pen.getVotes(vault.VOTE_SINK()), MAX_ISSUANCE - 5e18);
     }
 
+    function test_CapsMustNotBeInverted() public {
+        // perReleaseCap > dailyCap opens a band of amounts that pass the
+        // per-release check but can never fit the daily allowance: burned on
+        // Pendulum, deferred forever, clearable only by a timelocked setCaps.
+        vm.expectRevert(abi.encodeWithSelector(MigrationVault.CapsInverted.selector, DAILY_CAP + 1, DAILY_CAP));
+        new MigrationVault(admin, guardian, attestors, 3, CONVERSION_FACTOR, DAILY_CAP + 1, DAILY_CAP, earliestSweep);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(MigrationVault.CapsInverted.selector, DAILY_CAP + 1, DAILY_CAP));
+        vault.setCaps(DAILY_CAP + 1, DAILY_CAP);
+
+        // Equal caps are the intended shape and remain allowed.
+        vm.prank(admin);
+        vault.setCaps(DAILY_CAP, DAILY_CAP);
+        assertEq(vault.perReleaseCap(), DAILY_CAP);
+    }
+
+    function test_DailyCapIsBoundedSoDecayCannotOverflow() public {
+        // An "uncap" of type(uint256).max would overflow _decayedConsumed's
+        // elapsed * dailyCap product and revert every threshold-crossing
+        // approve() and release() until a second timelocked setCaps.
+        uint256 maxCap = vault.MAX_DAILY_CAP();
+        uint256 huge = maxCap + 1;
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(MigrationVault.CapTooLarge.selector, huge));
+        vault.setCaps(huge, huge);
+
+        // The largest allowed cap must still leave approve()/release() working.
+        vm.prank(admin);
+        vault.setCaps(maxCap, maxCap);
+        approveAs(0, 0, recipient, 5e12);
+        approveAs(1, 0, recipient, 5e12);
+        approveAs(2, 0, recipient, 5e12);
+        assertEq(pen.balanceOf(recipient), 5e18);
+    }
+
+    function test_ConstructorRejectsSweepTimestampInPast() public {
+        vm.expectRevert(MigrationVault.SweepTimestampInPast.selector);
+        new MigrationVault(
+            admin, guardian, attestors, 3, CONVERSION_FACTOR, PER_RELEASE_CAP, DAILY_CAP, block.timestamp
+        );
+    }
+
     function test_ConstructorRejectsThresholdBelowTwo() public {
         vm.expectRevert(MigrationVault.InvalidThreshold.selector);
         new MigrationVault(admin, guardian, attestors, 1, CONVERSION_FACTOR, PER_RELEASE_CAP, DAILY_CAP, earliestSweep);

@@ -19,7 +19,9 @@ const CONTRACTS = path.join(ROOT, "contracts");
 
 export function rehearsalParams(env) {
 	const dailyCapPen = BigInt(env.REHEARSAL_DAILY_CAP_PEN ?? "28800");
-	const perReleaseCapPen = BigInt(env.REHEARSAL_PER_RELEASE_CAP_PEN ?? "50000");
+	// Equal to the daily cap: the vault rejects perReleaseCap > dailyCap since
+	// round 9 (that band could never release).
+	const perReleaseCapPen = BigInt(env.REHEARSAL_PER_RELEASE_CAP_PEN ?? "28800");
 	return {
 		maxIssuance: 150_000_000n * PEN_18,
 		dailyCap: dailyCapPen * PEN_18,

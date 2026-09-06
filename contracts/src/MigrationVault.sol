@@ -49,6 +49,9 @@ contract MigrationVault {
     error InsufficientVaultBalance();
     error ExceedsSweepable(uint256 requested, uint256 sweepable);
     error SweepSettlingAfterThresholdCut(uint256 allowedFrom);
+    error CapsInverted(uint256 perReleaseCap, uint256 dailyCap);
+    error CapTooLarge(uint256 dailyCap);
+    error SweepTimestampInPast();
 
     // ---------------------------------------------------------------- events
 
@@ -167,6 +170,14 @@ contract MigrationVault {
     uint256 public thresholdReducedAt;
     uint256 public constant SWEEP_SETTLING_PERIOD = 7 days;
 
+    /// @notice Upper bound on `dailyCap`. `_decayedConsumed` multiplies the
+    ///         elapsed seconds by `dailyCap` under checked arithmetic; an
+    ///         "uncap" of type(uint256).max would make that product overflow
+    ///         and revert every threshold-crossing approve() and release()
+    ///         until a second timelocked setCaps lands. 2^128 token units is
+    ///         ~3e20 PEN — no real cap comes anywhere near it.
+    uint256 public constant MAX_DAILY_CAP = type(uint128).max;
+
     // ---------------------------------------------------------------- modifiers
 
     modifier onlyAdmin() {
@@ -194,6 +205,10 @@ contract MigrationVault {
         if (admin_ == address(0) || guardian_ == address(0)) revert ZeroAddress();
         if (threshold_ < 2 || threshold_ > attestors_.length) revert InvalidThreshold();
         if (conversionFactor_ == 0) revert ZeroAmount();
+        _validateCaps(perReleaseCap_, dailyCap_);
+        // A floor in the past would make the immutable "cannot sweep before"
+        // guarantee to holders void from block one.
+        if (earliestSweepTimestamp_ <= block.timestamp) revert SweepTimestampInPast();
 
         admin = admin_;
         guardian = guardian_;
@@ -426,9 +441,20 @@ contract MigrationVault {
     }
 
     function setCaps(uint256 perReleaseCap_, uint256 dailyCap_) external onlyAdmin {
+        _validateCaps(perReleaseCap_, dailyCap_);
         perReleaseCap = perReleaseCap_;
         dailyCap = dailyCap_;
         emit CapsUpdated(perReleaseCap_, dailyCap_);
+    }
+
+    /// @dev A release in the band (dailyCap, perReleaseCap] passes the
+    ///      per-release check but can never fit the daily allowance (which is
+    ///      capped at dailyCap), so it defers forever — burned on Pendulum,
+    ///      releasable only after a timelocked setCaps. Refuse such a pair at
+    ///      the source instead of relying on a deployment convention.
+    function _validateCaps(uint256 perReleaseCap_, uint256 dailyCap_) internal pure {
+        if (perReleaseCap_ > dailyCap_) revert CapsInverted(perReleaseCap_, dailyCap_);
+        if (dailyCap_ > MAX_DAILY_CAP) revert CapTooLarge(dailyCap_);
     }
 
     function setGuardian(address guardian_) external onlyAdmin {

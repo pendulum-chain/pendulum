@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {PEN} from "../src/PEN.sol";
 import {PENGovernor} from "../src/PENGovernor.sol";
 import {MigrationVault} from "../src/MigrationVault.sol";
@@ -14,6 +15,7 @@ contract PENGovernorTest is Test {
     uint256 internal constant TIMELOCK_DELAY = 2 days;
     uint48 internal constant VOTING_DELAY = 1 days;
     uint32 internal constant VOTING_PERIOD = 5 days;
+    uint256 internal constant QUORUM_FLOOR = 1_000e18;
 
     PEN internal pen;
     PENGovernor internal governor;
@@ -32,7 +34,7 @@ contract PENGovernorTest is Test {
         timelock = new TimelockController(TIMELOCK_DELAY, empty, empty, address(this));
 
         governor = new PENGovernor(
-            IVotes(address(pen)), timelock, VOTING_DELAY, VOTING_PERIOD, 1_000e18, 4
+            IVotes(address(pen)), timelock, VOTING_DELAY, VOTING_PERIOD, 1_000e18, 4, QUORUM_FLOOR
         );
 
         timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
@@ -90,6 +92,49 @@ contract PENGovernorTest is Test {
 
         assertEq(vault.perReleaseCap(), 5e24);
         assertEq(vault.dailyCap(), 9e24);
+    }
+
+    function test_QuorumSinkMatchesVaultVoteSink() public view {
+        // The vault parks unmigrated voting power exactly where the governor
+        // subtracts it. If these ever diverge, quorum silently reverts to a
+        // full-supply denominator and the deadlock the sink exists to prevent
+        // (an unpause proposal that can never reach quorum) comes back.
+        assertEq(governor.QUORUM_SINK(), vault.VOTE_SINK());
+    }
+
+    function test_QuorumTracksCirculatingSupplyWithFloor() public {
+        // A real vault+token pair: the full supply starts unmigrated.
+        address[] memory quorumAttestors = new address[](3);
+        quorumAttestors[0] = makeAddr("qa0");
+        quorumAttestors[1] = makeAddr("qa1");
+        quorumAttestors[2] = makeAddr("qa2");
+        MigrationVault migrationVault = new MigrationVault(
+            address(this), guardian, quorumAttestors, 2, 1e6, 1e30, 1e30, block.timestamp + 365 days
+        );
+        PEN token = new PEN(address(migrationVault), MAX_ISSUANCE);
+        migrationVault.setToken(IERC20(address(token)));
+        PENGovernor gov = new PENGovernor(
+            IVotes(address(token)), timelock, VOTING_DELAY, VOTING_PERIOD, 1_000e18, 4, QUORUM_FLOOR
+        );
+
+        vm.warp(block.timestamp + 1);
+        uint256 beforeMigration = block.timestamp - 1;
+        // Nothing migrated: the fractional quorum is zero and the floor holds,
+        // instead of 4% of the 150M total supply (6M) that nobody could reach.
+        assertEq(gov.quorum(beforeMigration), QUORUM_FLOOR);
+
+        // Release 50M PEN to a holder through the real approval path.
+        address bob = makeAddr("bob");
+        uint256 palletAmount = 50_000_000e12;
+        vm.prank(quorumAttestors[0]);
+        migrationVault.approve(0, bob, palletAmount);
+        vm.prank(quorumAttestors[1]);
+        migrationVault.approve(0, bob, palletAmount);
+
+        vm.warp(block.timestamp + 1);
+        uint256 afterMigration = block.timestamp - 1;
+        // Quorum is now 4% of the 50M circulating, not 4% of the 150M total.
+        assertEq(gov.quorum(afterMigration), (50_000_000e18 * 4) / 100);
     }
 
     function test_ProposalBelowThresholdReverts() public {

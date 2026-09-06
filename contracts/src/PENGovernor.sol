@@ -18,10 +18,15 @@ import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 ///         bootstrap phase. PEN uses the EIP-6372 timestamp clock, so all
 ///         Governor periods below are in seconds.
 ///
-///         Quorum caveat (PRD G1): quorum is a fraction of *total* supply,
-///         which includes the unmigrated balance held by the vault. Start
-///         with a low fraction while migration is in progress and raise it
-///         via governance as circulating supply grows.
+///         Quorum (PRD G1, revised in review round 8): quorum is a fraction of
+///         the CIRCULATING supply — total supply minus the unmigrated balance
+///         parked at `QUORUM_SINK` by the MigrationVault — bounded below by an
+///         absolute `quorumFloor`. A full-supply denominator could deadlock
+///         governance permanently: with the vault holding most of the supply
+///         early on, a pause (whose unpause is admin-only, i.e. behind this
+///         governor) could freeze releases while the votable supply can never
+///         grow to quorum. The sink-based denominator tracks what can actually
+///         vote; the floor keeps day-one capture from being trivial.
 contract PENGovernor is
     Governor,
     GovernorSettings,
@@ -30,20 +35,53 @@ contract PENGovernor is
     GovernorVotesQuorumFraction,
     GovernorTimelockControl
 {
+    /// @notice Where the MigrationVault parks the voting power of the
+    ///         unmigrated supply (`MigrationVault.VOTE_SINK` — the two
+    ///         constants must stay in exact lockstep, asserted in the tests).
+    ///         Delegating checkpoints the vault's balance in the token's vote
+    ///         history, which lets `quorum()` subtract it per timepoint.
+    address public constant QUORUM_SINK = 0x000000000000000000000000000000000000dEaD;
+
+    /// @notice Absolute lower bound on quorum, in token units. Guards the
+    ///         early window in which circulating supply is small enough that a
+    ///         purely fractional quorum would make proposals trivially cheap.
+    uint256 public immutable quorumFloor;
+
     constructor(
         IVotes token,
         TimelockController timelock,
         uint48 votingDelay_, // seconds (timestamp clock)
         uint32 votingPeriod_, // seconds
         uint256 proposalThreshold_, // token units
-        uint256 quorumFraction // percent of total supply
+        uint256 quorumFraction, // percent of circulating supply
+        uint256 quorumFloor_ // token units
     )
         Governor("PENGovernor")
         GovernorSettings(votingDelay_, votingPeriod_, proposalThreshold_)
         GovernorVotes(token)
         GovernorVotesQuorumFraction(quorumFraction)
         GovernorTimelockControl(timelock)
-    {}
+    {
+        quorumFloor = quorumFloor_;
+    }
+
+    /// @notice Quorum as a fraction of the circulating supply at `timepoint`,
+    ///         never below `quorumFloor`. Circulating = past total supply
+    ///         minus the votes parked at `QUORUM_SINK` (the vault's unmigrated
+    ///         balance, plus anything a holder knowingly burns there — which
+    ///         only ever costs the delegator its own voting power, so lowering
+    ///         quorum this way is strictly dominated by just voting).
+    function quorum(uint256 timepoint)
+        public
+        view
+        override(Governor, GovernorVotesQuorumFraction)
+        returns (uint256)
+    {
+        uint256 parked = token().getPastVotes(QUORUM_SINK, timepoint);
+        uint256 circulating = token().getPastTotalSupply(timepoint) - parked;
+        uint256 fractional = (circulating * quorumNumerator(timepoint)) / quorumDenominator();
+        return fractional > quorumFloor ? fractional : quorumFloor;
+    }
 
     // ----- required overrides for the Governor composition -----
 

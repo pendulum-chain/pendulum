@@ -84,6 +84,7 @@ export function governanceDrillParams(env) {
 		votingPeriod: Number(env.GOV_VOTING_PERIOD ?? "240"),
 		proposalThreshold: BigInt(env.GOV_PROPOSAL_THRESHOLD_PEN ?? "1000") * PEN_18,
 		quorumFraction: Number(env.GOV_QUORUM_FRACTION ?? "0"),
+		quorumFloor: BigInt(env.GOV_QUORUM_FLOOR_PEN ?? "0") * PEN_18,
 	};
 }
 
@@ -98,8 +99,9 @@ export function deployGovernanceToSepolia({ env, pen, log }) {
 		VOTING_PERIOD: String(params.votingPeriod),
 		PROPOSAL_THRESHOLD: params.proposalThreshold.toString(),
 		QUORUM_FRACTION: String(params.quorumFraction),
+		QUORUM_FLOOR: params.quorumFloor.toString(),
 	};
-	log(`deploying governance (timelock ${params.timelockDelay}s, voting ${params.votingDelay}s+${params.votingPeriod}s, quorum ${params.quorumFraction}%) ...`);
+	log(`deploying governance (timelock ${params.timelockDelay}s, voting ${params.votingDelay}s+${params.votingPeriod}s, quorum ${params.quorumFraction}% of circulating, floor ${params.quorumFloor / PEN_18} PEN) ...`);
 	execFileSync(
 		"forge",
 		[

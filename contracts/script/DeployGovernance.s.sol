@@ -22,8 +22,12 @@ import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 ///   VOTING_DELAY          seconds before voting starts (timestamp clock)
 ///   VOTING_PERIOD         seconds of voting
 ///   PROPOSAL_THRESHOLD    token units needed to propose
-///   QUORUM_FRACTION       percent of total supply (start low; vault balance
-///                         counts toward total supply, see PRD G1)
+///   QUORUM_FRACTION       percent of CIRCULATING supply (total minus the
+///                         vault's unmigrated balance parked at the vote
+///                         sink, see PRD G1 as revised in review round 8)
+///   QUORUM_FLOOR          absolute quorum lower bound, 18-decimal token
+///                         units; keeps early proposals from being trivially
+///                         cheap while circulating supply is still small
 contract DeployGovernance is Script {
     function run() external {
         address token = vm.envAddress("PEN_TOKEN");
@@ -32,6 +36,7 @@ contract DeployGovernance is Script {
         uint32 votingPeriod = uint32(vm.envUint("VOTING_PERIOD"));
         uint256 proposalThreshold = vm.envUint("PROPOSAL_THRESHOLD");
         uint256 quorumFraction = vm.envUint("QUORUM_FRACTION");
+        uint256 quorumFloor = vm.envUint("QUORUM_FLOOR");
 
         vm.startBroadcast();
 
@@ -41,7 +46,7 @@ contract DeployGovernance is Script {
             new TimelockController(timelockDelay, empty, empty, msg.sender);
 
         PENGovernor governor = new PENGovernor(
-            IVotes(token), timelock, votingDelay, votingPeriod, proposalThreshold, quorumFraction
+            IVotes(token), timelock, votingDelay, votingPeriod, proposalThreshold, quorumFraction, quorumFloor
         );
 
         // Only the Governor proposes/cancels; anyone may execute after the delay.

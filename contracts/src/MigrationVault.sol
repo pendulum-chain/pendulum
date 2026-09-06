@@ -3,6 +3,7 @@ pragma solidity 0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 
 /// @title MigrationVault — releases pre-minted PEN as holders migrate from Pendulum
 /// @notice Holds the entire unmigrated PEN supply. Each attestor independently
@@ -72,6 +73,17 @@ contract MigrationVault {
     /// @notice The PEN token. Set exactly once, after which the vault must
     ///         hold the token's entire supply (pre-mint model, ADR-001).
     IERC20 public token;
+
+    /// @notice Where the vault's own (unmigrated) voting power is parked.
+    ///         `setToken` delegates the vault's balance here once, which
+    ///         checkpoints the unmigrated supply in the token's vote history:
+    ///         PENGovernor subtracts it from its quorum denominator so quorum
+    ///         tracks CIRCULATING supply, and vault-held tokens can never
+    ///         vote. Must stay in exact lockstep with
+    ///         `PENGovernor.QUORUM_SINK` (asserted in the tests). A constant —
+    ///         an admin-chosen delegatee would hand whoever controls admin the
+    ///         full unmigrated voting power.
+    address public constant VOTE_SINK = 0x000000000000000000000000000000000000dEaD;
 
     /// @notice Admin of all parameters; a TimelockController post-bootstrap.
     address public admin;
@@ -205,12 +217,16 @@ contract MigrationVault {
     /// @notice One-time wiring of the token, required because vault and token
     ///         reference each other: the vault is deployed first, then PEN
     ///         mints its full supply here, then the admin calls this.
+    ///         The token must be ERC20Votes (PEN is): the vault parks its
+    ///         voting power at `VOTE_SINK` so governance quorum can track the
+    ///         circulating supply.
     function setToken(IERC20 token_) external onlyAdmin {
         if (address(token) != address(0)) revert TokenAlreadySet();
         if (address(token_) == address(0)) revert ZeroAddress();
         uint256 supply = token_.totalSupply();
         if (supply == 0 || token_.balanceOf(address(this)) != supply) revert VaultMustHoldFullSupply();
         token = token_;
+        IVotes(address(token_)).delegate(VOTE_SINK);
         emit TokenSet(address(token_));
     }
 

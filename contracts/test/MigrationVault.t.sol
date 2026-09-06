@@ -60,6 +60,21 @@ contract MigrationVaultTest is Test {
         fresh.setToken(IERC20(address(pen)));
     }
 
+    function test_SetTokenParksVaultVotesInSink() public {
+        // setToken delegates the vault's balance to the vote sink: the
+        // unmigrated supply is checkpointed there (so PENGovernor's quorum can
+        // subtract it) and vault-held tokens can never vote.
+        assertEq(pen.delegates(address(vault)), vault.VOTE_SINK());
+        assertEq(pen.getVotes(vault.VOTE_SINK()), MAX_ISSUANCE);
+
+        uint256 palletAmount = 5e12;
+        approveAs(0, 0, recipient, palletAmount);
+        approveAs(1, 0, recipient, palletAmount);
+        approveAs(2, 0, recipient, palletAmount);
+        // The released amount left the vault, and with it the parked votes.
+        assertEq(pen.getVotes(vault.VOTE_SINK()), MAX_ISSUANCE - 5e18);
+    }
+
     function test_ConstructorRejectsThresholdBelowTwo() public {
         vm.expectRevert(MigrationVault.InvalidThreshold.selector);
         new MigrationVault(admin, guardian, attestors, 1, CONVERSION_FACTOR, PER_RELEASE_CAP, DAILY_CAP, earliestSweep);

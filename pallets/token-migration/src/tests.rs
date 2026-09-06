@@ -221,6 +221,20 @@ fn set_treasury_destination_stores_and_emits() {
 }
 
 #[test]
+fn set_treasury_destination_is_a_one_time_security_anchor() {
+	run_test(|| {
+		let original = base_address();
+		let replacement = H160::repeat_byte(0xCD);
+		assert_ok!(TokenMigration::set_treasury_destination(RuntimeOrigin::root(), original));
+		assert_noop!(
+			TokenMigration::set_treasury_destination(RuntimeOrigin::root(), replacement),
+			Error::<Test>::TreasuryDestinationAlreadySet
+		);
+		assert_eq!(TreasuryDestination::<Test>::get(), Some(original));
+	});
+}
+
+#[test]
 fn set_treasury_destination_rejects_zero_and_bad_origin() {
 	run_test(|| {
 		assert_noop!(
@@ -328,13 +342,12 @@ fn migrate_treasury_keeps_treasury_alive() {
 #[test]
 fn migrate_treasury_respects_pause() {
 	run_test(|| {
-		assert_ok!(TokenMigration::set_treasury_destination(RuntimeOrigin::root(), base_address()));
 		assert_ok!(TokenMigration::set_paused(RuntimeOrigin::root(), true));
+		// Initial configuration is still allowed while paused.
+		assert_ok!(TokenMigration::set_treasury_destination(RuntimeOrigin::root(), base_address()));
 		assert_noop!(
 			TokenMigration::migrate_treasury(RuntimeOrigin::root(), UNIT),
 			Error::<Test>::MigrationsPaused
 		);
-		// Setting the destination is still allowed while paused (configuration).
-		assert_ok!(TokenMigration::set_treasury_destination(RuntimeOrigin::root(), base_address()));
 	});
 }

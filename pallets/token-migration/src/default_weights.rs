@@ -73,14 +73,16 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 		Weight::from_parts(4_000_000, 0)
 			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
-	/// Storage: `TokenMigration::TreasuryDestination` (r:0 w:1)
+	/// Storage: `TokenMigration::TreasuryDestination` (r:1 w:1)
 	/// Proof: `TokenMigration::TreasuryDestination` (`max_values`: Some(1), `max_size`: Some(20), added: 515, mode: `MaxEncodedLen`)
 	fn set_treasury_destination() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
-		//  Estimated: `0`
-		// Minimum execution time: 4_000_000 picoseconds.
-		Weight::from_parts(4_000_000, 0)
+		//  Estimated: `515`
+		// Conservative until the next production-hardware regeneration: the
+		// one-time-set guard adds one storage read and its proof.
+		Weight::from_parts(6_000_000, 515)
+			.saturating_add(T::DbWeight::get().reads(1_u64))
 			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
 	/// Storage: `TokenMigration::Paused` (r:1 w:0)
@@ -116,7 +118,8 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 	fn set_treasury_destination() -> Weight {
-		Weight::from_parts(4_000_000, 0)
+		Weight::from_parts(6_000_000, 515)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 	fn migrate_treasury() -> Weight {

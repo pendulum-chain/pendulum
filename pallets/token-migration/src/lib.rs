@@ -110,6 +110,8 @@ pub mod pallet {
 		/// A treasury migration was attempted before the Base destination was
 		/// set via `set_treasury_destination`.
 		NoTreasuryDestination,
+		/// The one-time treasury destination security anchor is already set.
+		TreasuryDestinationAlreadySet,
 	}
 
 	/// Nonce of the next migration. Monotonically increasing, never reused;
@@ -218,6 +220,10 @@ pub mod pallet {
 		pub fn set_treasury_destination(origin: OriginFor<T>, base_address: H160) -> DispatchResult {
 			T::TreasuryMigrateOrigin::ensure_origin(origin)?;
 			ensure!(base_address != H160::zero(), Error::<T>::InvalidBaseAddress);
+			ensure!(
+				!TreasuryDestination::<T>::exists(),
+				Error::<T>::TreasuryDestinationAlreadySet
+			);
 			TreasuryDestination::<T>::put(base_address);
 			Self::deposit_event(Event::TreasuryDestinationSet { base_address });
 			Ok(())

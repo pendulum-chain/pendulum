@@ -372,6 +372,7 @@ impl Contains<RuntimeCall> for BaseFilter {
 			| RuntimeCall::CumulusXcm(_)
 			| RuntimeCall::VaultStaking(_)
 			| RuntimeCall::XcmTeleport(_)
+			| RuntimeCall::TokenMigration(_)
 			| RuntimeCall::MessageQueue(_) => true, // All pallets are allowed, but exhaustive match is defensive
 			                                        // in the case of adding new pallets.
 		}
@@ -1116,6 +1117,31 @@ impl pallet_xcm_teleport::Config for Runtime {
 	type TreasuryAccount = PendulumTreasuryAccount;
 }
 
+parameter_types! {
+	// 100 PEN (~$0.86 at $0.00858/PEN). The minimum must exceed the marginal
+	// Base-gas cost the five-attestor fleet spends per migration (~3 `approve`
+	// txs, roughly $0.01–$1 depending on Base gas), or spamming dust migrations
+	// becomes a cheap asymmetric gas-drain grief on every operator. 100 PEN
+	// dominates that cost across normal Base conditions while staying negligible
+	// for any real holder. Tunable via runtime upgrade.
+	pub const MinimumMigrationAmount: Balance = 100 * UNIT;
+}
+
+impl token_migration::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type MinimumMigrationAmount = MinimumMigrationAmount;
+	// Root/half-council, or 2/3 of the technical committee for fast incident response.
+	type PauseOrigin = EitherOfDiverse<
+		EnsureRootOrHalfCouncil,
+		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>,
+	>;
+	type TreasuryAccount = PendulumTreasuryAccount;
+	// Same authority that approves treasury spends: root or 3/5 council.
+	type TreasuryMigrateOrigin = TreasuryApproveOrigin;
+	type WeightInfo = token_migration::default_weights::SubstrateWeight<Runtime>;
+}
+
 const fn deposit(items: u32, bytes: u32) -> Balance {
 	(items as Balance * UNIT + (bytes as Balance) * (5 * MILLIUNIT / 100)) / 10
 }
@@ -1692,6 +1718,8 @@ construct_runtime!(
 
 		XcmTeleport: pallet_xcm_teleport = 101,
 
+		TokenMigration: token_migration = 102,
+
 		MessageQueue: pallet_message_queue = 110,
 	}
 );
@@ -1725,6 +1753,7 @@ mod benches {
 
 		[orml_currencies_allowance_extension, TokenAllowance]
 		[treasury_buyout_extension, TreasuryBuyoutExtension]
+		[token_migration, TokenMigration]
 
 		[dia_oracle, DiaOracleModule]
 	);

@@ -9029,6 +9029,7 @@ dependencies = [
  "stellar-relay",
  "substrate-wasm-builder 5.0.0-dev (git+https://github.com/paritytech//polkadot-sdk?branch=release-polkadot-v1.6.0)",
  "token-chain-extension",
+ "token-migration",
  "treasury-buyout-extension",
  "vault-registry",
  "vesting-manager",
@@ -15493,6 +15494,22 @@ dependencies = [
  "sp-tracing 10.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?rev=22dd6dee5148a0879306337bd8619c16224cc07b)",
  "sp-weights 20.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?rev=22dd6dee5148a0879306337bd8619c16224cc07b)",
  "spacewalk-primitives",
+]
+
+[[package]]
+name = "token-migration"
+version = "1.6.0-d"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core 21.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?rev=22dd6dee5148a0879306337bd8619c16224cc07b)",
+ "sp-io 23.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?rev=22dd6dee5148a0879306337bd8619c16224cc07b)",
+ "sp-runtime 24.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?rev=22dd6dee5148a0879306337bd8619c16224cc07b)",
+ "sp-std 8.0.0 (git+https://github.com/pendulum-chain/polkadot-sdk?rev=22dd6dee5148a0879306337bd8619c16224cc07b)",
 ]
 
 [[package]]

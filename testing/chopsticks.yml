@@ -1,0 +1,17 @@
+# Forks live Pendulum mainnet state so the runtime upgrade and the pallet are
+# exercised against real balances, vesting schedules, staking locks and the
+# real treasury account -- not a fresh genesis.
+#
+#   npx @acala-network/chopsticks@latest --config testing/chopsticks.yml \
+#     --wasm-override target/release/wbuild/pendulum-runtime/pendulum_runtime.compact.compressed.wasm
+#
+# mock-signature-host lets the harness submit extrinsics from any account
+# without real signatures, so we can drive migrations from dev keys.
+endpoint: wss://rpc-pendulum.prd.pendulumchain.tech
+mock-signature-host: true
+block: null
+# No `db:` on purpose. A persisted database carries forward the blocks this
+# harness itself produces, so a re-run would start already-unpaused and the
+# ships-paused check -- the single most important assertion in this phase --
+# would silently pass or fail for the wrong reason. Every run forks afresh.
+port: 8000

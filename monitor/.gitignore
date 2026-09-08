@@ -1,0 +1,4 @@
+node_modules/
+dist/
+monitor-state.json
+monitor-state.json.*.tmp

@@ -1,0 +1,51 @@
+[package]
+authors = ["Pendulum Chain"]
+description = "One-way migration of the native token to Base: burns the migrated amount and emits an event for the attestor set"
+edition = "2021"
+name = "token-migration"
+version = "1.6.0-d"
+
+[dependencies]
+codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+scale-info = { workspace = true, features = ["derive"] }
+
+# Substrate dependencies
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+# benchmarking
+frame-benchmarking = { workspace = true, optional = true }
+
+[dev-dependencies]
+sp-io = { workspace = true, default-features = true }
+pallet-balances = { workspace = true, default-features = true }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"scale-info/std",
+	"frame-support/std",
+	"frame-system/std",
+	"sp-core/std",
+	"sp-runtime/std",
+	"sp-std/std",
+	"frame-benchmarking?/std"
+]
+runtime-benchmarks = [
+	"frame-benchmarking",
+	"frame-benchmarking/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+	"pallet-balances/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks"
+]
+try-runtime = [
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+	"pallet-balances/try-runtime",
+	"sp-runtime/try-runtime"
+]

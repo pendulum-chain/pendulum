@@ -1,0 +1,6 @@
+node_modules/
+dist/
+checkpoint.json
+cp*.json
+checkpoint.json.*.tmp
+cp*.json.*.tmp

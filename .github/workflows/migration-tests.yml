@@ -1,0 +1,65 @@
+name: Migration Tests
+
+# The PEN -> Base migration stack lives outside the Rust workspace: the
+# Foundry contracts and the three TypeScript daemons. `test-code.yml` covers
+# the pallet through `cargo test`; this job covers everything else, so a
+# green check on the PR means the suites the review log cites actually ran.
+
+on:
+  pull_request:
+    paths:
+      - "contracts/**"
+      - "attestor/**"
+      - "monitor/**"
+      - "releaser/**"
+      - ".github/workflows/migration-tests.yml"
+  push:
+    branches:
+      - main
+
+jobs:
+  contracts:
+    name: Foundry (contracts)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Build
+        run: forge build --sizes
+
+      - name: Test
+        run: forge test -vvv
+
+  daemons:
+    name: ${{ matrix.package }} (node)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [attestor, monitor, releaser]
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.package }}/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck and test
+        run: npm test

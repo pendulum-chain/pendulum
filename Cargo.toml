@@ -12,6 +12,7 @@ members = [
     "pallets/vesting-manager",
     "pallets/orml-currencies-allowance-extension",
     "pallets/orml-tokens-management-extension",
+    "pallets/token-migration",
     "pallets/treasury-buyout-extension",
     "pallets/xcm-teleport",
     "runtime/common",

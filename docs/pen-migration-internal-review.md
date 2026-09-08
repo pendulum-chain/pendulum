@@ -834,6 +834,20 @@ Note for later drills: `--slots-in-an-epoch 1` makes Anvil trail `safe` by one
 block, which would exercise the checkpoint trailing locally; the drills would
 then need to mine an extra block after each action.
 
+### Spec-26 runtime: phase 2 and RB-5 (2026-09-08)
+
+The runtime was built from the committed tree with `spec_version` 26
+(`transaction_version` unchanged at 11: no existing extrinsic encoding
+changes). Local artifact `pendulum_runtime.compact.compressed.wasm`, 2,206,797
+bytes, sha256 `8e82e2e8f0e17eb2174aa114cef2b999e52b905bb6e87b51a0aae8e72100c782`
+— the reproducible build from the release pipeline is the artifact to submit;
+compare hashes. Against a fresh Chopsticks fork of live mainnet with that wasm
+as override, the fork reports spec 26 and **phase 2 passed 14/14**, including
+ships-paused with no storage written. **RB-5 passed 5/5**: the wasm written to
+`:code` under a running four-attestor fleet on a pristine spec-25 fork; every
+attestor decoded post-upgrade blocks without a restart and rode a node
+restart. Dev-machine benchmark weights were accepted as production weights.
+
 ## Residual risks and standing practices (no external audit — risk accepted)
 - Every change to the fund-release path (vault release/approve/sweep logic,
   pallet burn path) gets a fresh independent adversarial review round before

@@ -5,10 +5,10 @@
 //! WASM-EXECUTION: `Compiled`, DB CACHE: 1024
 //!
 //! Generated on a development machine, not on collator-grade reference
-//! hardware, so treat these as measured-but-provisional: they are strictly
-//! better than the hand-written estimates they replace, but should be
-//! regenerated on production hardware before the runtime upgrade if the
-//! timeline allows.
+//! hardware, and accepted as the production weights (decision 2026-09-06):
+//! the project has never benchmarked on reference hardware, and these are
+//! measured rather than hand estimated. Regenerate if the pallet's
+//! extrinsics change.
 //!
 //! Regenerate with:
 //!

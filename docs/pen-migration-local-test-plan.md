@@ -450,8 +450,11 @@ UPGRADE_WASM=/path/to/spec+1.wasm node testing/src/drill-rb5-upgrade.mjs
 - [ ] Finality gating confirmed against a real relay: finalized lags best, and
       the attestors act only on the finalized stream.
 - [ ] The monitor alerts on a real injected deficit and tolerates a surplus.
-- [ ] Benchmarks re-run on reference hardware and the generated weights
-      replace the manual estimates.
+- [x] Benchmark weights: generated on a development machine (2026-08-27,
+      steps 50 / repeat 20) and consciously accepted as the production
+      weights (decision 2026-09-06) — the project has never benchmarked on
+      collator-grade reference hardware. They are measured, not hand
+      estimates; regenerate only if the pallet's extrinsics change.
 - [ ] A dry run of the deploy script with the **final** production parameters,
       reviewed by someone other than whoever wrote the `.env`.
 - [ ] The phase 5 rehearsal green on Base Sepolia against the shipped revision.

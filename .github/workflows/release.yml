@@ -1,48 +1,109 @@
-# This action triggers a GitLab CI job that performs the following:
-# * Srtool Check
-# * Subwasm info of the compressed wasm file
-# * Propose a Parachain Upgrade
-# * Generate Release Notes
-name: Release and Propose an Upgrade
+# Reproducible runtime build and release, replacing the GitLab pipeline this
+# workflow used to trigger.
+#
+# The wasm that goes into a runtime-upgrade referendum must be reproducible:
+# anyone with the same commit and the same srtool image must arrive at the
+# same hash. This job builds the runtime inside the pinned srtool image
+# (rustc matching rust-toolchain.toml), records the srtool/subwasm report,
+# and — when a release tag is known — attaches the compressed wasm and the
+# report to the GitHub release for that tag.
+#
+# Usage:
+#   * Push a tag `pendulum-release-<spec>` (or `amplitude-release-<spec>`) on
+#     the commit that bumps spec_version: builds and publishes the release.
+#   * Run the workflow by hand with a chain and no tag: builds and keeps the
+#     artifacts on the run only (a dry run of the pipeline).
+name: Release Runtime
 
 on:
-  pull_request:
-    types:
-      - closed
-    branches:
-      - 'main'
+  push:
+    tags:
+      - "pendulum-release-*"
+      - "amplitude-release-*"
+  workflow_dispatch:
+    inputs:
+      chain:
+        description: Runtime to build
+        type: choice
+        options: [pendulum, amplitude]
+        default: pendulum
+      tag:
+        description: Existing release tag to publish to (leave empty for a dry run)
+        required: false
+        default: ""
 
 jobs:
-  release_check:
-#    This job will only run if:
-#     * the pull request is closed and merged to main branch;
-#     * the pull request has the "release:" in its title
-    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.title, 'release:') }}
-    name: ${{ matrix.chain }} need new release
-    strategy:
-      fail-fast: true
-      matrix:
-        chain: ["AMPLITUDE", "PENDULUM"]
-#       The job will run for Amplitude IF the pull request has the "amplitude" in its title
-        shouldReleaseAmp:
-          - ${{ contains(github.event.pull_request.title, 'amplitude') }}
-#       The job will run for Pendulum IF the pull request has the "pendulum" in its title
-        shouldReleasePen:
-          - ${{ contains(github.event.pull_request.title, 'pendulum') }}
-        exclude:
-          - shouldReleaseAmp: false
-            chain: "AMPLITUDE"
-          - shouldReleasePen: false
-            chain: "PENDULUM"
+  build:
+    name: srtool build
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
     steps:
-      - name: trigger gitlab
-        uses: eic/trigger-gitlab-ci@v3
+      - name: Resolve chain and tag
+        id: meta
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${{ github.ref_name }}"
+            CHAIN="${TAG%%-release-*}"
+          else
+            TAG="${{ github.event.inputs.tag }}"
+            CHAIN="${{ github.event.inputs.chain }}"
+          fi
+          case "$CHAIN" in
+            pendulum|amplitude) ;;
+            *) echo "cannot derive the chain from '$TAG'; expected <chain>-release-<spec>"; exit 1 ;;
+          esac
+          echo "chain=$CHAIN" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "ref=${TAG:-${{ github.ref }}}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v5
         with:
-          url: https://gitlab.com
-          project_id: 56492543
-          token: ${{ secrets.GITLABAPI }}
-          ref_name: main
-          variables: |
-            ${{ matrix.chain }}=Y
+          ref: ${{ steps.meta.outputs.ref }}
+          fetch-depth: 0
+
+      - name: Build with srtool
+        id: srtool
+        uses: chevdor/srtool-actions@v0.9.2
+        with:
+          package: ${{ steps.meta.outputs.chain }}-runtime
+          runtime_dir: runtime/${{ steps.meta.outputs.chain }}
+          tag: "1.81.0"
+
+      - name: Record the srtool report
+        shell: bash
+        run: |
+          echo '${{ steps.srtool.outputs.json }}' | jq . > srtool-${{ steps.meta.outputs.chain }}.json
+          {
+            echo "## ${{ steps.meta.outputs.chain }} runtime — srtool build"
+            echo
+            echo "Commit: \`${{ github.sha }}\`  ·  srtool image: \`paritytech/srtool:1.81.0\`  ·  reproduce with the same commit and image."
+            echo
+            echo '```json'
+            jq '.runtimes.compressed.subwasm // .' srtool-${{ steps.meta.outputs.chain }}.json
+            echo '```'
+          } > release-notes.md
+          cat release-notes.md >> "$GITHUB_STEP_SUMMARY"
+          cp "${{ steps.srtool.outputs.wasm_compressed }}" ./${{ steps.meta.outputs.chain }}_runtime.compact.compressed.wasm
+          sha256sum ./${{ steps.meta.outputs.chain }}_runtime.compact.compressed.wasm | tee -a release-notes.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.chain }}-runtime-${{ github.sha }}
+          path: |
+            ${{ steps.meta.outputs.chain }}_runtime.compact.compressed.wasm
+            srtool-${{ steps.meta.outputs.chain }}.json
+            release-notes.md
+          if-no-files-found: error
+
+      - name: Publish the GitHub release
+        if: steps.meta.outputs.tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.tag }}
+          body_path: release-notes.md
+          files: |
+            ${{ steps.meta.outputs.chain }}_runtime.compact.compressed.wasm
+            srtool-${{ steps.meta.outputs.chain }}.json

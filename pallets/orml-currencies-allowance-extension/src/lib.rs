@@ -1,4 +1,8 @@
 #![deny(warnings)]
+// `manual_inspect` (clippy 1.81) fires inside the `#[pallet::pallet]` macro
+// expansion, which this crate does not control; with `deny(warnings)` that
+// failed every CI run since the toolchain bump.
+#![allow(clippy::manual_inspect)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{dispatch::DispatchResult, ensure};

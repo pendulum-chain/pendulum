@@ -154,11 +154,31 @@ Before the upgrade is enacted:
    migration touching `NextNonce` storage must preserve it; reject one that
    doesn't.
 
-After enactment:
-4. Watch the fleet: all four daemons progressing past the upgrade block, test
-   migration of a small amount end-to-end, monitor `ok` lines resuming.
-5. If daemons exit on the upgrade block: they hold position (checkpoint stays
+When the referendum enacts (`parachainSystem.authorizeUpgrade(code_hash,
+check_version = true)` executes — this only *authorizes* the hash):
+4. **Enact it.** Anyone submits `parachainSystem.enactAuthorizedUpgrade(code)`
+   with the full published wasm (`pendulum_runtime.compact.compressed.wasm`
+   from the GitHub release, ~2.2 MB; the length fee is well under 1 PEN). The
+   call verifies `blake2_256(code)` against the authorized hash and, with
+   `check_version`, that the new `spec_version` is higher; it then signals the
+   upgrade to the relay chain, which applies it after its validation delay.
+   Nothing happens until this call is sent. Verify afterwards:
+   `system.lastRuntimeUpgrade` reports the new spec, `tokenMigration.paused()`
+   is `true`, and `parachainSystem.authorizedUpgrade` is cleared.
+5. Reclaim the preimage deposit: `preimage.unnotePreimage(hash)` from the
+   account that noted it (the deposit is returned once the preimage is unused).
+6. Watch the fleet: all four daemons progressing past the upgrade block, test
+   migration of a small amount end-to-end (only after the governance unpause),
+   monitor `ok` lines resuming.
+7. If daemons exit on the upgrade block: they hold position (checkpoint stays
    put) — fix decoding, redeploy, they resume without loss.
+
+**Which hash goes where.** The release's srtool report lists several hashes.
+`parachainSystem.authorizeUpgrade` takes the **code hash** — `blake2_256` of
+the wasm file (the value `enactAuthorizedUpgrade` recomputes from the bytes).
+The report's `proposal_hash` is the preimage hash of a `system.setCode` call
+and its `parachain_authorize_upgrade_hash` is derived from the authorize
+*call*; neither is what the pallet checks at enactment.
 
 ## RB-7: Window close and remainder sweep
 

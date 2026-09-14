@@ -80,6 +80,8 @@ jobs:
             echo
             echo "Commit: \`${{ github.sha }}\`  ·  srtool image: \`paritytech/srtool:1.81.0\`  ·  reproduce with the same commit and image."
             echo
+            echo "For \`parachainSystem.authorizeUpgrade\` use **\`blake2_256\`** below (the code hash the chain recomputes from the wasm at enactment); \`proposal_hash\` is the preimage hash of a \`system.setCode\` call and \`parachain_authorize_upgrade_hash\` is derived from the authorize call — neither is the value to authorize."
+            echo
             echo '```json'
             jq '.runtimes.compressed.subwasm // .' srtool-${{ steps.meta.outputs.chain }}.json
             echo '```'

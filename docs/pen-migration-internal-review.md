@@ -848,6 +848,29 @@ ships-paused with no storage written. **RB-5 passed 5/5**: the wasm written to
 attestor decoded post-upgrade blocks without a restart and rode a node
 restart. Dev-machine benchmark weights were accepted as production weights.
 
+### Published spec-26 artifact (2026-09-08)
+
+Built reproducibly by the new `Release Runtime` workflow (srtool v0.17.0,
+rustc 1.81.0) from the tagged commit `14eb720` and published as
+[pendulum-release-26](https://github.com/pendulum-chain/pendulum/releases/tag/pendulum-release-26)
+together with the srtool report. Verified locally: the downloaded wasm's
+sha256 equals the report's, and the embedded version is spec 26 /
+transaction_version 11.
+
+| | |
+|---|---|
+| `pendulum_runtime.compact.compressed.wasm` | 2,177,219 bytes |
+| sha256 | `370ac425e69125ac3d23971a1d2eba7966b15c7026621dd6a778c099432eb66d` |
+| blake2_256 (code hash) | `0x6a19a408826fb4d2ab04886c864714dda188df2a1bfa11f27b1b2d0c0192e896` |
+| democracy proposal hash | `0x830dd2349bf421f430b068e1361010b33dfaf8d38e8c9465cd95ee7cd378a0bf` |
+| `parachainSystem.authorizeUpgrade` hash | `0xf6cd1f4a600906a31f305ea0a8401ca31f84afa52b9fa31d31d35cde406b6ebf` |
+
+Against **this** binary — the thing to be shipped, not a local build — the
+fork reports spec 26, **phase 2 passed 14/14** and **RB-5 passed 5/5**.
+Anyone can reproduce the hashes from the same commit with
+`paritytech/srtool:1.81.0`. The referendum text should carry the code hash
+and the proposal hash above.
+
 ## Residual risks and standing practices (no external audit — risk accepted)
 - Every change to the fund-release path (vault release/approve/sweep logic,
   pallet burn path) gets a fresh independent adversarial review round before

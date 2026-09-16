@@ -2,6 +2,9 @@
 	"ignorePatterns": [
 		{
 			"pattern": "^https://crates.io"
+		},
+		{
+			"pattern": "^https://github.com/substrate-developer-hub/substrate-docs/blob/314e9cd3bd0ca9426bbfd381b79c3ef4d06b49c2/static/assets/tutorials/cumulus/chain-specs/rococo-custom-2-raw\\.json$"
 		}
 	]
 }

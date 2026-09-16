@@ -20,7 +20,9 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --release --all-features -- -W clippy::all -A clippy::style -A forgetting_copy_types -A forgetting_references
+          # `manual_inspect` (clippy 1.81) fires inside the `#[pallet::pallet]` expansion of our
+          # polkadot-sdk fork; the `deny(warnings)` pallets cannot allow it from the outside.
+          args: --release --all-features -- -W clippy::all -A clippy::style -A clippy::manual_inspect -A forgetting_copy_types -A forgetting_references
 
       - name: Clippy -- All Targets (except integration)
         uses: actions-rs/cargo@v1

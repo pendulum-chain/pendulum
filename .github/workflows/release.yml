@@ -58,7 +58,7 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "ref=${TAG:-${{ github.ref }}}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ steps.meta.outputs.ref }}
           fetch-depth: 0

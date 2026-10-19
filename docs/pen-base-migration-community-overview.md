@@ -170,7 +170,7 @@ vault explicitly excluded, in both Snapshot and on-chain governance. See the
 
 1. Community discussion (the post this document accompanies).
 2. Team response + formal governance proposal fixing the final parameters.
-3. Testnet deployment and end-to-end testing (Foucoco + Base Sepolia).
+3. Testnet deployment and end-to-end testing (a fork of Pendulum mainnet state + Base Sepolia).
 4. Security reviews, key-management ceremonies, monitoring setup, and
    operational drills.
 5. Mainnet soft launch with conservative caps (team + invited large holders).

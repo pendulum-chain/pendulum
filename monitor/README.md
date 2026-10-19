@@ -12,7 +12,7 @@ Checks every poll:
 | M2a aggregate | `totalReleased <= TotalMigrated × conversionFactor`. This remains independent defence-in-depth around the event reconciliation. | Alert + auto-pause |
 | M2b: `balanceOf(vault) + totalReleased + totalSwept >= totalSupply` | Vault-internal conservation. Only a **deficit** alerts: a surplus is a harmless inbound transfer (donation, or a migration whose recipient is the vault) and is ignored, so it cannot false-trigger a pause. | Alert + auto-pause on a deficit |
 | M4: every old migration reaches active approval quorum — and then releases | Liveness of the attestor fleet (`below approval quorum`), and of everything after it (`quorum reached but not released`: a release starved of daily allowance, paused, or made releasable by a threshold cut without a `ReleasePending`, which the releaser cannot see). | Alert, throttled per nonce |
-| Source supply | `totalIssuance + TotalMigrated` on Pendulum must never grow past its first-seen anchor: minted PEN is burned honestly and drains the fixed-supply vault ahead of late migrators, satisfying every other check. | Alert (`SOURCE SUPPLY GREW`); pausing is a human decision |
+| Source supply | `totalIssuance + TotalMigrated` on Pendulum must never grow past its first-seen anchor. | Alert (`SOURCE SUPPLY GREW`) |
 | Unreleasable burns | A burn to the zero or vault address can never be approved or released; it is paged once and excluded from the pending count so it cannot page liveness forever or block RB-7. | Alert once |
 
 ## Configuration (environment)
@@ -27,7 +27,7 @@ Checks every poll:
 | `UNMATCHED_EVENT_GRACE_SECONDS` | Time a lagging Pendulum source view gets to reveal the burn behind a safe Base event before a cannot-verify pause (default 10 min). The first sighting of an unmatched event pages immediately, so this is the window operators have to repair a stalled node. Size it to your node-ops response time |
 | `SOURCE_CLOCK_SKEW_MARGIN_SECONDS` | Clock-skew allowance for the fabrication proof (default 120s): once the finalized Pendulum view has passed the moment the monitor first observed an unmatched Base event by this margin and the nonce still does not exist, the event is provably fabricated and pauses without waiting out the grace. The anchor is the monitor's own clock, not the Base block timestamp (which trails real time after a sequencer outage); a future-dated source view proves nothing |
 | `SOURCE_STALE_ALERT_SECONDS` | Age of the finalized Pendulum view (vs. wall clock) past which the monitor pages that it is going blind (default 300s) |
-| `ISSUANCE_TOLERANCE` | Growth of Pendulum `totalIssuance + TotalMigrated` over its first-seen anchor (12-decimal pallet units) tolerated before `SOURCE SUPPLY GREW` pages (default 0). That sum cannot grow under any legitimate flow; growth means PEN was minted at the source and can be honestly burned against the fixed-supply vault |
+| `ISSUANCE_TOLERANCE` | Growth of Pendulum `totalIssuance + TotalMigrated` over its first-seen anchor (12-decimal pallet units) tolerated before `SOURCE SUPPLY GREW` pages (default 0) |
 | `ALERT_WEBHOOK_URL` | Webhook receiving JSON alerts — wire this to paging |
 | `GUARDIAN_PRIVATE_KEY` | Optional: a guardian key enabling automatic `pause()` on conservation violations |
 | `BASE_CHAIN_ID` | Default 8453 |

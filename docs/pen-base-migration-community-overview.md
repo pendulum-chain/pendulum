@@ -10,7 +10,7 @@ community discussion.
 For the full engineering specification, see the
 [technical PRD](pen-base-migration-prd.md). Deeper companions:
 [governance guide](pen-governance-guide.md),
-[migration-window analysis](pen-migration-window-analysis.md),
+[security overview](pen-migration-security.md),
 [approach rationale (ADR-001)](adr-001-pen-base-migration-approach.md).
 
 ## The design in one paragraph
@@ -128,7 +128,7 @@ Two facts frame it:
   separate governance decision and a timelocked execution — and extending the
   window is always an option.
 - **On-chain locks do not force a long window.** Analysis of live chain state
-  ([details](pen-migration-window-analysis.md)) shows almost all genuinely
+  shows almost all genuinely
   time-locked (vesting) PEN unlocks within a few months; a small residue can
   be force-unlocked by referendum if needed. Most "locked" balances (staking,
   already-vested tokens, governance votes) can be freed by their holders at

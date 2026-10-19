@@ -235,7 +235,7 @@ phase runs a genuine relay chain, where finalized lags best.
 
 ```bash
 node testing/src/make-zombienet-spec.mjs     # generates testing/.zombienet-pendulum-raw.json
-./zombienet-macos-arm64 spawn testing/zombienet.toml --provider native
+./zombienet-macos-arm64 spawn testing/zombienet.toml --provider native   # from the repo root, with polkadot on PATH
 node testing/src/phase4-zombienet.mjs        # auto-discovers the collator RPC
 ```
 

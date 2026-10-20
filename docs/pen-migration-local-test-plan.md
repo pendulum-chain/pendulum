@@ -18,9 +18,7 @@ Chopsticks gives realistic *state*; Zombienet gives realistic *finality*. You
 need both, for different reasons. Neither requires Paseo or Foucoco.
 
 > Foucoco is **not** used: that chain is no longer live. Validation is this
-> local stack plus a public run on Base Sepolia for the contracts. The
-> discussion post's reference to Foucoco should be corrected when the formal
-> proposal is published.
+> local stack plus a public run on Base Sepolia for the contracts.
 
 ---
 
@@ -193,8 +191,7 @@ Checks:
    balance on Anvil equals `amount × 1e6`.
 2. **The race is benign.** All four attestors see the same event; the two that
    lose the race log a skip and **stay running**. No crash-loop, no fatal
-   alert. (This is the failure mode that took three review rounds to get
-   right — verify it explicitly.)
+   alert. (Verify this explicitly.)
 3. **Restart safety:** kill an attestor mid-run, restart it → it resumes from
    its checkpoint, re-derives nothing twice, no duplicate release.
 4. **Outage tolerance:** stop one attestor → migrations still release (3 of 4
@@ -238,7 +235,7 @@ phase runs a genuine relay chain, where finalized lags best.
 
 ```bash
 node testing/src/make-zombienet-spec.mjs     # generates testing/.zombienet-pendulum-raw.json
-./zombienet-macos-arm64 spawn testing/zombienet.toml --provider native
+./zombienet-macos-arm64 spawn testing/zombienet.toml --provider native   # from the repo root, with polkadot on PATH
 node testing/src/phase4-zombienet.mjs        # auto-discovers the collator RPC
 ```
 
@@ -385,9 +382,8 @@ vault paused: post-handover, unpausing takes a full proposal (≥ 48h in
 production) — that latency is the design's cost, made tangible.
 
 Drill parameters are wall-clock-sized (3 min timelock, 1+4 min voting, quorum
-fraction 0). **Quorum sizing is deliberately not rehearsed** — production
-quorum is ~3M delegated PEN — and stays covered by the unit tests, as do the
-production timing values.
+fraction 0). **Quorum sizing is not rehearsed here**; it stays covered by the
+unit tests, as do the production timing values.
 
 ### Manual walkthrough (after `--manual`, or against any run's contracts)
 
@@ -436,25 +432,3 @@ UPGRADE_WASM=/path/to/spec+1.wasm node testing/src/drill-rb5-upgrade.mjs
 | RB-5 runtime upgrade | `drill-rb5-upgrade.mjs` on Chopsticks: fork pre-upgrade mainnet (no pallet), enact the real spec-26 upgrade by writing `:code`, confirm frame-system records it, and require every attestor's checkpoint to advance past the upgrade block — their decode path ran on post-upgrade blocks, and a decode failure exits by design — including across a full node restart. A post-upgrade `migrate` cannot be *submitted* through Chopsticks (it serves pre-fork metadata even across `--resume`, so the real runtime rejects the extrinsic as `badProof`); decoding real events under the post-upgrade runtime is what phases 2–3 do wholesale, and the shape-change half is the attestor's unit-tested 4-field assertion |
 | RB-6 attestor rotation | `drills.mjs`: re-add bumps the generation so the old vote stays dead; the documented recovery (rewind checkpoint, restart, re-approve) completes the quorum; a 5th attestor adds and removes cleanly |
 | RB-7 window close | `drills.mjs`: pallet paused, `pendingApprovedAmount` drained, conservation reconciled exactly, sweep executed, monitor quiet. Deploys with a ~90s sweep floor since Sepolia time cannot be warped; the threshold is never reduced, so the 7-day settling gate stays unarmed |
-
----
-
-## Phase 7 — Exit criteria before mainnet
-
-- [ ] Phases 1–6 pass end to end.
-- [ ] The upgrade ships paused, verified on a Chopsticks fork of **live**
-      mainnet state (not a fresh chain).
-- [ ] A cap-deferred release recovers correctly without manual contract
-      surgery.
-- [ ] All four attestors survive a full run without a fatal exit.
-- [ ] Finality gating confirmed against a real relay: finalized lags best, and
-      the attestors act only on the finalized stream.
-- [ ] The monitor alerts on a real injected deficit and tolerates a surplus.
-- [x] Benchmark weights: generated on a development machine (2026-08-27,
-      steps 50 / repeat 20) and consciously accepted as the production
-      weights (decision 2026-09-06) — the project has never benchmarked on
-      collator-grade reference hardware. They are measured, not hand
-      estimates; regenerate only if the pallet's extrinsics change.
-- [ ] A dry run of the deploy script with the **final** production parameters,
-      reviewed by someone other than whoever wrote the `.env`.
-- [ ] The phase 5 rehearsal green on Base Sepolia against the shipped revision.

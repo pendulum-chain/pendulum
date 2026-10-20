@@ -94,4 +94,4 @@ WantedBy=multi-user.target
   set and refuses to run otherwise.
 - After a Pendulum **runtime upgrade**, verify event decoding against the new
   metadata on a staging node before letting the fleet advance past the
-  upgrade block (see docs/pen-migration-runbooks.md).
+  upgrade block.

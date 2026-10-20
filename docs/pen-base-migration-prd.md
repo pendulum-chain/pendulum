@@ -61,8 +61,8 @@ The migration is **one-way**. No reverse flow (Base → Pendulum) will be built.
 | D1 | Pendulum-side effect of `migrate` | **Burn.** Keeps the invariant `Σ burned on Pendulum = Σ releasable on Base` trivially auditable and leaves no honeypot. (Implemented.) |
 | D2 | Decimals on Base | **18** (scale ×10⁶ at release, in the vault only — V7). Exact conversion; no change to holder amounts, ownership share, or max supply. (Implemented.) |
 | D3 | Max issuance | **Exactly 150,000,000 PEN — deliberately rounded up from the live Pendulum issuance (~149.93M, no inflation).** The live figure is an untidy artifact of the chain's history (fee burns etc.), not a meaningful tokenomics number; a clean canonical 150M is what trackers, integrators and the immutable constructor should carry, and it stays valid even as small fee burns keep nudging the live figure. Consequence: the **rounding delta (~67k PEN, ~0.045%) can never be released by migration** — no matching burns can ever exist for it — so it sits inert in the vault, is excluded from circulating supply, and at window close moves to the **community treasury via the governed, timelocked sweep (D5)**. It is not allocated to any person or team; only a governance decision can ever spend it. Per-holder conversion remains exactly 1:1. |
-| D4 | Attestor set composition | **4 attestors, all initially team-operated**, one per internal RPC node, threshold **3-of-4**. Rationale: Pendulum currently has no external node operators, and onboarding them means asking outsiders to fund + run a node for the whole window. Honest consequence: organizational independence is *not* claimed — blast-radius controls (caps, monitoring, guardian pause, ≥48h timelock) and **separation of duties** (guardian + monitor operated by someone other than the attestor-key holder) carry the security. |
-| D5 | Migration window end policy | Target migration window **~3 months**, with the immutable on-chain floor set later at **`earliestSweepTimestamp` = 2027-03-01** so the remainder provably cannot move before then. The two are deliberately different numbers: the target is what we aim to communicate and operate to, the floor is the guarantee to holders. Conditional on the planned block-time improvement toward 12s; a referendum (`vesting-manager.remove_vesting_schedule`) force-unlocks any vesting residue and the permanent sentinel locks before close ([window analysis](pen-migration-window-analysis.md)). **Final window length is deliberately left to the community discussion / formal governance proposal** (the discussion post solicits 6-month / 12-month / open-ended feedback). An earliest close date is *not* an automatic sweep: moving any remainder requires a separate governance decision + timelocked execution. |
+| D4 | Attestor set composition | **4 attestors, all initially team-operated**, one per node, threshold **3-of-4**. Rationale: Pendulum currently has no external node operators, and onboarding them means asking outsiders to fund + run a node for the whole window. Honest consequence: organizational independence is *not* claimed — blast-radius controls (caps, monitoring, guardian pause, ≥48h timelock) and **separation of duties** (guardian + monitor operated by someone other than the attestor-key holder) carry the security. |
+| D5 | Migration window end policy | Target migration window **~3 months**, with the immutable on-chain floor set later at **`earliestSweepTimestamp` = 2027-03-01** so the remainder provably cannot move before then. The two are deliberately different numbers: the target is what we aim to communicate and operate to, the floor is the guarantee to holders. **Final window length is deliberately left to the community discussion / formal governance proposal** (the discussion post solicits 6-month / 12-month / open-ended feedback). An earliest close date is *not* an automatic sweep: moving any remainder requires a separate governance decision + timelocked execution. |
 | D6 | Encumbered balances policy | **Only unstaked, freely transferable PEN migrates** (enforced by the pallet). Staked/vesting/governance-locked balances must be freed first; UI and docs surface this. No vesting locks should extend beyond the window — residue handled per D5's referendum path. |
 
 ## 5. System overview
@@ -96,7 +96,7 @@ The migration is **one-way**. No reverse flow (Base → Pendulum) will be built.
 - **P4** — Pallet is pausable via a privileged origin (technical committee / root) to halt new migrations during incidents.
 - **P5** — Storage exposes cumulative migrated total for monitoring (`TotalMigrated`).
 - **P6** — No knowledge of Base state; the pallet is fire-and-forget. Documentation and UI must make irreversibility explicit.
-- **P7** — Deployed to Foucoco (testnet runtime) first with identical logic.
+- **P7** — Validated against a fork of Pendulum mainnet state with the release runtime before the upgrade.
 
 ### 6.2 Base: `PEN` ERC-20
 
@@ -178,23 +178,19 @@ The migration is **one-way**. No reverse flow (Base → Pendulum) will be built.
 
 **Standing security requirements:** all privileged Base keys in Safes or HSMs; no single human can both approve and change the attestor set; the guardian Safe and the invariant monitor are operated by people who hold no attestor keys (separation of duties, D4); public disclosure/bug-bounty channel before mainnet; all contracts verified on the Base explorer.
 
-## 9. Security assurance (decision: no external audit)
+## 9. Security assurance
 
-**Decision:** no external audit is commissioned. The residual risk is
-consciously accepted and carried by the threat-model mitigations of §8 — rate
-caps bounding worst-case daily loss, independent monitoring with auto-pause,
-the fast guardian, the ≥48h timelock on every sensitive change, separation of
-duties, and the conservative-caps soft launch. This trade-off is judged
-acceptable because the migration is finite, damage-bounded and pausable, and
-the permanent artifact (the token) is an unmodified OpenZeppelin composition
-with no mint surface.
+Security rests on the threat-model mitigations of §8 — rate caps bounding
+worst-case daily loss, independent monitoring with auto-pause, the fast
+guardian, the ≥48h timelock on every sensitive change, separation of duties,
+and the conservative-caps soft launch — and on the shape of the system: the
+migration is finite, damage-bounded and pausable, and the permanent artifact
+(the token) is an unmodified OpenZeppelin composition with no mint surface.
 
-**What is done instead:** repeated **independent internal adversarial review
-rounds** over the full stack, each documented with findings and resolutions in
-the [internal security review log](pen-migration-internal-review.md), with all
-critical/high findings fixed and regression-tested before mainnet vault
-funding. Standing practice: every change to the fund-release path triggers a
-fresh review round before deployment.
+The full stack goes through repeated internal adversarial review rounds, with
+all critical/high findings fixed and regression-tested before mainnet vault
+funding; every change to the fund-release path gets a fresh review before
+deployment. A summary is in the [security overview](pen-migration-security.md).
 
 Review focus, ranked by where the risk actually lives:
 
@@ -211,8 +207,8 @@ Review focus, ranked by where the risk actually lives:
 | Phase | Contents | Gate to next phase |
 |---|---|---|
 | **0 — Decisions & spec** | Resolve D1–D6 (done — §4.2); community discussion + formal governance proposal fixing the final window and parameters; publish tokenomics/max-issuance statement | Proposal approved |
-| **1 — Build & testnet** | Pallet on Foucoco; contracts on Base Sepolia; 4 test attestors; monitor; UI; internal adversarial testing incl. chaos drills (kill attestors, inject bad approvals) | All acceptance criteria pass on testnet |
-| **2 — Security reviews & drills** | Internal adversarial review rounds per §9; fix and re-verify; publish the review log; chaos + runbook drills | No open critical/high findings |
+| **1 — Build & testnet** | Pallet on a fork of mainnet state; contracts on Base Sepolia; 4 test attestors; monitor; UI; internal adversarial testing incl. chaos drills (kill attestors, inject bad approvals) | All acceptance criteria pass on testnet |
+| **2 — Security reviews & drills** | Internal adversarial review rounds per §9; fix and re-verify; publish a security overview; chaos + runbook drills | No open critical/high findings |
 | **3 — Mainnet soft launch** | Deploy token + vault (full supply minted); production attestor ceremony; **conservative caps**; team-only + invited large-holder migrations for 1–2 weeks; vault admin held by bootstrap Safe | Soft-launch volume clean, monitor green |
 | **4 — Public launch** | Runtime upgrade enabling `migrate` for all; UI public; raise caps to target; tracker submissions (DefiLlama/CoinGecko: supply endpoints, vault as non-circulating); exchange & community comms | ≥ agreed % supply migrated or T reached |
 | **5 — Governance handover** | Snapshot space live from phase 4; deploy Governor + Timelock; transfer vault admin from bootstrap Safe to timelock; elect executor Safe | — |
@@ -224,12 +220,11 @@ Review focus, ranked by where the risk actually lives:
 - **Unstaking delay friction (D6):** staked holders face the staking unbond period before they can migrate; comms must set expectations.
 - **Attestor key concentration (D4):** with a team-operated set, a single organization holds all attestor keys — separation of duties (guardian/monitor held by non-key-holders) is the load-bearing control and must be verifiable, not aspirational.
 - **Exchange coordination:** any CEX listing PEN needs a supported path (they migrate custody balances themselves via the same mechanism); start conversations in phase 1.
-- **Legal/regulatory review** of the migration mechanics and any public statements about supply — not covered by this PRD, must run in parallel.
 - **Pendulum chain end-state** (full sunset vs. minimal maintenance) is deliberately out of scope but interacts with D1 and G4; schedule that decision before phase 6.
 
 ## 12. Deliverables checklist
 
-- [ ] `token-migration` pallet (+ benchmarks, tests) in this repo, deployed to Foucoco then Pendulum
+- [ ] `token-migration` pallet (+ benchmarks, tests) in this repo, deployed to Pendulum
 - [ ] `PEN.sol`, `MigrationVault.sol` (+ Foundry test suite incl. fork tests and invariant tests)
 - [ ] Attestor daemon (open-sourced) + operator deployment guide
 - [ ] Invariant monitor + alerting integration
@@ -237,5 +232,5 @@ Review focus, ranked by where the risk actually lives:
 - [ ] Migration web UI
 - [ ] Governor + Timelock deployment scripts; Snapshot space config (vault-excluded strategy)
 - [ ] Runbooks: key compromise, attestor outage, invariant breach, pause/unpause, runtime upgrade
-- [ ] Internal security-review log (published; findings and resolutions)
+- [ ] Security overview (published)
 - [ ] Tracker submissions and public migration documentation

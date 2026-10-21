@@ -21,14 +21,18 @@ import { privateKeyToAccount } from "viem/accounts";
 import {
 	approvalMismatch,
 	blockRanges,
+	type CallNode,
 	chunks,
+	describeCall,
 	describeTimelockOperation,
 	isStale,
 	provablyUnsourced,
 	releaseMismatch,
 	releasedExceedsMigrated,
+	riskyCalls,
 	type ScheduledCall,
 	shouldAwaitSource,
+	toCallNode,
 	type MigrationTuple,
 	vaultConservationDeficit,
 } from "./checks.js";
@@ -325,6 +329,9 @@ let lastIssuanceAlertMs = 0;
 let timelockFromBlock: bigint | undefined;
 // ponytail: in-memory dedupe; a restart can re-page operations between the persisted cursor and the last scan.
 const pagedTimelockOperations = new Set<string>();
+// ponytail: in-memory dedupe; a restart re-pages the Pendulum governance items still pending.
+const pagedGovernanceItems = new Set<string>();
+let lastGovernanceWatchFailureMs = 0;
 
 function log(message: string): void {
 	console.log(`${new Date().toISOString()} ${message}`);
@@ -729,6 +736,100 @@ async function watchTimelock(toBlock: bigint): Promise<void> {
 	timelockFromBlock = toBlock + 1n;
 }
 
+type ApiAt = Awaited<ReturnType<ApiPromise["at"]>>;
+
+/** A democracy `Bounded<Call>`, as much of it as the watcher reads. */
+interface BoundedCall {
+	isInline: boolean;
+	asInline: Uint8Array;
+	isLookup: boolean;
+	asLookup: { hash_: { toHex(): string }; len: { toNumber(): number } };
+	toString(): string;
+}
+
+/** Decodes a proposal's call; a preimage that is not noted yet cannot be read. */
+async function boundedCall(apiAt: ApiAt, bounded: BoundedCall): Promise<{ node?: CallNode; text: string }> {
+	let bytes: Uint8Array;
+	if (bounded.isInline) bytes = bounded.asInline;
+	else if (bounded.isLookup) {
+		const { hash_, len } = bounded.asLookup;
+		const preimage = (await apiAt.query.preimage.preimageFor([hash_, len])) as unknown as {
+			isSome: boolean;
+			unwrap(): Uint8Array;
+		};
+		if (!preimage.isSome) return { text: `preimage ${hash_.toHex()} is not noted yet; review the call once it is` };
+		bytes = preimage.unwrap();
+	} else return { text: `legacy call reference ${bounded.toString()}; review it manually` };
+	const node = toCallNode(apiAt.registry.createType("Call", bytes) as unknown as Parameters<typeof toCallNode>[0]);
+	return { node, text: describeCall(node) };
+}
+
+/**
+ * Page every pending Pendulum democracy item once: public proposals, the
+ * council's external proposal and ongoing referenda, with the call decoded.
+ * Calls that mint, move or unlock balances or change the runtime page as
+ * CRITICAL: minted PEN burned through the migration drains the fixed-supply
+ * vault, and only Pendulum governance can stop the call before enactment.
+ * Alert-only.
+ */
+async function watchPendulumGovernance(apiAt: ApiAt, finalizedBlock: number): Promise<void> {
+	const democracy = apiAt.query.democracy;
+	const launchPeriod = Number(apiAt.consts.democracy.launchPeriod.toString());
+	const nextLaunch = (Math.floor(finalizedBlock / launchPeriod) + 1) * launchPeriod;
+	const items: Array<{ key: string; label: string; hint: string; bounded: BoundedCall }> = [];
+	const proposals = (await democracy.publicProps()) as unknown as Array<
+		[{ toNumber(): number }, BoundedCall, { toString(): string }]
+	>;
+	for (const [index, bounded, proposer] of proposals) {
+		items.push({
+			key: `proposal:${index.toNumber()}`,
+			label: `public proposal #${index.toNumber()} from ${proposer.toString()}`,
+			hint: `the best-backed public proposal becomes a referendum at block ${nextLaunch}; ` +
+				"a hostile one needs a council or technical-committee cancel before then, or nay votes after",
+			bounded,
+		});
+	}
+	const external = (await democracy.nextExternal()) as unknown as { isSome: boolean; unwrap(): [BoundedCall, unknown] };
+	if (external.isSome) {
+		const [bounded] = external.unwrap();
+		items.push({
+			key: `external:${bounded.toString()}`,
+			label: "the council's external proposal",
+			hint: `it can become a referendum at block ${nextLaunch}`,
+			bounded,
+		});
+	}
+	const [count, lowest] = (await Promise.all([democracy.referendumCount(), democracy.lowestUnbaked()])).map((value) =>
+		Number(value.toString())
+	);
+	for (let index = lowest; index < count; index++) {
+		const info = (await democracy.referendumInfoOf(index)) as unknown as {
+			isSome: boolean;
+			unwrap(): { isOngoing: boolean; asOngoing: { proposal: BoundedCall; end: { toNumber(): number } } };
+		};
+		if (!info.isSome || !info.unwrap().isOngoing) continue;
+		const ongoing = info.unwrap().asOngoing;
+		items.push({
+			key: `referendum:${index}`,
+			label: `referendum #${index}`,
+			hint: `voting ends at block ${ongoing.end.toNumber()}; a hostile one needs nay votes or an emergency cancel`,
+			bounded: ongoing.proposal,
+		});
+	}
+	for (const item of items) {
+		if (pagedGovernanceItems.has(item.key)) continue;
+		const call = await boundedCall(apiAt, item.bounded);
+		const risky = call.node ? riskyCalls(call.node) : [];
+		await alert(
+			risky.length
+				? "CRITICAL: Pendulum governance item mints, moves or unlocks balances, or changes the runtime"
+				: "PENDULUM GOVERNANCE ITEM",
+			`${item.label}: ${call.text}${risky.length ? ` (flagged: ${risky.join(", ")})` : ""}; ${item.hint}`,
+		);
+		pagedGovernanceItems.add(item.key);
+	}
+}
+
 function payloadHash(migration: MigrationRecord): `0x${string}` {
 	return keccak256(encodeAbiParameters(
 		[{ type: "uint64" }, { type: "address" }, { type: "uint256" }],
@@ -797,6 +898,15 @@ async function check(api: ApiPromise): Promise<void> {
 				`the monitor cannot verify new Base events against a stalled source — restore the node before ` +
 				`the ${config.unmatchedEventGraceSeconds}s unmatched-event grace forces a pause`,
 		);
+	}
+	try {
+		await watchPendulumGovernance(apiAt, finalizedBlock);
+	} catch (governanceError) {
+		// Alert-only: an RPC or decode failure here must not stop the conservation checks.
+		if (Date.now() - lastGovernanceWatchFailureMs > config.graceSeconds * 1000) {
+			lastGovernanceWatchFailureMs = Date.now();
+			await alert("pendulum governance watch failed", `${governanceError}`);
+		}
 	}
 	const draft = cloneState(state);
 	await ingestPendulumEvents(api, draft, finalizedBlock);

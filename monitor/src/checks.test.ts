@@ -12,12 +12,15 @@ import {
 	approvalMismatch,
 	blockRanges,
 	chunks,
+	describeCall,
 	describeTimelockOperation,
 	isStale,
 	provablyUnsourced,
 	releaseMismatch,
 	releasedExceedsMigrated,
+	riskyCalls,
 	shouldAwaitSource,
+	toCallNode,
 	vaultConservationDeficit,
 } from "./checks.js";
 
@@ -147,4 +150,15 @@ test("a scheduled operation with unknown parts or a settled timestamp still page
 	assert.match(describeTimelockOperation("0x1", [call], 0n, 0, {}, {}), new RegExp(`#0 ${other}\\.unknown function 0xdeadbeef value=5 .*cancelled\\)$`));
 	assert.match(describeTimelockOperation("0x1", [call], 1n, 0, {}, {}), /already executed$/);
 	assert.match(describeTimelockOperation("0x1", [call], 100n, 200_000, {}, {}), /\(ready now\)/);
+});
+
+test("a governance call tree is walked through batches and minting calls are flagged", () => {
+	const setBalance = { section: "tokens", method: "setBalance", args: ["who", "Native", 4_000_000n] };
+	// The recurring attack proposal: utility.batch of tokens.setBalance to the proposer.
+	const attack = toCallNode({ section: "utility", method: "batch", args: [[setBalance, setBalance]] });
+	assert.equal(describeCall(attack), "utility.batch(tokens.setBalance, tokens.setBalance)");
+	assert.deepEqual(riskyCalls(attack), ["tokens.setBalance"]);
+	const nested = toCallNode({ section: "utility", method: "dispatchAs", args: ["Root", { section: "tokenMigration", method: "setPaused", args: [false] }] });
+	assert.deepEqual(riskyCalls(nested), ["tokenMigration.setPaused"]);
+	assert.deepEqual(riskyCalls(toCallNode({ section: "system", method: "remark", args: ["0x00"] })), []);
 });

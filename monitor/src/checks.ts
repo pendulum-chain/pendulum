@@ -204,3 +204,61 @@ export function describeTimelockOperation(
 	}
 	return `operation ${id}: ${callText} — ${status}`;
 }
+
+/** A decoded Pendulum call: `section.method` plus any calls nested in its arguments. */
+export interface CallNode {
+	name: string;
+	calls: CallNode[];
+}
+
+/** The duck type of a polkadot.js `Call`, enough to walk nested calls. */
+interface CallLike {
+	section: string;
+	method: string;
+	args: unknown[];
+}
+
+function isCallLike(value: unknown): value is CallLike {
+	const call = value as CallLike | null;
+	return typeof call?.section === "string" && typeof call.method === "string" && Array.isArray(call.args);
+}
+
+/** Walks a decoded call, descending into arguments that are calls or lists of calls (batch, dispatch_as, ...). */
+export function toCallNode(call: CallLike): CallNode {
+	const calls: CallNode[] = [];
+	for (const arg of call.args) {
+		if (isCallLike(arg)) calls.push(toCallNode(arg));
+		else if (Array.isArray(arg)) for (const item of arg) if (isCallLike(item)) calls.push(toCallNode(item));
+	}
+	return { name: `${call.section}.${call.method}`, calls };
+}
+
+/** Calls that mint, move or unlock balances outside normal transfers, or change
+ *  the runtime or the migration pallet. Minted PEN that is burned through the
+ *  migration drains the fixed-supply vault on Base, and only Pendulum governance
+ *  can stop such a call before it is enacted. */
+const RISKY_CALLS = new Set([
+	"balances.forceSetBalance", "balances.setBalance", "balances.setBalanceDeprecated", "balances.forceTransfer",
+	"balances.forceUnreserve", "balances.forceAdjustTotalIssuance", "tokens.setBalance", "tokens.forceTransfer",
+	"currencies.updateBalance", "vesting.forceVestedTransfer", "vestingManager.removeVestingSchedule",
+	"system.setCode", "system.setCodeWithoutChecks", "system.setStorage", "system.killStorage", "system.killPrefix",
+	"system.authorizeUpgrade", "system.authorizeUpgradeWithoutChecks", "parachainSystem.authorizeUpgrade",
+	"parachainSystem.enactAuthorizedUpgrade",
+]);
+const RISKY_SECTIONS = new Set(["sudo", "tokenMigration"]);
+
+/** The risky calls anywhere in a call tree, deduplicated. */
+export function riskyCalls(call: CallNode): string[] {
+	const found = new Set<string>();
+	const walk = (node: CallNode) => {
+		if (RISKY_CALLS.has(node.name) || RISKY_SECTIONS.has(node.name.split(".")[0])) found.add(node.name);
+		node.calls.forEach(walk);
+	};
+	walk(call);
+	return [...found];
+}
+
+/** Compact one-line form: `utility.batch(tokens.setBalance, tokens.setBalance)`. */
+export function describeCall(call: CallNode): string {
+	return call.calls.length ? `${call.name}(${call.calls.map(describeCall).join(", ")})` : call.name;
+}

@@ -91,7 +91,7 @@ export function governanceDrillParams(env) {
 }
 
 /** Runs the real DeployGovernance.s.sol — its first execution anywhere. */
-export function deployGovernanceToSepolia({ env, pen, log }) {
+export function deployGovernanceToSepolia({ env, pen, canceller, log }) {
 	const params = governanceDrillParams(env);
 	const scriptEnv = {
 		...process.env,
@@ -102,6 +102,7 @@ export function deployGovernanceToSepolia({ env, pen, log }) {
 		PROPOSAL_THRESHOLD: params.proposalThreshold.toString(),
 		QUORUM_FRACTION: String(params.quorumFraction),
 		QUORUM_FLOOR: params.quorumFloor.toString(),
+		TIMELOCK_CANCELLER: canceller,
 	};
 	log(`deploying governance (timelock ${params.timelockDelay}s, voting ${params.votingDelay}s+${params.votingPeriod}s, quorum ${params.quorumFraction}% of circulating, floor ${params.quorumFloor / PEN_18} PEN) ...`);
 	execFileSync(

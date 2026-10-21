@@ -28,13 +28,15 @@ import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 ///   QUORUM_FLOOR          absolute quorum lower bound, 18-decimal token
 ///                         units; keeps early proposals from being trivially
 ///                         cheap while circulating supply is still small
-///   TIMELOCK_CANCELLER    optional: an address (the guardian/council Safe)
+///   TIMELOCK_CANCELLER    required: an address (the guardian/council Safe)
 ///                         that can cancel a QUEUED operation during the
 ///                         timelock delay. Without it only the Governor holds
 ///                         CANCELLER_ROLE, and OZ Governor lets only the
 ///                         proposer cancel, only before voting starts — so a
 ///                         hostile proposal that passed could not be stopped
-///                         during the 48h delay by anyone (review round 9)
+///                         during the 48h delay by anyone (review round 9).
+///                         Once the delay has passed anyone may execute, so
+///                         the script refuses to deploy without it.
 contract DeployGovernance is Script {
     function run() external {
         address token = vm.envAddress("PEN_TOKEN");
@@ -45,6 +47,7 @@ contract DeployGovernance is Script {
         uint256 quorumFraction = vm.envUint("QUORUM_FRACTION");
         uint256 quorumFloor = vm.envUint("QUORUM_FLOOR");
         address canceller = vm.envOr("TIMELOCK_CANCELLER", address(0));
+        require(canceller != address(0), "TIMELOCK_CANCELLER is required: no veto during the timelock delay otherwise");
 
         vm.startBroadcast();
 
@@ -58,12 +61,12 @@ contract DeployGovernance is Script {
         );
 
         // Only the Governor proposes; anyone may execute after the delay. The
-        // Governor cancels its own operations, and an optional human canceller
-        // can veto a queued operation during the delay — the reaction window
-        // the timelock exists to provide.
+        // Governor cancels its own operations, and the human canceller can
+        // veto a queued operation during the delay — the reaction window the
+        // timelock exists to provide.
         timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
         timelock.grantRole(timelock.CANCELLER_ROLE(), address(governor));
-        if (canceller != address(0)) timelock.grantRole(timelock.CANCELLER_ROLE(), canceller);
+        timelock.grantRole(timelock.CANCELLER_ROLE(), canceller);
         timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0));
         // Leave the timelock self-administered: changes require a proposal.
         timelock.renounceRole(timelock.DEFAULT_ADMIN_ROLE(), msg.sender);

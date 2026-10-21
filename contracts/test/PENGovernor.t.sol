@@ -40,7 +40,7 @@ contract PENGovernorTest is Test {
         timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
         timelock.grantRole(timelock.CANCELLER_ROLE(), address(governor));
         // The human veto during the timelock delay (DeployGovernance's
-        // optional TIMELOCK_CANCELLER): the guardian Safe.
+        // required TIMELOCK_CANCELLER): the guardian Safe.
         timelock.grantRole(timelock.CANCELLER_ROLE(), guardian);
         timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0));
         timelock.renounceRole(timelock.DEFAULT_ADMIN_ROLE(), address(this));

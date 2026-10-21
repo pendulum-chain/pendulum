@@ -156,3 +156,51 @@ export function chunks<T>(items: T[], size: number): T[][] {
 	for (let start = 0; start < items.length; start += size) result.push(items.slice(start, start + size));
 	return result;
 }
+
+/** One call of a governance Timelock operation (one `CallScheduled` event). */
+export interface ScheduledCall {
+	index: bigint;
+	target: string;
+	value: bigint;
+	data: string;
+}
+
+/**
+ * The page for one operation the governance Timelock scheduled. Every such
+ * operation pages: once its delay has passed, anyone may execute it, so the
+ * canceller has exactly the delay to review and veto it.
+ *
+ * `readyAtSeconds` is the Timelock's `getTimestamp(id)`, whose sentinels are
+ * 0 (unknown or cancelled) and 1 (executed). `labels` maps lowercased
+ * addresses and `functions` maps selectors to readable names.
+ */
+export function describeTimelockOperation(
+	id: string,
+	calls: ScheduledCall[],
+	readyAtSeconds: bigint,
+	nowMs: number,
+	labels: Record<string, string>,
+	functions: Record<string, string>,
+): string {
+	const callText = [...calls]
+		.sort((a, b) => (a.index < b.index ? -1 : a.index > b.index ? 1 : 0))
+		.map((call) => {
+			const target = labels[call.target.toLowerCase()] ?? call.target;
+			const selector = call.data.slice(0, 10).toLowerCase();
+			const name = functions[selector] ?? `unknown function ${selector}`;
+			return `#${call.index} ${target}.${name}${call.value ? ` value=${call.value}` : ""} data=${call.data}`;
+		})
+		.join("; ");
+	let status: string;
+	if (readyAtSeconds === 0n) status = "no longer pending (cancelled)";
+	else if (readyAtSeconds === 1n) status = "already executed";
+	else {
+		const readyMs = Number(readyAtSeconds) * 1000;
+		const leftMinutes = Math.floor((readyMs - nowMs) / 60_000);
+		status =
+			`executable by anyone from ${new Date(readyMs).toISOString()}` +
+			(leftMinutes > 0 ? ` (in ${Math.floor(leftMinutes / 60)}h ${leftMinutes % 60}m)` : " (ready now)") +
+			"; if it is not intended, the canceller must cancel it before then";
+	}
+	return `operation ${id}: ${callText} — ${status}`;
+}

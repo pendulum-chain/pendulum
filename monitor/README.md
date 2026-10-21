@@ -14,6 +14,7 @@ Checks every poll:
 | M4: every old migration reaches active approval quorum — and then releases | Liveness of the attestor fleet (`below approval quorum`), and of everything after it (`quorum reached but not released`: a release starved of daily allowance, paused, or made releasable by a threshold cut without a `ReleasePending`, which the releaser cannot see). | Alert, throttled per nonce |
 | Source supply | `totalIssuance + TotalMigrated` on Pendulum must never grow past its first-seen anchor. | Alert (`SOURCE SUPPLY GREW`) |
 | Unreleasable burns | A burn to the zero or vault address can never be approved or released; it is paged once and excluded from the pending count so it cannot page liveness forever or block RB-7. | Alert once |
+| Governance queue | Every operation the governance Timelock schedules (`CallScheduled`), with its calls decoded and the time it becomes executable. Once the delay has passed anyone may execute a ready operation, so the canceller has exactly the delay to review and veto it. | Alert once per operation (`GOVERNANCE OPERATION SCHEDULED`) |
 
 ## Configuration (environment)
 
@@ -28,6 +29,7 @@ Checks every poll:
 | `SOURCE_CLOCK_SKEW_MARGIN_SECONDS` | Clock-skew allowance for the fabrication proof (default 120s): once the finalized Pendulum view has passed the moment the monitor first observed an unmatched Base event by this margin and the nonce still does not exist, the event is provably fabricated and pauses without waiting out the grace. The anchor is the monitor's own clock, not the Base block timestamp (which trails real time after a sequencer outage); a future-dated source view proves nothing |
 | `SOURCE_STALE_ALERT_SECONDS` | Age of the finalized Pendulum view (vs. wall clock) past which the monitor pages that it is going blind (default 300s) |
 | `ISSUANCE_TOLERANCE` | Growth of Pendulum `totalIssuance + TotalMigrated` over its first-seen anchor (12-decimal pallet units) tolerated before `SOURCE SUPPLY GREW` pages (default 0) |
+| `TIMELOCK_ADDRESS` | Optional: the governance TimelockController. Set it as soon as governance is deployed; the queue is scanned from the monitor's Base cursor onwards, so operations scheduled before the monitor knew the address are not paged |
 | `ALERT_WEBHOOK_URL` | Webhook receiving JSON alerts — wire this to paging |
 | `GUARDIAN_PRIVATE_KEY` | Optional: a guardian key enabling automatic `pause()` on conservation violations |
 | `BASE_CHAIN_ID` | Default 8453 |

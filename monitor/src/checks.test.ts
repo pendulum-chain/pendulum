@@ -12,6 +12,7 @@ import {
 	approvalMismatch,
 	blockRanges,
 	chunks,
+	describeTimelockOperation,
 	isStale,
 	provablyUnsourced,
 	releaseMismatch,
@@ -123,4 +124,27 @@ test("RPC work is split into inclusive block ranges and bounded batches", () => 
 	assert.deepEqual(blockRanges(1n, 10n, 4n), [[1n, 4n], [5n, 8n], [9n, 10n]]);
 	assert.deepEqual(blockRanges(11n, 10n, 4n), []);
 	assert.deepEqual(chunks([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
+});
+
+test("a scheduled governance operation is described with names, targets and the veto deadline", () => {
+	const vault = "0x2222222222222222222222222222222222222222";
+	const labels = { [vault]: "vault" };
+	const functions = { "0x0e18b681": "acceptAdmin()", "0x212bf316": "setCaps(uint256,uint256)" };
+	const calls = [
+		{ index: 1n, target: vault.toUpperCase().replace("0X", "0x"), value: 0n, data: "0x212bf316" + "00".repeat(64) },
+		{ index: 0n, target: vault, value: 0n, data: "0x0e18b681" },
+	];
+	const now = Date.UTC(2026, 9, 21, 10, 0, 0);
+	const text = describeTimelockOperation("0xabc", calls, BigInt((now + (48 * 60 + 5) * 60_000) / 1000), now, labels, functions);
+	assert.match(text, /^operation 0xabc: #0 vault\.acceptAdmin\(\) data=0x0e18b681; #1 vault\.setCaps\(uint256,uint256\)/);
+	assert.match(text, /executable by anyone from 2026-10-23T10:05:00\.000Z \(in 48h 5m\)/);
+	assert.match(text, /canceller must cancel it before then$/);
+});
+
+test("a scheduled operation with unknown parts or a settled timestamp still pages readably", () => {
+	const other = "0x3333333333333333333333333333333333333333";
+	const call = { index: 0n, target: other, value: 5n, data: "0xdeadbeef" };
+	assert.match(describeTimelockOperation("0x1", [call], 0n, 0, {}, {}), new RegExp(`#0 ${other}\\.unknown function 0xdeadbeef value=5 .*cancelled\\)$`));
+	assert.match(describeTimelockOperation("0x1", [call], 1n, 0, {}, {}), /already executed$/);
+	assert.match(describeTimelockOperation("0x1", [call], 100n, 200_000, {}, {}), /\(ready now\)/);
 });

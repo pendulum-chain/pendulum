@@ -15,16 +15,19 @@ import {
 	encodeAbiParameters,
 	http,
 	keccak256,
+	toFunctionSelector,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import {
 	approvalMismatch,
 	blockRanges,
 	chunks,
+	describeTimelockOperation,
 	isStale,
 	provablyUnsourced,
 	releaseMismatch,
 	releasedExceedsMigrated,
+	type ScheduledCall,
 	shouldAwaitSource,
 	type MigrationTuple,
 	vaultConservationDeficit,
@@ -86,6 +89,44 @@ const erc20Abi = [
 	},
 ] as const;
 
+const timelockAbi = [
+	{
+		type: "function",
+		name: "getTimestamp",
+		stateMutability: "view",
+		inputs: [{ name: "id", type: "bytes32" }],
+		outputs: [{ type: "uint256" }],
+	},
+	{
+		type: "event",
+		name: "CallScheduled",
+		inputs: [
+			{ name: "id", type: "bytes32", indexed: true },
+			{ name: "index", type: "uint256", indexed: true },
+			{ name: "target", type: "address", indexed: false },
+			{ name: "value", type: "uint256", indexed: false },
+			{ name: "data", type: "bytes", indexed: false },
+			{ name: "predecessor", type: "bytes32", indexed: false },
+			{ name: "delay", type: "uint256", indexed: false },
+		],
+	},
+] as const;
+
+/** Calls governance can be expected to schedule, named in the page. Anything
+ *  else still pages, with its raw selector. */
+const KNOWN_FUNCTIONS = Object.fromEntries([
+	// MigrationVault
+	"acceptAdmin()", "transferAdmin(address)", "setCaps(uint256,uint256)", "setGuardian(address)",
+	"setThreshold(uint256)", "addAttestor(address)", "removeAttestor(address)", "pause()", "unpause()",
+	"sweepRemainder(address,uint256)", "clearStalePending(uint64,address,uint256)", "setToken(address)",
+	// TimelockController and Governor self-administration
+	"updateDelay(uint256)", "grantRole(bytes32,address)", "revokeRole(bytes32,address)",
+	"setVotingDelay(uint48)", "setVotingPeriod(uint32)", "setProposalThreshold(uint256)",
+	"updateQuorumNumerator(uint256)", "updateTimelock(address)", "relay(address,uint256,bytes)",
+	// Treasury spends
+	"transfer(address,uint256)", "approve(address,uint256)",
+].map((signature) => [toFunctionSelector(signature), signature]));
+
 function required(name: string): string {
 	const value = process.env[name];
 	if (!value) throw new Error(`Missing required environment variable ${name}`);
@@ -104,6 +145,13 @@ function envNumber(name: string, fallback: number | undefined): number {
 	const value = Number(raw);
 	if (!Number.isFinite(value) || value < 0) throw new Error(`invalid ${name}: ${raw}`);
 	return value;
+}
+
+function optionalAddress(name: string): `0x${string}` | undefined {
+	const value = process.env[name];
+	if (!value) return undefined;
+	if (!/^0x[0-9a-fA-F]{40}$/.test(value)) throw new Error(`invalid ${name}: ${value}`);
+	return value as `0x${string}`;
 }
 
 function finalityTag(): "safe" | "finalized" {
@@ -150,6 +198,9 @@ const config = {
 	/** Growth of (Pendulum totalIssuance + TotalMigrated) over its first-seen
 	 *  anchor, in 12-decimal pallet units, tolerated before paging. */
 	issuanceToleranceRaw: BigInt(process.env.ISSUANCE_TOLERANCE ?? "0"),
+	/** Optional: the governance TimelockController; every operation it
+	 *  schedules pages, because the canceller must veto inside the delay. */
+	timelockAddress: optionalAddress("TIMELOCK_ADDRESS"),
 };
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -268,6 +319,12 @@ let state: RuntimeState;
 let multicallUnavailable = false;
 let lastSourceStallAlertMs = 0;
 let lastIssuanceAlertMs = 0;
+/** The governance-queue scan runs ahead of everything else in a poll and
+ *  throws on failure, so the persisted Base cursor never passes a range it has
+ *  not scanned; a restart resumes from that cursor. */
+let timelockFromBlock: bigint | undefined;
+// ponytail: in-memory dedupe; a restart can re-page operations between the persisted cursor and the last scan.
+const pagedTimelockOperations = new Set<string>();
 
 function log(message: string): void {
 	console.log(`${new Date().toISOString()} ${message}`);
@@ -614,6 +671,64 @@ async function reconcileBaseEvents(
 	return { violation: firstViolation };
 }
 
+/** Page every operation the governance Timelock scheduled up to `toBlock`,
+ *  the poll's `safe`/`finalized` Base block. */
+async function watchTimelock(toBlock: bigint): Promise<void> {
+	if (!config.timelockAddress) return;
+	const operations = new Map<`0x${string}`, ScheduledCall[]>();
+	for (const [start, end] of blockRanges(timelockFromBlock ?? state.baseFromBlock, toBlock, config.baseMaxBlockRange)) {
+		await publicClient.getBlock({ blockNumber: end }); // same lagging-node probe as the vault scan
+		const scheduled = await publicClient.getContractEvents({
+			address: config.timelockAddress,
+			abi: timelockAbi,
+			eventName: "CallScheduled",
+			fromBlock: start,
+			toBlock: end,
+		});
+		for (const event of scheduled) {
+			const { id, index, target, value, data } = event.args as {
+				id: `0x${string}`;
+				index: bigint;
+				target: `0x${string}`;
+				value: bigint;
+				data: `0x${string}`;
+			};
+			const calls = operations.get(id) ?? [];
+			calls.push({ index, target, value, data });
+			operations.set(id, calls);
+		}
+	}
+	if (operations.size > 0) {
+		const token = await publicClient.readContract({
+			address: config.vaultAddress,
+			abi: vaultAbi,
+			functionName: "token",
+			blockNumber: toBlock,
+		});
+		const labels = {
+			[config.vaultAddress.toLowerCase()]: "vault",
+			[token.toLowerCase()]: "token",
+			[config.timelockAddress.toLowerCase()]: "timelock",
+		};
+		for (const [id, calls] of operations) {
+			if (pagedTimelockOperations.has(id)) continue;
+			const readyAt = await publicClient.readContract({
+				address: config.timelockAddress,
+				abi: timelockAbi,
+				functionName: "getTimestamp",
+				args: [id],
+				blockNumber: toBlock,
+			});
+			await alert(
+				"GOVERNANCE OPERATION SCHEDULED",
+				describeTimelockOperation(id, calls, readyAt, Date.now(), labels, KNOWN_FUNCTIONS),
+			);
+			pagedTimelockOperations.add(id);
+		}
+	}
+	timelockFromBlock = toBlock + 1n;
+}
+
 function payloadHash(migration: MigrationRecord): `0x${string}` {
 	return keccak256(encodeAbiParameters(
 		[{ type: "uint64" }, { type: "address" }, { type: "uint256" }],
@@ -658,6 +773,7 @@ async function check(api: ApiPromise): Promise<void> {
 	const confirmedBase = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
 	if (confirmedBase.number === null) throw new Error(`${config.baseFinalityTag} Base block has no number`);
 	const baseBlock = confirmedBase.number;
+	await watchTimelock(baseBlock);
 
 	// Read Pendulum after choosing the Base snapshot. TotalMigrated can only
 	// grow, so this ordering cannot false-positive if a burn finalizes mid-poll.
@@ -840,7 +956,8 @@ async function main(): Promise<void> {
 	}
 	log(
 		`monitor started; Pendulum after ${state.lastPendulumBlock}, Base from ${state.baseFromBlock}, ` +
-			`polling every ${config.pollIntervalMs}ms`,
+			`polling every ${config.pollIntervalMs}ms; governance queue ` +
+			(config.timelockAddress ? `watched at ${config.timelockAddress}` : "not watched (TIMELOCK_ADDRESS unset)"),
 	);
 	for (;;) {
 		try {

@@ -157,6 +157,13 @@ test("a scheduled operation with unknown parts or a settled timestamp still page
 	assert.match(describeTimelockOperation("0x1", [call], 100n, 200_000, {}, {}), /\(ready now\)/);
 });
 
+test("a scheduled operation pages whatever its delay or its event carries", () => {
+	const call = { index: 0n, target: "0x3333333333333333333333333333333333333333", value: 0n, data: "0x8456cb59" };
+	assert.match(describeTimelockOperation("0x1", [call], 10n ** 20n, 0, {}, {}), /from timestamp 100000000000000000000 \(in /);
+	const undecoded = { index: undefined, target: undefined, value: undefined, data: undefined } as unknown as typeof call;
+	assert.match(describeTimelockOperation("0x1", [undecoded, call], 5n, 0, {}, {}), /^operation 0x1: #undefined undefined\.unknown function undefined/);
+});
+
 test("a governance call tree is walked through batches and minting calls are flagged", () => {
 	const setBalance = { section: "tokens", method: "setBalance", args: ["who", "Native", 4_000_000n] };
 	// The recurring attack proposal: utility.batch of tokens.setBalance to the proposer.

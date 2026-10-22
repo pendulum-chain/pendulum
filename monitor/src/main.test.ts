@@ -775,6 +775,19 @@ function schedule(base: Base, id: Hex, blockNumber = 1_005n): void {
 	base.readyAt.set(id, BigInt(Math.floor(Date.now() / 1000) + 172_800));
 }
 
+test("a scheduled operation with an extreme delay pages and hides nothing after it", async (t) => {
+	const { base, api, monitor, pages } = await setup(t, { env: { TIMELOCK_ADDRESS: TIMELOCK } });
+	const [extreme, ordinary] = [toHex(1, { size: 32 }), toHex(2, { size: 32 })];
+	schedule(base, extreme, 1_004n);
+	base.readyAt.set(extreme, 10n ** 20n);
+	schedule(base, ordinary, 1_006n);
+	await monitor.poll(api);
+	const scheduled = pages.filter((page) => page.subject === "GOVERNANCE OPERATION SCHEDULED").map((page) => page.detail);
+	assert.equal(scheduled.length, 2, JSON.stringify(pages));
+	assert.ok(scheduled.some((detail) => detail.startsWith(`operation ${ordinary}`)), JSON.stringify(scheduled));
+	assert.ok(!pages.some((page) => page.subject === "BASE ADMIN SCAN FAILED"), JSON.stringify(pages));
+});
+
 test("once-only pages the webhook rejects are sent again on the next poll", async (t) => {
 	const failedOnce = new Set<string>();
 	const { base, pendulum, api, monitor, pages } = await setup(t, {

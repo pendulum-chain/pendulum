@@ -177,7 +177,8 @@ export interface ScheduledCall {
  *
  * `readyAtSeconds` is the Timelock's `getTimestamp(id)`, whose sentinels are
  * 0 (unknown or cancelled) and 1 (executed). `labels` maps lowercased
- * addresses and `functions` maps selectors to readable names.
+ * addresses and `functions` maps selectors to readable names. Never throws,
+ * whatever the event carries: one operation must not hide the next.
  */
 export function describeTimelockOperation(
 	id: string,
@@ -190,8 +191,8 @@ export function describeTimelockOperation(
 	const callText = [...calls]
 		.sort((a, b) => (a.index < b.index ? -1 : a.index > b.index ? 1 : 0))
 		.map((call) => {
-			const target = labels[call.target.toLowerCase()] ?? call.target;
-			const selector = call.data.slice(0, 10).toLowerCase();
+			const target = labels[String(call.target).toLowerCase()] ?? call.target;
+			const selector = String(call.data).slice(0, 10).toLowerCase();
 			const name = functions[selector] ?? `unknown function ${selector}`;
 			return `#${call.index} ${target}.${name}${call.value ? ` value=${call.value}` : ""} data=${call.data}`;
 		})
@@ -202,8 +203,10 @@ export function describeTimelockOperation(
 	else {
 		const readyMs = Number(readyAtSeconds) * 1000;
 		const leftMinutes = Math.floor((readyMs - nowMs) / 60_000);
+		// A Date holds at most 8.64e15 ms; a later time is shown in seconds.
+		const readyText = readyMs <= 8.64e15 ? new Date(readyMs).toISOString() : `timestamp ${readyAtSeconds}`;
 		status =
-			`executable by anyone from ${new Date(readyMs).toISOString()}` +
+			`executable by anyone from ${readyText}` +
 			(leftMinutes > 0 ? ` (in ${Math.floor(leftMinutes / 60)}h ${leftMinutes % 60}m)` : " (ready now)") +
 			"; if it is not intended, the canceller must cancel it before then";
 	}

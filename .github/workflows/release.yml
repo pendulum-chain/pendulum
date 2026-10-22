@@ -169,6 +169,10 @@ jobs:
     needs: build
     if: needs.build.outputs.tag != ''
     runs-on: ubuntu-latest
+    # A second run for the same tag waits for the first, then finds its assets.
+    concurrency:
+      group: publish-${{ needs.build.outputs.tag }}
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:

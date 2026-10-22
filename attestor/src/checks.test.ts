@@ -18,6 +18,7 @@ import {
 	HttpRequestError,
 	InsufficientFundsError,
 	InvalidInputRpcError,
+	LimitExceededRpcError,
 	ResourceNotFoundRpcError,
 	RpcRequestError,
 	TimeoutError,
@@ -29,6 +30,11 @@ import { vaultAbi } from "./vaultAbi.js";
 const VAULT = "0x1111111111111111111111111111111111111111";
 const NORMAL = "0x00000000000000000000000000000000deadbeef";
 const AMOUNT = 5_000_000_000_000n; // 5 PEN in 12-decimal pallet units
+
+// What viem raises for a JSON-RPC error answer: the mapped error type with the
+// node's text as its details.
+const rpcError = (code: number, message: string) =>
+	new RpcRequestError({ body: {}, error: { code, message }, url: "https://rpc" });
 
 test("a normal recipient with a non-zero amount is releasable", () => {
 	assert.equal(isUnreleasable(NORMAL, AMOUNT, VAULT), false);
@@ -101,10 +107,6 @@ test("text-only transport failures (polkadot-js) are still recognized", () => {
 });
 
 test("a lagging backend's missing-block answers at the finality boundary are transient", () => {
-	// What viem raises for a JSON-RPC error answer: the mapped error type with
-	// the node's text as its details.
-	const rpcError = (code: number, message: string) =>
-		new RpcRequestError({ body: {}, error: { code, message }, url: "https://rpc" });
 	// op-geth (-32000) and reth (-32001) asked for a block they have not imported.
 	assert.equal(isTransientRpcError(new InvalidInputRpcError(rpcError(-32000, "header not found"))), true);
 	assert.equal(isTransientRpcError(new ResourceNotFoundRpcError(rpcError(-32001, "header not found"))), true);
@@ -112,6 +114,18 @@ test("a lagging backend's missing-block answers at the finality boundary are tra
 	// A backend without a safe head: an error, or a null block.
 	assert.equal(isTransientRpcError(new InvalidInputRpcError(rpcError(-32000, "safe block not found"))), true);
 	assert.equal(isTransientRpcError(new BlockNotFoundError({})), true);
+});
+
+test("a pruned Base state window, an endpoint limit and a silent Pendulum node are transient", () => {
+	// reth asked for state at the pinned safe block outside its retained window.
+	assert.equal(isTransientRpcError(new InvalidInputRpcError(rpcError(-32000, "state at block #36000000 is pruned"))), true);
+	// JSON-RPC -32005 answered at HTTP 200, whatever text the provider uses.
+	assert.equal(
+		isTransientRpcError(new LimitExceededRpcError(rpcError(-32005, "exceeded its compute units per second capacity"))),
+		true,
+	);
+	// polkadot-js when its node does not answer a request in time.
+	assert.equal(isTransientRpcError(new Error("No response received from RPC endpoint in 60s")), true);
 });
 
 test("a pruned Pendulum node stays fatal", () => {

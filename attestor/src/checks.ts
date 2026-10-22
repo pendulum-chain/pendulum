@@ -14,6 +14,7 @@ import {
 	BlockNotFoundError,
 	ContractFunctionRevertedError,
 	HttpRequestError,
+	LimitExceededRpcError,
 	TimeoutError,
 } from "viem";
 
@@ -43,11 +44,12 @@ const TRANSIENT_SOCKET_CODES = new Set([
  *  transient (the post-drills L1 class). Numeric codes are matched structurally
  *  against `HttpRequestError.status` instead. */
 const TRANSIENT_TEXT =
-	/rate limit|too many requests|timeout|timed out|socket hang up|fetch failed|service unavailable|internal error|disconnected|websocket is not connected|connection (?:closed|refused|reset|terminated)|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ENOTFOUND|EPIPE|missing trie node|historical state|state (?:is )?not available|state unavailable|header not found|unknown block|block not found/i;
-// The state phrasings: a state read pinned at the `safe` block can fall outside
-// a node's retained-state window while the batcher lags (safe trails latest by
-// more blocks than the node keeps). It heals as the safe head catches up, so
-// it is a wait, not a verdict on any event — and not a reason to crash-loop.
+	/rate limit|too many requests|timeout|timed out|socket hang up|fetch failed|service unavailable|internal error|disconnected|websocket is not connected|no response received|connection (?:closed|refused|reset|terminated)|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ENOTFOUND|EPIPE|missing trie node|historical state|state (?:is )?not available|state unavailable|is pruned|header not found|unknown block|block not found/i;
+// The state phrasings (reth's is `state at block #N is pruned`): a state read
+// pinned at the `safe` block can fall outside a node's retained-state window
+// while the batcher lags (safe trails latest by more blocks than the node
+// keeps). It heals as the safe head catches up, so it is a wait, not a verdict
+// on any event — and not a reason to crash-loop.
 // The block phrasings: behind a load-balanced endpoint the boundary block can
 // come from one backend and the read pinned at it land on another that has not
 // imported it yet, or that has no safe head at all. That heals as the backend
@@ -77,6 +79,8 @@ export function isTransientRpcError(error: unknown): boolean {
 		// BlockNotFoundError: viem's answer to a `null` block, e.g. a backend
 		// without a safe head yet.
 		if (cause instanceof TimeoutError || cause instanceof BlockNotFoundError) return true;
+		// JSON-RPC -32005: the endpoint's request or rate limit, answered at HTTP 200.
+		if (cause instanceof LimitExceededRpcError) return true;
 		const code = (cause as { code?: unknown }).code;
 		if (typeof code === "string" && TRANSIENT_SOCKET_CODES.has(code)) return true;
 		const texts = [

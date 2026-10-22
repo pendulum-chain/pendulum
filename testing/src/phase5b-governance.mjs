@@ -305,7 +305,7 @@ async function main() {
 		commit: execSync("git rev-parse HEAD", { cwd: ROOT, encoding: "utf8" }).trim(),
 		contracts: { vault, pen, timelock, governor },
 		voter: voter.address,
-		params: { ...params, proposalThreshold: params.proposalThreshold.toString() },
+		params: { ...params, proposalThreshold: params.proposalThreshold.toString(), quorumFloor: params.quorumFloor.toString() },
 		proposals: {
 			handover: handoverProposal?.toString(),
 			capsRaise: capsProposal?.toString(),

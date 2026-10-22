@@ -28,8 +28,8 @@ export interface PersistedMonitorState {
 	migrations: PersistedMigration[];
 	livenessAlertedAt: Array<[string, number]>;
 	unmatchedBaseFirstSeenAt: Array<[string, number]>;
-	/** Pendulum totalIssuance + TotalMigrated when first observed (round 9);
-	 *  absent in state written before it existed and re-anchored on load. */
+	/** Pendulum totalIssuance + TotalMigrated when first observed; absent in
+	 *  state written before it existed and re-anchored on load. */
 	issuanceAnchor?: string;
 	/** Next Base block of the admin scan; absent in older state, which never
 	 *  persisted a Base cursor past it, and then `baseFromBlock`. */

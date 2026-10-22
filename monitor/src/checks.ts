@@ -2,8 +2,7 @@
  * Pure conservation/liveness predicates for the invariant monitor.
  *
  * These are isolated from the chain-client plumbing in `main.ts` so they can be
- * unit-tested exhaustively (see checks.test.ts). Every subtlety that has bitten
- * a review round lives here.
+ * unit-tested exhaustively (see checks.test.ts).
  */
 
 /**
@@ -95,7 +94,7 @@ export function shouldAwaitSource(
  * timestamp: OP-stack L2 block timestamps trail real time by the length of any
  * sequencer outage while it catches up, and an artificially old event
  * timestamp would let a merely-lagging source "prove" a legitimate event
- * fabricated (review round 9). A lagging source never satisfies this predicate
+ * fabricated. A lagging source never satisfies this predicate
  * (its head timestamp trails the observation), and a future-dated source view
  * (a collator clock ahead of real time) proves nothing either and is excluded,
  * so neither can turn node lag into a false pause.

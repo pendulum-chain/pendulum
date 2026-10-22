@@ -1,9 +1,9 @@
 /**
  * Unit tests for the monitor's conservation/liveness predicates.
  *
- * Run with `npm test` (compiles, then `node --test`). These lock in the
- * round-5 fixes: the M2b check must ignore a token surplus (donation / vault
- * recipient) and only fire on a real deficit.
+ * Run with `npm test` (compiles, then `node --test`). Among others, these lock
+ * in that the M2b check ignores a token surplus (donation / vault recipient)
+ * and only fires on a real deficit.
  */
 
 import assert from "node:assert/strict";

@@ -18,7 +18,7 @@ import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 ///         bootstrap phase. PEN uses the EIP-6372 timestamp clock, so all
 ///         Governor periods below are in seconds.
 ///
-///         Quorum (PRD G1, revised in review round 8): quorum is a fraction of
+///         Quorum (PRD G1): quorum is a fraction of
 ///         the CIRCULATING supply — total supply minus the unmigrated balance
 ///         parked at `QUORUM_SINK` by the MigrationVault — bounded below by an
 ///         absolute `quorumFloor`. A full-supply denominator could deadlock

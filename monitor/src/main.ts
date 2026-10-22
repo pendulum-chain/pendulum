@@ -1045,14 +1045,14 @@ async function anchorToRelay(
  *  block ingested before and with the relay-chain record kept from an earlier
  *  poll, and the newest of them that every checker that answers confirms
  *  (`confirmed`, at most the source's finalized head): the second node up to
- *  `crossChecked`, and the relay chain, whose newest record anchors the
- *  source. A checker that does not answer confirms nothing and holds nothing
- *  back. */
+ *  `crossChecked`, and the relay chain up to `anchored`, its newest record
+ *  that anchors the source. A checker that does not answer confirms nothing
+ *  and holds nothing back. */
 async function sourceHashes(
 	api: ApiPromise,
 	draft: RuntimeState,
 	finalized: BlockRef,
-): Promise<{ hashes: Map<number, string>; confirmed: number; crossChecked: number | undefined }> {
+): Promise<{ hashes: Map<number, string>; confirmed: number; crossChecked: number | undefined; anchored: number | undefined }> {
 	// A kept record past the finalized head binds the source too: the walk starts there.
 	const known = draft.relayAnchor;
 	const top = known && known.number > finalized.number ? known : finalized;
@@ -1072,7 +1072,7 @@ async function sourceHashes(
 	const lowest = Math.min(top.number, draft.lastPendulumBlock);
 	const crossChecked = await crossCheckSource(hashes, top, lowest);
 	const anchored = await anchorToRelay(api, draft, hashes, top, { number: lowest, hash: hashes.get(lowest) as string });
-	return { hashes, confirmed: Math.min(finalized.number, crossChecked ?? Infinity, anchored ?? Infinity), crossChecked };
+	return { hashes, confirmed: Math.min(finalized.number, crossChecked ?? Infinity, anchored ?? Infinity), crossChecked, anchored };
 }
 
 /** The migration pallet's admin events, each with what to check. */
@@ -1721,7 +1721,7 @@ async function readSource(api: ApiPromise, draft: RuntimeState): Promise<SourceV
 	const finalizedHash = await api.rpc.chain.getFinalizedHead();
 	const finalizedHeader = await api.rpc.chain.getHeader(finalizedHash);
 	const finalized = { number: finalizedHeader.number.toNumber(), hash: finalizedHash.toHex() };
-	const { hashes, confirmed, crossChecked } = await sourceHashes(api, draft, finalized);
+	const { hashes, confirmed, crossChecked, anchored } = await sourceHashes(api, draft, finalized);
 	// The view: the newest block the checkers confirm, or the block ingested
 	// last while they confirm none after it. Every value read from Pendulum
 	// below is read there.
@@ -1733,18 +1733,25 @@ async function readSource(api: ApiPromise, draft: RuntimeState): Promise<SourceV
 	// A stalling source view is this daemon going blind: it cannot verify any
 	// new Base event, and once the unmatched-event grace expires that forces a
 	// cannot-verify pause. Page as soon as the view goes stale, so operators
-	// get the entire grace window to restore the node before that happens.
+	// get the entire grace window to restore the node, or the checker that
+	// holds the view back, before that happens.
 	if (
 		Date.now() - sourceFinalizedTsMs > config.sourceStaleAlertMs &&
 		Date.now() - lastSourceStallAlertMs > config.unmatchedEventGraceSeconds * 1000
 	) {
 		lastSourceStallAlertMs = Date.now();
+		// The checkers that confirm less than the source finalized hold the view back.
+		const holding = finalized.number <= viewBlock ? "" : [
+			crossChecked !== undefined && crossChecked < finalized.number && "the second node (PENDULUM_WS_CROSSCHECK)",
+			anchored !== undefined && anchored < finalized.number && "the relay RPCs (POLKADOT_WS)",
+		].filter(Boolean).join(" and ");
 		await alert(
 			"PENDULUM SOURCE VIEW STALLED",
 			`verified Pendulum block ${viewBlock} is ${Math.round((Date.now() - sourceFinalizedTsMs) / 1000)}s old` +
-				(finalized.number > viewBlock ? ` (the source finalized ${finalized.number}, not confirmed yet)` : "") +
-				`; the monitor cannot verify new Base events against a stalled source — restore the node before ` +
-				`the ${config.unmatchedEventGraceSeconds}s unmatched-event grace forces a pause`,
+				(holding ? ` (the source finalized ${finalized.number}, not confirmed yet by ${holding})` : "") +
+				`; the monitor cannot verify new Base events against a stalled view — ` +
+				`${holding ? `check ${holding}` : "restore the node"} before the ${config.unmatchedEventGraceSeconds}s ` +
+				"unmatched-event grace forces a pause",
 		);
 	}
 	const [totals, totalIssuanceValue] = await Promise.all([migrationTotals(apiAt), apiAt.query.balances.totalIssuance()]);

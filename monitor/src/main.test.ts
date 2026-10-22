@@ -1282,15 +1282,21 @@ test("a source that finalizes below a relay record it does not hold ingests noth
 	assert.deepEqual(persisted().relayAnchor, { number: 101, hash: pendulumHash({}, 101) });
 });
 
-test("a Pendulum view the relay chain holds back pages as stalled", async (t) => {
-	const { pendulum, api, monitor, pages } = await relaySetup(t, { head: () => ({ number: 101, hash: pendulumHash({}, 101) }) });
-	burn(pendulum, 0n, 100n * PEN);
-	pendulum.finalized = 130; // 29 blocks of 12 s past the relay chain's record
-	await monitor.poll(api);
-	assert.match(
-		pages.find((page) => page.subject === "PENDULUM SOURCE VIEW STALLED")?.detail ?? "",
-		/^verified Pendulum block 101 is 34\ds old \(the source finalized 130, not confirmed yet\);/,
-	);
+test("a Pendulum view a checker holds back pages as stalled, naming that checker", async (t) => {
+	const relayed = await relaySetup(t, { head: () => ({ number: 101, hash: pendulumHash({}, 101) }) });
+	const crossChecked = await crossCheckSetup(t, { finalized: 101 });
+	for (const [{ pendulum, api, monitor, pages }, checker] of [
+		[relayed, "the relay RPCs \\(POLKADOT_WS\\)"],
+		[crossChecked, "the second node \\(PENDULUM_WS_CROSSCHECK\\)"],
+	] as const) {
+		burn(pendulum, 0n, 100n * PEN);
+		pendulum.finalized = 130; // 29 blocks of 12 s past the checker's head
+		await monitor.poll(api);
+		assert.match(
+			pages.find((page) => page.subject === "PENDULUM SOURCE VIEW STALLED")?.detail ?? "",
+			new RegExp(`^verified Pendulum block 101 is 34\\ds old \\(the source finalized 130, not confirmed yet by ${checker}\\);.* — check ${checker} before`),
+		);
+	}
 });
 
 test("a Base event whose burn the relay chain has not confirmed yet is not proven fabricated by a newer source head", async (t) => {

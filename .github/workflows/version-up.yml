@@ -141,24 +141,24 @@ jobs:
           gh api graphql \
           -F githubRepository="$GITHUB_REPOSITORY" \
           -F branchName="$BRANCH" \
-          -F expectedHeadOid=$(git rev-parse HEAD) \
+          -F expectedHeadOid="$(git rev-parse HEAD)" \
           -F commitMessage="$(cat changes.txt)" \
-          -F files[][path]="chain-extensions/common/Cargo.toml" -F files[][contents]=$(base64 -w0 chain-extensions/common/Cargo.toml) \
-          -F files[][path]="chain-extensions/price/Cargo.toml" -F files[][contents]=$(base64 -w0 chain-extensions/price/Cargo.toml) \
-          -F files[][path]="chain-extensions/token/Cargo.toml" -F files[][contents]=$(base64 -w0 chain-extensions/token/Cargo.toml) \
-          -F files[][path]="node/Cargo.toml" -F files[][contents]=$(base64 -w0 node/Cargo.toml) \
-          -F files[][path]="pallets/orml-currencies-allowance-extension/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/orml-currencies-allowance-extension/Cargo.toml) \
-          -F files[][path]="pallets/orml-tokens-management-extension/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/orml-tokens-management-extension/Cargo.toml) \
-          -F files[][path]="pallets/parachain-staking/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/parachain-staking/Cargo.toml) \
-          -F files[][path]="pallets/parachain-staking/rpc/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/parachain-staking/rpc/Cargo.toml) \
-          -F files[][path]="pallets/parachain-staking/rpc/runtime-api/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/parachain-staking/rpc/runtime-api/Cargo.toml) \
-          -F files[][path]="pallets/treasury-buyout-extension/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/treasury-buyout-extension/Cargo.toml) \
-          -F files[][path]="pallets/vesting-manager/Cargo.toml" -F files[][contents]=$(base64 -w0 pallets/vesting-manager/Cargo.toml) \
-          -F files[][path]="runtime/amplitude/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/amplitude/Cargo.toml) \
-          -F files[][path]="runtime/common/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/common/Cargo.toml) \
-          -F files[][path]="runtime/foucoco/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/foucoco/Cargo.toml) \
-          -F files[][path]="runtime/integration-tests/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/integration-tests/Cargo.toml) \
-          -F files[][path]="runtime/pendulum/Cargo.toml" -F files[][contents]=$(base64 -w0 runtime/pendulum/Cargo.toml) \
+          -F "files[][path]=chain-extensions/common/Cargo.toml" -F "files[][contents]=$(base64 -w0 chain-extensions/common/Cargo.toml)" \
+          -F "files[][path]=chain-extensions/price/Cargo.toml" -F "files[][contents]=$(base64 -w0 chain-extensions/price/Cargo.toml)" \
+          -F "files[][path]=chain-extensions/token/Cargo.toml" -F "files[][contents]=$(base64 -w0 chain-extensions/token/Cargo.toml)" \
+          -F "files[][path]=node/Cargo.toml" -F "files[][contents]=$(base64 -w0 node/Cargo.toml)" \
+          -F "files[][path]=pallets/orml-currencies-allowance-extension/Cargo.toml" -F "files[][contents]=$(base64 -w0 pallets/orml-currencies-allowance-extension/Cargo.toml)" \
+          -F "files[][path]=pallets/orml-tokens-management-extension/Cargo.toml" -F "files[][contents]=$(base64 -w0 pallets/orml-tokens-management-extension/Cargo.toml)" \
+          -F "files[][path]=pallets/parachain-staking/Cargo.toml" -F "files[][contents]=$(base64 -w0 pallets/parachain-staking/Cargo.toml)" \
+          -F "files[][path]=pallets/parachain-staking/rpc/Cargo.toml" -F "files[][contents]=$(base64 -w0 pallets/parachain-staking/rpc/Cargo.toml)" \
+          -F "files[][path]=pallets/parachain-staking/rpc/runtime-api/Cargo.toml" -F "files[][contents]=$(base64 -w0 pallets/parachain-staking/rpc/runtime-api/Cargo.toml)" \
+          -F "files[][path]=pallets/treasury-buyout-extension/Cargo.toml" -F "files[][contents]=$(base64 -w0 pallets/treasury-buyout-extension/Cargo.toml)" \
+          -F "files[][path]=pallets/vesting-manager/Cargo.toml" -F "files[][contents]=$(base64 -w0 pallets/vesting-manager/Cargo.toml)" \
+          -F "files[][path]=runtime/amplitude/Cargo.toml" -F "files[][contents]=$(base64 -w0 runtime/amplitude/Cargo.toml)" \
+          -F "files[][path]=runtime/common/Cargo.toml" -F "files[][contents]=$(base64 -w0 runtime/common/Cargo.toml)" \
+          -F "files[][path]=runtime/foucoco/Cargo.toml" -F "files[][contents]=$(base64 -w0 runtime/foucoco/Cargo.toml)" \
+          -F "files[][path]=runtime/integration-tests/Cargo.toml" -F "files[][contents]=$(base64 -w0 runtime/integration-tests/Cargo.toml)" \
+          -F "files[][path]=runtime/pendulum/Cargo.toml" -F "files[][contents]=$(base64 -w0 runtime/pendulum/Cargo.toml)" \
           -F 'query=@.github/api/createCommitOnBranch.gql'
 
       - name: Commit New Changes to New Branch (node)
@@ -170,9 +170,9 @@ jobs:
           gh api graphql \
           -F githubRepository="$GITHUB_REPOSITORY" \
           -F branchName="$BRANCH" \
-          -F expectedHeadOid=$(git rev-parse HEAD) \
+          -F expectedHeadOid="$(git rev-parse HEAD)" \
           -F commitMessage="$(cat changes.txt)" \
-          -F files[][path]="node/Cargo.toml" -F files[][contents]=$(base64 -w0 node/Cargo.toml) \
+          -F "files[][path]=node/Cargo.toml" -F "files[][contents]=$(base64 -w0 node/Cargo.toml)" \
           -F 'query=@.github/api/createCommitOnBranch.gql'
 
       - name: Prepare Pull Request title

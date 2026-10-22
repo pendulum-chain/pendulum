@@ -394,14 +394,23 @@ function pendulumHash(chain: { forkFrom?: number }, block: number): string {
 const blockOf = (blockHash: string) => Number(BigInt(blockHash) & 0xffff_ffff_ffff_ffffn);
 type Pendulum = ReturnType<typeof pendulumChain>["chain"];
 
-/** A finalized burn on Pendulum, in block 101 unless stated. */
-function burn(pendulum: Pendulum, nonce: bigint, palletAmount: bigint, block = 101): void {
+const MIGRATOR = `0x${"ab".repeat(32)}`;
+const TREASURY_ACCOUNT = `0x${Buffer.from("modlpy/trsry").toString("hex")}${"00".repeat(20)}`;
+
+/** A finalized burn on Pendulum by `who` for `recipient`, in block 101 unless stated. */
+function burn(
+	pendulum: Pendulum,
+	nonce: bigint,
+	palletAmount: bigint,
+	block = 101,
+	{ who = MIGRATOR, recipient = RECIPIENT } = {},
+): void {
 	pendulum.finalized = Math.max(pendulum.finalized, block);
 	const events = pendulum.events.get(block) ?? [];
 	events.push({
 		section: "tokenMigration",
 		method: "MigrationInitiated",
-		data: [codec(nonce), "5Migrator", hash(RECIPIENT), codec(palletAmount)],
+		data: [codec(nonce), hash(who), hash(recipient), codec(palletAmount)],
 	});
 	pendulum.events.set(block, events);
 	pendulum.totalMigrated += palletAmount;
@@ -1183,6 +1192,38 @@ test("a motion or external proposal made again with the same call pages again", 
 	await monitor.poll(api);
 	assert.equal(pages.filter((page) => page.detail.startsWith(`council motion ${motion}`)).length, 2, JSON.stringify(pages));
 	assert.equal(pages.filter((page) => page.detail.startsWith("the council's external proposal")).length, 3, JSON.stringify(pages));
+});
+
+const TREASURY_DESTINATION = "0x5555555555555555555555555555555555555555";
+
+test("a treasury migration to any but the expected address pages and pauses", async (t) => {
+	const { base, pendulum, api, monitor, pages, persisted } = await setup(t, {
+		env: { EXPECTED_TREASURY_DESTINATION: TREASURY_DESTINATION, GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY },
+	});
+	base.paused = true; // so the auto-pause only confirms
+	burn(pendulum, 0n, 100n * PEN, 101, { who: TREASURY_ACCOUNT, recipient: TREASURY_DESTINATION });
+	burn(pendulum, 1n, 100n * PEN, 101, { recipient: TOKEN }); // anyone else may migrate anywhere
+	await monitor.poll(api);
+	assert.equal(pages.length, 0, JSON.stringify(pages));
+	burn(pendulum, 2n, 7n * PEN, 102, { who: TREASURY_ACCOUNT, recipient: TOKEN });
+	await monitor.poll(api);
+	const page = pages.find((page) => page.subject === "TREASURY DESTINATION VIOLATION");
+	assert.equal(page?.severity, "CRITICAL", JSON.stringify(pages));
+	assert.match(page.detail, new RegExp(`nonce 2 in finalized Pendulum block 102 pays 7000000000000 pallet units to ${TOKEN}`, "i"));
+	assert.ok(pages.some((page) => page.subject === "vault pause confirmed"), JSON.stringify(pages));
+	assert.deepEqual(persisted().migrations.map((migration) => migration.nonce), ["0", "1", "2"]);
+});
+
+test("while the pause after a treasury violation is not confirmed, the monitor holds at its block", async (t) => {
+	const { pendulum, api, monitor, subjects, persisted } = await setup(t, {
+		env: { EXPECTED_TREASURY_DESTINATION: TREASURY_DESTINATION },
+	});
+	burn(pendulum, 0n, 100n * PEN, 101, { who: TREASURY_ACCOUNT, recipient: TOKEN });
+	await monitor.poll(api);
+	await monitor.poll(api);
+	assert.equal(subjects().filter((subject) => subject === "TREASURY DESTINATION VIOLATION").length, 2);
+	assert.equal(persisted().lastPendulumBlock, 100);
+	assert.ok(subjects().includes("PENDULUM SOURCE UNREADABLE"), JSON.stringify(subjects()));
 });
 
 test("admin events of the migration pallet page from the ingest", async (t) => {

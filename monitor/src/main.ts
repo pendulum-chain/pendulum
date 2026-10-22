@@ -251,6 +251,8 @@ const config = {
 	/** Optional: the governance TimelockController; every operation it
 	 *  schedules pages, because the canceller must veto inside the delay. */
 	timelockAddress: optionalAddress("TIMELOCK_ADDRESS"),
+	/** Optional: the only Base address a treasury migration may pay. */
+	expectedTreasuryDestination: optionalAddress("EXPECTED_TREASURY_DESTINATION"),
 	/** Age of the confirmed Base block (vs. wall clock) past which the monitor
 	 *  pages that its Base view stopped advancing. `safe` normally trails by
 	 *  about a minute, `finalized` by about 20 minutes. */
@@ -263,6 +265,9 @@ const config = {
 };
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+/** The runtime's treasury account, `PalletId(*b"py/trsry")` as an account
+ *  ("modl" + id, zero-padded): the `who` of every treasury migration. */
+const PENDULUM_TREASURY_ACCOUNT = `0x6d6f646c70792f7472737279${"00".repeat(20)}`;
 
 const baseChain = defineChain({
 	id: config.baseChainId,
@@ -892,9 +897,9 @@ async function ingestPendulumEvents(
 			}
 			if (method !== "MigrationInitiated") continue;
 			if (data.length !== 4) throw new Error(`MigrationInitiated in block ${block} has ${data.length} fields, expected 4`);
-			const [nonceValue, , recipientValue, amountValue] = data as [
+			const [nonceValue, whoValue, recipientValue, amountValue] = data as [
 				{ toBigInt(): bigint },
-				unknown,
+				{ toHex(): string },
 				{ toHex(): string },
 				{ toBigInt(): bigint },
 			];
@@ -907,6 +912,21 @@ async function ingestPendulumEvents(
 				throw new Error(`migration nonce gap: finalized event ${nonce}, expected ${draft.nextExpectedNonce}`);
 			}
 			draft.nextExpectedNonce++;
+			const expectedTreasury = config.expectedTreasuryDestination;
+			if (
+				expectedTreasury &&
+				whoValue.toHex().toLowerCase() === PENDULUM_TREASURY_ACCOUNT &&
+				recipient.toLowerCase() !== expectedTreasury.toLowerCase()
+			) {
+				// The vault is paused before the attestors can release it; while
+				// the pause is not confirmed, the monitor does not move past it.
+				const paused = await securityViolation(
+					"TREASURY DESTINATION VIOLATION",
+					`treasury migration nonce ${nonce} in finalized Pendulum block ${block} pays ${amountValue.toBigInt()} ` +
+						`pallet units to ${recipient}, not EXPECTED_TREASURY_DESTINATION ${expectedTreasury}`,
+				);
+				if (!paused) throw new Error(`the vault is not confirmed paused after treasury migration nonce ${nonce}`);
+			}
 			if (recipient === ZERO_ADDRESS || recipient.toLowerCase() === config.vaultAddress.toLowerCase()) {
 				// The vault deterministically rejects this tuple (ZeroAddress /
 				// RecipientIsVault) and the attestors skip it, so it can never be

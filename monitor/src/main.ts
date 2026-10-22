@@ -357,7 +357,7 @@ let lastIssuanceAlertMs = 0;
 let baseAdminFromBlock: bigint | undefined;
 /** Once-only pages by key, each held until the webhook accepts it. */
 // ponytail: in memory; a restart re-pages what it finds again (Base admin events after the persisted cursor, pending governance items) and drops undelivered pages it does not find again.
-const onceOnlyPages = new Map<string, { subject: string; detail: string; delivered: boolean }>();
+const onceOnlyPages = new Map<string, { subject: string; detail: string; delivery: Promise<boolean> }>();
 let lastGovernanceWatchFailureMs = 0;
 
 function log(message: string): void {
@@ -394,16 +394,19 @@ async function alert(subject: string, detail: string): Promise<boolean> {
 
 /** Pages `key` once. A page the webhook does not accept stays queued, and
  *  every poll retries it until it is delivered. */
-async function pageOnce(key: string, subject: string, detail: string): Promise<void> {
-	if (onceOnlyPages.has(key)) return;
-	const page = { subject, detail, delivered: false };
-	onceOnlyPages.set(key, page);
-	page.delivered = await alert(subject, detail);
+function pageOnce(key: string, subject: string, detail: string): Promise<boolean> {
+	const queued = onceOnlyPages.get(key);
+	if (queued) return queued.delivery;
+	const delivery = alert(subject, detail);
+	onceOnlyPages.set(key, { subject, detail, delivery });
+	return delivery;
 }
 
 async function retryUndeliveredPages(): Promise<void> {
-	await Promise.all([...onceOnlyPages.values()].filter((page) => !page.delivered).map(async (page) => {
-		page.delivered = await alert(page.subject, page.detail);
+	await Promise.all([...onceOnlyPages.values()].map(async (page) => {
+		if (await page.delivery) return;
+		page.delivery = alert(page.subject, page.detail);
+		await page.delivery;
 	}));
 }
 
@@ -545,9 +548,10 @@ async function securityViolation(subject: string, detail: string): Promise<boole
  *
  * The first observation of an unmatched event pages immediately (deduplicated
  * via the persisted first-seen map), so operators get the entire grace window
- * to repair a lagging source node before "expired" forces the pause.
+ * to repair a lagging source node before "expired" forces the pause. The page
+ * is not awaited: nothing may sit between detecting a violation and the pause.
  */
-async function unmatchedDisposition(
+function unmatchedDisposition(
 	kind: "Approved" | "Released",
 	key: string,
 	nonce: bigint,
@@ -555,12 +559,12 @@ async function unmatchedDisposition(
 	draft: RuntimeState,
 	observedAt: number,
 	sourceFinalizedTsMs: number,
-): Promise<"proven" | "await" | "expired"> {
+): "proven" | "await" | "expired" {
 	const alreadyKnown = draft.unmatchedBaseFirstSeenAt.has(key);
 	const firstSeen = draft.unmatchedBaseFirstSeenAt.get(key) ?? observedAt;
 	draft.unmatchedBaseFirstSeenAt.set(key, firstSeen);
 	if (!alreadyKnown) {
-		await pageOnce(
+		void pageOnce(
 			`unverified:${key}`,
 			"UNVERIFIED BASE EVENT",
 			`${kind} nonce ${nonce} at Base block ${eventBlockNumber} has no finalized Pendulum source yet; ` +
@@ -699,7 +703,7 @@ async function reconcileBaseEvents(
 				continue;
 			}
 			if (!expected) {
-				const disposition = await unmatchedDisposition(
+				const disposition = unmatchedDisposition(
 					"Approved",
 					key,
 					actual.nonce,
@@ -735,7 +739,7 @@ async function reconcileBaseEvents(
 				continue;
 			}
 			if (!expected) {
-				const disposition = await unmatchedDisposition(
+				const disposition = unmatchedDisposition(
 					"Released",
 					key,
 					actual.nonce,
@@ -790,7 +794,7 @@ async function reconcileBaseEvents(
 async function watchBaseAdmin(toBlock: bigint): Promise<void> {
 	const timelock = config.timelockAddress;
 	const operations = new Map<`0x${string}`, ScheduledCall[]>();
-	const pages: Promise<void>[] = [];
+	const pages: Promise<boolean>[] = [];
 	for (const [start, end] of blockRanges(baseAdminFromBlock ?? state.baseFromBlock, toBlock, config.baseMaxBlockRange)) {
 		await publicClient.getBlock({ blockNumber: end }); // same lagging-node probe as the vault scan
 		const adminEvents = await publicClient.getContractEvents({
@@ -1005,7 +1009,7 @@ async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
 		}
 	}
 	// Pages go out together, so a burst of new items costs one webhook round trip.
-	const pages: Promise<void>[] = [];
+	const pages: Promise<boolean>[] = [];
 	for (const item of items) {
 		if (onceOnlyPages.has(item.key)) continue;
 		let call: CallRead;
@@ -1256,30 +1260,41 @@ async function check(api: ApiPromise): Promise<void> {
 	});
 	const approvals = await activeApprovalCounts(pending, baseBlock);
 	const now = Date.now();
+	// One page per kind and poll however long the backlog, with the detail
+	// per nonce in the log: a page per nonce floods the receiver and, awaited
+	// in turn, delays the next poll's checks.
+	const quorum: MigrationRecord[] = [];
+	const belowQuorum: MigrationRecord[] = [];
 	for (let index = 0; index < pending.length; index++) {
 		const migration = pending[index];
 		if (!isStale(migration.firstSeenMs, now, config.graceSeconds)) continue;
 		const lastAlerted = draft.livenessAlertedAt.get(migration.nonce);
 		if (lastAlerted !== undefined && now - lastAlerted < config.graceSeconds * 1000) continue;
-		draft.livenessAlertedAt.set(migration.nonce, now);
-		if (approvals[index] >= threshold) {
-			// Quorum is present but nothing released it: cap-deferred and
-			// starved of daily allowance, paused, or made releasable by a
-			// threshold cut without ever emitting ReleasePending (so the
-			// releaser cannot see it). Silent indefinitely before round 9.
-			await alert(
-				"LIVENESS: quorum reached but not released",
-				`nonce ${migration.nonce} has ${approvals[index]}/${threshold} active approvals and is still unreleased ` +
-					`after ${config.graceSeconds}s — check the daily allowance / pause state, or call release() directly ` +
-					`if it qualified through a threshold cut (RB-6)`,
-			);
-			continue;
-		}
-		await alert(
-			"LIVENESS: migration below approval quorum",
-			`nonce ${migration.nonce} has ${approvals[index]}/${threshold} active approvals after ${config.graceSeconds}s`,
-		);
+		log(`liveness: nonce ${migration.nonce} has ${approvals[index]}/${threshold} active approvals and is unreleased`);
+		(approvals[index] >= threshold ? quorum : belowQuorum).push(migration);
 	}
+	const pageLiveness = async (migrations: MigrationRecord[], subject: string, detail: string) => {
+		if (!migrations.length) return;
+		const nonces = migrations.slice(0, 10).map((migration) => migration.nonce).join(", ") +
+			(migrations.length > 10 ? ` and ${migrations.length - 10} more` : "");
+		if (await alert(subject, `${migrations.length} migration(s) (nonce ${nonces}) ${detail}`)) {
+			for (const migration of migrations) draft.livenessAlertedAt.set(migration.nonce, now);
+		}
+	};
+	// Quorum is present but nothing released it: cap-deferred and starved of
+	// daily allowance, paused, or made releasable by a threshold cut without
+	// ever emitting ReleasePending (so the releaser cannot see it).
+	await pageLiveness(
+		quorum,
+		"LIVENESS: quorum reached but not released",
+		`have ${threshold} or more active approvals and are still unreleased after ${config.graceSeconds}s — check the ` +
+			`daily allowance / pause state, or call release() directly if one qualified through a threshold cut (RB-6)`,
+	);
+	await pageLiveness(
+		belowQuorum,
+		"LIVENESS: migration below approval quorum",
+		`have fewer than ${threshold} active approvals after ${config.graceSeconds}s`,
+	);
 
 	state = draft;
 	persistState(state);

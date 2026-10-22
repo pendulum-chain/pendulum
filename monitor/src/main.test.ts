@@ -20,6 +20,7 @@ import {
 	encodeAbiParameters,
 	encodeEventTopics,
 	type Hex,
+	keccak256,
 	parseAbi,
 	toHex,
 } from "viem";
@@ -577,6 +578,61 @@ test("the governance watch runs after the conservation checks", async (t) => {
 	await monitor.poll(api);
 	assert.deepEqual(subjects().slice(2), ["PENDULUM GOVERNANCE ITEM"]);
 	assert.deepEqual(sorted(subjects().slice(0, 2)), ["AUTO-PAUSE UNAVAILABLE", "VAULT BALANCE DEFICIT"]);
+});
+
+test("stale migrations page one liveness summary per kind and poll", async (t) => {
+	const { base, pendulum, api, monitor, pages } = await setup(t, { env: { GRACE_SECONDS: "30" } });
+	pendulum.headAgeMs = 60_000;
+	for (let nonce = 0n; nonce < 27n; nonce++) burn(pendulum, nonce, 100n * PEN);
+	for (const nonce of [25n, 26n]) {
+		const payload = keccak256(encodeAbiParameters(
+			[{ type: "uint64" }, { type: "address" }, { type: "uint256" }],
+			[nonce, RECIPIENT, 100n * PEN],
+		));
+		base.approvals.set(payload, 3n);
+	}
+	await monitor.poll(api);
+	await monitor.poll(api);
+	const liveness = pages.filter((page) => page.subject.startsWith("LIVENESS"));
+	assert.equal(liveness.length, 2, JSON.stringify(liveness));
+	assert.match(pageFor(liveness, "LIVENESS: migration below approval quorum", "25 ")!.detail, /nonce 0, 1, .*, 9 and 15 more\)/);
+	assert.match(pageFor(liveness, "LIVENESS: quorum reached but not released", "2 ")!.detail, /\(nonce 25, 26\)/);
+});
+
+test("first sightings of unmatched events do not delay the pause", async (t) => {
+	const events: string[] = [];
+	let violationArrived = () => {};
+	const arrived = new Promise<void>((resolve) => (violationArrived = resolve));
+	const { base, pendulum, api, monitor } = await setup(t, {
+		webhook: async ({ subject }) => {
+			if (subject === "MIGRATION TUPLE VIOLATION") {
+				events.push("violation paged");
+				violationArrived();
+			}
+			if (subject === "UNVERIFIED BASE EVENT") {
+				events.push("first sighting paged");
+				await Promise.race([arrived, new Promise((resolve) => setTimeout(resolve, 3_000).unref())]);
+				events.push("first sighting answered");
+			}
+			return 200;
+		},
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	base.logs.push({
+		address: VAULT,
+		eventName: "Approved",
+		args: { nonce: 5n, recipient: RECIPIENT, palletAmount: 100n * PEN, attestor: ATTESTORS[0] },
+		blockNumber: 1_005n,
+	});
+	base.logs.push({
+		address: VAULT,
+		eventName: "Released",
+		args: { nonce: 0n, recipient: RECIPIENT, palletAmount: 100n * PEN, tokenAmount: 1n },
+		blockNumber: 1_006n,
+	});
+	await monitor.poll(api);
+	while (!events.includes("first sighting answered")) await new Promise((resolve) => setTimeout(resolve, 10));
+	assert.deepEqual(events, ["first sighting paged", "violation paged", "first sighting answered"]);
 });
 
 /** A timelock operation scheduling the vault's `pause()`, ready in 48 h. */

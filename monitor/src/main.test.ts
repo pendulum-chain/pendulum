@@ -704,12 +704,14 @@ test("a motion or external proposal made again with the same call pages again", 
 	pendulum.external = inline("remark");
 	await monitor.poll(api);
 	pendulum.motionIndices.set(motion, 4); // closed and proposed again between two polls
-	pendulum.external = undefined; // tabled
+	pendulum.referenda.set(9, inline("remark")); // the external proposal tabled, and proposed again between two polls
+	await monitor.poll(api);
+	pendulum.external = undefined; // tabled or vetoed
 	await monitor.poll(api);
 	pendulum.external = inline("remark"); // proposed again
 	await monitor.poll(api);
 	assert.equal(pages.filter((page) => page.detail.startsWith(`council motion ${motion}`)).length, 2, JSON.stringify(pages));
-	assert.equal(pages.filter((page) => page.detail.startsWith("the council's external proposal")).length, 2, JSON.stringify(pages));
+	assert.equal(pages.filter((page) => page.detail.startsWith("the council's external proposal")).length, 3, JSON.stringify(pages));
 });
 
 test("admin events of the migration pallet page from the ingest", async (t) => {

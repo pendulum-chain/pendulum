@@ -996,24 +996,11 @@ async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
 			read: () => boundedCall(apiAt, bounded),
 		});
 	}
-	const external = (await democracy.nextExternal()) as unknown as { isSome: boolean; unwrap(): [BoundedCall, unknown] };
-	if (external.isSome) {
-		const [bounded] = external.unwrap();
-		items.push({
-			key: `external:${bounded.toString()}`,
-			label: "the council's external proposal",
-			hint: `it can become a referendum at block ${nextLaunch}`,
-			read: () => boundedCall(apiAt, bounded),
-		});
-	} else {
-		// Only its call identifies an external proposal, so once it has left the
-		// queue the same call proposed again pages again.
-		// ponytail: one tabled and proposed again between two polls pages again only as a referendum.
-		for (const key of onceOnlyPages.keys()) if (key.startsWith("external:")) onceOnlyPages.delete(key);
-	}
 	const [count, lowest] = (await Promise.all([democracy.referendumCount(), democracy.lowestUnbaked()])).map((value) =>
 		Number(value.toString())
 	);
+	/** The newest ongoing referendum of each call. */
+	const referendumOf = new Map<string, number>();
 	for (let index = lowest; index < count; index++) {
 		const info = (await democracy.referendumInfoOf(index)) as unknown as {
 			isSome: boolean;
@@ -1021,12 +1008,29 @@ async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
 		};
 		if (!info.isSome || !info.unwrap().isOngoing) continue;
 		const ongoing = info.unwrap().asOngoing;
+		referendumOf.set(ongoing.proposal.toString(), index);
 		items.push({
 			key: `referendum:${index}`,
 			label: `referendum #${index}`,
 			hint: `voting ends at block ${ongoing.end.toNumber()}; a hostile one needs nay votes or an emergency cancel`,
 			read: () => boundedCall(apiAt, ongoing.proposal),
 		});
+	}
+	const external = (await democracy.nextExternal()) as unknown as { isSome: boolean; unwrap(): [BoundedCall, unknown] };
+	if (external.isSome) {
+		const [bounded] = external.unwrap();
+		// Only its call identifies an external proposal. A tabled one becomes a
+		// referendum with the same call, so that referendum keys the page of the
+		// same call proposed again.
+		items.push({
+			key: `external:${referendumOf.get(bounded.toString()) ?? "-"}:${bounded.toString()}`,
+			label: "the council's external proposal",
+			hint: `it can become a referendum at block ${nextLaunch}`,
+			read: () => boundedCall(apiAt, bounded),
+		});
+	} else {
+		// Once it has left the queue, the same call proposed again pages again.
+		for (const key of onceOnlyPages.keys()) if (key.startsWith("external:")) onceOnlyPages.delete(key);
 	}
 	for (const collective of ["council", "technicalCommittee"] as const) {
 		const motions = (await apiAt.query[collective].proposals()) as unknown as Array<{ toHex(): string }>;

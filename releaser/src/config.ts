@@ -1,3 +1,5 @@
+import { parseHeartbeatUrl } from "./alert.js";
+
 function required(name: string): string {
 	const value = process.env[name];
 	if (!value) {
@@ -42,9 +44,10 @@ export const config = {
 	/** Alert when the gas wallet drops below this balance (wei). */
 	minGasBalanceWei: BigInt(process.env.MIN_GAS_BALANCE_WEI ?? "5000000000000000"),
 	alertWebhookUrl: process.env.ALERT_WEBHOOK_URL,
-	/** Optional URL requested after every cycle that completed without error:
-	 *  a dead-man's switch pages when the requests stop. */
-	heartbeatUrl: process.env.HEARTBEAT_URL,
+	/** Optional http(s) URL requested after a cycle that completed without
+	 *  error, at most once a minute: a dead-man's switch pages when the
+	 *  requests stop. */
+	heartbeatUrl: parseHeartbeatUrl(process.env.HEARTBEAT_URL),
 	baseChainId: envNumber("BASE_CHAIN_ID", 8453),
 	/** Only logs and state inside this Base confirmation boundary may advance
 	 * durable state: ReleasePending ingestion scans up to it, and a pending

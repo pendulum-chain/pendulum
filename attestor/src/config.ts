@@ -1,4 +1,5 @@
 import { parseGwei } from "viem";
+import { parseHeartbeatUrl } from "./alert.js";
 import { MIN_REPLACEMENT_PERCENT } from "./approval.js";
 
 function required(name: string): string {
@@ -71,9 +72,10 @@ export const config = {
 	minGasBalanceWei: BigInt(process.env.MIN_GAS_BALANCE_WEI ?? "10000000000000000"), // 0.01 ETH
 	/** Optional webhook that receives JSON alerts (low gas, fatal errors). */
 	alertWebhookUrl: process.env.ALERT_WEBHOOK_URL,
-	/** Optional URL requested after every finalized head processed without
-	 *  error: a dead-man's switch pages when the requests stop. */
-	heartbeatUrl: process.env.HEARTBEAT_URL,
+	/** Optional http(s) URL requested after a finalized head processed without
+	 *  error, at most once a minute: a dead-man's switch pages when the
+	 *  requests stop. */
+	heartbeatUrl: parseHeartbeatUrl(process.env.HEARTBEAT_URL),
 	/** Base chain id: 8453 mainnet. */
 	baseChainId: envNumber("BASE_CHAIN_ID", 8453),
 	/** Confirmation boundary required before the checkpoint may pass a block. */

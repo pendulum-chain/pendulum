@@ -15,10 +15,29 @@ export function alertText(severity: Severity, source: string, subject: string, d
 	return cut.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+/** A dead-man's switch needs a steady signal, not one per loop, and some
+ *  refuse more than a few requests a minute. */
+const HEARTBEAT_INTERVAL_MS = 60_000;
+
+/** HEARTBEAT_URL, checked once at startup: unset, or an http(s) URL. The value
+ *  is never echoed, as it usually holds a token. */
+export function parseHeartbeatUrl(value: string | undefined): string | undefined {
+	if (!value) return undefined;
+	let protocol: string | undefined;
+	try {
+		protocol = new URL(value).protocol;
+	} catch {
+		// Not a URL at all: refused below.
+	}
+	if (protocol !== "http:" && protocol !== "https:") throw new Error("invalid HEARTBEAT_URL: expected an http(s) URL");
+	return value;
+}
+
 /**
  * Request the URL of an external dead-man's switch, which pages once these
  * requests stop. A failed request is logged, never thrown: the missing
- * heartbeat is the signal. The URL is not logged, as it usually holds a token.
+ * heartbeat is the signal. Only the error's name and code are logged: the URL
+ * usually holds a token, and error messages can quote it.
  */
 export async function pingHeartbeat(url: string, timeoutMs = 10_000): Promise<void> {
 	try {
@@ -26,8 +45,25 @@ export async function pingHeartbeat(url: string, timeoutMs = 10_000): Promise<vo
 		await response.body?.cancel();
 		if (!response.ok) console.error(`heartbeat failed: HTTP ${response.status}`);
 	} catch (error) {
-		console.error("heartbeat failed", error);
+		const { name, cause } = error as { name?: unknown; cause?: { code?: unknown } };
+		console.error(`heartbeat failed: ${name}${cause?.code === undefined ? "" : ` ${cause.code}`}`);
 	}
+}
+
+/** The heartbeat for `url` (nothing when unset): requested at most once per
+ *  `intervalMs`, however often it is called. Returns the request when one goes
+ *  out. */
+export function throttledHeartbeat(
+	url: string | undefined,
+	intervalMs = HEARTBEAT_INTERVAL_MS,
+	now = Date.now,
+): () => Promise<void> | undefined {
+	let last = -Infinity;
+	return () => {
+		if (url === undefined || now() - last < intervalMs) return undefined;
+		last = now();
+		return pingHeartbeat(url);
+	};
 }
 
 /**

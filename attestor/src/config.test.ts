@@ -44,6 +44,14 @@ test("the expected Pendulum genesis defaults to Pendulum's and must be a block h
 	}
 });
 
+test("HEARTBEAT_URL must be an http(s) URL, and a bad one is refused without echoing it", () => {
+	assert.equal(loadConfig({ HEARTBEAT_URL: "https://hc-ping.com/secret-token" }, "config.heartbeatUrl").stdout, "https://hc-ping.com/secret-token");
+	const { status, stderr } = loadConfig({ HEARTBEAT_URL: "hc-ping.com/secret-token" });
+	assert.notEqual(status, 0);
+	assert.match(stderr, /invalid HEARTBEAT_URL/);
+	assert.doesNotMatch(stderr, /secret-token/);
+});
+
 test("fee bumping defaults to 60 s, 20 %, 3 bumps and a 1 gwei cap, and refuses invalid settings", () => {
 	const print = "[config.feeBump.afterMs, config.feeBump.percent, config.feeBump.max, config.feeBump.maxFeePerGas].join(' ')";
 	assert.equal(loadConfig({}, print).stdout, "60000 20 3 1000000000");

@@ -38,7 +38,7 @@ consumed nonce and drops it.
 | `MAX_BLOCK_RANGE` | Max blocks per `eth_getLogs` (default 10,000) |
 | `MIN_GAS_BALANCE_WEI` | Low-gas alert threshold |
 | `ALERT_WEBHOOK_URL` | Optional JSON alert webhook in Slack incoming-webhook form: `text` holds `[CRITICAL]` or `[WARNING]`, the releaser and the subject, then the detail; `severity`, `subject` and `detail` are also sent as fields. A non-2xx answer, a timeout (10 s) or a connection error is logged as a failed delivery |
-| `HEARTBEAT_URL` | Optional URL requested (GET) after every cycle that completed without error; point it at a dead-man's switch that pages when the requests stop. A failed request is logged, never fatal |
+| `HEARTBEAT_URL` | Optional http(s) URL requested (GET) after a cycle that completed without error, at most once a minute; point it at a dead-man's switch that pages when the requests stop. Startup refuses any other value. A failed request is logged (error name and code only, never the URL), never fatal |
 | `BASE_CHAIN_ID` | Default 8453 |
 | `BASE_FINALITY_TAG` | `safe` (default) or `finalized`; the scan cursor stays inside this boundary and a pending entry is dropped only once its nonce is consumed there |
 | `BLOCKED_ALERT_INTERVAL_MS` | Re-page interval for governance-blocked releases (default 6h — the condition needs a ≥48h timelocked action, so per-poll paging would bury the signal) |

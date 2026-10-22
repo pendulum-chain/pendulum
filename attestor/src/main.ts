@@ -24,7 +24,7 @@
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { createPublicClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { alertText, pingHeartbeat, postAlert, type Severity } from "./alert.js";
+import { alertText, postAlert, throttledHeartbeat, type Severity } from "./alert.js";
 import { advanceCheckpoint, processBlock, viemVaultChain, type Attestor, type UnconfirmedBlock } from "./approval.js";
 import { decodeMigrationEvent, isTransientRpcError, type MigrationEvent } from "./checks.js";
 import { config } from "./config.js";
@@ -170,6 +170,7 @@ async function main(): Promise<void> {
 	const unconfirmed: UnconfirmedBlock[] = [];
 	let processedThrough = checkpoint.lastProcessedBlock;
 	let lastTransientAlertMs = 0;
+	const heartbeat = throttledHeartbeat(config.heartbeatUrl);
 
 	let lastHeadAt = Date.now();
 	let lastHeadStallAlertMs = 0;
@@ -184,7 +185,7 @@ async function main(): Promise<void> {
 				processedThrough = block;
 			}
 			if (await advanceCheckpoint(attestor, unconfirmed, checkpoint)) saveCheckpoint(config.checkpointFile, checkpoint);
-			if (config.heartbeatUrl) void pingHeartbeat(config.heartbeatUrl);
+			void heartbeat();
 		}).catch(async (error) => {
 			if (isTransientRpcError(error)) {
 				// Not a statement about any event — resume from the in-memory

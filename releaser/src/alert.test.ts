@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import { inspect } from "node:util";
-import { alertText, pingHeartbeat, postAlert } from "./alert.js";
+import { alertText, parseHeartbeatUrl, pingHeartbeat, postAlert, throttledHeartbeat } from "./alert.js";
 
 /** A local webhook answering every POST with `status`, or never when null. */
 async function webhook(status: number | null): Promise<{ url: string; server: Server }> {
@@ -90,6 +90,53 @@ test("a heartbeat requests its URL, and a failing endpoint is logged without the
 	const closed = await webhook(200);
 	closed.server.close();
 	await pingHeartbeat(`${closed.url}/secret-token`);
-	assert.equal(logged.mock.callCount(), 3);
+	// An error message can quote the URL, so only the name and code are logged.
+	await pingHeartbeat("hc-ping.com/secret-token");
+	assert.deepEqual(
+		logged.mock.calls.map((call) => call.arguments),
+		[
+			["heartbeat failed: HTTP 500"],
+			["heartbeat failed: TimeoutError"],
+			["heartbeat failed: TypeError ECONNREFUSED"],
+			["heartbeat failed: TypeError ERR_INVALID_URL"],
+		],
+	);
 	assert.ok(logged.mock.calls.every((call) => !inspect(call.arguments).includes("secret-token")));
+});
+
+test("HEARTBEAT_URL is unset or an http(s) URL, and a bad one is refused without echoing it", () => {
+	assert.equal(parseHeartbeatUrl(undefined), undefined);
+	assert.equal(parseHeartbeatUrl(""), undefined);
+	for (const url of ["https://hc-ping.com/secret-token", "http://127.0.0.1:8080/ping"]) assert.equal(parseHeartbeatUrl(url), url);
+	for (const url of ["hc-ping.com/secret-token", "ftp://hc-ping.com/secret-token", "secret-token"]) {
+		assert.throws(
+			() => parseHeartbeatUrl(url),
+			(error: Error) => error.message === "invalid HEARTBEAT_URL: expected an http(s) URL",
+			url,
+		);
+	}
+});
+
+test("heartbeats go out at most once a minute, however often they are due", async () => {
+	const seen: string[] = [];
+	const server = createServer((request, response) => {
+		seen.push(`${request.url}`);
+		response.writeHead(200).end();
+	});
+	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+	let clock = 1_000_000;
+	const beat = throttledHeartbeat(`http://127.0.0.1:${(server.address() as AddressInfo).port}/ping`, 60_000, () => clock);
+	try {
+		await beat();
+		for (const after of [12_000, 59_999]) {
+			clock = 1_000_000 + after;
+			assert.equal(beat(), undefined, `${after} ms after the last one`);
+		}
+		clock = 1_060_000;
+		await beat();
+	} finally {
+		server.close();
+	}
+	assert.deepEqual(seen, ["/ping", "/ping"]);
+	assert.equal(throttledHeartbeat(undefined)(), undefined, "nothing without a URL");
 });

@@ -840,7 +840,18 @@ async function watchPendulumGovernance(apiAt: ApiAt, finalizedBlock: number): Pr
 	}
 	for (const item of items) {
 		if (onceOnlyPages.has(item.key)) continue;
-		const call = await boundedCall(apiAt, item.bounded);
+		let call: { node?: CallNode; text: string };
+		try {
+			call = await boundedCall(apiAt, item.bounded);
+		} catch (readError) {
+			// One unreadable item must never hide the items after it.
+			await pageOnce(
+				item.key,
+				"CRITICAL: Pendulum governance item cannot be read",
+				`${item.label}: ${String(readError).slice(0, 300)}; review it manually; ${item.hint}`,
+			);
+			continue;
+		}
 		const risky = call.node ? riskyCalls(call.node) : [];
 		await pageOnce(
 			item.key,

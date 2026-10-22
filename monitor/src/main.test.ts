@@ -356,11 +356,14 @@ test("a released migration reconciles and the poll pages nothing", async (t) => 
 	assert.equal(persisted().baseFromBlock, "1011");
 });
 
+/** Pages sent concurrently can arrive in either order. */
+const sorted = (subjects: string[]) => [...subjects].sort();
+
 test("a vault balance deficit pages and asks for the auto-pause", async (t) => {
 	const { base, api, monitor, subjects } = await setup(t);
 	base.vaultBalance -= 1n;
 	await monitor.poll(api);
-	assert.deepEqual(subjects(), ["VAULT BALANCE DEFICIT", "AUTO-PAUSE UNAVAILABLE"]);
+	assert.deepEqual(sorted(subjects()), ["AUTO-PAUSE UNAVAILABLE", "VAULT BALANCE DEFICIT"]);
 });
 
 test("a Pendulum failure pages on its own and the vault balance check still runs", async (t) => {
@@ -368,7 +371,21 @@ test("a Pendulum failure pages on its own and the vault balance check still runs
 	pendulum.failure = new Error("node unreachable");
 	base.vaultBalance -= 1n;
 	await monitor.poll(api);
-	assert.deepEqual(subjects(), ["PENDULUM SOURCE UNREADABLE", "VAULT BALANCE DEFICIT", "AUTO-PAUSE UNAVAILABLE"]);
+	assert.deepEqual(sorted(subjects()), ["AUTO-PAUSE UNAVAILABLE", "PENDULUM SOURCE UNREADABLE", "VAULT BALANCE DEFICIT"]);
+});
+
+const UNREADABLE = "CRITICAL: Pendulum governance item cannot be read";
+const RISKY = "CRITICAL: Pendulum governance item mints, moves or unlocks balances, or changes the runtime";
+const pageFor = (pages: Page[], subject: string, label: string) =>
+	pages.find((page) => page.subject === subject && page.detail.startsWith(label));
+
+test("an undecodable governance item pages as unreadable and hides nothing after it", async (t) => {
+	const { pendulum, api, monitor, pages } = await setup(t);
+	pendulum.publicProps.push([5, inline("garbage")]);
+	pendulum.referenda.set(9, inline("mint"));
+	await monitor.poll(api);
+	assert.ok(pageFor(pages, UNREADABLE, "public proposal #5"), JSON.stringify(pages));
+	assert.ok(pageFor(pages, RISKY, "referendum #9"), JSON.stringify(pages));
 });
 
 /** A timelock operation scheduling the vault's `pause()`, ready in 48 h. */

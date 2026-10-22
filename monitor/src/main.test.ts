@@ -223,9 +223,11 @@ function pendulumChain() {
 		publicProps: [] as Array<[number, Bounded]>,
 		external: undefined as Bounded | undefined,
 		referenda: new Map<number, Bounded>(),
-		/** Noted preimages by `${hash}:${len}`, and their lengths by hash. */
+		/** Noted preimages by `${hash}:${len}`, and their lengths by hash (old:
+		 *  noted before the pallet's status migration). */
 		preimages: new Map<string, string>(),
 		notedLengths: new Map<string, number>(),
+		oldNotedLengths: new Map<string, number>(),
 		preimageReads: 0,
 		/** Preimage reads still to fail, as an RPC error would. */
 		preimageFailures: 0,
@@ -285,6 +287,10 @@ function pendulumChain() {
 				requestStatusFor: async (preimage: { toHex(): string }) => {
 					const len = chain.notedLengths.get(preimage.toHex());
 					return { toJSON: () => (len === undefined ? null : { unrequested: { ticket: ["5Noter", 1], len } }) };
+				},
+				statusFor: async (preimage: { toHex(): string }) => {
+					const len = chain.oldNotedLengths.get(preimage.toHex());
+					return { toJSON: () => (len === undefined ? null : { unrequested: { deposit: ["5Noter", 1], len } }) };
 				},
 			},
 			council: collective(chain.motions.council),
@@ -610,6 +616,16 @@ test("a legacy call reference is read through the noted preimage's length", asyn
 	const preimage = `0x${"ef".repeat(32)}`;
 	pendulum.referenda.set(9, legacy(preimage));
 	pendulum.notedLengths.set(preimage, 4);
+	pendulum.preimages.set(`${preimage}:4`, "mint");
+	await monitor.poll(api);
+	assert.ok(pageFor(pages, RISKY, "referendum #9"), JSON.stringify(pages));
+});
+
+test("a legacy call reference to a preimage noted before the status migration is read too", async (t) => {
+	const { pendulum, api, monitor, pages } = await setup(t);
+	const preimage = `0x${"fe".repeat(32)}`;
+	pendulum.referenda.set(9, legacy(preimage));
+	pendulum.oldNotedLengths.set(preimage, 4);
 	pendulum.preimages.set(`${preimage}:4`, "mint");
 	await monitor.poll(api);
 	assert.ok(pageFor(pages, RISKY, "referendum #9"), JSON.stringify(pages));

@@ -921,13 +921,20 @@ const oversizedCall = (len: number): CallRead => ({
 	text: `the call is ${len} bytes, over the ${MAX_GOVERNANCE_CALL_BYTES} bytes the monitor decodes`,
 });
 
-/** The length of a noted preimage, which a legacy call reference leaves out. */
+/** The length of a noted preimage, which a legacy call reference leaves out.
+ *  One noted before the pallet's status migration stays in the deprecated
+ *  `statusFor` until something touches it. */
 async function notedLength(apiAt: ApiAt, hash: { toHex(): string }): Promise<number | undefined> {
 	const status = (await apiAt.query.preimage.requestStatusFor(hash)).toJSON() as {
 		unrequested?: { len: number };
 		requested?: { maybeLen: number | null };
 	} | null;
-	return status?.unrequested?.len ?? status?.requested?.maybeLen ?? undefined;
+	if (status) return status.unrequested?.len ?? status.requested?.maybeLen ?? undefined;
+	const old = (await apiAt.query.preimage.statusFor(hash)).toJSON() as {
+		unrequested?: { len: number };
+		requested?: { len: number | null };
+	} | null;
+	return old?.unrequested?.len ?? old?.requested?.len ?? undefined;
 }
 
 /** Reads a proposal's call. Its preimage may be noted at any time before

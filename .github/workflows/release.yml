@@ -81,7 +81,7 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "ref=${TAG:-$GITHUB_REF}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           ref: ${{ steps.meta.outputs.ref }}
           fetch-depth: 0
@@ -151,7 +151,7 @@ jobs:
           cp "$WASM_COMPRESSED" "./${CHAIN}_runtime.compact.compressed.wasm"
           sha256sum "./${CHAIN}_runtime.compact.compressed.wasm" | tee -a release-notes.md
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ steps.meta.outputs.chain }}-runtime-${{ steps.commit.outputs.sha }}
           path: |
@@ -168,11 +168,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: ${{ needs.build.outputs.chain }}-runtime-${{ needs.build.outputs.sha }}
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: ${{ needs.build.outputs.tag }}
           name: ${{ needs.build.outputs.tag }}

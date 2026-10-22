@@ -23,13 +23,19 @@ on:
         type: boolean
         default: true
 
+permissions:
+  contents: read
+
 jobs:
   bump-version:
     runs-on: ubuntu-latest
     name: bump version
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
 
@@ -70,7 +76,7 @@ jobs:
 
       - name: "Read file contents"
         id: read-file
-        uses: juliangruber/read-file-action@v1
+        uses: juliangruber/read-file-action@271ff311a4947af354c6abcd696a306553b9ec18 # v1.1.8
         with:
           path: ./changes.txt
 
@@ -85,7 +91,7 @@ jobs:
 
       - name: Put current date into a variable
         id: date-now
-        uses: Kaven-Universe/github-action-current-date-time@v1
+        uses: Kaven-Universe/github-action-current-date-time@7c1d8465d1bfd7d35466d2ee82a8e460780561ae # v1.5.0
         with:
           format: "yyyy-MM-dd"
 
@@ -164,7 +170,7 @@ jobs:
           fi
 
       - name: Create Pull Request
-        uses: thomaseizinger/create-pull-request@master
+        uses: thomaseizinger/create-pull-request@84104598ab3d603b60080ddfabd783999765a992 # master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           title: ${{ steps.pr-title.outputs.title }}

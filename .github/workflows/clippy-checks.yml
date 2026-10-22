@@ -6,18 +6,21 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   clippy-checks:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Free up Space and Installation
         uses: ./.github/actions/shared
 
       - name: Clippy -- Main
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
           command: clippy
           # `manual_inspect` (clippy 1.81) fires inside the `#[pallet::pallet]` expansion of our
@@ -25,7 +28,7 @@ jobs:
           args: --release --all-features -- -W clippy::all -A clippy::style -A clippy::manual_inspect -A forgetting_copy_types -A forgetting_references
 
       - name: Clippy -- All Targets (except integration)
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
           command: clippy
           # We are a bit more forgiving when it comes to the code in tests and only check for correctness

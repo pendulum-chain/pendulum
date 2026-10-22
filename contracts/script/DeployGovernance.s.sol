@@ -33,7 +33,7 @@ import {MigrationVault} from "../src/MigrationVault.sol";
 ///                         50000 is refused
 ///   QUORUM_FRACTION       percent of CIRCULATING supply (total minus the
 ///                         vault's unmigrated balance parked at the vote
-///                         sink, see PRD G1 as revised in review round 8)
+///                         sink, see PRD G1)
 ///   QUORUM_FLOOR          absolute quorum lower bound, 18-decimal token
 ///                         units, 1 PEN (1e18) to total supply; PERMANENT.
 ///                         Keeps early proposals from being trivially cheap

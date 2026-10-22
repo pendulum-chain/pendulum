@@ -264,6 +264,8 @@ interface RuntimeState {
 	lastPendulumBlock: number;
 	nextExpectedNonce: bigint;
 	baseFromBlock: bigint;
+	/** The admin scan's own cursor: it only pages, so nothing waits for it. */
+	baseAdminFromBlock: bigint;
 	migrations: Map<bigint, MigrationRecord>;
 	livenessAlertedAt: Map<bigint, number>;
 	unmatchedBaseFirstSeenAt: Map<string, number>;
@@ -285,6 +287,7 @@ function hydrateState(): RuntimeState {
 			lastPendulumBlock: config.pendulumStartBlock - 1,
 			nextExpectedNonce: config.pendulumStartNonce,
 			baseFromBlock: config.baseStartBlock,
+			baseAdminFromBlock: config.baseStartBlock,
 			migrations: new Map(),
 			livenessAlertedAt: new Map(),
 			unmatchedBaseFirstSeenAt: new Map(),
@@ -298,6 +301,7 @@ function hydrateState(): RuntimeState {
 		lastPendulumBlock: persisted.lastPendulumBlock,
 		nextExpectedNonce: BigInt(persisted.nextExpectedNonce),
 		baseFromBlock: BigInt(persisted.baseFromBlock),
+		baseAdminFromBlock: BigInt(persisted.baseAdminFromBlock ?? persisted.baseFromBlock),
 		migrations: new Map(persisted.migrations.map((migration) => [
 			BigInt(migration.nonce),
 			{
@@ -322,6 +326,7 @@ function cloneState(source: RuntimeState): RuntimeState {
 		lastPendulumBlock: source.lastPendulumBlock,
 		nextExpectedNonce: source.nextExpectedNonce,
 		baseFromBlock: source.baseFromBlock,
+		baseAdminFromBlock: source.baseAdminFromBlock,
 		migrations: new Map(source.migrations),
 		livenessAlertedAt: new Map(source.livenessAlertedAt),
 		unmatchedBaseFirstSeenAt: new Map(source.unmatchedBaseFirstSeenAt),
@@ -339,6 +344,7 @@ function persistState(state: RuntimeState): void {
 		lastPendulumBlock: state.lastPendulumBlock,
 		nextExpectedNonce: state.nextExpectedNonce.toString(),
 		baseFromBlock: state.baseFromBlock.toString(),
+		baseAdminFromBlock: state.baseAdminFromBlock.toString(),
 		migrations: [...state.migrations.values()].map((migration) => ({
 			nonce: migration.nonce.toString(),
 			recipient: migration.recipient as `0x${string}`,
@@ -361,11 +367,6 @@ let lastBaseStallAlertMs = 0;
 let lastReadinessAlertMs = 0;
 let lastAdminScanFailureAlertMs = 0;
 let lastIssuanceAlertMs = 0;
-/** The Base admin scan (vault admin events and the governance queue) runs
- *  ahead of reconciliation in a poll, and reconciliation waits while it fails,
- *  so the persisted Base cursor never passes a range it has not scanned; a
- *  restart resumes from that cursor. */
-let baseAdminFromBlock: bigint | undefined;
 /** Once-only pages by key, each held until the webhook accepts it. */
 // ponytail: in memory; a restart re-pages what it finds again (Base admin events after the persisted cursor, pending governance items) and drops undelivered pages it does not find again.
 const onceOnlyPages = new Map<string, { subject: string; detail: string; delivery: Promise<boolean> }>();
@@ -805,12 +806,14 @@ async function reconcileBaseEvents(
 /** Page every vault admin event, and every operation the governance Timelock
  *  scheduled, up to `toBlock`, the poll's `safe`/`finalized` Base block.
  *  Before the governance handover the vault admin acts without a delay, so
- *  its events are the only trace of a guardian, attestor or cap change. */
+ *  its events are the only trace of a guardian, attestor or cap change. The
+ *  scan keeps its own cursor in `state`, so a restart resumes where it stopped. */
 async function watchBaseAdmin(toBlock: bigint): Promise<void> {
 	const timelock = config.timelockAddress;
 	const operations = new Map<`0x${string}`, ScheduledCall[]>();
 	const pages: Promise<boolean>[] = [];
-	for (const [start, end] of blockRanges(baseAdminFromBlock ?? state.baseFromBlock, toBlock, config.baseMaxBlockRange)) {
+	const fromBlock = state.baseAdminFromBlock;
+	for (const [start, end] of blockRanges(fromBlock, toBlock, config.baseMaxBlockRange)) {
 		await publicClient.getBlock({ blockNumber: end }); // same lagging-node probe as the vault scan
 		const adminEvents = await publicClient.getContractEvents({
 			address: config.vaultAddress,
@@ -876,7 +879,7 @@ async function watchBaseAdmin(toBlock: bigint): Promise<void> {
 		}
 	}
 	await Promise.all(pages);
-	baseAdminFromBlock = toBlock + 1n;
+	if (toBlock >= fromBlock) state.baseAdminFromBlock = toBlock + 1n;
 }
 
 type ApiAt = Awaited<ReturnType<ApiPromise["at"]>>;
@@ -1202,20 +1205,17 @@ async function check(api: ApiPromise): Promise<void> {
 		);
 	}
 	await checkAutoPauseReadiness();
-	// The admin scan only pages, so its failure must not skip the vault balance
-	// check. Reconciliation waits for it: a restart resumes the scan from the
-	// persisted Base cursor, which must never pass a range it has not covered.
-	let adminScanned = false;
+	// The admin scan only pages and keeps its own cursor, so nothing else waits
+	// for it, and its failure skips no other check.
 	try {
 		await watchBaseAdmin(baseBlock);
-		adminScanned = true;
 	} catch (adminError) {
 		if (Date.now() - lastAdminScanFailureAlertMs > config.unmatchedEventGraceSeconds * 1000) {
 			lastAdminScanFailureAlertMs = Date.now();
 			await alert(
 				"BASE ADMIN SCAN FAILED",
-				`${adminError}; the vault balance check continues, but vault admin events, the governance queue and ` +
-					"the reconciliation of Approved and Released events wait until the scan reads again",
+				`${adminError}; vault admin events and the governance queue are not paged until the scan reads again, ` +
+					"and it then resumes where it stopped; every other check still runs",
 			);
 		}
 	}
@@ -1224,8 +1224,7 @@ async function check(api: ApiPromise): Promise<void> {
 	// are then reconciled against the last view read in full, as against a
 	// lagging source but with no fabrication proof: a mismatch on a known nonce
 	// still pauses at once, an unknown nonce after the grace. The vault balance
-	// check needs no source; M2a and liveness wait for it. All but the vault
-	// balance check also wait for the admin scan.
+	// check needs no source; M2a and liveness wait for it.
 	let draft = cloneState(state);
 	let source: SourceView | undefined;
 	try {
@@ -1236,8 +1235,9 @@ async function check(api: ApiPromise): Promise<void> {
 			lastSourceFailureAlertMs = Date.now();
 			await alert(
 				"PENDULUM SOURCE UNREADABLE",
-				`${sourceError}; Base events are reconciled against the last Pendulum view read in full, so one with an ` +
-					`unknown nonce pauses the vault after ${config.unmatchedEventGraceSeconds}s unless the source reads again`,
+				`${sourceError}; until the source reads again, Base events are checked against the last Pendulum view ` +
+					`read in full: one whose nonce that view lacks pauses the vault ${config.unmatchedEventGraceSeconds}s ` +
+					"after its first sighting, and M2a and liveness are skipped",
 			);
 		}
 	}
@@ -1249,9 +1249,7 @@ async function check(api: ApiPromise): Promise<void> {
 		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "token", blockNumber: baseBlock }),
 	]);
 
-	const reconciliation = adminScanned
-		? await reconcileBaseEvents(draft, baseBlock, conversionFactor, source?.timestampMs ?? 0)
-		: { violation: undefined, awaitingSource: undefined };
+	const reconciliation = await reconcileBaseEvents(draft, baseBlock, conversionFactor, source?.timestampMs ?? 0);
 	if (reconciliation.violation) {
 		if (await securityViolation("MIGRATION TUPLE VIOLATION", reconciliation.violation)) {
 			state = draft;
@@ -1280,7 +1278,6 @@ async function check(api: ApiPromise): Promise<void> {
 		}
 		return;
 	}
-	if (!adminScanned) return;
 	if (!source) {
 		state = draft; // reconciled against the last view read in full
 		persistState(state);

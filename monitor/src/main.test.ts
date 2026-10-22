@@ -403,8 +403,12 @@ async function setup(
 	for (const name of monitorEnv) delete process.env[name];
 	monitorEnv = Object.keys(variables);
 	Object.assign(process.env, variables);
-	const monitor: typeof import("./main.js") = await import(`./main.js?instance=${++instances}`);
-	await monitor.start(api);
+	const launch = async () => {
+		const monitor: typeof import("./main.js") = await import(`./main.js?instance=${++instances}`);
+		await monitor.start(api);
+		return monitor;
+	};
+	const monitor = await launch();
 	const startup = pages.splice(0);
 	return {
 		base,
@@ -413,8 +417,14 @@ async function setup(
 		pages,
 		startup,
 		monitor,
+		/** A new monitor process on the same state file and stand-ins. */
+		restart: launch,
 		subjects: () => pages.map((page) => page.subject),
-		persisted: () => JSON.parse(readFileSync(stateFile, "utf8")) as { baseFromBlock: string; migrations: Array<{ nonce: string }> },
+		persisted: () => JSON.parse(readFileSync(stateFile, "utf8")) as {
+			baseFromBlock: string;
+			baseAdminFromBlock: string;
+			migrations: Array<{ nonce: string }>;
+		},
 	};
 }
 
@@ -532,8 +542,10 @@ test("vault admin events page once each from the Base scan", async (t) => {
 	assert.match(adminPages[1], /^CapsUpdated\(perReleaseCap=5, dailyCap=7\) at Base block 1012/);
 });
 
-test("a failed admin scan pages, the vault balance check still runs and the Base cursor waits", async (t) => {
-	const { base, pendulum, api, monitor, subjects, persisted } = await setup(t, { env: { GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY } });
+test("a failed admin scan pages, every other check still runs and the scan resumes where it stopped", async (t) => {
+	const { base, pendulum, api, monitor, restart, subjects, persisted } = await setup(t, {
+		env: { GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY },
+	});
 	burn(pendulum, 0n, 100n * PEN);
 	release(base, 0n, 100n * PEN);
 	base.logs.push({ address: VAULT, eventName: "GuardianUpdated", args: { guardian: GUARDIAN }, blockNumber: 1_004n });
@@ -543,12 +555,13 @@ test("a failed admin scan pages, the vault balance check still runs and the Base
 	base.paused = true; // so the auto-pause only confirms and the poll persists its state
 	await monitor.poll(api);
 	assert.deepEqual(sorted(subjects()), ["BASE ADMIN SCAN FAILED", "VAULT BALANCE DEFICIT", "vault pause confirmed"]);
-	assert.equal(persisted().baseFromBlock, "1000");
+	assert.equal(persisted().baseFromBlock, "1011"); // reconciled although the admin scan failed
+	assert.equal(persisted().baseAdminFromBlock, "1000");
 	base.failing = undefined;
 	base.vaultBalance += 1n;
-	await monitor.poll(api);
+	await (await restart()).poll(api);
 	assert.ok(subjects().includes("VAULT ADMIN EVENT"), JSON.stringify(subjects()));
-	assert.equal(persisted().baseFromBlock, "1011");
+	assert.equal(persisted().baseAdminFromBlock, "1011");
 });
 
 test("a monitor without a guardian key says so at startup", async (t) => {

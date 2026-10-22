@@ -69,3 +69,16 @@ test("missing unmatched-event history is rejected rather than resetting its grac
 		rmSync(directory, { recursive: true, force: true });
 	}
 });
+
+test("optional cursors are checked when present", () => {
+	const directory = mkdtempSync(join(tmpdir(), "pen-monitor-state-"));
+	const path = join(directory, "state.json");
+	try {
+		saveMonitorState(path, { ...state, baseAdminFromBlock: "150" });
+		assert.equal(loadMonitorState(path)?.baseAdminFromBlock, "150");
+		writeFileSync(path, JSON.stringify({ ...state, baseAdminFromBlock: "-1" }));
+		assert.throws(() => loadMonitorState(path), /invalid or legacy schema/);
+	} finally {
+		rmSync(directory, { recursive: true, force: true });
+	}
+});

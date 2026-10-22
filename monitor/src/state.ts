@@ -31,6 +31,9 @@ export interface PersistedMonitorState {
 	/** Pendulum totalIssuance + TotalMigrated when first observed (round 9);
 	 *  absent in state written before it existed and re-anchored on load. */
 	issuanceAnchor?: string;
+	/** Next Base block of the admin scan; absent in older state, which never
+	 *  persisted a Base cursor past it, and then `baseFromBlock`. */
+	baseAdminFromBlock?: string;
 }
 
 function isMissing(error: unknown): boolean {
@@ -86,6 +89,7 @@ export function loadMonitorState(path: string): PersistedMonitorState | undefine
 		!isUint(state.nextExpectedNonce) ||
 		!isUint(state.baseFromBlock) ||
 		(state.issuanceAnchor !== undefined && !isUint(state.issuanceAnchor)) ||
+		(state.baseAdminFromBlock !== undefined && !isUint(state.baseAdminFromBlock)) ||
 		badMigration ||
 		badAlerts ||
 		badUnmatchedEvents

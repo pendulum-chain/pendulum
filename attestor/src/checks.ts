@@ -9,7 +9,7 @@
  * transport-level noise rather than statements about an event.
  */
 
-import { HttpRequestError, TimeoutError } from "viem";
+import { BlockNotFoundError, HttpRequestError, TimeoutError } from "viem";
 
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -37,11 +37,16 @@ const TRANSIENT_SOCKET_CODES = new Set([
  *  transient (the post-drills L1 class). Numeric codes are matched structurally
  *  against `HttpRequestError.status` instead. */
 const TRANSIENT_TEXT =
-	/rate limit|too many requests|timeout|timed out|socket hang up|fetch failed|service unavailable|internal error|disconnected|websocket is not connected|connection (?:closed|refused|reset|terminated)|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ENOTFOUND|EPIPE|missing trie node|historical state|state (?:is )?not available|state unavailable/i;
-// The last four: a state read pinned at the `safe` block can fall outside a
-// node's retained-state window while the batcher lags (safe trails latest by
+	/rate limit|too many requests|timeout|timed out|socket hang up|fetch failed|service unavailable|internal error|disconnected|websocket is not connected|connection (?:closed|refused|reset|terminated)|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ENOTFOUND|EPIPE|missing trie node|historical state|state (?:is )?not available|state unavailable|header not found|unknown block|block not found/i;
+// The state phrasings: a state read pinned at the `safe` block can fall outside
+// a node's retained-state window while the batcher lags (safe trails latest by
 // more blocks than the node keeps). It heals as the safe head catches up, so
 // it is a wait, not a verdict on any event — and not a reason to crash-loop.
+// The block phrasings: behind a load-balanced endpoint the boundary block can
+// come from one backend and the read pinned at it land on another that has not
+// imported it yet, or that has no safe head at all. That heals as the backend
+// catches up. Substrate's `UnknownBlock:` (no space) is deliberately not
+// matched: a pruned Pendulum node stays fatal.
 
 /**
  * Transport-level failures that say nothing about the migration itself.
@@ -63,7 +68,9 @@ export function isTransientRpcError(error: unknown): boolean {
 		if (cause instanceof HttpRequestError && cause.status !== undefined && TRANSIENT_HTTP_STATUS.has(cause.status)) {
 			return true;
 		}
-		if (cause instanceof TimeoutError) return true;
+		// BlockNotFoundError: viem's answer to a `null` block, e.g. a backend
+		// without a safe head yet.
+		if (cause instanceof TimeoutError || cause instanceof BlockNotFoundError) return true;
 		const code = (cause as { code?: unknown }).code;
 		if (typeof code === "string" && TRANSIENT_SOCKET_CODES.has(code)) return true;
 		const texts = [

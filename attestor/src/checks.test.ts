@@ -10,7 +10,14 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { HttpRequestError, TimeoutError } from "viem";
+import {
+	BlockNotFoundError,
+	HttpRequestError,
+	InvalidInputRpcError,
+	ResourceNotFoundRpcError,
+	RpcRequestError,
+	TimeoutError,
+} from "viem";
 import { isTransientRpcError, isUnreleasable, ZERO_ADDRESS } from "./checks.js";
 
 const VAULT = "0x1111111111111111111111111111111111111111";
@@ -85,6 +92,27 @@ test("text-only transport failures (polkadot-js) are still recognized", () => {
 	// A safe-block state read outside the node's retained window heals as the
 	// safe head catches up; it must wait, not exit.
 	assert.equal(isTransientRpcError(new Error("missing trie node 0xabc (path ) <nil>")), true);
+});
+
+test("a lagging backend's missing-block answers at the finality boundary are transient", () => {
+	// What viem raises for a JSON-RPC error answer: the mapped error type with
+	// the node's text as its details.
+	const rpcError = (code: number, message: string) =>
+		new RpcRequestError({ body: {}, error: { code, message }, url: "https://rpc" });
+	// op-geth (-32000) and reth (-32001) asked for a block they have not imported.
+	assert.equal(isTransientRpcError(new InvalidInputRpcError(rpcError(-32000, "header not found"))), true);
+	assert.equal(isTransientRpcError(new ResourceNotFoundRpcError(rpcError(-32001, "header not found"))), true);
+	assert.equal(isTransientRpcError(new InvalidInputRpcError(rpcError(-32000, "unknown block"))), true);
+	// A backend without a safe head: an error, or a null block.
+	assert.equal(isTransientRpcError(new InvalidInputRpcError(rpcError(-32000, "safe block not found"))), true);
+	assert.equal(isTransientRpcError(new BlockNotFoundError({})), true);
+});
+
+test("a pruned Pendulum node stays fatal", () => {
+	assert.equal(
+		isTransientRpcError(new Error("-32000: Client error: UnknownBlock: State already discarded for 0xabc")),
+		false,
+	);
 });
 
 test("a decode failure is never transient", () => {

@@ -66,14 +66,29 @@ contract DeployScriptTest is Test {
     }
 }
 
+// Answers getThreshold() like a Safe. Immutable, so an account delegating to
+// it answers the same.
+contract SafeStub {
+    uint256 internal immutable threshold;
+
+    constructor(uint256 threshold_) {
+        threshold = threshold_;
+    }
+
+    function getThreshold() external view returns (uint256) {
+        return threshold;
+    }
+}
+
 contract DeployGovernanceScriptTest is Test {
     uint256 internal constant SUPPLY = 150_000_000e18;
 
     DeployGovernance internal script;
     PEN internal pen;
     MigrationVault internal vault;
-    // The dedicated canceller Safe, separate from the vault's guardian.
-    address internal canceller = makeAddr("cancellerSafe");
+    // The dedicated canceller Safe, separate from the vault's guardian Safe.
+    address internal canceller = address(new SafeStub(2));
+    address internal guardian = address(new SafeStub(2));
 
     function setUp() public {
         script = new DeployGovernance();
@@ -81,12 +96,9 @@ contract DeployGovernanceScriptTest is Test {
         attestors[0] = makeAddr("a0");
         attestors[1] = makeAddr("a1");
         attestors[2] = makeAddr("a2");
-        vault = new MigrationVault(
-            address(this), makeAddr("guardian"), attestors, 2, 1e6, 1e24, 1e24, block.timestamp + 365 days
-        );
+        vault = new MigrationVault(address(this), guardian, attestors, 2, 1e6, 1e24, 1e24, block.timestamp + 365 days);
         pen = new PEN(address(vault), SUPPLY);
         vault.setToken(IERC20(address(pen)));
-        vm.etch(canceller, hex"00"); // stands in for the Safe's code
     }
 
     function _setValidEnv() internal {
@@ -133,11 +145,19 @@ contract DeployGovernanceScriptTest is Test {
             "TIMELOCK_CANCELLER", "", "TIMELOCK_CANCELLER is required: no veto during the timelock delay otherwise"
         );
         _expectRefused("TIMELOCK_CANCELLER", vm.toString(address(this)), "TIMELOCK_CANCELLER must not be the deployer");
+        string memory notPenOrVault = "TIMELOCK_CANCELLER must not be PEN or the vault";
+        _expectRefused("TIMELOCK_CANCELLER", vm.toString(address(pen)), notPenOrVault);
+        _expectRefused("TIMELOCK_CANCELLER", vm.toString(address(vault)), notPenOrVault);
         _expectRefused(
-            "TIMELOCK_CANCELLER",
-            vm.toString(makeAddr("codeless")),
-            "TIMELOCK_CANCELLER has no code on this chain (expected a Safe)"
+            "TIMELOCK_CANCELLER", vm.toString(guardian), "TIMELOCK_CANCELLER must be separate from the guardian"
         );
+        string memory notSafe = "TIMELOCK_CANCELLER is not a Safe on this chain (getThreshold() failed)";
+        _expectRefused("TIMELOCK_CANCELLER", vm.toString(makeAddr("codeless")), notSafe);
+        _expectRefused("TIMELOCK_CANCELLER", vm.toString(address(new PEN(makeAddr("other"), SUPPLY))), notSafe);
+        _expectRefused("TIMELOCK_CANCELLER", vm.toString(address(new SafeStub(0))), notSafe);
+        address delegated = makeAddr("delegatedEoa");
+        vm.etch(delegated, abi.encodePacked(hex"ef0100", canceller)); // EIP-7702 delegation to a Safe
+        _expectRefused("TIMELOCK_CANCELLER", vm.toString(delegated), notSafe);
 
         vm.chainId(8453);
         _expectRefused("TEST_DEPLOY", "true", "TEST_DEPLOY is refused on Base mainnet");
@@ -163,13 +183,17 @@ contract DeployGovernanceScriptTest is Test {
         assertEq(governor.proposalThreshold(), 1_000e18);
         assertEq(governor.quorumFloor(), 100_000e18);
 
-        // Testnet drills: a short delay, a codeless canceller and no floor.
+        // Testnet drills: a short delay, no floor and the guardian key, not a
+        // Safe, as canceller.
+        address guardianKey = makeAddr("guardianKey");
+        vault.setGuardian(guardianKey);
         _setValidEnv();
         vm.setEnv("TEST_DEPLOY", "true");
         vm.setEnv("TIMELOCK_DELAY", "180");
         vm.setEnv("QUORUM_FLOOR", "0");
-        vm.setEnv("TIMELOCK_CANCELLER", vm.toString(makeAddr("codeless")));
+        vm.setEnv("TIMELOCK_CANCELLER", vm.toString(guardianKey));
         (timelock,) = script.run();
         assertEq(timelock.getMinDelay(), 180);
+        assertTrue(timelock.hasRole(timelock.CANCELLER_ROLE(), guardianKey));
     }
 }

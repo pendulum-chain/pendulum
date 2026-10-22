@@ -47,11 +47,14 @@ import {MigrationVault} from "../src/MigrationVault.sol";
 ///                         could not be stopped during the delay by anyone.
 ///                         Once the delay has passed anyone may execute, so
 ///                         the script refuses to deploy without it. It must
-///                         have code on this chain and must not be the
-///                         deployer.
+///                         be a Safe on this chain (getThreshold() returns a
+///                         non-zero threshold, no EIP-7702 delegated EOA) and
+///                         must not be the deployer, PEN_TOKEN, VAULT_ADDRESS
+///                         or the vault's guardian.
 ///   TEST_DEPLOY           optional, testnet drills only: allows a shorter
-///                         TIMELOCK_DELAY, a codeless TIMELOCK_CANCELLER and
-///                         QUORUM_FLOOR=0. Refused on Base mainnet.
+///                         TIMELOCK_DELAY, a TIMELOCK_CANCELLER that is not a
+///                         Safe or is the guardian, and QUORUM_FLOOR=0.
+///                         Refused on Base mainnet.
 contract DeployGovernance is Script {
     uint256 internal constant BASE_MAINNET = 8453;
     uint256 internal constant MIN_TIMELOCK_DELAY = 2 days;
@@ -64,10 +67,8 @@ contract DeployGovernance is Script {
         require(!testDeploy || block.chainid != BASE_MAINNET, "TEST_DEPLOY is refused on Base mainnet");
 
         address token = vm.envAddress("PEN_TOKEN");
-        require(
-            address(MigrationVault(vm.envAddress("VAULT_ADDRESS")).token()) == token,
-            "PEN_TOKEN is not the migration vault's token"
-        );
+        MigrationVault vault = MigrationVault(vm.envAddress("VAULT_ADDRESS"));
+        require(address(vault.token()) == token, "PEN_TOKEN is not the migration vault's token");
         uint256 supply = IERC20(token).totalSupply();
 
         uint256 timelockDelay = vm.envUint("TIMELOCK_DELAY");
@@ -95,8 +96,10 @@ contract DeployGovernance is Script {
         address canceller = vm.envOr("TIMELOCK_CANCELLER", address(0));
         require(canceller != address(0), "TIMELOCK_CANCELLER is required: no veto during the timelock delay otherwise");
         require(canceller != msg.sender, "TIMELOCK_CANCELLER must not be the deployer");
+        require(canceller != token && canceller != address(vault), "TIMELOCK_CANCELLER must not be PEN or the vault");
+        require(canceller != vault.guardian() || testDeploy, "TIMELOCK_CANCELLER must be separate from the guardian");
         require(
-            canceller.code.length > 0 || testDeploy, "TIMELOCK_CANCELLER has no code on this chain (expected a Safe)"
+            _isSafe(canceller) || testDeploy, "TIMELOCK_CANCELLER is not a Safe on this chain (getThreshold() failed)"
         );
 
         // Broadcast as msg.sender (forge sets it to --sender or the single
@@ -132,5 +135,13 @@ contract DeployGovernance is Script {
 
         console.log("TimelockController: ", address(timelock));
         console.log("PENGovernor:        ", address(governor));
+    }
+
+    // Any contract has code; a Safe answers getThreshold() with its non-zero
+    // threshold. An EIP-7702 delegated EOA stays a single key whatever it
+    // delegates to.
+    function _isSafe(address account) internal view returns (bool) {
+        (bool ok, bytes memory threshold) = account.staticcall(abi.encodeWithSignature("getThreshold()"));
+        return ok && threshold.length == 32 && abi.decode(threshold, (uint256)) > 0 && bytes3(account.code) != 0xef0100;
     }
 }

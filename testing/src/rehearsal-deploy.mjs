@@ -91,8 +91,8 @@ export function governanceDrillParams(env) {
 }
 
 /** Runs the real DeployGovernance.s.sol — its first execution anywhere.
- *  TEST_DEPLOY admits the drill-scale delay, the zero floor and an EOA
- *  canceller, which the script refuses for a production deploy. */
+ *  TEST_DEPLOY admits the drill-scale delay, the zero floor and the guardian
+ *  EOA as canceller, which the script refuses for a production deploy. */
 export function deployGovernanceToSepolia({ env, pen, vault, canceller, log }) {
 	const params = governanceDrillParams(env);
 	const scriptEnv = {

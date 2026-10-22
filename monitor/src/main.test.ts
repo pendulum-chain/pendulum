@@ -23,6 +23,7 @@ import {
 	parseAbi,
 	toHex,
 } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
 (globalThis as { penMonitorUnderTest?: boolean }).penMonitorUnderTest = true;
 
@@ -34,6 +35,8 @@ const ATTESTORS = ["0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1", "0xa2a2a2a2a2a2
 const CF = 1_000_000n;
 const SUPPLY = 150_000_000n * 10n ** 18n;
 const PEN = 10n ** 12n;
+const GUARDIAN_KEY = `0x${"11".repeat(32)}` as const;
+const GUARDIAN = privateKeyToAccount(GUARDIAN_KEY).address;
 
 const abi = parseAbi([
 	"function totalReleased() view returns (uint256)",
@@ -42,6 +45,7 @@ const abi = parseAbi([
 	"function token() view returns (address)",
 	"function paused() view returns (bool)",
 	"function threshold() view returns (uint256)",
+	"function guardian() view returns (address)",
 	"function activeApprovals(bytes32 payload) view returns (uint256)",
 	"function totalSupply() view returns (uint256)",
 	"function balanceOf(address owner) view returns (uint256)",
@@ -67,11 +71,14 @@ function baseChain() {
 		safeAgeSeconds: 2,
 		paused: false,
 		threshold: 3n,
+		guardian: GUARDIAN as string,
 		totalReleased: 0n,
 		totalSwept: 0n,
 		vaultBalance: SUPPLY,
 		approvals: new Map<string, bigint>(),
 		readyAt: new Map<string, bigint>(),
+		/** Ether balances by lowercased address. */
+		balances: new Map<string, bigint>([[GUARDIAN.toLowerCase(), 10n ** 18n]]),
 		logs: [] as Log[],
 	};
 }
@@ -84,6 +91,8 @@ function answer(base: Base, method: string, params: any[]): unknown {
 			return toHex(base.chainId);
 		case "eth_getCode":
 			return "0x";
+		case "eth_getBalance":
+			return toHex(base.balances.get(String(params[0]).toLowerCase()) ?? 0n);
 		case "eth_getBlockByNumber": {
 			const number = String(params[0]).startsWith("0x") ? BigInt(params[0]) : base.safe;
 			const timestamp = Math.floor(Date.now() / 1000) - base.safeAgeSeconds;
@@ -99,6 +108,7 @@ function answer(base: Base, method: string, params: any[]): unknown {
 				token: TOKEN,
 				paused: base.paused,
 				threshold: base.threshold,
+				guardian: base.guardian,
 				activeApprovals: base.approvals.get(key) ?? 0n,
 				totalSupply: SUPPLY,
 				balanceOf: base.vaultBalance,
@@ -316,16 +326,24 @@ async function body(request: IncomingMessage): Promise<string> {
 let instances = 0;
 let monitorEnv: string[] = [];
 
-/** A started monitor against fresh stand-ins. `webhook` answers each page
- *  with an HTTP status; `pages` lists them in arrival order from after
- *  startup, `startup` the ones before. */
+/** A started monitor against fresh stand-ins, which `prepare` can change
+ *  before startup. `webhook` answers each page with an HTTP status; `pages`
+ *  lists them in arrival order from after startup, `startup` the ones before. */
 async function setup(
 	t: { after(fn: () => void): void },
-	env: Record<string, string> = {},
-	webhook: (page: Page) => number | Promise<number> = () => 200,
+	{
+		env = {},
+		webhook = () => 200,
+		prepare = () => {},
+	}: {
+		env?: Record<string, string>;
+		webhook?: (page: Page) => number | Promise<number>;
+		prepare?: (base: Base, pendulum: Pendulum) => void;
+	} = {},
 ) {
 	const base = baseChain();
 	const { chain: pendulum, api } = pendulumChain();
+	prepare(base, pendulum);
 	const pages: Page[] = [];
 	const server = createServer(async (request, response) => {
 		const text = await body(request);
@@ -413,6 +431,34 @@ test("a Pendulum failure pages on its own and the vault balance check still runs
 		"VAULT BALANCE DEFICIT",
 		"pendulum governance watch failed",
 	]);
+});
+
+test("auto-pause readiness is checked at startup and each problem pages", async (t) => {
+	const { startup } = await setup(t, {
+		env: { GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY },
+		prepare: (base) => {
+			base.chainId = 84532;
+			base.guardian = "0x5555555555555555555555555555555555555555";
+			base.balances.clear();
+		},
+	});
+	const detail = startup.find((page) => page.subject === "AUTO-PAUSE NOT READY")?.detail ?? "";
+	assert.match(detail, /serves chain 84532, not BASE_CHAIN_ID 8453/);
+	assert.match(detail, new RegExp(`${GUARDIAN} is not the vault guardian 0x5{40}`));
+	assert.match(detail, /holds 0 wei/);
+});
+
+test("auto-pause readiness is re-checked every poll", async (t) => {
+	const { base, api, monitor, startup, subjects } = await setup(t, { env: { GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY } });
+	assert.ok(!startup.some((page) => page.subject.startsWith("AUTO-PAUSE")), JSON.stringify(startup));
+	base.guardian = "0x5555555555555555555555555555555555555555";
+	await monitor.poll(api);
+	assert.deepEqual(subjects(), ["AUTO-PAUSE NOT READY"]);
+});
+
+test("a monitor without a guardian key says so at startup", async (t) => {
+	const { startup } = await setup(t);
+	assert.ok(startup.some((page) => page.subject === "AUTO-PAUSE DISABLED"), JSON.stringify(startup));
 });
 
 test("a Base view that stops advancing pages", async (t) => {
@@ -526,10 +572,13 @@ function schedule(base: Base, id: Hex, blockNumber = 1_005n): void {
 
 test("once-only pages the webhook rejects are sent again on the next poll", async (t) => {
 	const failedOnce = new Set<string>();
-	const { base, pendulum, api, monitor, pages } = await setup(t, { TIMELOCK_ADDRESS: TIMELOCK }, ({ subject }) => {
-		if (failedOnce.has(subject)) return 200;
-		failedOnce.add(subject);
-		return 500;
+	const { base, pendulum, api, monitor, pages } = await setup(t, {
+		env: { TIMELOCK_ADDRESS: TIMELOCK },
+		webhook: ({ subject }) => {
+			if (failedOnce.has(subject)) return 200;
+			failedOnce.add(subject);
+			return 500;
+		},
 	});
 	schedule(base, toHex(1, { size: 32 }));
 	pendulum.publicProps.push([7, inline("remark")]);

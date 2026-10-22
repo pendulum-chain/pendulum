@@ -52,6 +52,7 @@ const vaultAbi = [
 	{ type: "function", name: "token", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
 	{ type: "function", name: "paused", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
 	{ type: "function", name: "threshold", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+	{ type: "function", name: "guardian", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
 	{
 		type: "function",
 		name: "activeApprovals",
@@ -209,6 +210,8 @@ const config = {
 	 *  pages that its Base view stopped advancing. `safe` normally trails by
 	 *  about a minute, `finalized` by about 20 minutes. */
 	baseStaleAlertMs: envNumber("BASE_STALE_ALERT_SECONDS", baseFinalityTag === "finalized" ? 1800 : 600) * 1000,
+	/** Guardian balance (wei) below which the auto-pause counts as not ready. */
+	guardianMinBalanceWei: BigInt(process.env.GUARDIAN_MIN_BALANCE_WEI ?? "1000000000000000"),
 };
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -328,6 +331,7 @@ let multicallUnavailable = false;
 let lastSourceStallAlertMs = 0;
 let lastSourceFailureAlertMs = 0;
 let lastBaseStallAlertMs = 0;
+let lastReadinessAlertMs = 0;
 let lastIssuanceAlertMs = 0;
 /** The governance-queue scan runs ahead of everything else in a poll and
  *  throws on failure, so the persisted Base cursor never passes a range it has
@@ -460,6 +464,42 @@ async function pauseVault(): Promise<boolean> {
 		await alert("AUTO-PAUSE FAILED", `${pauseError}; pause manually NOW`);
 		return false;
 	}
+}
+
+/** What would make an auto-pause fail now: an RPC on another chain, or a key
+ *  that does not parse, is not the vault's guardian or cannot pay for the
+ *  pause. Pages, throttled, so it surfaces before a violation needs it. */
+async function checkAutoPauseReadiness(): Promise<string[]> {
+	const problems: string[] = [];
+	const chainId = await publicClient.getChainId();
+	if (chainId !== config.baseChainId) {
+		problems.push(`the Base RPC serves chain ${chainId}, not BASE_CHAIN_ID ${config.baseChainId}`);
+	}
+	if (config.guardianPrivateKey) {
+		let guardian: `0x${string}` | undefined;
+		try {
+			guardian = privateKeyToAccount(config.guardianPrivateKey).address;
+		} catch {
+			problems.push("GUARDIAN_PRIVATE_KEY is not a valid private key");
+		}
+		if (guardian) {
+			const [vaultGuardian, balance] = await Promise.all([
+				publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "guardian" }),
+				publicClient.getBalance({ address: guardian }),
+			]);
+			if (vaultGuardian.toLowerCase() !== guardian.toLowerCase()) {
+				problems.push(`the key's address ${guardian} is not the vault guardian ${vaultGuardian}`);
+			}
+			if (balance < config.guardianMinBalanceWei) {
+				problems.push(`guardian ${guardian} holds ${balance} wei, less than GUARDIAN_MIN_BALANCE_WEI ${config.guardianMinBalanceWei}`);
+			}
+		}
+	}
+	if (problems.length && Date.now() - lastReadinessAlertMs > config.graceSeconds * 1000) {
+		lastReadinessAlertMs = Date.now();
+		await alert("AUTO-PAUSE NOT READY", `${problems.join("; ")} — fix it before a violation needs the pause`);
+	}
+	return problems;
 }
 
 async function securityViolation(subject: string, detail: string): Promise<boolean> {
@@ -1089,6 +1129,7 @@ async function check(api: ApiPromise): Promise<void> {
 				`are not being checked — restore the Base node, or check whether Base's ${config.baseFinalityTag} head stalled`,
 		);
 	}
+	await checkAutoPauseReadiness();
 	await watchTimelock(baseBlock);
 
 	// A Pendulum failure must not switch off the Base-side checks: the vault
@@ -1212,7 +1253,7 @@ async function check(api: ApiPromise): Promise<void> {
 }
 
 /** Startup once the Pendulum API is connected: durable state, the multicall
- *  probe and the state identity check. */
+ *  probe, the state identity check and the auto-pause readiness. */
 export async function start(api: ApiPromise): Promise<void> {
 	state = hydrateState();
 	const multicallCode = await publicClient.getBytecode({ address: MULTICALL3_ADDRESS });
@@ -1233,10 +1274,18 @@ export async function start(api: ApiPromise): Promise<void> {
 	} else {
 		state.pendulumGenesisHash = pendulumGenesisHash;
 	}
+	if (!config.guardianPrivateKey) {
+		await alert(
+			"AUTO-PAUSE DISABLED",
+			"no GUARDIAN_PRIVATE_KEY configured: violations page, but nothing pauses the vault automatically",
+		);
+	}
+	const readiness = await checkAutoPauseReadiness();
 	log(
 		`monitor started; Pendulum after ${state.lastPendulumBlock}, Base from ${state.baseFromBlock}, ` +
 			`polling every ${config.pollIntervalMs}ms; governance queue ` +
-			(config.timelockAddress ? `watched at ${config.timelockAddress}` : "not watched (TIMELOCK_ADDRESS unset)"),
+			(config.timelockAddress ? `watched at ${config.timelockAddress}` : "not watched (TIMELOCK_ADDRESS unset)") +
+			`; auto-pause ${!config.guardianPrivateKey ? "disabled" : readiness.length ? "NOT READY" : "ready"}`,
 	);
 }
 

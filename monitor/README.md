@@ -53,9 +53,6 @@ once no head was anchored for `RELAY_ANCHOR_GRACE_SECONDS`, whatever the reason
 (relay RPCs down, the source behind the relay chain, a relay head that does not
 advance).
 
-These checks bind block hashes only: the events and storage the source returns
-for a verified block are not proof-checked against the block's state root.
-
 ## Configuration (environment)
 
 | Variable | Meaning |

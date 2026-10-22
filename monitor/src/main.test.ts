@@ -83,12 +83,15 @@ function baseChain() {
 		/** Ether balances by lowercased address. */
 		balances: new Map<string, bigint>([[GUARDIAN.toLowerCase(), 10n ** 18n]]),
 		logs: [] as Log[],
+		/** Requests to answer with an RPC error. */
+		failing: undefined as ((method: string, params: unknown[]) => boolean) | undefined,
 	};
 }
 type Base = ReturnType<typeof baseChain>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function answer(base: Base, method: string, params: any[]): unknown {
+	if (base.failing?.(method, params)) throw new Error("rate limited");
 	switch (method) {
 		case "eth_chainId":
 			return toHex(base.chainId);
@@ -457,6 +460,16 @@ test("auto-pause readiness is re-checked every poll", async (t) => {
 	base.guardian = "0x5555555555555555555555555555555555555555";
 	await monitor.poll(api);
 	assert.deepEqual(subjects(), ["AUTO-PAUSE NOT READY"]);
+});
+
+test("a failed readiness read pages and the vault balance check still runs", async (t) => {
+	const { base, api, monitor, pages, subjects } = await setup(t, { env: { GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY } });
+	base.failing = (method) => method === "eth_getBalance";
+	base.vaultBalance -= 1n;
+	base.paused = true; // so the auto-pause only confirms
+	await monitor.poll(api);
+	assert.deepEqual(sorted(subjects()), ["AUTO-PAUSE NOT READY", "VAULT BALANCE DEFICIT", "vault pause confirmed"]);
+	assert.match(pages.find((page) => page.subject === "AUTO-PAUSE NOT READY")?.detail ?? "", /readiness reads failed.*rate limited/s);
 });
 
 test("vault admin events page once each from the Base scan", async (t) => {

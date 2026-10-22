@@ -499,32 +499,37 @@ async function pauseVault(): Promise<boolean> {
 
 /** What would make an auto-pause fail now: an RPC on another chain, or a key
  *  that does not parse, is not the vault's guardian or cannot pay for the
- *  pause. Pages, throttled, so it surfaces before a violation needs it. */
+ *  pause. Pages, throttled, so it surfaces before a violation needs it. A read
+ *  that fails is a problem too: it must not stop the poll's other checks. */
 async function checkAutoPauseReadiness(): Promise<string[]> {
 	const problems: string[] = [];
-	const chainId = await publicClient.getChainId();
-	if (chainId !== config.baseChainId) {
-		problems.push(`the Base RPC serves chain ${chainId}, not BASE_CHAIN_ID ${config.baseChainId}`);
-	}
-	if (config.guardianPrivateKey) {
-		let guardian: `0x${string}` | undefined;
-		try {
-			guardian = privateKeyToAccount(config.guardianPrivateKey).address;
-		} catch {
-			problems.push("GUARDIAN_PRIVATE_KEY is not a valid private key");
+	try {
+		const chainId = await publicClient.getChainId();
+		if (chainId !== config.baseChainId) {
+			problems.push(`the Base RPC serves chain ${chainId}, not BASE_CHAIN_ID ${config.baseChainId}`);
 		}
-		if (guardian) {
-			const [vaultGuardian, balance] = await Promise.all([
-				publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "guardian" }),
-				publicClient.getBalance({ address: guardian }),
-			]);
-			if (vaultGuardian.toLowerCase() !== guardian.toLowerCase()) {
-				problems.push(`the key's address ${guardian} is not the vault guardian ${vaultGuardian}`);
+		if (config.guardianPrivateKey) {
+			let guardian: `0x${string}` | undefined;
+			try {
+				guardian = privateKeyToAccount(config.guardianPrivateKey).address;
+			} catch {
+				problems.push("GUARDIAN_PRIVATE_KEY is not a valid private key");
 			}
-			if (balance < config.guardianMinBalanceWei) {
-				problems.push(`guardian ${guardian} holds ${balance} wei, less than GUARDIAN_MIN_BALANCE_WEI ${config.guardianMinBalanceWei}`);
+			if (guardian) {
+				const [vaultGuardian, balance] = await Promise.all([
+					publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "guardian" }),
+					publicClient.getBalance({ address: guardian }),
+				]);
+				if (vaultGuardian.toLowerCase() !== guardian.toLowerCase()) {
+					problems.push(`the key's address ${guardian} is not the vault guardian ${vaultGuardian}`);
+				}
+				if (balance < config.guardianMinBalanceWei) {
+					problems.push(`guardian ${guardian} holds ${balance} wei, less than GUARDIAN_MIN_BALANCE_WEI ${config.guardianMinBalanceWei}`);
+				}
 			}
 		}
+	} catch (readError) {
+		problems.push(`the readiness reads failed: ${readError}`);
 	}
 	if (problems.length && Date.now() - lastReadinessAlertMs > config.graceSeconds * 1000) {
 		lastReadinessAlertMs = Date.now();

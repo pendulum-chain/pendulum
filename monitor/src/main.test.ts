@@ -211,7 +211,7 @@ const codec = (value: number | bigint) => ({
 	toNumber: () => Number(value),
 	toBigInt: () => BigInt(value),
 });
-const hash = (hex: string) => ({ toHex: () => hex, isEmpty: /^0x0*$/.test(hex) });
+const hash = (hex: string) => ({ toHex: () => hex, toString: () => hex, isEmpty: /^0x0*$/.test(hex) });
 const inline = (name: string) => ({ isInline: true, asInline: encodeCall(name), isLookup: false, isLegacy: false, toString: () => `inline ${name}` });
 const lookup = (hex: string, len: number) => ({
 	isInline: false,
@@ -238,8 +238,8 @@ interface PendulumEvent {
 /** The Pendulum side: finalized blocks with their events, the migration
  *  pallet's totals and the governance queues. A block hash encodes the block
  *  number, and whether it is on the fork the node serves from `forkFrom` on. */
-function pendulumChain() {
-	const chain = {
+function pendulumState() {
+	return {
 		/** Where set, the node serves another chain from this block on. */
 		forkFrom: undefined as number | undefined,
 		/** Blocks whose header the node alters, so it no longer hashes to its hash. */
@@ -275,6 +275,11 @@ function pendulumChain() {
 		motionSizes: new Map<string, number>(),
 		motionReads: new Set<string>(),
 	};
+}
+type Pendulum = ReturnType<typeof pendulumState>;
+
+/** A node serving `chain`, as much of the polkadot.js API as the monitor uses. */
+function pendulumChain(chain: Pendulum = pendulumState()) {
 	const collective = (motions: Map<string, string>) => ({
 		proposals: async () => [...motions.keys()].map(hash),
 		voting: async (motion: { toHex(): string }) => ({
@@ -400,7 +405,6 @@ function pendulumHash(chain: { forkFrom?: number }, block: number): string {
 	return toHex(fork + BigInt(block), { size: 32 });
 }
 const blockOf = (blockHash: string) => Number(BigInt(blockHash) & 0xffff_ffff_ffff_ffffn);
-type Pendulum = ReturnType<typeof pendulumChain>["chain"];
 
 const MIGRATOR = `0x${"ab".repeat(32)}`;
 const TREASURY_ACCOUNT = `0x${Buffer.from("modlpy/trsry").toString("hex")}${"00".repeat(20)}`;
@@ -690,18 +694,29 @@ test("a source header that does not hash to its block hash pages critical", asyn
 
 const SECOND_NODE = "ws://second-node.test:9944?apikey=secret";
 
-test("a second node that disagrees on the newest block pages critical and nothing is ingested", async (t) => {
-	const second = pendulumChain();
-	second.chain.finalized = 200;
-	const { pendulum, api, monitor, pages, persisted } = await setup(t, {
+/** A monitor whose second Pendulum node serves the source's chain, except for
+ *  the values in `own`, which the test may change later. */
+async function crossCheckSetup(t: { after(fn: () => void): void }, own: Partial<Pendulum> = {}) {
+	let source: Pendulum | undefined;
+	const chain = new Proxy({} as Pendulum, {
+		get: (_target, key) => (key in own ? own[key as keyof Pendulum] : source![key as keyof Pendulum]),
+	});
+	const second = pendulumChain(chain);
+	const monitor = await setup(t, {
 		env: { PENDULUM_WS_CROSSCHECK: SECOND_NODE },
+		prepare: (_base, pendulum) => (source = pendulum),
 		connect: async (url) => (url === SECOND_NODE ? second.api : assert.fail(url)),
 	});
+	return { ...monitor, own };
+}
+
+test("a second node that disagrees on the newest block pages critical and nothing is ingested", async (t) => {
+	const { pendulum, api, monitor, pages, persisted, own } = await crossCheckSetup(t, { finalized: 200 });
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api);
 	assert.equal(pages.length, 0, JSON.stringify(pages));
 	assert.equal(persisted().lastPendulumBlock, 101);
-	second.chain.forkFrom = 102;
+	own.forkFrom = 102;
 	burn(pendulum, 1n, 100n * PEN, 102);
 	await monitor.poll(api);
 	assert.match(
@@ -747,11 +762,7 @@ test("a node connection that fails with an event says why", async (t) => {
 });
 
 test("a second node that has not reached the newest block only warns", async (t) => {
-	const second = pendulumChain(); // finalized at 100
-	const { pendulum, api, monitor, pages, persisted } = await setup(t, {
-		env: { PENDULUM_WS_CROSSCHECK: SECOND_NODE },
-		connect: async () => second.api,
-	});
+	const { pendulum, api, monitor, pages, persisted } = await crossCheckSetup(t, { finalized: 100 });
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api);
 	assert.deepEqual(pages.map((page) => page.subject), ["PENDULUM CROSS-CHECK UNAVAILABLE"]);
@@ -760,16 +771,51 @@ test("a second node that has not reached the newest block only warns", async (t)
 });
 
 test("a second node whose best chain holds another newest block, not yet finalized, only warns", async (t) => {
-	const second = pendulumChain(); // finalized at 100
-	second.chain.best = 101;
-	second.chain.forkFrom = 101;
-	const { pendulum, api, monitor, pages, persisted } = await setup(t, {
-		env: { PENDULUM_WS_CROSSCHECK: SECOND_NODE },
-		connect: async () => second.api,
-	});
+	const { pendulum, api, monitor, pages, persisted } = await crossCheckSetup(t, { finalized: 100, best: 101, forkFrom: 101 });
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api);
 	assert.deepEqual(pages.map((page) => page.subject), ["PENDULUM CROSS-CHECK UNAVAILABLE"]);
+	assert.equal(persisted().lastPendulumBlock, 101);
+});
+
+test("a second node with other migration totals at the finalized head pages critical and nothing is ingested", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await crossCheckSetup(t, { nextNonce: 1n, totalMigrated: 7n * PEN });
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		/at Pendulum block 101 the second node has nextNonce 1 and totalMigrated 7000000000000, the source 1 and 100000000000000;/,
+	);
+	assert.equal(persisted().lastPendulumBlock, 100);
+});
+
+test("a second node with other migration events in a block pages critical and nothing is ingested", async (t) => {
+	const { pendulum, api, monitor, pages, persisted, own } = await crossCheckSetup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	const events = new Map(pendulum.events);
+	own.events = events;
+	burn(pendulum, 1n, 100n * PEN, 102);
+	events.set(102, [{ ...pendulum.events.get(102)![0], data: [codec(1n), hash(MIGRATOR), hash(TOKEN), codec(100n * PEN)] }]);
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		new RegExp(`in Pendulum block 102 the second node reports the migration events MigrationInitiated\\(1, ${MIGRATOR}, ${TOKEN}, `, "i"),
+	);
+	assert.equal(persisted().lastPendulumBlock, 100);
+	assert.deepEqual(persisted().migrations, []);
+});
+
+test("a second node that cannot read a block's events only warns", async (t) => {
+	const failing = {
+		get: () => {
+			throw new Error("state discarded");
+		},
+	} as unknown as Pendulum["events"];
+	const { pendulum, api, monitor, pages, persisted } = await crossCheckSetup(t, { events: failing });
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.deepEqual(pages.map((page) => page.subject), ["PENDULUM CROSS-CHECK UNAVAILABLE"]);
+	assert.match(pages[0].detail, /cannot be read: .*state discarded/);
 	assert.equal(persisted().lastPendulumBlock, 101);
 });
 

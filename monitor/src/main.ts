@@ -719,26 +719,80 @@ async function onNode<T>(url: string, read: (node: ApiPromise) => Promise<T>): P
 	}
 }
 
+interface MigrationTotals {
+	nextNonce: bigint;
+	totalMigrated: bigint;
+}
+
+async function migrationTotals(apiAt: ApiAt): Promise<MigrationTotals> {
+	const [nextNonce, totalMigrated] = await Promise.all([
+		apiAt.query.tokenMigration.nextNonce(),
+		apiAt.query.tokenMigration.totalMigrated(),
+	]);
+	return {
+		nextNonce: BigInt(nextNonce.toString().replaceAll(",", "")),
+		totalMigrated: BigInt(totalMigrated.toString().replaceAll(",", "")),
+	};
+}
+
 /** The second node must have finalized the source's finalized head, with the
- *  same hash. One that cannot answer, or has not finalized that block yet,
- *  only warns, throttled: it is a check, not a source. */
-async function crossCheckSource(finalized: BlockRef): Promise<void> {
+ *  same hash and the same migration totals there. One that cannot answer, or
+ *  has not finalized that block yet, only warns, throttled: it is a check,
+ *  not a source. */
+async function crossCheckSource(finalized: BlockRef, totals: MigrationTotals): Promise<void> {
 	const url = config.pendulumWsCrossCheck;
 	if (!url) return;
-	let other: string | undefined;
+	let other: { hash: string; totals?: MigrationTotals } | undefined;
 	try {
 		other = await onNode(url, async (node) => {
 			// Above its finalized head, a node's block at a height may still lose.
 			const head = await node.rpc.chain.getHeader(await node.rpc.chain.getFinalizedHead());
 			if (head.number.toNumber() < finalized.number) return undefined;
-			return (await node.rpc.chain.getBlockHash(finalized.number)).toHex();
+			const hash = (await node.rpc.chain.getBlockHash(finalized.number)).toHex();
+			return { hash, totals: hash === finalized.hash ? await migrationTotals(await node.at(hash)) : undefined };
 		});
 	} catch (crossCheckError) {
 		return crossCheckUnavailable(`cannot be read: ${crossCheckError}`);
 	}
 	if (other === undefined) return crossCheckUnavailable(`has not finalized block ${finalized.number} yet`);
-	if (other !== finalized.hash) {
-		throw new SourceIntegrityError(`the second Pendulum node has ${other} at block ${finalized.number}, the source ${finalized.hash}`);
+	if (other.hash !== finalized.hash) {
+		throw new SourceIntegrityError(`the second Pendulum node has ${other.hash} at block ${finalized.number}, the source ${finalized.hash}`);
+	}
+	if (other.totals?.nextNonce !== totals.nextNonce || other.totals.totalMigrated !== totals.totalMigrated) {
+		throw new SourceIntegrityError(
+			`at Pendulum block ${finalized.number} the second node has nextNonce ${other.totals?.nextNonce} and ` +
+				`totalMigrated ${other.totals?.totalMigrated}, the source ${totals.nextNonce} and ${totals.totalMigrated}`,
+		);
+	}
+}
+
+type EventRecords = Array<{ event: { section: string; method: string; data: unknown[] } }>;
+
+/** The migration pallet's events in a block, as one text; empty without any. */
+function migrationEventText(records: EventRecords): string {
+	return records
+		.filter(({ event }) => event.section === "tokenMigration")
+		.map(({ event }) => `${event.method}(${event.data.join(", ")})`)
+		.join("; ");
+}
+
+/** The second node must report the same migration events in the block at
+ *  `blockHash`. One that cannot answer only warns, throttled. */
+async function crossCheckEvents(block: number, blockHash: string, events: string): Promise<void> {
+	const url = config.pendulumWsCrossCheck;
+	if (!url) return;
+	let other: string;
+	try {
+		other = await onNode(url, async (node) =>
+			migrationEventText((await (await node.at(blockHash)).query.system.events()) as unknown as EventRecords)
+		);
+	} catch (crossCheckError) {
+		return crossCheckUnavailable(`cannot be read: ${crossCheckError}`);
+	}
+	if (other !== events) {
+		throw new SourceIntegrityError(
+			`in Pendulum block ${block} the second node reports the migration events ${other || "none"}, the source ${events}`,
+		);
 	}
 }
 
@@ -958,9 +1012,9 @@ async function ingestPendulumEvents(
 		if (!blockHash) throw new Error(`no verified hash for Pendulum block ${block}`);
 		const apiAt = await api.at(blockHash);
 		const firstSeenMs = Number((await apiAt.query.timestamp.now()).toString().replaceAll(",", ""));
-		const records = (await apiAt.query.system.events()) as unknown as {
-			event: { section: string; method: string; data: unknown[] };
-		}[];
+		const records = (await apiAt.query.system.events()) as unknown as EventRecords;
+		const migrationEvents = migrationEventText(records);
+		if (migrationEvents) await crossCheckEvents(block, blockHash, migrationEvents);
 		for (const [index, record] of records.entries()) {
 			const { section, method, data } = record.event;
 			if (section !== "tokenMigration") continue;
@@ -1580,16 +1634,11 @@ async function readSource(api: ApiPromise, draft: RuntimeState): Promise<SourceV
 		);
 	}
 	const finalized = { number: finalizedBlock, hash: finalizedHash.toHex() };
-	await crossCheckSource(finalized);
+	const [totals, totalIssuanceValue] = await Promise.all([migrationTotals(apiAt), apiAt.query.balances.totalIssuance()]);
+	const { nextNonce: chainNextNonce, totalMigrated } = totals;
+	await crossCheckSource(finalized, totals);
 	const hashes = await sourceHashes(api, draft, finalized);
 	await ingestPendulumEvents(api, draft, finalizedBlock, hashes);
-	const [totalMigratedValue, chainNextNonceValue, totalIssuanceValue] = await Promise.all([
-		apiAt.query.tokenMigration.totalMigrated(),
-		apiAt.query.tokenMigration.nextNonce(),
-		apiAt.query.balances.totalIssuance(),
-	]);
-	const totalMigrated = BigInt(totalMigratedValue.toString().replaceAll(",", ""));
-	const chainNextNonce = BigInt(chainNextNonceValue.toString().replaceAll(",", ""));
 	if (chainNextNonce !== draft.nextExpectedNonce) {
 		throw new Error(`finalized nextNonce ${chainNextNonce} != monitor event cursor ${draft.nextExpectedNonce}`);
 	}

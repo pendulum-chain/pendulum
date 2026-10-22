@@ -217,6 +217,8 @@ function pendulumChain() {
 		/** Age of the finalized head; earlier blocks are 12 s apart. */
 		headAgeMs: 0,
 		failure: undefined as Error | undefined,
+		/** Holds every finalized-head read until it settles, as a slow node would. */
+		gate: undefined as Promise<void> | undefined,
 		events: new Map<number, PendulumEvent[]>(),
 		totalMigrated: 0n,
 		nextNonce: 0n,
@@ -302,6 +304,7 @@ function pendulumChain() {
 		rpc: {
 			chain: {
 				getFinalizedHead: async () => {
+					await chain.gate;
 					if (chain.failure) throw chain.failure;
 					return chain.finalized;
 				},
@@ -459,6 +462,41 @@ test("a Pendulum failure pages on its own and the vault balance check still runs
 		"VAULT BALANCE DEFICIT",
 		"pendulum governance watch failed",
 	]);
+});
+
+test("a failing Base log read does not skip the vault balance check", async (t) => {
+	const { base, pendulum, api, monitor, subjects } = await setup(t, { env: { GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY } });
+	pendulum.failure = new Error("node unreachable");
+	const released = toEventSelector("Released(uint64,address,uint256,uint256)"); // only reconciliation asks for it
+	base.failing = (method, params) => method === "eth_getLogs" && JSON.stringify(params).includes(released);
+	base.vaultBalance -= 1n;
+	base.paused = true; // so the auto-pause only confirms
+	await monitor.poll(api);
+	assert.ok(subjects().includes("VAULT BALANCE DEFICIT"), JSON.stringify(subjects()));
+	assert.ok(subjects().includes("vault pause confirmed"), JSON.stringify(subjects()));
+});
+
+/** Waits until `predicate` holds, failing after `ms`. */
+async function until(predicate: () => boolean, label: string, ms = 2_000): Promise<void> {
+	const deadline = Date.now() + ms;
+	while (!predicate()) {
+		if (Date.now() > deadline) assert.fail(`timed out waiting for ${label}`);
+		await new Promise((resolve) => setTimeout(resolve, 10));
+	}
+}
+
+test("a slow Pendulum source does not delay the vault balance check", async (t) => {
+	const { base, pendulum, api, monitor, subjects } = await setup(t);
+	let respond = () => {};
+	pendulum.gate = new Promise((resolve) => (respond = resolve));
+	base.vaultBalance -= 1n;
+	const polling = monitor.poll(api);
+	try {
+		await until(() => subjects().includes("VAULT BALANCE DEFICIT"), "the deficit page while Pendulum is still answering");
+	} finally {
+		respond();
+		await polling;
+	}
 });
 
 test("while Pendulum cannot be read, a Base event with an unknown nonce pauses after the grace", async (t) => {

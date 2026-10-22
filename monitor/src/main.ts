@@ -1205,6 +1205,34 @@ async function check(api: ApiPromise): Promise<void> {
 		);
 	}
 	await checkAutoPauseReadiness();
+
+	// The vault balance check (M2b) reads Base only, so it runs before anything
+	// that waits on Pendulum or scans Base logs: a slow or failing source, or a
+	// failing log scan, can neither delay nor skip it. Its pause does not end
+	// the poll.
+	const [totalReleased, totalSwept, conversionFactor, tokenAddress] = await Promise.all([
+		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalReleased", blockNumber: baseBlock }),
+		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalSwept", blockNumber: baseBlock }),
+		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "conversionFactor", blockNumber: baseBlock }),
+		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "token", blockNumber: baseBlock }),
+	]);
+	const [totalSupply, vaultBalance] = await Promise.all([
+		publicClient.readContract({ address: tokenAddress, abi: erc20Abi, functionName: "totalSupply", blockNumber: baseBlock }),
+		publicClient.readContract({
+			address: tokenAddress,
+			abi: erc20Abi,
+			functionName: "balanceOf",
+			args: [config.vaultAddress],
+			blockNumber: baseBlock,
+		}),
+	]);
+	if (vaultConservationDeficit(vaultBalance, totalReleased, totalSwept, totalSupply)) {
+		await securityViolation(
+			"VAULT BALANCE DEFICIT",
+			`balance ${vaultBalance} + released ${totalReleased} + swept ${totalSwept} < supply ${totalSupply}`,
+		);
+	}
+
 	// The admin scan only pages and keeps its own cursor, so nothing else waits
 	// for it, and its failure skips no other check.
 	try {
@@ -1242,37 +1270,9 @@ async function check(api: ApiPromise): Promise<void> {
 		}
 	}
 
-	const [totalReleased, totalSwept, conversionFactor, tokenAddress] = await Promise.all([
-		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalReleased", blockNumber: baseBlock }),
-		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalSwept", blockNumber: baseBlock }),
-		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "conversionFactor", blockNumber: baseBlock }),
-		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "token", blockNumber: baseBlock }),
-	]);
-
 	const reconciliation = await reconcileBaseEvents(draft, baseBlock, conversionFactor, source?.timestampMs ?? 0);
 	if (reconciliation.violation) {
 		if (await securityViolation("MIGRATION TUPLE VIOLATION", reconciliation.violation)) {
-			state = draft;
-			persistState(state);
-		}
-		return;
-	}
-
-	const [totalSupply, vaultBalance] = await Promise.all([
-		publicClient.readContract({ address: tokenAddress, abi: erc20Abi, functionName: "totalSupply", blockNumber: baseBlock }),
-		publicClient.readContract({
-			address: tokenAddress,
-			abi: erc20Abi,
-			functionName: "balanceOf",
-			args: [config.vaultAddress],
-			blockNumber: baseBlock,
-		}),
-	]);
-	if (vaultConservationDeficit(vaultBalance, totalReleased, totalSwept, totalSupply)) {
-		if (await securityViolation(
-			"VAULT BALANCE DEFICIT",
-			`balance ${vaultBalance} + released ${totalReleased} + swept ${totalSwept} < supply ${totalSupply}`,
-		)) {
 			state = draft;
 			persistState(state);
 		}

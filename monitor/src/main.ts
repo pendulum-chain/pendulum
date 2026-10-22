@@ -535,10 +535,6 @@ function pauseVault(): Promise<boolean> {
 }
 
 async function pauseOnce(): Promise<boolean> {
-	if (!config.guardianPrivateKey) {
-		await alert("AUTO-PAUSE UNAVAILABLE", "no GUARDIAN_PRIVATE_KEY configured; pause manually NOW", "critical");
-		return false;
-	}
 	try {
 		const confirmed = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
 		if (confirmed.number === null) throw new Error(`${config.baseFinalityTag} block has no number`);
@@ -559,6 +555,10 @@ async function pauseOnce(): Promise<boolean> {
 		});
 		if (pausedLatest) {
 			await alert("AUTO-PAUSE PENDING FINALITY", `pause is mined but not yet ${config.baseFinalityTag}`);
+			return false;
+		}
+		if (!config.guardianPrivateKey) {
+			await alert("AUTO-PAUSE UNAVAILABLE", "no GUARDIAN_PRIVATE_KEY configured; pause manually NOW", "critical");
 			return false;
 		}
 

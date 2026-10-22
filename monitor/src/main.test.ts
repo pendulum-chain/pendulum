@@ -1878,6 +1878,23 @@ test("while the pause after a treasury violation is not confirmed, the monitor h
 	assert.ok(!subjects().includes("PENDULUM SOURCE UNREADABLE"), JSON.stringify(subjects())); // the source reads fine
 });
 
+test("without a guardian key, a vault paused by hand after a treasury violation lets the monitor move on", async (t) => {
+	const { base, pendulum, api, monitor, pages, persisted } = await setup(t, {
+		env: { EXPECTED_TREASURY_DESTINATION: TREASURY_DESTINATION },
+	});
+	burn(pendulum, 0n, 100n * PEN, 101, { who: TREASURY_ACCOUNT, recipient: TOKEN });
+	await monitor.poll(api);
+	assert.equal(persisted().lastPendulumBlock, 100);
+	base.paused = true; // operators pause the vault by hand
+	const before = pages.length;
+	await monitor.poll(api);
+	const subjects = pages.slice(before).map((page) => page.subject);
+	assert.ok(subjects.includes("vault pause confirmed"), JSON.stringify(subjects));
+	assert.ok(!subjects.includes("AUTO-PAUSE UNAVAILABLE"), JSON.stringify(subjects));
+	assert.equal(persisted().lastPendulumBlock, 101);
+	assert.deepEqual(persisted().migrations.map((migration) => migration.nonce), ["0"]);
+});
+
 test("admin events of the migration pallet page from the ingest", async (t) => {
 	const { pendulum, api, monitor, pages } = await setup(t);
 	pendulum.finalized = 101;

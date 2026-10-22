@@ -120,7 +120,7 @@ subject that starts with `CRITICAL`; everything else is a `WARNING`.
 
 | Subjects | Meaning |
 |---|---|
-| `MIGRATION TUPLE VIOLATION`, `VAULT BALANCE DEFICIT`, `CONSERVATION VIOLATION`, `TREASURY DESTINATION VIOLATION` | A conservation or treasury check failed; the auto-pause follows with `vault auto-pause confirmed`, `vault pause confirmed` (already paused), `AUTO-PAUSE PENDING FINALITY`, `AUTO-PAUSE FAILED` or `AUTO-PAUSE UNAVAILABLE` |
+| `MIGRATION TUPLE VIOLATION`, `VAULT BALANCE DEFICIT`, `CONSERVATION VIOLATION`, `TREASURY DESTINATION VIOLATION` | A conservation or treasury check failed; the auto-pause follows with `vault auto-pause confirmed`, `vault pause confirmed` (already paused, also without a guardian key), `AUTO-PAUSE PENDING FINALITY`, `AUTO-PAUSE FAILED` or `AUTO-PAUSE UNAVAILABLE` (no guardian key, and the vault is not paused) |
 | `UNVERIFIED BASE EVENT` | First sighting of a Base event whose nonce the source view does not know yet |
 | `CRITICAL: MISMATCHED APPROVAL` | One attestor approved a tuple that disagrees with the finalized Pendulum view; check its key and its Pendulum node. A second attestor doing so for the same nonce pauses the vault |
 | `LIVENESS: migration below approval quorum`, `LIVENESS: quorum reached but not released` | Stalled migrations, one summary per kind and poll |

@@ -37,6 +37,8 @@ export function deployToSepolia({ env, roles, log }) {
 	const sweepTs = Math.floor(Date.now() / 1000) + params.sweepOffsetSeconds;
 	const scriptEnv = {
 		...process.env,
+		// The admin is a throwaway key, not a Safe.
+		TEST_DEPLOY: "true",
 		PRIVATE_KEY: env.DEPLOYER_PRIVATE_KEY,
 		ADMIN_SAFE: roles.admin.address,
 		GUARDIAN_SAFE: roles.guardian.address,

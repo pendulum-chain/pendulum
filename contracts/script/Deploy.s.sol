@@ -14,7 +14,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 ///            must call acceptAdmin() to complete)
 ///
 /// Environment:
-///   ADMIN_SAFE            bootstrap Safe that becomes vault admin
+///   ADMIN_SAFE            bootstrap Safe that becomes vault admin; must have
+///                         code on this chain (not an EOA or an EIP-7702
+///                         delegated EOA)
 ///   GUARDIAN_SAFE         fast pause guardian
 ///   ATTESTOR_1..4         attestor transaction-sender addresses (D4: 3-of-4)
 ///   MAX_ISSUANCE          max issuance in 18-decimal units (decision D3);
@@ -23,7 +25,10 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 ///   DAILY_CAP             initial daily cap, 18-decimal units
 ///   EARLIEST_SWEEP_TS     unix timestamp in SECONDS before which no remainder
 ///                         sweep (D5); must lie in the next MAX_SWEEP_FLOOR_AHEAD
+///   TEST_DEPLOY           optional, testnet drills and local runs only: allows
+///                         an ADMIN_SAFE without code. Refused on Base mainnet.
 contract Deploy is Script {
+    uint256 internal constant BASE_MAINNET = 8453;
     // 12-decimal pallet amounts -> 18-decimal token amounts (decision D2).
     uint256 internal constant CONVERSION_FACTOR = 1e6;
     uint256 internal constant THRESHOLD = 3;
@@ -36,7 +41,16 @@ contract Deploy is Script {
     uint256 internal constant MAX_SWEEP_FLOOR_AHEAD = 2 * 365 days;
 
     function run() external returns (PEN pen, MigrationVault vault) {
+        bool testDeploy = vm.envOr("TEST_DEPLOY", false);
+        require(!testDeploy || block.chainid != BASE_MAINNET, "TEST_DEPLOY is refused on Base mainnet");
+
+        // The bootstrap admin holds every vault setting until governance takes
+        // over, so it must be a Safe, not a single key.
         address adminSafe = vm.envAddress("ADMIN_SAFE");
+        if (!testDeploy) {
+            require(adminSafe.code.length > 0, "ADMIN_SAFE has no code on this chain (create the Safe first)");
+            require(bytes3(adminSafe.code) != 0xef0100, "ADMIN_SAFE is an EIP-7702 delegated EOA, not a Safe");
+        }
         address guardianSafe = vm.envAddress("GUARDIAN_SAFE");
         uint256 maxIssuance = vm.envUint("MAX_ISSUANCE");
         uint256 perReleaseCap = vm.envUint("PER_RELEASE_CAP");

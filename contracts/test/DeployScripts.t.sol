@@ -48,7 +48,7 @@ contract DeployScriptsTest is Test {
     uint256 internal constant SUPPLY = 150_000_000e18;
 
     Deploy internal deployScript;
-    address internal adminSafe = makeAddr("adminSafe");
+    address internal adminSafe = address(new SafeStub(2));
 
     DeployGovernance internal governanceScript;
     PEN internal pen;
@@ -77,6 +77,7 @@ contract DeployScriptsTest is Test {
     }
 
     function _setValidDeployEnv() internal {
+        vm.setEnv("TEST_DEPLOY", "false");
         vm.setEnv("ADMIN_SAFE", vm.toString(adminSafe));
         vm.setEnv("GUARDIAN_SAFE", vm.toString(makeAddr("guardianSafe")));
         vm.setEnv("ATTESTOR_1", vm.toString(makeAddr("attestor1")));
@@ -105,6 +106,20 @@ contract DeployScriptsTest is Test {
         _expectDeployRefused("EARLIEST_SWEEP_TS", vm.toString(SWEEP_FLOOR * 1000), sweep); // milliseconds
         _expectDeployRefused("EARLIEST_SWEEP_TS", vm.toString(block.timestamp), sweep);
 
+        address adminEoa = makeAddr("adminEoa");
+        _expectDeployRefused(
+            "ADMIN_SAFE", vm.toString(adminEoa), "ADMIN_SAFE has no code on this chain (create the Safe first)"
+        );
+        address delegated = makeAddr("delegatedAdmin");
+        vm.etch(delegated, abi.encodePacked(hex"ef0100", adminSafe)); // EIP-7702 delegation to a Safe
+        _expectDeployRefused(
+            "ADMIN_SAFE", vm.toString(delegated), "ADMIN_SAFE is an EIP-7702 delegated EOA, not a Safe"
+        );
+
+        vm.chainId(8453);
+        _expectDeployRefused("TEST_DEPLOY", "true", "TEST_DEPLOY is refused on Base mainnet");
+        vm.chainId(31337);
+
         _setValidDeployEnv();
         (PEN newPen, MigrationVault newVault) = deployScript.run();
         assertEq(address(newVault.token()), address(newPen));
@@ -113,6 +128,13 @@ contract DeployScriptsTest is Test {
         assertEq(newVault.earliestSweepTimestamp(), SWEEP_FLOOR);
         assertEq(newVault.admin(), address(this), "interim admin until the Safe accepts");
         assertEq(newVault.pendingAdmin(), adminSafe);
+
+        // Testnet drills and local runs: an EOA as admin.
+        _setValidDeployEnv();
+        vm.setEnv("TEST_DEPLOY", "true");
+        vm.setEnv("ADMIN_SAFE", vm.toString(adminEoa));
+        (, newVault) = deployScript.run();
+        assertEq(newVault.pendingAdmin(), adminEoa);
     }
 
     function _setValidGovernanceEnv() internal {

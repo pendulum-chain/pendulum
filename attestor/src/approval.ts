@@ -71,7 +71,8 @@ export interface Submission {
 	event: MigrationEvent;
 	data: Hex;
 	gas: bigint;
-	/** Set by the first attempt the node accepted, and fixed from then on. */
+	/** Set by the first attempt the node accepted, or may have accepted (its
+	 *  answer was lost), and fixed from then on. */
 	nonce?: number;
 	/** The latest attempt's fees. */
 	fees?: Fees;
@@ -190,10 +191,10 @@ export interface Attestor {
 	 *  transaction instead of sending a second one at another nonce, and one
 	 *  holding a nonce is finished before any other approval is sent. */
 	submissions: Map<Hex, Submission>;
-	/** The lowest nonce no transaction of this process has been accepted at.
-	 *  The node's pending count can trail it (a load-balanced endpoint, a pool
-	 *  that dropped the transaction), and a nonce one payload was sent at is
-	 *  never signed for another. */
+	/** The lowest nonce no transaction of this process has been accepted at (or
+	 *  sent at without an answer). The node's pending count can trail it (a
+	 *  load-balanced endpoint, a pool that dropped the transaction), and a nonce
+	 *  one payload was sent at is never signed for another. */
 	nextNonce: number;
 }
 

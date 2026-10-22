@@ -133,6 +133,13 @@ test("a pruned Pendulum node stays fatal", () => {
 		isTransientRpcError(new Error("-32000: Client error: UnknownBlock: State already discarded for 0xabc")),
 		false,
 	);
+	// The runtime-API phrasing of the same condition (e.g. state_getMetadata).
+	assert.equal(
+		isTransientRpcError(
+			new Error("-32000: Client error: Api called for an unknown Block: State already discarded for 0xabc"),
+		),
+		false,
+	);
 });
 
 test("only a vault rejection for a released or already-approved migration is a lost race", () => {

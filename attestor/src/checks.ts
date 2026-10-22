@@ -44,7 +44,7 @@ const TRANSIENT_SOCKET_CODES = new Set([
  *  transient (the post-drills L1 class). Numeric codes are matched structurally
  *  against `HttpRequestError.status` instead. */
 const TRANSIENT_TEXT =
-	/rate limit|too many requests|timeout|timed out|socket hang up|fetch failed|service unavailable|internal error|disconnected|websocket is not connected|no response received|connection (?:closed|refused|reset|terminated)|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ENOTFOUND|EPIPE|missing trie node|historical state|state (?:is )?not available|state unavailable|is pruned|header not found|unknown block|block not found/i;
+	/rate limit|too many requests|timeout|timed out|socket hang up|fetch failed|service unavailable|internal error|disconnected|websocket is not connected|no response received|connection (?:closed|refused|reset|terminated)|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ENOTFOUND|EPIPE|missing trie node|historical state|state (?:is )?not available|state unavailable|is pruned|header not found|(?<!an )unknown block|block not found/i;
 // The state phrasings (reth's is `state at block #N is pruned`): a state read
 // pinned at the `safe` block can fall outside a node's retained-state window
 // while the batcher lags (safe trails latest by more blocks than the node
@@ -53,8 +53,9 @@ const TRANSIENT_TEXT =
 // The block phrasings: behind a load-balanced endpoint the boundary block can
 // come from one backend and the read pinned at it land on another that has not
 // imported it yet, or that has no safe head at all. That heals as the backend
-// catches up. Substrate's `UnknownBlock:` (no space) is deliberately not
-// matched: a pruned Pendulum node stays fatal.
+// catches up. Substrate's `UnknownBlock:` (no space) and its runtime API's
+// `called for an unknown Block` are deliberately not matched: a pruned
+// Pendulum node stays fatal.
 
 /**
  * Transport-level failures that say nothing about the migration itself.

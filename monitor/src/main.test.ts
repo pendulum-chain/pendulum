@@ -211,7 +211,26 @@ function pendulumChain() {
 		preimageReads: 0,
 		/** Preimage reads still to fail, as an RPC error would. */
 		preimageFailures: 0,
+		/** Open motions by hash, the stored size where it is not the call's,
+		 *  and the motions whose call was fetched. */
+		motions: { council: new Map<string, string>(), technicalCommittee: new Map<string, string>() },
+		motionSizes: new Map<string, number>(),
+		motionReads: new Set<string>(),
 	};
+	const collective = (motions: Map<string, string>) => ({
+		proposals: async () => [...motions.keys()].map(hash),
+		proposalOf: Object.assign(
+			async (motion: { toHex(): string }) => {
+				chain.motionReads.add(motion.toHex());
+				const name = motions.get(motion.toHex());
+				return optional(name === undefined ? undefined : decodeCall(encodeCall(name)));
+			},
+			{
+				size: async (motion: { toHex(): string }) =>
+					codec(chain.motionSizes.get(motion.toHex()) ?? encodeCall(motions.get(motion.toHex()) ?? "").length),
+			},
+		),
+	});
 	const optional = <T>(value: T | undefined) => (value === undefined ? { isSome: false } : { isSome: true, unwrap: () => value });
 	const at = (block: number) => ({
 		registry: { createType: (_type: string, bytes: Uint8Array) => decodeCall(bytes) },
@@ -246,6 +265,8 @@ function pendulumChain() {
 					return { toJSON: () => (len === undefined ? null : { unrequested: { ticket: ["5Noter", 1], len } }) };
 				},
 			},
+			council: collective(chain.motions.council),
+			technicalCommittee: collective(chain.motions.technicalCommittee),
 		},
 	});
 	const api = {
@@ -450,6 +471,34 @@ test("a legacy call reference is read through the noted preimage's length", asyn
 	pendulum.preimages.set(`${preimage}:4`, "mint");
 	await monitor.poll(api);
 	assert.ok(pageFor(pages, RISKY, "referendum #9"), JSON.stringify(pages));
+});
+
+test("council and technical-committee motions are decoded with the same risk rules", async (t) => {
+	const { pendulum, api, monitor, pages } = await setup(t);
+	const [anchor, remark, huge] = ["0x01", "0x02", "0x03"].map((prefix) => prefix + "00".repeat(31));
+	pendulum.motions.council.set(anchor, "setTreasuryDestination");
+	pendulum.motions.technicalCommittee.set(remark, "remark");
+	pendulum.motions.council.set(huge, "mint");
+	pendulum.motionSizes.set(huge, 100_000);
+	await monitor.poll(api);
+	assert.ok(pageFor(pages, RISKY, `council motion ${anchor}`), JSON.stringify(pages));
+	assert.ok(pageFor(pages, "PENDULUM GOVERNANCE ITEM", `technical committee motion ${remark}`), JSON.stringify(pages));
+	assert.match(pageFor(pages, UNREADABLE, `council motion ${huge}`)?.detail ?? "", /100000 bytes/);
+	assert.ok(!pendulum.motionReads.has(huge));
+});
+
+test("admin events of the migration pallet page from the ingest", async (t) => {
+	const { pendulum, api, monitor, pages } = await setup(t);
+	pendulum.finalized = 101;
+	pendulum.events.set(101, [
+		{ section: "tokenMigration", method: "TreasuryDestinationSet", data: ["0x5555555555555555555555555555555555555555"] },
+		{ section: "tokenMigration", method: "MigrationPauseSet", data: [false] },
+	]);
+	await monitor.poll(api);
+	const adminPages = pages.filter((page) => page.subject === "MIGRATION PALLET ADMIN EVENT").map((page) => page.detail);
+	assert.equal(adminPages.length, 2, JSON.stringify(pages));
+	assert.match(adminPages[0], /TreasuryDestinationSet\(0x5{40}\) in finalized Pendulum block 101/);
+	assert.match(adminPages[1], /MigrationPauseSet\(false\)/);
 });
 
 test("the governance watch runs after the conservation checks", async (t) => {

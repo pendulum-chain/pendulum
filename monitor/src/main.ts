@@ -510,6 +510,15 @@ async function unmatchedDisposition(
 		: "expired";
 }
 
+/** The migration pallet's admin events, each with what to check. */
+const PALLET_ADMIN_EVENTS = new Map([
+	["MigrationPauseSet", "migrations were paused or resumed; check that it was intended"],
+	[
+		"TreasuryDestinationSet",
+		"treasury migrations are released to this Base address from now on; check that it is the governance timelock",
+	],
+]);
+
 async function ingestPendulumEvents(api: ApiPromise, draft: RuntimeState, finalizedBlock: number): Promise<void> {
 	for (let block = draft.lastPendulumBlock + 1; block <= finalizedBlock; block++) {
 		const blockHash = await api.rpc.chain.getBlockHash(block);
@@ -518,9 +527,20 @@ async function ingestPendulumEvents(api: ApiPromise, draft: RuntimeState, finali
 		const records = (await apiAt.query.system.events()) as unknown as {
 			event: { section: string; method: string; data: unknown[] };
 		}[];
-		for (const record of records) {
+		for (const [index, record] of records.entries()) {
 			const { section, method, data } = record.event;
-			if (section !== "tokenMigration" || method !== "MigrationInitiated") continue;
+			if (section !== "tokenMigration") continue;
+			const adminCheck = PALLET_ADMIN_EVENTS.get(method);
+			if (adminCheck) {
+				// Every admin change, however fast the motion behind it passed.
+				await pageOnce(
+					`pallet:${block}:${index}`,
+					"MIGRATION PALLET ADMIN EVENT",
+					`tokenMigration.${method}(${data.join(", ")}) in finalized Pendulum block ${block}: ${adminCheck}`,
+				);
+				continue;
+			}
+			if (method !== "MigrationInitiated") continue;
 			if (data.length !== 4) throw new Error(`MigrationInitiated in block ${block} has ${data.length} fields, expected 4`);
 			const [nonceValue, , recipientValue, amountValue] = data as [
 				{ toBigInt(): bigint },
@@ -787,14 +807,18 @@ interface CallRead {
  */
 const MAX_GOVERNANCE_CALL_BYTES = 64 * 1024;
 
-function decodeCall(apiAt: ApiAt, bytes: Uint8Array): CallRead {
+function readCall(decode: () => unknown): CallRead {
 	try {
-		const node = toCallNode(apiAt.registry.createType("Call", bytes) as unknown as Parameters<typeof toCallNode>[0]);
+		const node = toCallNode(decode() as Parameters<typeof toCallNode>[0]);
 		return { node, text: describeCall(node) };
 	} catch (decodeError) {
 		return { text: `the call cannot be decoded: ${String(decodeError).slice(0, 300)}` };
 	}
 }
+
+const oversizedCall = (len: number): CallRead => ({
+	text: `the call is ${len} bytes, over the ${MAX_GOVERNANCE_CALL_BYTES} bytes the monitor decodes`,
+});
 
 /** The length of a noted preimage, which a legacy call reference leaves out. */
 async function notedLength(apiAt: ApiAt, hash: { toHex(): string }): Promise<number | undefined> {
@@ -808,23 +832,32 @@ async function notedLength(apiAt: ApiAt, hash: { toHex(): string }): Promise<num
 /** Reads a proposal's call. Its preimage may be noted at any time before
  *  enactment, so until then the call is pending, not unreadable. */
 async function boundedCall(apiAt: ApiAt, bounded: BoundedCall): Promise<CallRead> {
-	if (bounded.isInline) return decodeCall(apiAt, bounded.asInline);
+	if (bounded.isInline) return readCall(() => apiAt.registry.createType("Call", bounded.asInline));
 	const hash = bounded.isLookup ? bounded.asLookup.hash_ : bounded.asLegacy.hash_;
 	const len = bounded.isLookup ? bounded.asLookup.len.toNumber() : await notedLength(apiAt, hash);
-	if (len !== undefined && len > MAX_GOVERNANCE_CALL_BYTES) {
-		return { text: `the call is ${len} bytes, over the ${MAX_GOVERNANCE_CALL_BYTES} bytes the monitor decodes` };
-	}
+	if (len !== undefined && len > MAX_GOVERNANCE_CALL_BYTES) return oversizedCall(len);
 	const preimage = len === undefined
 		? undefined
 		: (await apiAt.query.preimage.preimageFor([hash, len])) as unknown as { isSome: boolean; unwrap(): Uint8Array };
 	if (!preimage?.isSome) return { text: `preimage ${hash.toHex()} is not noted yet`, pending: true };
-	return decodeCall(apiAt, preimage.unwrap());
+	return readCall(() => apiAt.registry.createType("Call", preimage.unwrap()));
+}
+
+/** Reads a council or technical-committee motion's call, sized before it is fetched. */
+async function motionCall(apiAt: ApiAt, collective: "council" | "technicalCommittee", hash: { toHex(): string }): Promise<CallRead> {
+	const proposalOf = apiAt.query[collective].proposalOf;
+	const len = Number((await proposalOf.size(hash)).toString());
+	if (len > MAX_GOVERNANCE_CALL_BYTES) return oversizedCall(len);
+	const call = (await proposalOf(hash)) as unknown as { isSome: boolean; unwrap(): unknown };
+	if (!call.isSome) return { text: "the motion's call is not stored", pending: true };
+	return readCall(() => call.unwrap());
 }
 
 /**
- * Page every pending Pendulum democracy item once: public proposals, the
- * council's external proposal and ongoing referenda, with the call decoded.
- * Calls that mint, move or unlock balances or change the runtime page as
+ * Page every pending Pendulum governance item once: public proposals, the
+ * council's external proposal, ongoing referenda and open council and
+ * technical-committee motions, with the call decoded. Calls that mint, move
+ * or unlock balances or change the runtime or the migration pallet page as
  * CRITICAL: minted PEN burned through the migration drains the fixed-supply
  * vault, and only Pendulum governance can stop the call before enactment.
  * So does a call the watcher cannot read; until it can, it is re-checked
@@ -838,7 +871,7 @@ async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
 	const democracy = apiAt.query.democracy;
 	const launchPeriod = Number(apiAt.consts.democracy.launchPeriod.toString());
 	const nextLaunch = (Math.floor(finalizedBlock / launchPeriod) + 1) * launchPeriod;
-	const items: Array<{ key: string; label: string; hint: string; bounded: BoundedCall }> = [];
+	const items: Array<{ key: string; label: string; hint: string; read(): Promise<CallRead> }> = [];
 	const proposals = (await democracy.publicProps()) as unknown as Array<
 		[{ toNumber(): number }, BoundedCall, { toString(): string }]
 	>;
@@ -848,7 +881,7 @@ async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
 			label: `public proposal #${index.toNumber()} from ${proposer.toString()}`,
 			hint: `the best-backed public proposal becomes a referendum at block ${nextLaunch}; ` +
 				"a hostile one needs a council or technical-committee cancel before then, or nay votes after",
-			bounded,
+			read: () => boundedCall(apiAt, bounded),
 		});
 	}
 	const external = (await democracy.nextExternal()) as unknown as { isSome: boolean; unwrap(): [BoundedCall, unknown] };
@@ -858,7 +891,7 @@ async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
 			key: `external:${bounded.toString()}`,
 			label: "the council's external proposal",
 			hint: `it can become a referendum at block ${nextLaunch}`,
-			bounded,
+			read: () => boundedCall(apiAt, bounded),
 		});
 	}
 	const [count, lowest] = (await Promise.all([democracy.referendumCount(), democracy.lowestUnbaked()])).map((value) =>
@@ -875,8 +908,19 @@ async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
 			key: `referendum:${index}`,
 			label: `referendum #${index}`,
 			hint: `voting ends at block ${ongoing.end.toNumber()}; a hostile one needs nay votes or an emergency cancel`,
-			bounded: ongoing.proposal,
+			read: () => boundedCall(apiAt, ongoing.proposal),
 		});
+	}
+	for (const collective of ["council", "technicalCommittee"] as const) {
+		const motions = (await apiAt.query[collective].proposals()) as unknown as Array<{ toHex(): string }>;
+		for (const hash of motions) {
+			items.push({
+				key: `${collective}:${hash.toHex()}`,
+				label: `${collective === "council" ? "council" : "technical committee"} motion ${hash.toHex()}`,
+				hint: "it executes as soon as enough members vote aye; a hostile one needs nay votes",
+				read: () => motionCall(apiAt, collective, hash),
+			});
+		}
 	}
 	// Pages go out together, so a burst of new items costs one webhook round trip.
 	const pages: Promise<void>[] = [];
@@ -884,7 +928,7 @@ async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
 		if (onceOnlyPages.has(item.key)) continue;
 		let call: CallRead;
 		try {
-			call = await boundedCall(apiAt, item.bounded);
+			call = await item.read();
 		} catch (readError) {
 			// One item must never hide the items after it; a failed read is retried.
 			call = { text: `reading the call failed: ${String(readError).slice(0, 300)}`, pending: true };

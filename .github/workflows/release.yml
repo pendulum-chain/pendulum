@@ -172,11 +172,29 @@ jobs:
         with:
           name: ${{ needs.build.outputs.chain }}-runtime-${{ needs.build.outputs.sha }}
 
+      # A published runtime is never rebuilt in place: a later build of the same
+      # tag (other build options or image) need not match the hash enacted on
+      # chain. Publishing again needs the old assets removed by hand.
+      - name: Refuse to change a release that already has assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          ASSETS="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
+            | jq -r -s --arg tag "$TAG" '[.[][] | select(.tag_name == $tag) | .assets[].name] | join(" ")')"
+          if [ -n "$ASSETS" ]; then
+            echo "::error::release $TAG already has assets ($ASSETS); refusing to change it"
+            exit 1
+          fi
+
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: ${{ needs.build.outputs.tag }}
           name: ${{ needs.build.outputs.tag }}
           body_path: release-notes.md
+          # Never delete an attached asset, even one another run added after the check.
+          overwrite_files: false
           files: |
             ${{ needs.build.outputs.chain }}_runtime.compact.compressed.wasm
             srtool-${{ needs.build.outputs.chain }}.json

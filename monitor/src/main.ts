@@ -32,7 +32,9 @@ import {
 	releasedExceedsMigrated,
 	riskyCalls,
 	type ScheduledCall,
+	type Severity,
 	shouldAwaitSource,
+	slackText,
 	toCallNode,
 	type MigrationTuple,
 	vaultConservationDeficit,
@@ -382,16 +384,21 @@ function redact(text: string): string {
 	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
 }
 
-/** Sends one page and resolves to whether it was delivered: the webhook must
- *  answer 2xx within the timeout. Without a webhook the log line is the page. */
-async function alert(subject: string, detail: string): Promise<boolean> {
+/** Sends one page, as a Slack incoming-webhook message, and resolves to
+ *  whether it was delivered: the webhook must answer 2xx within the timeout.
+ *  Without a webhook the log line is the page. */
+async function alert(
+	subject: string,
+	detail: string,
+	severity: Severity = subject.startsWith("CRITICAL") ? "critical" : "warning",
+): Promise<boolean> {
 	console.error(`${new Date().toISOString()} ALERT: ${subject} — ${detail}`);
 	if (!config.alertWebhookUrl) return true;
 	try {
 		const response = await fetch(config.alertWebhookUrl, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ service: "pen-monitor", subject, detail: redact(detail) }),
+			body: JSON.stringify({ text: slackText("pen-monitor", severity, subject, redact(detail)) }),
 			// The webhook is an external dependency; it must never stall the
 			// check loop (or the pause that follows a violation) indefinitely.
 			signal: AbortSignal.timeout(10_000),
@@ -446,7 +453,7 @@ async function waitForBaseFinality(
 
 async function pauseVault(): Promise<boolean> {
 	if (!config.guardianPrivateKey) {
-		await alert("AUTO-PAUSE UNAVAILABLE", "no GUARDIAN_PRIVATE_KEY configured; pause manually NOW");
+		await alert("AUTO-PAUSE UNAVAILABLE", "no GUARDIAN_PRIVATE_KEY configured; pause manually NOW", "critical");
 		return false;
 	}
 	try {
@@ -494,7 +501,7 @@ async function pauseVault(): Promise<boolean> {
 		await alert("vault auto-pause confirmed", `tx=${txHash} ${config.baseFinalityTag}Block=${safeBlock}`);
 		return true;
 	} catch (pauseError) {
-		await alert("AUTO-PAUSE FAILED", `${pauseError}; pause manually NOW`);
+		await alert("AUTO-PAUSE FAILED", `${pauseError}; pause manually NOW`, "critical");
 		return false;
 	}
 }
@@ -543,7 +550,7 @@ async function checkAutoPauseReadiness(): Promise<string[]> {
 async function securityViolation(subject: string, detail: string): Promise<boolean> {
 	// Pause FIRST. The alert webhook is an external dependency with its own
 	// latency; nothing may sit between detecting a violation and the pause.
-	const notified = alert(subject, detail);
+	const notified = alert(subject, detail, "critical");
 	const paused = await pauseVault();
 	await notified;
 	return paused;

@@ -213,6 +213,24 @@ export function describeTimelockOperation(
 	return `operation ${id}: ${callText} — ${status}`;
 }
 
+export type Severity = "critical" | "warning";
+
+/** Longest page detail sent; the monitor's log line keeps the full text. */
+const MAX_PAGE_DETAIL = 3_000;
+
+/**
+ * A page as the `text` of a Slack incoming-webhook message: severity, subject
+ * and detail, with Slack's control characters `&`, `<` and `>` escaped, so
+ * that no detail can mention anyone or hide a link.
+ */
+export function slackText(service: string, severity: Severity, subject: string, detail: string): string {
+	const body = detail.length > MAX_PAGE_DETAIL
+		? `${detail.slice(0, MAX_PAGE_DETAIL)}… (cut short; the monitor log has the full text)`
+		: detail;
+	const escapes: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
+	return `[${severity.toUpperCase()}] ${service}: ${subject}\n${body}`.replace(/[&<>]/g, (char) => escapes[char]);
+}
+
 /** A decoded Pendulum call: `section.method` plus any calls nested in its arguments. */
 export interface CallNode {
 	name: string;

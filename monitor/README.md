@@ -38,7 +38,7 @@ Checks every poll:
 | `ISSUANCE_TOLERANCE` | Growth of Pendulum `totalIssuance + TotalMigrated` over its first-seen anchor (12-decimal pallet units) tolerated before `SOURCE SUPPLY GREW` pages (default 0) |
 | `ACKNOWLEDGED_RELEASE_EXCESS` | Excess of released over migrated, in token units (18 decimals), that operators quantified and accepted after a real loss; M2a fires only beyond it (default 0). Set it at the RB-3 sign-off and restart; the startup log shows it |
 | `TIMELOCK_ADDRESS` | Optional: the governance TimelockController. Set it as soon as governance is deployed; the queue is scanned from the monitor's Base cursor onwards, so operations scheduled before the monitor knew the address are not paged |
-| `ALERT_WEBHOOK_URL` | Webhook receiving JSON alerts — wire this to paging. A page counts as delivered only on a 2xx answer within 10s: once-only pages (governance items, admin events, scheduled operations, first sightings) are retried every poll until delivered, and failed deliveries are logged. Without it the log line is the page |
+| `ALERT_WEBHOOK_URL` | Slack incoming webhook receiving the pages (see [Pages](#pages)). A page counts as delivered only on a 2xx answer within 10s: once-only pages (governance items, admin events, scheduled operations, first sightings) are retried every poll until delivered, and failed deliveries are logged. Without it the log line is the page |
 | `GUARDIAN_PRIVATE_KEY` | Optional: the key of `vault.guardian()`, enabling automatic `pause()` on conservation violations; its readiness is checked at startup and every poll, and any other key pages `AUTO-PAUSE NOT READY` (the vault admin may pause too, but its key does not belong on the monitor) |
 | `GUARDIAN_MIN_BALANCE_WEI` | Guardian ETH balance below which `AUTO-PAUSE NOT READY` pages (default 10^15 wei = 0.001 ETH) |
 | `BASE_CHAIN_ID` | Default 8453; the Base RPC must serve it |
@@ -51,7 +51,14 @@ Checks every poll:
 
 ## Pages
 
-Each page is a JSON `POST` of `{ service, subject, detail }` to `ALERT_WEBHOOK_URL`.
+Each page is a Slack incoming-webhook message, a JSON `POST` of `{ "text": … }`
+to `ALERT_WEBHOOK_URL`. The text is `[CRITICAL] pen-monitor: SUBJECT` or
+`[WARNING] pen-monitor: SUBJECT`, then the detail on the next line. Slack's
+control characters `&`, `<` and `>` are escaped, so no detail can mention
+anyone or hide a link, and a detail longer than 3,000 characters is cut short
+(the monitor's log line keeps the full text). `CRITICAL` marks the conservation
+violations, `AUTO-PAUSE FAILED`, `AUTO-PAUSE UNAVAILABLE` and every subject that
+starts with `CRITICAL`; everything else is a `WARNING`.
 
 | Subjects | Meaning |
 |---|---|

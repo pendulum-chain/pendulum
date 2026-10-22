@@ -335,7 +335,18 @@ function burn(pendulum: Pendulum, nonce: bigint, palletAmount: bigint, block = 1
 interface Page {
 	subject: string;
 	detail: string;
+	severity: string;
+	/** The Slack message as sent. */
+	message: Record<string, unknown>;
 	status?: number;
+}
+
+/** A page from the Slack message the monitor sent, with Slack's escapes undone. */
+function readPage(message: Record<string, unknown>): Page {
+	const [, severity, subject, detail] = /^\[(CRITICAL|WARNING)\] pen-monitor: (.*)\n([\s\S]*)$/.exec(String(message.text)) ?? [];
+	assert.ok(subject, `not a monitor page: ${JSON.stringify(message)}`);
+	const unescaped = detail.replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
+	return { subject, detail: unescaped, severity, message };
 }
 
 async function body(request: IncomingMessage): Promise<string> {
@@ -369,8 +380,7 @@ async function setup(
 	const server = createServer(async (request, response) => {
 		const text = await body(request);
 		if (request.url === "/alert") {
-			const { subject, detail } = JSON.parse(text) as Page;
-			const page: Page = { subject, detail };
+			const page = readPage(JSON.parse(text));
 			pages.push(page);
 			page.status = await webhook(page);
 			response.writeHead(page.status).end();
@@ -443,6 +453,20 @@ test("a released migration reconciles and the poll pages nothing", async (t) => 
 
 /** Pages sent concurrently can arrive in either order. */
 const sorted = (subjects: string[]) => [...subjects].sort();
+
+test("pages are Slack messages carrying severity, subject and detail in their text only", async (t) => {
+	const { base, api, monitor, pages } = await setup(t);
+	base.vaultBalance -= 1n;
+	base.safeAgeSeconds = 601;
+	await monitor.poll(api);
+	assert.ok(pages.length >= 3, JSON.stringify(pages));
+	for (const page of pages) assert.deepEqual(Object.keys(page.message), ["text"]);
+	const severity = (subject: string) => pages.find((page) => page.subject === subject)?.severity;
+	assert.equal(severity("VAULT BALANCE DEFICIT"), "CRITICAL");
+	assert.equal(severity("AUTO-PAUSE UNAVAILABLE"), "CRITICAL");
+	assert.equal(severity("BASE VIEW STALLED"), "WARNING");
+	assert.match(pages.find((page) => page.subject === "VAULT BALANCE DEFICIT")!.detail, /^balance \d+ \+ released 0 \+ swept 0 < supply/);
+});
 
 test("a vault balance deficit pages and asks for the auto-pause", async (t) => {
 	const { base, api, monitor, subjects } = await setup(t);

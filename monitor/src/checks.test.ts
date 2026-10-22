@@ -20,6 +20,7 @@ import {
 	releasedExceedsMigrated,
 	riskyCalls,
 	shouldAwaitSource,
+	slackText,
 	toCallNode,
 	vaultConservationDeficit,
 } from "./checks.js";
@@ -162,6 +163,16 @@ test("a scheduled operation pages whatever its delay or its event carries", () =
 	assert.match(describeTimelockOperation("0x1", [call], 10n ** 20n, 0, {}, {}), /from timestamp 100000000000000000000 \(in /);
 	const undecoded = { index: undefined, target: undefined, value: undefined, data: undefined } as unknown as typeof call;
 	assert.match(describeTimelockOperation("0x1", [undecoded, call], 5n, 0, {}, {}), /^operation 0x1: #undefined undefined\.unknown function undefined/);
+});
+
+test("a page is Slack text with its control characters escaped and a long detail cut short", () => {
+	assert.equal(
+		slackText("pen-monitor", "critical", "SUBJECT", "to <!channel> & <https://x.example|click>"),
+		"[CRITICAL] pen-monitor: SUBJECT\nto &lt;!channel&gt; &amp; &lt;https://x.example|click&gt;",
+	);
+	const text = slackText("pen-monitor", "warning", "SUBJECT", "a".repeat(10_000));
+	assert.ok(text.startsWith(`[WARNING] pen-monitor: SUBJECT\n${"a".repeat(3_000)}… (cut short`), text.slice(0, 80));
+	assert.ok(text.length < 3_200, String(text.length));
 });
 
 test("a governance call tree is walked through batches and minting calls are flagged", () => {

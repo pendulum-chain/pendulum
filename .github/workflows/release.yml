@@ -185,8 +185,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.build.outputs.tag }}
         run: |
-          ASSETS="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
-            | jq -r -s --arg tag "$TAG" '[.[][] | select(.tag_name == $tag) | .assets[].name] | join(" ")')"
+          # The lookup the release action makes; any error but a missing release fails the step.
+          if REL="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG")"; then
+            ASSETS="$(jq -r '[.assets[].name] | join(" ")' <<<"$REL")"
+          elif [ "$(jq -r '.status? // empty' <<<"$REL" 2>/dev/null)" = 404 ]; then
+            ASSETS=""
+          else
+            echo "::error::could not look up the release for $TAG"
+            exit 1
+          fi
           if [ -n "$ASSETS" ]; then
             echo "::error::release $TAG already has assets ($ASSETS); refusing to change it"
             exit 1

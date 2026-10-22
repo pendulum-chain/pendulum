@@ -204,6 +204,8 @@ const baseFinalityTag = finalityTag();
 
 const config = {
 	pendulumWs: required("PENDULUM_WS"),
+	/** Optional: a second Pendulum node whose block hashes must agree. */
+	pendulumWsCrossCheck: process.env.PENDULUM_WS_CROSSCHECK,
 	baseRpcUrl: required("BASE_RPC_URL"),
 	vaultAddress: required("VAULT_ADDRESS") as `0x${string}`,
 	pollIntervalMs: envNumber("POLL_INTERVAL_MS", 60_000),
@@ -399,6 +401,7 @@ let multicallUnavailable = false;
 let lastSourceStallAlertMs = 0;
 let lastSourceFailureAlertMs = 0;
 let lastSourceIntegrityAlertMs = 0;
+let lastCrossCheckAlertMs = 0;
 let lastBaseStallAlertMs = 0;
 let lastReadinessAlertMs = 0;
 let lastAdminScanFailureAlertMs = 0;
@@ -414,9 +417,9 @@ function log(message: string): void {
 }
 
 /** Strip URLs before anything leaves the process: RPC endpoints commonly embed
- *  API keys, and viem error texts quote the endpoint verbatim. */
+ *  API keys, and viem and polkadot.js error texts quote the endpoint verbatim. */
 function redact(text: string): string {
-	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
+	return text.replace(/(?:https?|wss?):\/\/[^\s"')]+/gi, "<url>");
 }
 
 /** Sends one page, as a Slack incoming-webhook message, and resolves to
@@ -644,6 +647,72 @@ interface BlockRef {
 /** The Pendulum source contradicts the chain it must be on: the one ingested
  *  so far, the second node's or the relay chain's. Handled as unreadable. */
 class SourceIntegrityError extends Error {}
+
+/** Bound on connecting to, and on each read from, the nodes of the integrity checks. */
+const NODE_TIMEOUT_MS = 20_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+	let timer: NodeJS.Timeout | undefined;
+	const timeout = new Promise<never>((_, reject) => {
+		timer = setTimeout(() => reject(new Error(`no answer within ${ms / 1000}s`)), ms);
+	});
+	return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/** Connects to a node of the integrity checks; tests replace it. */
+let connectNode = async (url: string): Promise<ApiPromise> => {
+	const provider = new WsProvider(url, 2_500, {}, NODE_TIMEOUT_MS);
+	try {
+		return await withTimeout(ApiPromise.create({ provider, throwOnConnect: true, noInitWarn: true }), NODE_TIMEOUT_MS);
+	} catch (connectError) {
+		await provider.disconnect().catch(() => {});
+		throw connectError;
+	}
+};
+const nodeConnections = new Map<string, Promise<ApiPromise>>();
+
+/** Runs `read` against the node at `url` over a kept connection, bounded in
+ *  time; a failure drops the connection, so the next poll connects afresh. */
+async function onNode<T>(url: string, read: (node: ApiPromise) => Promise<T>): Promise<T> {
+	let connection = nodeConnections.get(url);
+	if (!connection) nodeConnections.set(url, (connection = connectNode(url)));
+	try {
+		return await withTimeout(connection.then(read), NODE_TIMEOUT_MS);
+	} catch (nodeError) {
+		nodeConnections.delete(url);
+		connection.then((node) => node.disconnect()).catch(() => {});
+		throw nodeError;
+	}
+}
+
+/** The second node must have the source's finalized head at its height. One
+ *  that cannot answer only warns, throttled: it is a check, not a source. */
+async function crossCheckSource(finalized: BlockRef): Promise<void> {
+	const url = config.pendulumWsCrossCheck;
+	if (!url) return;
+	let reason: string;
+	try {
+		const other = await onNode(url, (node) => node.rpc.chain.getBlockHash(finalized.number));
+		if (!other.isEmpty && other.toHex() !== finalized.hash) {
+			throw new SourceIntegrityError(
+				`the second Pendulum node has ${other.toHex()} at block ${finalized.number}, the source ${finalized.hash}`,
+			);
+		}
+		if (!other.isEmpty) return;
+		reason = `has no block ${finalized.number} yet`;
+	} catch (crossCheckError) {
+		if (crossCheckError instanceof SourceIntegrityError) throw crossCheckError;
+		reason = `cannot be read: ${crossCheckError}`;
+	}
+	if (Date.now() - lastCrossCheckAlertMs > config.graceSeconds * 1000) {
+		lastCrossCheckAlertMs = Date.now();
+		await alert(
+			"PENDULUM CROSS-CHECK UNAVAILABLE",
+			`the second Pendulum node (PENDULUM_WS_CROSSCHECK) ${reason}; the source's blocks are not compared ` +
+				"with it until it answers — restore it",
+		);
+	}
+}
 
 /** Walks parent hashes down from `top` to `bottom` through headers fetched
  *  from the node, recomputing each hash here, so that the result is one
@@ -1304,7 +1373,9 @@ async function readSource(api: ApiPromise, draft: RuntimeState): Promise<SourceV
 				`the ${config.unmatchedEventGraceSeconds}s unmatched-event grace forces a pause`,
 		);
 	}
-	const hashes = await sourceHashes(api, draft, { number: finalizedBlock, hash: finalizedHash.toHex() });
+	const finalized = { number: finalizedBlock, hash: finalizedHash.toHex() };
+	await crossCheckSource(finalized);
+	const hashes = await sourceHashes(api, draft, finalized);
 	await ingestPendulumEvents(api, draft, finalizedBlock, hashes);
 	const [totalMigratedValue, chainNextNonceValue, totalIssuanceValue] = await Promise.all([
 		apiAt.query.tokenMigration.totalMigrated(),
@@ -1540,8 +1611,10 @@ async function heartbeat(): Promise<void> {
 }
 
 /** Startup once the Pendulum API is connected: durable state, the multicall
- *  probe, the state identity check and the auto-pause readiness. */
-export async function start(api: ApiPromise): Promise<void> {
+ *  probe, the state identity check and the auto-pause readiness. `connect`
+ *  replaces how the nodes of the integrity checks are reached (tests). */
+export async function start(api: ApiPromise, connect?: (url: string) => Promise<ApiPromise>): Promise<void> {
+	if (connect) connectNode = connect;
 	state = hydrateState();
 	const multicallCode = await publicClient.getBytecode({ address: MULTICALL3_ADDRESS });
 	if (!multicallCode || multicallCode === "0x") {
@@ -1573,6 +1646,7 @@ export async function start(api: ApiPromise): Promise<void> {
 		`monitor started; Pendulum after ${state.lastPendulumBlock}, Base from ${state.baseFromBlock}, ` +
 			`polling every ${config.pollIntervalMs}ms; governance queue ` +
 			(config.timelockAddress ? `watched at ${config.timelockAddress}` : "not watched (TIMELOCK_ADDRESS unset)") +
+			`; second Pendulum node ${config.pendulumWsCrossCheck ? "cross-checked" : "not set"}` +
 			`; auto-pause ${!config.guardianPrivateKey ? "disabled" : readiness.length ? "NOT READY" : "ready"}` +
 			`; acknowledged release excess ${config.acknowledgedReleaseExcess} token units`,
 	);

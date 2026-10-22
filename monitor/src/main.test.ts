@@ -203,7 +203,7 @@ const codec = (value: number | bigint) => ({
 	toNumber: () => Number(value),
 	toBigInt: () => BigInt(value),
 });
-const hash = (hex: string) => ({ toHex: () => hex });
+const hash = (hex: string) => ({ toHex: () => hex, isEmpty: /^0x0*$/.test(hex) });
 const inline = (name: string) => ({ isInline: true, asInline: encodeCall(name), isLookup: false, isLegacy: false, toString: () => `inline ${name}` });
 const lookup = (hex: string, len: number) => ({
 	isInline: false,
@@ -340,7 +340,7 @@ function pendulumChain() {
 						hash: hash(chain.alteredHeaders.has(block) ? pendulumHash(chain, block + 1_000_000) : requested),
 					};
 				},
-				getBlockHash: async (block: number) => hash(pendulumHash(chain, block)),
+				getBlockHash: async (block: number) => hash(block > chain.finalized ? toHex(0, { size: 32 }) : pendulumHash(chain, block)),
 			},
 		},
 		at: async (value: string | { toHex(): string }) => at(blockOf(typeof value === "string" ? value : value.toHex())),
@@ -407,11 +407,14 @@ async function setup(
 		webhook = () => 200,
 		heartbeat = () => 200,
 		prepare = () => {},
+		connect,
 	}: {
 		env?: Record<string, string>;
 		webhook?: (page: Page) => number | Promise<number>;
 		heartbeat?: () => number;
 		prepare?: (base: Base, pendulum: Pendulum) => void;
+		/** Reaches the other nodes: the second Pendulum node and relay RPCs. */
+		connect?: (url: string) => Promise<ApiPromise>;
 	} = {},
 ) {
 	const base = baseChain();
@@ -466,7 +469,7 @@ async function setup(
 	Object.assign(process.env, variables);
 	const launch = async () => {
 		const monitor: typeof import("./main.js") = await import(`./main.js?instance=${++instances}`);
-		await monitor.start(api);
+		await monitor.start(api, connect ?? (async (url) => assert.fail(`unexpected connection to ${url}`)));
 		return monitor;
 	};
 	const monitor = await launch();
@@ -627,6 +630,59 @@ test("a source header that does not hash to its block hash pages critical", asyn
 		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
 		/header for Pendulum block 102 does not hash to 0x0+66;/,
 	);
+});
+
+const SECOND_NODE = "ws://second-node.test:9944?apikey=secret";
+
+test("a second node that disagrees on the newest block pages critical and nothing is ingested", async (t) => {
+	const second = pendulumChain();
+	second.chain.finalized = 200;
+	const { pendulum, api, monitor, pages, persisted } = await setup(t, {
+		env: { PENDULUM_WS_CROSSCHECK: SECOND_NODE },
+		connect: async (url) => (url === SECOND_NODE ? second.api : assert.fail(url)),
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.equal(pages.length, 0, JSON.stringify(pages));
+	assert.equal(persisted().lastPendulumBlock, 101);
+	second.chain.forkFrom = 102;
+	burn(pendulum, 1n, 100n * PEN, 102);
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		/second Pendulum node has 0x0+10+66 at block 102, the source 0x0+66;/,
+	);
+	assert.equal(persisted().lastPendulumBlock, 101);
+});
+
+test("a second node that cannot answer only warns", async (t) => {
+	const { pendulum, api, monitor, pages, persisted, heartbeats } = await setup(t, {
+		env: { PENDULUM_WS_CROSSCHECK: SECOND_NODE },
+		connect: async (url) => {
+			throw new Error(`cannot connect to ${url}`);
+		},
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.deepEqual(pages.map((page) => [page.subject, page.severity]), [["PENDULUM CROSS-CHECK UNAVAILABLE", "WARNING"]]);
+	assert.match(pages[0].detail, /cannot be read: Error: cannot connect to <url> /);
+	assert.equal(persisted().lastPendulumBlock, 101);
+	assert.deepEqual(heartbeats, ["GET"]);
+	await monitor.poll(api);
+	assert.equal(pages.length, 1); // throttled
+});
+
+test("a second node that has not reached the newest block only warns", async (t) => {
+	const second = pendulumChain(); // finalized at 100
+	const { pendulum, api, monitor, pages, persisted } = await setup(t, {
+		env: { PENDULUM_WS_CROSSCHECK: SECOND_NODE },
+		connect: async () => second.api,
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.deepEqual(pages.map((page) => page.subject), ["PENDULUM CROSS-CHECK UNAVAILABLE"]);
+	assert.match(pages[0].detail, /has no block 101 yet;/);
+	assert.equal(persisted().lastPendulumBlock, 101);
 });
 
 test("while Pendulum cannot be read, a Base event with an unknown nonce pauses after the grace", async (t) => {

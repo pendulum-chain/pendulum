@@ -750,6 +750,42 @@ test("an earlier attempt mined after a refused bump is still found as ours", asy
 	assert.equal(attestor.missedApprovals, 0);
 });
 
+test("a bump whose send timed out but which was mined anyway is found as ours", async () => {
+	const chain = new FakeVault();
+	chain.baseFee = 8_000_000n;
+	const send = chain.sendRawTransaction.bind(chain);
+	chain.sendRawTransaction = async (serialized) => {
+		const hash = await send(serialized);
+		if (chain.sent.length === 2) throw new TimeoutError({ body: {}, url: "http://rpc" });
+		return hash;
+	};
+	const { attestor, logs } = attestorOn(chain, { missedApprovals: 1 });
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.equal(chain.sent.length, 2);
+	assert.ok(logs.some((line) => line.startsWith("approved: nonce=7 ") && line.includes(`tx=${chain.sent[1].hash}`)));
+	assert.equal(attestor.missedApprovals, 0);
+});
+
+test("an attempt mined just after the last poll is found as ours, not counted as a miss", async () => {
+	const chain = new FakeVault();
+	let armed = false;
+	chain.onSend = () => {
+		armed = true;
+	};
+	chain.onRead = () => {
+		// Mined while the approval's state is read, after its receipt was polled.
+		if (armed) {
+			armed = false;
+			chain.mine();
+		}
+	};
+	const { attestor, logs } = attestorOn(chain, { missedApprovals: 1 }, () => {});
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.equal(chain.sent.length, 1);
+	assert.ok(logs.some((line) => line.startsWith("approved: nonce=7 ") && line.includes(`tx=${chain.sent[0].hash}`)));
+	assert.equal(attestor.missedApprovals, 0);
+});
+
 test("a first attempt the node took although its answer was lost is followed at its nonce, not sent anew", async () => {
 	const chain = new FakeVault();
 	chain.baseFee = 8_000_000n;
@@ -919,6 +955,25 @@ test("a retry after a failed read resumes the same transaction at its nonce", as
 	assert.ok(chain.sent.length >= 2 && chain.sent.every((tx) => tx.nonce === 5));
 	assert.ok(chain.approved.has(payloadHash(EVENT)));
 	assert.equal(attestor.submissions.size, 0);
+});
+
+test("an approval interrupted before any send is dropped once the migration resolved", async () => {
+	const chain = new FakeVault();
+	const fees = chain.fees.bind(chain);
+	let failures = 1;
+	chain.fees = async () => {
+		if (failures-- > 0) throw new HttpRequestError({ url: "http://rpc", status: 503 });
+		return fees();
+	};
+	const { attestor, logs } = attestorOn(chain);
+	await assert.rejects(approve(attestor, EVENT), HttpRequestError);
+	assert.equal(attestor.submissions.size, 1);
+	assert.equal(attestor.submissions.get(payloadHash(EVENT))?.nonce, undefined);
+	chain.consumed.add(EVENT.nonce);
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.equal(attestor.submissions.size, 0);
+	assert.equal(chain.sent.length, 0);
+	assert.ok(logs.some((line) => line.startsWith("skip (already released or approved): nonce=7 ")));
 });
 
 test("when another transaction takes the nonce, the approval is sent again at a new one", async () => {

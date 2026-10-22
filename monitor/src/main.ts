@@ -933,18 +933,22 @@ async function relayVerdict(
  *  record that contradicts the source counts only when another relay RPC's
  *  record contradicts it too, or when POLKADOT_WS lists one RPC. A record that
  *  anchors the source at or above the contradicting record's height outvotes
- *  it; any other answer leaves it unconfirmed. Pages while no new head is
- *  anchored: a warning when the relay RPCs fail or a contradiction stays
- *  unconfirmed, critical once none was anchored for
- *  RELAY_ANCHOR_GRACE_SECONDS; and when relay RPCs disagree. All throttled. */
+ *  it; any other answer leaves it unconfirmed. Resolves to the height up to
+ *  which the relay chain confirms the source's chain `hashes`, walked down
+ *  from `top` to `bottom`: the newest anchored head, or no higher than
+ *  `bottom` before the first; undefined while no relay RPC answers. Pages
+ *  while no new head is anchored and the source's blocks wait for one, a
+ *  contradiction stays unconfirmed or no relay RPC answers: a warning,
+ *  critical once none was anchored for RELAY_ANCHOR_GRACE_SECONDS; and when
+ *  relay RPCs disagree. All throttled. */
 async function anchorToRelay(
 	api: ApiPromise,
 	draft: RuntimeState,
 	hashes: Map<number, string>,
 	top: BlockRef,
 	bottom: BlockRef,
-): Promise<void> {
-	if (!config.polkadotWs.length) return;
+): Promise<number | undefined> {
+	if (!config.polkadotWs.length) return undefined;
 	const answers: string[] = [];
 	let answered = false;
 	let contradiction: { rpc: number; height: number; error: SourceIntegrityError } | undefined;
@@ -984,21 +988,25 @@ async function anchorToRelay(
 					"that record — one of the two relay RPCs is wrong, check both",
 			);
 		}
-		return;
+		return head.number;
 	}
 	const reason = contradiction
 		? `relay RPC ${contradiction.rpc} reports that ${contradiction.error.message}, and no other relay RPC confirms ` +
 			`or outvotes it${answers.length ? ` (${answers.join("; ")})` : ""}`
 		: `${answered ? "" : "the relay chain cannot be read: "}${answers.join("; ")}`;
-	if (contradiction || !answered) {
-		if (Date.now() - lastRelayAlertMs > config.graceSeconds * 1000) {
-			lastRelayAlertMs = Date.now();
-			await alert(
-				"RELAY ANCHOR UNAVAILABLE",
-				`${reason}; the Pendulum source is used without the relay-chain anchor until a relay RPC answers, ` +
-					`and this turns critical after ${config.relayAnchorGraceMs / 1000}s`,
-			);
-		}
+	const confirmed = draft.relayAnchor?.number ?? bottom.number;
+	const consequence = answered
+		? `no Pendulum block after ${Math.max(confirmed, draft.lastPendulumBlock)} is ingested until a relay RPC anchors a newer head`
+		: "the Pendulum source is used without the relay-chain anchor until a relay RPC answers";
+	if (
+		(contradiction || !answered || top.number > confirmed) &&
+		Date.now() - lastRelayAlertMs > config.graceSeconds * 1000
+	) {
+		lastRelayAlertMs = Date.now();
+		await alert(
+			"RELAY ANCHOR UNAVAILABLE",
+			`${reason}; ${consequence}, and this turns critical after ${config.relayAnchorGraceMs / 1000}s`,
+		);
 	}
 	const unanchoredMs = Date.now() - lastRelayAnchorMs;
 	if (unanchoredMs > config.relayAnchorGraceMs && Date.now() - lastRelayStaleAlertMs > config.unmatchedEventGraceSeconds * 1000) {
@@ -1006,16 +1014,19 @@ async function anchorToRelay(
 		await alert(
 			"CRITICAL: RELAY ANCHOR STALE",
 			`no Pendulum head was checked against the relay chain for ${Math.round(unanchoredMs / 1000)}s (${reason}); ` +
-				"the source is trusted without the anchor — restore a relay RPC, or the source node if it lags",
+				`${consequence} — restore a relay RPC, or the source node if it lags`,
 		);
 	}
+	return answered ? confirmed : undefined;
 }
 
 /** The hashes of the finalized blocks to ingest, on one chain with every
  *  block ingested before and with the relay-chain record kept from an earlier
- *  poll, and the newest of them that the second node confirms (`confirmed`,
- *  at most the source's finalized head; `crossChecked` while the second node
- *  answers). The source is then anchored to the relay chain's newest record. */
+ *  poll, and the newest of them that every checker that answers confirms
+ *  (`confirmed`, at most the source's finalized head): the second node up to
+ *  `crossChecked`, and the relay chain, whose newest record anchors the
+ *  source. A checker that does not answer confirms nothing and holds nothing
+ *  back. */
 async function sourceHashes(
 	api: ApiPromise,
 	draft: RuntimeState,
@@ -1039,8 +1050,8 @@ async function sourceHashes(
 	}
 	const lowest = Math.min(top.number, draft.lastPendulumBlock);
 	const crossChecked = await crossCheckSource(hashes, top, lowest);
-	await anchorToRelay(api, draft, hashes, top, { number: lowest, hash: hashes.get(lowest) as string });
-	return { hashes, confirmed: Math.min(finalized.number, crossChecked ?? Infinity), crossChecked };
+	const anchored = await anchorToRelay(api, draft, hashes, top, { number: lowest, hash: hashes.get(lowest) as string });
+	return { hashes, confirmed: Math.min(finalized.number, crossChecked ?? Infinity, anchored ?? Infinity), crossChecked };
 }
 
 /** The migration pallet's admin events, each with what to check. */

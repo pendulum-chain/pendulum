@@ -126,6 +126,15 @@ contract DeployScriptsTest is Test {
         _expectDeployRefused(
             "ADMIN_SAFE", vm.toString(delegated), "ADMIN_SAFE is an EIP-7702 delegated EOA, not a Safe"
         );
+        _expectDeployRefused(
+            "ADMIN_SAFE",
+            vm.toString(address(new PEN(makeAddr("other"), SUPPLY))),
+            "ADMIN_SAFE is not a Safe (getThreshold() failed)"
+        );
+        // A 1-of-n Safe, the Safe singleton's own threshold included.
+        _expectDeployRefused(
+            "ADMIN_SAFE", vm.toString(address(new SafeStub(1))), "ADMIN_SAFE Safe threshold is below 2"
+        );
 
         // A production deploy on Base mainnet.
         vm.chainId(8453);

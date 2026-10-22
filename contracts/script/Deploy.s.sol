@@ -5,6 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {PEN} from "../src/PEN.sol";
 import {MigrationVault} from "../src/MigrationVault.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {requireMultisigSafe} from "./SafeCheck.sol";
 
 /// @notice Deploys the migration stack on Base (PRD rollout phase 3):
 ///         1. MigrationVault with the deployer as interim admin
@@ -14,9 +15,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 ///            must call acceptAdmin() to complete)
 ///
 /// Environment:
-///   ADMIN_SAFE            bootstrap Safe that becomes vault admin; must have
-///                         code on this chain (not an EOA or an EIP-7702
-///                         delegated EOA)
+///   ADMIN_SAFE            bootstrap Safe that becomes vault admin; must be a
+///                         Safe on this chain with a threshold of at least 2
+///                         (getThreshold(); no EIP-7702 delegated EOA)
 ///   GUARDIAN_SAFE         fast pause guardian
 ///   ATTESTOR_1..4         attestor transaction-sender addresses (D4: 3-of-4)
 ///   MAX_ISSUANCE          max issuance in 18-decimal units (decision D3);
@@ -27,8 +28,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 ///                         sweep (D5); at least MIN_SWEEP_FLOOR_AHEAD after
 ///                         the deploy block and at most MAX_SWEEP_FLOOR_AHEAD
 ///   TEST_DEPLOY           optional, testnet drills and local runs only: allows
-///                         an ADMIN_SAFE without code and an EARLIEST_SWEEP_TS
-///                         any time in the future. Refused on Base mainnet.
+///                         an ADMIN_SAFE that is not a Safe and an
+///                         EARLIEST_SWEEP_TS any time in the future. Refused
+///                         on Base mainnet.
 contract Deploy is Script {
     uint256 internal constant BASE_MAINNET = 8453;
     // 12-decimal pallet amounts -> 18-decimal token amounts (decision D2).
@@ -51,10 +53,7 @@ contract Deploy is Script {
         // The bootstrap admin holds every vault setting until governance takes
         // over, so it must be a Safe, not a single key.
         address adminSafe = vm.envAddress("ADMIN_SAFE");
-        if (!testDeploy) {
-            require(adminSafe.code.length > 0, "ADMIN_SAFE has no code on this chain (create the Safe first)");
-            require(bytes3(adminSafe.code) != 0xef0100, "ADMIN_SAFE is an EIP-7702 delegated EOA, not a Safe");
-        }
+        if (!testDeploy) requireMultisigSafe(adminSafe, "ADMIN_SAFE");
         address guardianSafe = vm.envAddress("GUARDIAN_SAFE");
         uint256 maxIssuance = vm.envUint("MAX_ISSUANCE");
         uint256 perReleaseCap = vm.envUint("PER_RELEASE_CAP");

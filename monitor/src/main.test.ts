@@ -711,6 +711,16 @@ test("a second node that cannot answer only warns", async (t) => {
 	assert.equal(pages.length, 1); // throttled
 });
 
+test("a node connection that fails with an event says why", async (t) => {
+	const { pendulum, api, monitor, pages } = await setup(t, {
+		env: { PENDULUM_WS_CROSSCHECK: SECOND_NODE },
+		connect: () => Promise.reject({ type: "error", message: "getaddrinfo ENOTFOUND second-node.test" }),
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.match(pages[0]?.detail ?? "", /cannot be read: Error: getaddrinfo ENOTFOUND second-node\.test;/);
+});
+
 test("a second node that has not reached the newest block only warns", async (t) => {
 	const second = pendulumChain(); // finalized at 100
 	const { pendulum, api, monitor, pages, persisted } = await setup(t, {

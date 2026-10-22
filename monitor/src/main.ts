@@ -698,7 +698,8 @@ async function onNode<T>(url: string, read: (node: ApiPromise) => Promise<T>): P
 	} catch (nodeError) {
 		nodeConnections.delete(url);
 		connection.then((node) => node.disconnect()).catch(() => {});
-		throw nodeError;
+		// A failed WebSocket connection rejects with an event, not an Error.
+		throw nodeError instanceof Error ? nodeError : new Error(String((nodeError as { message?: unknown })?.message ?? nodeError));
 	}
 }
 

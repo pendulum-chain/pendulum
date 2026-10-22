@@ -810,7 +810,9 @@ async function reconcileBaseEvents(
  *  scan keeps its own cursor in `state`, so a restart resumes where it stopped. */
 async function watchBaseAdmin(toBlock: bigint): Promise<void> {
 	const timelock = config.timelockAddress;
-	const operations = new Map<`0x${string}`, ScheduledCall[]>();
+	/** Scheduled calls by operation id and block: a cancelled operation can be
+	 *  scheduled again with the same id, and then pages again. */
+	const operations = new Map<string, { id: `0x${string}`; calls: ScheduledCall[] }>();
 	const pages: Promise<boolean>[] = [];
 	const fromBlock = state.baseAdminFromBlock;
 	for (const [start, end] of blockRanges(fromBlock, toBlock, config.baseMaxBlockRange)) {
@@ -845,9 +847,10 @@ async function watchBaseAdmin(toBlock: bigint): Promise<void> {
 				value: bigint;
 				data: `0x${string}`;
 			};
-			const calls = operations.get(id) ?? [];
-			calls.push({ index, target, value, data });
-			operations.set(id, calls);
+			const key = `timelock:${id}:${event.blockNumber}`;
+			const operation = operations.get(key) ?? { id, calls: [] };
+			operation.calls.push({ index, target, value, data });
+			operations.set(key, operation);
 		}
 	}
 	if (timelock && operations.size > 0) {
@@ -862,8 +865,8 @@ async function watchBaseAdmin(toBlock: bigint): Promise<void> {
 			[token.toLowerCase()]: "token",
 			[timelock.toLowerCase()]: "timelock",
 		};
-		for (const [id, calls] of operations) {
-			if (onceOnlyPages.has(`timelock:${id}`)) continue;
+		for (const [key, { id, calls }] of operations) {
+			if (onceOnlyPages.has(key)) continue;
 			const readyAt = await publicClient.readContract({
 				address: timelock,
 				abi: timelockAbi,
@@ -872,7 +875,7 @@ async function watchBaseAdmin(toBlock: bigint): Promise<void> {
 				blockNumber: toBlock,
 			});
 			pages.push(pageOnce(
-				`timelock:${id}`,
+				key,
 				"GOVERNANCE OPERATION SCHEDULED",
 				describeTimelockOperation(id, calls, readyAt, Date.now(), labels, KNOWN_FUNCTIONS),
 			));

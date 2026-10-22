@@ -841,6 +841,19 @@ test("a scheduled operation with an extreme delay pages and hides nothing after 
 	assert.ok(!pages.some((page) => page.subject === "BASE ADMIN SCAN FAILED"), JSON.stringify(pages));
 });
 
+test("an operation cancelled and scheduled again with the same id pages again", async (t) => {
+	const { base, api, monitor, pages } = await setup(t, { env: { TIMELOCK_ADDRESS: TIMELOCK } });
+	const id = toHex(7, { size: 32 });
+	schedule(base, id, 1_005n);
+	await monitor.poll(api);
+	base.readyAt.set(id, 0n); // cancelled
+	schedule(base, id, 1_015n);
+	base.safe = 1_020n;
+	await monitor.poll(api);
+	const scheduled = pages.filter((page) => page.subject === "GOVERNANCE OPERATION SCHEDULED");
+	assert.equal(scheduled.length, 2, JSON.stringify(pages));
+});
+
 test("once-only pages the webhook rejects are sent again on the next poll", async (t) => {
 	const failedOnce = new Set<string>();
 	const { base, pendulum, api, monitor, pages } = await setup(t, {

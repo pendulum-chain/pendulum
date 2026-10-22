@@ -85,6 +85,7 @@ test("optional fields are checked when present", () => {
 			baseAdminFromBlock: "150",
 			mismatchedApprovals: [approval],
 			lastPendulumHash: `0x${"55".repeat(32)}` as const,
+			relayAnchor: { number: 100, hash: `0x${"66".repeat(32)}` as const },
 		};
 		saveMonitorState(path, complete);
 		assert.deepEqual(loadMonitorState(path), complete);
@@ -92,6 +93,8 @@ test("optional fields are checked when present", () => {
 			{ baseAdminFromBlock: "-1" },
 			{ mismatchedApprovals: [{ ...approval, attestor: "0x44" }] },
 			{ lastPendulumHash: "0x55" },
+			{ relayAnchor: { number: "100", hash: `0x${"66".repeat(32)}` } },
+			{ relayAnchor: { number: 100, hash: "0x66" } },
 		]) {
 			writeFileSync(path, JSON.stringify({ ...state, ...bad }));
 			assert.throws(() => loadMonitorState(path), /invalid or legacy schema/);

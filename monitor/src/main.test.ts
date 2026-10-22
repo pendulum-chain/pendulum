@@ -236,7 +236,11 @@ function pendulumChain() {
 		forkFrom: undefined as number | undefined,
 		/** Blocks whose header the node alters, so it no longer hashes to its hash. */
 		alteredHeaders: new Set<number>(),
+		/** Whether the node names block hashes by number from the chain without the fork. */
+		canonicalBlockHashes: false,
 		finalized: 100,
+		/** The newest block the node imported, where it is past the finalized one. */
+		best: undefined as number | undefined,
 		/** Age of the finalized head; earlier blocks are 12 s apart. */
 		headAgeMs: 0,
 		failure: undefined as Error | undefined,
@@ -334,18 +338,52 @@ function pendulumChain() {
 				getHeader: async (value: string | { toHex(): string }) => {
 					const requested = typeof value === "string" ? value : value.toHex();
 					const block = blockOf(requested);
+					const onFork = BigInt(requested) >> 64n !== 0n;
 					return {
 						number: codec(block),
-						parentHash: hash(pendulumHash(chain, block - 1)),
+						parentHash: hash(pendulumHash(onFork ? chain : {}, block - 1)),
 						hash: hash(chain.alteredHeaders.has(block) ? pendulumHash(chain, block + 1_000_000) : requested),
 					};
 				},
-				getBlockHash: async (block: number) => hash(block > chain.finalized ? toHex(0, { size: 32 }) : pendulumHash(chain, block)),
+				getBlockHash: async (block: number) =>
+					hash(
+						block > (chain.best ?? chain.finalized)
+							? toHex(0, { size: 32 })
+							: pendulumHash(chain.canonicalBlockHashes ? {} : chain, block),
+					),
 			},
+		},
+		/** Decodes the head data of the stand-in relay chain. */
+		createType: (_type: string, bytes: Uint8Array) => {
+			const header = JSON.parse(new TextDecoder().decode(bytes)) as { number: number; hash: string };
+			return { number: codec(header.number), hash: hash(header.hash) };
 		},
 		at: async (value: string | { toHex(): string }) => at(blockOf(typeof value === "string" ? value : value.toHex())),
 	};
 	return { chain, api: api as unknown as ApiPromise };
+}
+
+/** A relay chain whose finalized block records `head()` as the Pendulum head;
+ *  every read fails while `failing()` holds. */
+function relayChain(head: () => { number: number; hash: string }, failing = () => false): ApiPromise {
+	const check = () => {
+		if (failing()) throw new Error("relay RPC unavailable");
+	};
+	const relay = {
+		rpc: { chain: { getFinalizedHead: async () => (check(), hash(`0x${"77".repeat(32)}`)) } },
+		at: async () => ({
+			query: {
+				paras: {
+					heads: async (paraId: number) => {
+						check();
+						const data = new TextEncoder().encode(JSON.stringify(head()));
+						return paraId === 2094 ? { isSome: true, unwrap: () => ({ toU8a: () => data }) } : { isSome: false };
+					},
+				},
+			},
+		}),
+	};
+	return relay as unknown as ApiPromise;
 }
 
 /** The hash of `block` on the chain the node serves. */
@@ -488,6 +526,7 @@ async function setup(
 		persisted: () => JSON.parse(readFileSync(stateFile, "utf8")) as {
 			lastPendulumBlock: number;
 			lastPendulumHash: string;
+			relayAnchor?: { number: number; hash: string };
 			baseFromBlock: string;
 			baseAdminFromBlock: string;
 			migrations: Array<{ nonce: string }>;
@@ -683,6 +722,144 @@ test("a second node that has not reached the newest block only warns", async (t)
 	assert.deepEqual(pages.map((page) => page.subject), ["PENDULUM CROSS-CHECK UNAVAILABLE"]);
 	assert.match(pages[0].detail, /has no block 101 yet;/);
 	assert.equal(persisted().lastPendulumBlock, 101);
+});
+
+const RELAY = "wss://relay.test";
+type Head = { number: number; hash: string };
+
+/** A monitor with the relay-chain anchor, against a relay chain recording
+ *  `head` (by default the source's finalized head, on the chain without a fork). */
+async function relaySetup(
+	t: { after(fn: () => void): void },
+	{ head, failing, env = {} }: { head?: (pendulum: Pendulum) => Head; failing?: () => boolean; env?: Record<string, string> } = {},
+) {
+	let chain: Pendulum | undefined;
+	const honest = (pendulum: Pendulum) => ({ number: pendulum.finalized, hash: pendulumHash({}, pendulum.finalized) });
+	const relay = relayChain(() => (head ?? honest)(chain!), failing);
+	return setup(t, {
+		env: { POLKADOT_WS: RELAY, ...env },
+		prepare: (_base, pendulum) => (chain = pendulum),
+		connect: async (url) => (url === RELAY ? relay : assert.fail(url)),
+	});
+}
+
+test("a relay-chain record of the source's head anchors it and is kept", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.equal(pages.length, 0, JSON.stringify(pages));
+	assert.deepEqual(persisted().relayAnchor, { number: 101, hash: pendulumHash({}, 101) });
+	assert.equal(persisted().lastPendulumBlock, 101);
+});
+
+test("a source that names another hash than the relay chain's record pages critical", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, {
+		head: (pendulum) => ({ number: pendulum.finalized, hash: pendulumHash({ forkFrom: 0 }, pendulum.finalized) }),
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		/relay chain records 0x0+10+65 as Pendulum block 101, the source has 0x0+65;/,
+	);
+	assert.equal(persisted().lastPendulumBlock, 100);
+});
+
+test("a source whose chain avoids the relay chain's record pages critical, whatever hash it names", async (t) => {
+	const { pendulum, api, monitor, pages } = await relaySetup(t, {
+		head: () => ({ number: 101, hash: pendulumHash({}, 101) }),
+	});
+	pendulum.forkFrom = 101;
+	pendulum.canonicalBlockHashes = true; // it names the relay chain's hash for block 101
+	burn(pendulum, 0n, 100n * PEN, 102);
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		/chain has 0x0+10+65 at Pendulum block 101, where the relay chain records 0x0+65;/,
+	);
+});
+
+test("a relay record past the source's finalized head anchors it, and its chain must keep passing through it", async (t) => {
+	let relayDown = false;
+	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, {
+		head: (pendulum) => ({ number: 102, hash: pendulumHash(pendulum, 102) }),
+		failing: () => relayDown,
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	pendulum.best = 102; // imported, not yet finalized by the source
+	await monitor.poll(api);
+	assert.equal(pages.length, 0, JSON.stringify(pages));
+	assert.deepEqual(persisted().relayAnchor, { number: 102, hash: pendulumHash({}, 102) });
+	assert.equal(persisted().lastPendulumBlock, 101);
+	relayDown = true;
+	pendulum.forkFrom = 102; // the source moves to another chain above its last ingested block
+	burn(pendulum, 1n, 100n * PEN, 103);
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		/chain has 0x0+10+66 at Pendulum block 102, where the relay chain recorded 0x0+66;/,
+	);
+});
+
+test("a relay record past the source's finalized head must descend from that head", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, {
+		head: () => ({ number: 102, hash: pendulumHash({}, 102) }),
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	pendulum.forkFrom = 101; // its finalized block 101 is on another chain...
+	pendulum.canonicalBlockHashes = true; // ...though it names the relay chain's hash for block 102
+	pendulum.best = 102;
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		/chain has 0x0+65 at Pendulum block 101, where the source's finalized head is 0x0+10+65;/,
+	);
+	assert.equal(persisted().lastPendulumBlock, 100);
+});
+
+test("an unreadable relay chain warns, the source is used, and it turns critical after the grace", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, { failing: () => true });
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.deepEqual(pages.map((page) => [page.subject, page.severity]), [["RELAY ANCHOR UNAVAILABLE", "WARNING"]]);
+	assert.match(pages[0].detail, /relay RPC 1: Error: relay RPC unavailable;/);
+	assert.equal(persisted().lastPendulumBlock, 101);
+	const late = await relaySetup(t, { failing: () => true, env: { RELAY_ANCHOR_GRACE_SECONDS: "0" } });
+	burn(late.pendulum, 0n, 100n * PEN);
+	await new Promise((resolve) => setTimeout(resolve, 5));
+	await late.monitor.poll(late.api);
+	assert.ok(late.subjects().includes("CRITICAL: RELAY ANCHOR STALE"), JSON.stringify(late.subjects()));
+});
+
+test("a source behind the relay chain is not anchored, and pages only after the grace", async (t) => {
+	const ahead = (pendulum: Pendulum) => ({ number: pendulum.finalized + 1, hash: pendulumHash(pendulum, pendulum.finalized + 1) });
+	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, { head: ahead });
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.equal(pages.length, 0, JSON.stringify(pages));
+	assert.equal(persisted().relayAnchor, undefined);
+	assert.equal(persisted().lastPendulumBlock, 101);
+	const late = await relaySetup(t, { head: ahead, env: { RELAY_ANCHOR_GRACE_SECONDS: "0" } });
+	await new Promise((resolve) => setTimeout(resolve, 5));
+	await late.monitor.poll(late.api);
+	assert.match(
+		late.pages.find((page) => page.subject === "CRITICAL: RELAY ANCHOR STALE")?.detail ?? "",
+		/the source has not imported block 101, the relay chain's Pendulum head, yet/,
+	);
+});
+
+test("the relay RPCs are tried in order", async (t) => {
+	let chain: Pendulum | undefined;
+	const relay = relayChain(() => ({ number: chain!.finalized, hash: pendulumHash({}, chain!.finalized) }));
+	const { pendulum, api, monitor, pages, persisted } = await setup(t, {
+		env: { POLKADOT_WS: "wss://down.test, wss://up.test" },
+		prepare: (_base, pendulum) => (chain = pendulum),
+		connect: async (url) => (url === "wss://up.test" ? relay : assert.fail(`cannot reach ${url}`)),
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.equal(pages.length, 0, JSON.stringify(pages));
+	assert.equal(persisted().relayAnchor?.number, 101);
 });
 
 test("while Pendulum cannot be read, a Base event with an unknown nonce pauses after the grace", async (t) => {

@@ -206,6 +206,12 @@ const config = {
 	pendulumWs: required("PENDULUM_WS"),
 	/** Optional: a second Pendulum node whose block hashes must agree. */
 	pendulumWsCrossCheck: process.env.PENDULUM_WS_CROSSCHECK,
+	/** Optional: third-party Polkadot RPCs, tried in order, whose record of
+	 *  the Pendulum head anchors the source. */
+	polkadotWs: (process.env.POLKADOT_WS ?? "").split(",").map((url) => url.trim()).filter(Boolean),
+	pendulumParaId: envNumber("PENDULUM_PARA_ID", 2094),
+	/** How long the source may go without a relay-anchored head before that pages critical. */
+	relayAnchorGraceMs: envNumber("RELAY_ANCHOR_GRACE_SECONDS", 3600) * 1000,
 	baseRpcUrl: required("BASE_RPC_URL"),
 	vaultAddress: required("VAULT_ADDRESS") as `0x${string}`,
 	pollIntervalMs: envNumber("POLL_INTERVAL_MS", 60_000),
@@ -279,6 +285,9 @@ interface RuntimeState {
 	lastPendulumBlock: number;
 	/** The hash of `lastPendulumBlock`: the next blocks must descend from it. */
 	lastPendulumHash: string | undefined;
+	/** The newest Pendulum head the relay chain recorded that the source was
+	 *  verified against; the source's chain must keep passing through it. */
+	relayAnchor: { number: number; hash: string } | undefined;
 	nextExpectedNonce: bigint;
 	baseFromBlock: bigint;
 	/** The admin scan's own cursor: it only pages, so nothing waits for it. */
@@ -306,6 +315,7 @@ function hydrateState(): RuntimeState {
 			pendulumGenesisHash: undefined,
 			lastPendulumBlock: config.pendulumStartBlock - 1,
 			lastPendulumHash: undefined,
+			relayAnchor: undefined,
 			nextExpectedNonce: config.pendulumStartNonce,
 			baseFromBlock: config.baseStartBlock,
 			baseAdminFromBlock: config.baseStartBlock,
@@ -322,6 +332,7 @@ function hydrateState(): RuntimeState {
 		pendulumGenesisHash: persisted.pendulumGenesisHash,
 		lastPendulumBlock: persisted.lastPendulumBlock,
 		lastPendulumHash: persisted.lastPendulumHash,
+		relayAnchor: persisted.relayAnchor,
 		nextExpectedNonce: BigInt(persisted.nextExpectedNonce),
 		baseFromBlock: BigInt(persisted.baseFromBlock),
 		baseAdminFromBlock: BigInt(persisted.baseAdminFromBlock ?? persisted.baseFromBlock),
@@ -353,6 +364,7 @@ function cloneState(source: RuntimeState): RuntimeState {
 		pendulumGenesisHash: source.pendulumGenesisHash,
 		lastPendulumBlock: source.lastPendulumBlock,
 		lastPendulumHash: source.lastPendulumHash,
+		relayAnchor: source.relayAnchor,
 		nextExpectedNonce: source.nextExpectedNonce,
 		baseFromBlock: source.baseFromBlock,
 		baseAdminFromBlock: source.baseAdminFromBlock,
@@ -373,6 +385,7 @@ function persistState(state: RuntimeState): void {
 		pendulumGenesisHash: state.pendulumGenesisHash,
 		lastPendulumBlock: state.lastPendulumBlock,
 		lastPendulumHash: state.lastPendulumHash as `0x${string}` | undefined,
+		relayAnchor: state.relayAnchor as { number: number; hash: `0x${string}` } | undefined,
 		nextExpectedNonce: state.nextExpectedNonce.toString(),
 		baseFromBlock: state.baseFromBlock.toString(),
 		baseAdminFromBlock: state.baseAdminFromBlock.toString(),
@@ -402,6 +415,10 @@ let lastSourceStallAlertMs = 0;
 let lastSourceFailureAlertMs = 0;
 let lastSourceIntegrityAlertMs = 0;
 let lastCrossCheckAlertMs = 0;
+let lastRelayAlertMs = 0;
+let lastRelayStaleAlertMs = 0;
+/** When the source last verified against a new relay-chain record (or the start). */
+let lastRelayAnchorMs = Date.now();
 let lastBaseStallAlertMs = 0;
 let lastReadinessAlertMs = 0;
 let lastAdminScanFailureAlertMs = 0;
@@ -731,16 +748,105 @@ async function walkHeaders(api: ApiPromise, top: BlockRef, bottom: number): Prom
 	return hashes;
 }
 
-/** The hashes of the finalized blocks to ingest, on one chain with every
- *  block ingested before. */
-async function sourceHashes(api: ApiPromise, draft: RuntimeState, finalized: BlockRef): Promise<Map<number, string>> {
-	const hashes = await walkHeaders(api, finalized, draft.lastPendulumBlock);
-	const hash = hashes.get(draft.lastPendulumBlock);
-	if (draft.lastPendulumHash && hash !== undefined && hash !== draft.lastPendulumHash) {
-		throw new SourceIntegrityError(
-			`the source's chain has ${hash} at Pendulum block ${draft.lastPendulumBlock}, ` +
-				`where the monitor ingested ${draft.lastPendulumHash}`,
+/** The Pendulum head that the relay chain recorded at its finalized block,
+ *  from the first relay RPC in POLKADOT_WS that answers. */
+async function relayHead(api: ApiPromise): Promise<BlockRef> {
+	const failures: string[] = [];
+	for (const [index, url] of config.polkadotWs.entries()) {
+		try {
+			return await onNode(url, async (relay) => {
+				const relayFinalized = await relay.rpc.chain.getFinalizedHead();
+				const head = (await (await relay.at(relayFinalized)).query.paras.heads(config.pendulumParaId)) as unknown as {
+					isSome: boolean;
+					unwrap(): { toU8a(bare: boolean): Uint8Array };
+				};
+				if (!head.isSome) throw new Error(`no head recorded for para ${config.pendulumParaId}`);
+				// The head data is the Pendulum header; its hash is computed here.
+				const header = api.createType("Header", head.unwrap().toU8a(true)) as unknown as {
+					number: { toNumber(): number };
+					hash: { toHex(): string };
+				};
+				return { number: header.number.toNumber(), hash: header.hash.toHex() };
+			});
+		} catch (relayError) {
+			failures.push(`relay RPC ${index + 1}: ${relayError}`);
+		}
+	}
+	throw new Error(failures.join("; "));
+}
+
+/** The relay chain's record of a Pendulum head newer than the last one
+ *  verified, if this poll can check the source against it. Pages while there
+ *  is none: a warning when the relay RPCs fail, critical once no head was
+ *  anchored for RELAY_ANCHOR_GRACE_SECONDS. Both throttled. */
+async function relayAnchor(api: ApiPromise, draft: RuntimeState, finalized: BlockRef): Promise<BlockRef | undefined> {
+	if (!config.polkadotWs.length) return undefined;
+	let reason: string;
+	try {
+		const anchor = await relayHead(api);
+		const known = draft.relayAnchor;
+		if (known?.number === anchor.number && known.hash !== anchor.hash) {
+			throw new SourceIntegrityError(
+				`the relay chain now records ${anchor.hash} as Pendulum block ${anchor.number}, where it recorded ${known.hash}`,
+			);
+		}
+		const sourceHash = await api.rpc.chain.getBlockHash(anchor.number);
+		if (!sourceHash.isEmpty && sourceHash.toHex() !== anchor.hash) {
+			throw new SourceIntegrityError(
+				`the relay chain records ${anchor.hash} as Pendulum block ${anchor.number}, the source has ${sourceHash.toHex()}`,
+			);
+		}
+		if (known && anchor.number <= known.number) reason = `the relay chain's Pendulum head ${anchor.number} is not newer`;
+		else if (sourceHash.isEmpty && anchor.number > finalized.number) {
+			reason = `the source has not imported block ${anchor.number}, the relay chain's Pendulum head, yet`;
+		} else return anchor;
+	} catch (relayError) {
+		if (relayError instanceof SourceIntegrityError) throw relayError;
+		reason = `the relay chain cannot be read: ${relayError}`;
+		if (Date.now() - lastRelayAlertMs > config.graceSeconds * 1000) {
+			lastRelayAlertMs = Date.now();
+			await alert(
+				"RELAY ANCHOR UNAVAILABLE",
+				`${reason}; the Pendulum source is used without the relay-chain anchor until a relay RPC answers, ` +
+					`and this turns critical after ${config.relayAnchorGraceMs / 1000}s`,
+			);
+		}
+	}
+	const unanchoredMs = Date.now() - lastRelayAnchorMs;
+	if (unanchoredMs > config.relayAnchorGraceMs && Date.now() - lastRelayStaleAlertMs > config.unmatchedEventGraceSeconds * 1000) {
+		lastRelayStaleAlertMs = Date.now();
+		await alert(
+			"CRITICAL: RELAY ANCHOR STALE",
+			`no Pendulum head was checked against the relay chain for ${Math.round(unanchoredMs / 1000)}s (${reason}); ` +
+				"the source is trusted without the anchor — restore a relay RPC, or the source node if it lags",
 		);
+	}
+	return undefined;
+}
+
+/** The hashes of the finalized blocks to ingest, on one chain with every
+ *  block ingested before and, where available, with the relay chain's record
+ *  of the Pendulum head. */
+async function sourceHashes(api: ApiPromise, draft: RuntimeState, finalized: BlockRef): Promise<Map<number, string>> {
+	const anchor = await relayAnchor(api, draft, finalized);
+	const top = anchor && anchor.number > finalized.number ? anchor : finalized;
+	const hashes = await walkHeaders(api, top, Math.min(draft.lastPendulumBlock, anchor?.number ?? Infinity));
+	const ingested = draft.lastPendulumHash ? { number: draft.lastPendulumBlock, hash: draft.lastPendulumHash } : undefined;
+	const expected: Array<[BlockRef | undefined, string]> = [
+		[finalized, "the source's finalized head is"],
+		[ingested, "the monitor ingested"],
+		[anchor, "the relay chain records"],
+		[draft.relayAnchor, "the relay chain recorded"],
+	];
+	for (const [block, what] of expected) {
+		const hash = block && hashes.get(block.number);
+		if (block && hash !== undefined && hash !== block.hash) {
+			throw new SourceIntegrityError(`the source's chain has ${hash} at Pendulum block ${block.number}, where ${what} ${block.hash}`);
+		}
+	}
+	if (anchor) {
+		draft.relayAnchor = anchor;
+		lastRelayAnchorMs = Date.now();
 	}
 	return hashes;
 }

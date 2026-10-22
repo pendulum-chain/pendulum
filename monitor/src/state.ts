@@ -39,6 +39,9 @@ export interface PersistedMonitorState {
 	mismatchedApprovals?: PersistedApproval[];
 	/** The hash of `lastPendulumBlock`; absent in older state. */
 	lastPendulumHash?: `0x${string}`;
+	/** The newest relay-chain record of the Pendulum head the source was
+	 *  verified against; absent without the relay-chain anchor. */
+	relayAnchor?: { number: number; hash: `0x${string}` };
 }
 
 export interface PersistedApproval {
@@ -112,6 +115,8 @@ export function loadMonitorState(path: string): PersistedMonitorState | undefine
 		(state.issuanceAnchor !== undefined && !isUint(state.issuanceAnchor)) ||
 		(state.baseAdminFromBlock !== undefined && !isUint(state.baseAdminFromBlock)) ||
 		(state.lastPendulumHash !== undefined && !isHash(state.lastPendulumHash)) ||
+		(state.relayAnchor !== undefined &&
+			(!Number.isSafeInteger(state.relayAnchor?.number) || !isHash(state.relayAnchor?.hash))) ||
 		badMigration ||
 		badAlerts ||
 		badApprovals ||

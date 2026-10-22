@@ -440,6 +440,30 @@ test("a Pendulum failure pages on its own and the vault balance check still runs
 	]);
 });
 
+test("while Pendulum cannot be read, a Base event with an unknown nonce pauses after the grace", async (t) => {
+	const { base, pendulum, api, monitor, subjects } = await setup(t, { env: { UNMATCHED_EVENT_GRACE_SECONDS: "0" } });
+	pendulum.failure = new Error("node unreachable");
+	release(base, 7n, 5_000n * PEN); // no burn behind it
+	await monitor.poll(api);
+	assert.ok(subjects().includes("UNVERIFIED BASE EVENT"), JSON.stringify(subjects()));
+	assert.ok(!subjects().includes("MIGRATION TUPLE VIOLATION"), JSON.stringify(subjects()));
+	await new Promise((resolve) => setTimeout(resolve, 5));
+	await monitor.poll(api); // the grace has run out
+	assert.ok(subjects().includes("MIGRATION TUPLE VIOLATION"), JSON.stringify(subjects()));
+});
+
+test("while Pendulum cannot be read, a mismatch on a known nonce pauses at once", async (t) => {
+	const { base, pendulum, api, monitor, pages } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	pendulum.failure = new Error("node unreachable");
+	const approval = { nonce: 0n, recipient: TOKEN, palletAmount: 100n * PEN, attestor: ATTESTORS[0] };
+	base.logs.push({ address: VAULT, eventName: "Approved", args: approval, blockNumber: 1_012n });
+	base.safe = 1_020n;
+	await monitor.poll(api);
+	assert.match(pages.find((page) => page.subject === "MIGRATION TUPLE VIOLATION")?.detail ?? "", /recipient/);
+});
+
 test("auto-pause readiness is checked at startup and each problem pages", async (t) => {
 	const { startup } = await setup(t, {
 		env: { GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY },

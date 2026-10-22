@@ -1204,9 +1204,12 @@ async function check(api: ApiPromise): Promise<void> {
 		}
 	}
 
-	// A Pendulum failure must not switch off the Base-side checks: the vault
-	// balance check and its pause run without the source. Reconciliation, M2a
-	// and liveness need the source and the admin scan, and wait for them.
+	// A Pendulum failure must not switch off the Base-side checks. Base events
+	// are then reconciled against the last view read in full, as against a
+	// lagging source but with no fabrication proof: a mismatch on a known nonce
+	// still pauses at once, an unknown nonce after the grace. The vault balance
+	// check needs no source; M2a and liveness wait for it. All but the vault
+	// balance check also wait for the admin scan.
 	let draft = cloneState(state);
 	let source: SourceView | undefined;
 	try {
@@ -1217,7 +1220,8 @@ async function check(api: ApiPromise): Promise<void> {
 			lastSourceFailureAlertMs = Date.now();
 			await alert(
 				"PENDULUM SOURCE UNREADABLE",
-				`${sourceError}; the vault balance check continues, but Base events are not reconciled until the source reads again`,
+				`${sourceError}; Base events are reconciled against the last Pendulum view read in full, so one with an ` +
+					`unknown nonce pauses the vault after ${config.unmatchedEventGraceSeconds}s unless the source reads again`,
 			);
 		}
 	}
@@ -1229,8 +1233,8 @@ async function check(api: ApiPromise): Promise<void> {
 		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "token", blockNumber: baseBlock }),
 	]);
 
-	const reconciliation = source && adminScanned
-		? await reconcileBaseEvents(draft, baseBlock, conversionFactor, source.timestampMs)
+	const reconciliation = adminScanned
+		? await reconcileBaseEvents(draft, baseBlock, conversionFactor, source?.timestampMs ?? 0)
 		: { violation: undefined, awaitingSource: undefined };
 	if (reconciliation.violation) {
 		if (await securityViolation("MIGRATION TUPLE VIOLATION", reconciliation.violation)) {
@@ -1260,7 +1264,12 @@ async function check(api: ApiPromise): Promise<void> {
 		}
 		return;
 	}
-	if (!source || !adminScanned) return;
+	if (!adminScanned) return;
+	if (!source) {
+		state = draft; // reconciled against the last view read in full
+		persistState(state);
+		return;
+	}
 	const { finalizedBlock, totalMigrated } = source;
 	if (reconciliation.awaitingSource) {
 		state = draft;

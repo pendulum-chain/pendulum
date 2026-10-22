@@ -47,6 +47,7 @@ const abi = parseAbi([
 	"function conversionFactor() view returns (uint256)",
 	"function token() view returns (address)",
 	"function paused() view returns (bool)",
+	"function pause()",
 	"function threshold() view returns (uint256)",
 	"function guardian() view returns (address)",
 	"function activeApprovals(bytes32 payload) view returns (uint256)",
@@ -97,6 +98,11 @@ function baseChain() {
 		deployedAt: undefined as bigint | undefined,
 		/** Requests to answer with an RPC error. */
 		failing: undefined as ((method: string, params: unknown[]) => boolean) | undefined,
+		/** Where set, the guardian's pause transaction is accepted and mined in the
+		 *  confirmed block; it pauses the vault there only where `true`. */
+		pauseTakesEffect: undefined as boolean | undefined,
+		/** Hashes of the transactions sent. */
+		sent: [] as string[],
 	};
 }
 
@@ -112,6 +118,39 @@ type Base = ReturnType<typeof baseChain>;
 function answer(base: Base, method: string, params: any[]): unknown {
 	if (base.failing?.(method, params)) throw new Error("rate limited");
 	switch (method) {
+		case "eth_getTransactionCount":
+			return "0x0";
+		case "eth_gasPrice":
+			return "0x1";
+		case "eth_estimateGas":
+			return "0x5208";
+		case "eth_blockNumber":
+			return toHex(base.safe);
+		case "eth_sendRawTransaction": {
+			if (base.pauseTakesEffect === undefined) break;
+			base.sent.push(keccak256(params[0]));
+			if (base.pauseTakesEffect) base.pausedFrom ??= base.safe;
+			return keccak256(params[0]);
+		}
+		case "eth_getTransactionReceipt": {
+			if (!base.sent.includes(params[0])) return null;
+			return {
+				transactionHash: params[0],
+				transactionIndex: "0x0",
+				blockHash: toHex(base.safe, { size: 32 }),
+				blockNumber: toHex(base.safe),
+				from: GUARDIAN,
+				to: VAULT,
+				cumulativeGasUsed: "0x5208",
+				gasUsed: "0x5208",
+				effectiveGasPrice: "0x1",
+				contractAddress: null,
+				logs: [],
+				logsBloom: `0x${"00".repeat(256)}`,
+				status: "0x1",
+				type: "0x0",
+			};
+		}
 		case "eth_chainId":
 			return toHex(base.chainId);
 		case "eth_getCode": {
@@ -128,6 +167,10 @@ function answer(base: Base, method: string, params: any[]): unknown {
 		}
 		case "eth_call": {
 			const { functionName, args } = decodeFunctionData({ abi, data: params[0].data });
+			if (functionName === "pause") {
+				if (base.pauseTakesEffect === undefined) throw new Error("unmocked pause");
+				return "0x";
+			}
 			const key = (args as readonly unknown[] | undefined)?.[0] as string;
 			const block = String(params[1]).startsWith("0x") ? BigInt(params[1]) : undefined;
 			const undeployed = base.deployedAt !== undefined && block !== undefined && block < base.deployedAt;
@@ -632,6 +675,20 @@ test("a failing heartbeat never stops the monitor", async (t) => {
 	const unreachable = await setup(t, { env: { HEARTBEAT_URL: "http://127.0.0.1:1/heartbeat" } });
 	await unreachable.monitor.poll(unreachable.api);
 	assert.deepEqual([...subjects(), ...unreachable.subjects()], []);
+});
+
+test("an auto-pause counts as confirmed only where the vault is paused at the confirmed block", async (t) => {
+	for (const pauseTakesEffect of [true, false]) {
+		const { base, api, monitor, subjects } = await setup(t, {
+			env: { GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY, BASE_FINALITY_POLL_MS: "10" },
+			prepare: (base) => (base.pauseTakesEffect = pauseTakesEffect),
+		});
+		base.vaultBalance -= 1n;
+		await monitor.poll(api);
+		assert.equal(base.sent.length, 1);
+		const outcome = subjects().filter((subject) => subject.includes("PAUSE") || subject.includes("pause"));
+		assert.deepEqual(outcome, [pauseTakesEffect ? "vault auto-pause confirmed" : "AUTO-PAUSE FAILED"]);
+	}
 });
 
 test("a vault balance deficit pages and asks for the auto-pause", async (t) => {

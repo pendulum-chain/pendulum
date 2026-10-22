@@ -1430,10 +1430,10 @@ test("the relay RPCs are tried in order", async (t) => {
 	assert.equal(persisted().relayAnchor?.number, 101);
 });
 
-/** A monitor with two relay RPCs; each records `head` or, without one, is down. */
-async function twoRelaySetup(t: { after(fn: () => void): void }, heads: Array<((pendulum: Pendulum) => Head) | undefined>) {
+/** A monitor with relay RPCs, in this order; each records `head` or, without one, is down. */
+async function relayRpcsSetup(t: { after(fn: () => void): void }, heads: Array<((pendulum: Pendulum) => Head) | undefined>) {
 	let chain: Pendulum | undefined;
-	const urls = ["wss://first.test", "wss://second.test"];
+	const urls = heads.map((_head, index) => `wss://relay-${index + 1}.test`);
 	const relays = heads.map((head) => relayChain(() => head!(chain!), () => !head));
 	return setup(t, {
 		env: { POLKADOT_WS: urls.join(",") },
@@ -1445,7 +1445,7 @@ const honestHead = (pendulum: Pendulum) => ({ number: pendulum.finalized, hash: 
 const forkedHead = (pendulum: Pendulum) => ({ number: pendulum.finalized, hash: pendulumHash({ forkFrom: 0 }, pendulum.finalized) });
 
 test("a relay contradiction the next relay RPC outvotes warns, and that RPC's record anchors the source", async (t) => {
-	const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [forkedHead, honestHead]);
+	const { pendulum, api, monitor, pages, persisted } = await relayRpcsSetup(t, [forkedHead, honestHead]);
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api);
 	assert.deepEqual(pages.map((page) => [page.subject, page.severity]), [["RELAY RPCS DISAGREE", "WARNING"]]);
@@ -1460,7 +1460,7 @@ test("a relay contradiction the next relay RPC outvotes warns, and that RPC's re
 test("a relay record below a contradicting one does not outvote it, and anchors the source up to its own height", async (t) => {
 	const below = (pendulum: Pendulum) => ({ number: pendulum.finalized - 1, hash: pendulumHash({}, pendulum.finalized - 1) });
 	for (const [heads, contradicting, lower] of [[[forkedHead, below], 1, 2], [[below, forkedHead], 2, 1]] as const) {
-		const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [...heads]);
+		const { pendulum, api, monitor, pages, persisted } = await relayRpcsSetup(t, [...heads]);
 		burn(pendulum, 0n, 100n * PEN, 102);
 		await monitor.poll(api);
 		assert.deepEqual(pages.map((page) => page.subject), ["RELAY ANCHOR UNAVAILABLE"]);
@@ -1480,7 +1480,7 @@ test("a relay record below a contradicting one does not outvote it, and anchors 
 const stuckHead = () => ({ number: 101, hash: pendulumHash({}, 101) });
 
 test("a relay contradiction that only a stuck relay RPC answers stays unconfirmed", async (t) => {
-	const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [honestHead, stuckHead]);
+	const { pendulum, api, monitor, pages, persisted } = await relayRpcsSetup(t, [honestHead, stuckHead]);
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api); // relay RPC 1 anchors block 101
 	pendulum.forkFrom = 102; // the source moves to another chain...
@@ -1497,7 +1497,7 @@ test("a relay contradiction that only a stuck relay RPC answers stays unconfirme
 });
 
 test("a relay RPC whose record does not anchor the source leaves it to the next one", async (t) => {
-	const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [stuckHead, honestHead]);
+	const { pendulum, api, monitor, pages, persisted } = await relayRpcsSetup(t, [stuckHead, honestHead]);
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api); // relay RPC 1 anchors block 101
 	burn(pendulum, 1n, 100n * PEN, 102);
@@ -1509,7 +1509,7 @@ test("a relay RPC whose record does not anchor the source leaves it to the next 
 
 test("a relay RPC whose record lags the source's head leaves the newer blocks to the next one", async (t) => {
 	const lagging = (pendulum: Pendulum) => ({ number: pendulum.finalized - 70, hash: pendulumHash({}, pendulum.finalized - 70) });
-	const { base, pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [lagging, honestHead]);
+	const { base, pendulum, api, monitor, pages, persisted } = await relayRpcsSetup(t, [lagging, honestHead]);
 	burn(pendulum, 0n, 100n * PEN, 190);
 	pendulum.finalized = 200;
 	release(base, 0n, 100n * PEN);
@@ -1522,15 +1522,31 @@ test("a relay RPC whose record lags the source's head leaves the newer blocks to
 });
 
 test("a relay contradiction the next relay RPC confirms pages critical", async (t) => {
-	const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [forkedHead, forkedHead]);
+	const { pendulum, api, monitor, pages, persisted } = await relayRpcsSetup(t, [forkedHead, forkedHead]);
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api);
 	assert.ok(pages.some((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED"), JSON.stringify(pages));
 	assert.equal(persisted().lastPendulumBlock, 100);
 });
 
+test("a relay contradiction above the source's head is confirmed by a later relay RPC, though a record between anchors", async (t) => {
+	const above = () => ({ number: 102, hash: pendulumHash({}, 102) });
+	const onSourceChain = (pendulum: Pendulum) => ({ number: 101, hash: pendulumHash(pendulum, 101) });
+	const { pendulum, api, monitor, pages, persisted } = await relayRpcsSetup(t, [above, onSourceChain, above]);
+	burn(pendulum, 0n, 100n * PEN);
+	pendulum.forkFrom = 101; // its finalized block 101 is on another chain...
+	pendulum.canonicalBlockHashes = true; // ...though its best chain holds the relay chain's block 102
+	pendulum.best = 102;
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		/records 0x0+66 as Pendulum block 102, whose chain has 0x0+65 at block 101, where the source has 0x0+10+65;/,
+	);
+	assert.equal(persisted().lastPendulumBlock, 100);
+});
+
 test("a relay contradiction no other relay RPC can confirm warns, and the source's blocks wait", async (t) => {
-	const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [forkedHead, undefined]);
+	const { pendulum, api, monitor, pages, persisted } = await relayRpcsSetup(t, [forkedHead, undefined]);
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api);
 	assert.deepEqual(pages.map((page) => page.subject), ["RELAY ANCHOR UNAVAILABLE"]);

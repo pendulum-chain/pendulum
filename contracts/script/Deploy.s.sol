@@ -17,22 +17,36 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 ///   ADMIN_SAFE            bootstrap Safe that becomes vault admin
 ///   GUARDIAN_SAFE         fast pause guardian
 ///   ATTESTOR_1..4         attestor transaction-sender addresses (D4: 3-of-4)
-///   MAX_ISSUANCE          max issuance in 18-decimal units (decision D3)
+///   MAX_ISSUANCE          max issuance in 18-decimal units (decision D3);
+///                         must equal EXPECTED_MAX_ISSUANCE
 ///   PER_RELEASE_CAP       initial per-release cap, 18-decimal units
 ///   DAILY_CAP             initial daily cap, 18-decimal units
-///   EARLIEST_SWEEP_TS     unix timestamp before which no remainder sweep (D5)
+///   EARLIEST_SWEEP_TS     unix timestamp in SECONDS before which no remainder
+///                         sweep (D5); must lie in the next MAX_SWEEP_FLOOR_AHEAD
 contract Deploy is Script {
     // 12-decimal pallet amounts -> 18-decimal token amounts (decision D2).
     uint256 internal constant CONVERSION_FACTOR = 1e6;
     uint256 internal constant THRESHOLD = 3;
+    // MAX_ISSUANCE and EARLIEST_SWEEP_TS are permanent once deployed, so the
+    // script checks them instead of trusting the environment.
+    // Decision D3: 150M PEN.
+    uint256 internal constant EXPECTED_MAX_ISSUANCE = 150_000_000e18;
+    // A sweep floor further out than this is a units slip (milliseconds land
+    // ~1000x further) or a typo, not a decision.
+    uint256 internal constant MAX_SWEEP_FLOOR_AHEAD = 2 * 365 days;
 
-    function run() external {
+    function run() external returns (PEN pen, MigrationVault vault) {
         address adminSafe = vm.envAddress("ADMIN_SAFE");
         address guardianSafe = vm.envAddress("GUARDIAN_SAFE");
         uint256 maxIssuance = vm.envUint("MAX_ISSUANCE");
         uint256 perReleaseCap = vm.envUint("PER_RELEASE_CAP");
         uint256 dailyCap = vm.envUint("DAILY_CAP");
         uint256 earliestSweepTs = vm.envUint("EARLIEST_SWEEP_TS");
+        require(maxIssuance == EXPECTED_MAX_ISSUANCE, "MAX_ISSUANCE must be 150M PEN in 18-decimal units");
+        require(
+            earliestSweepTs > block.timestamp && earliestSweepTs <= block.timestamp + MAX_SWEEP_FLOOR_AHEAD,
+            "EARLIEST_SWEEP_TS must be a future unix time in seconds, at most two years ahead"
+        );
 
         address[] memory attestors = new address[](4);
         attestors[0] = vm.envAddress("ATTESTOR_1");
@@ -40,9 +54,11 @@ contract Deploy is Script {
         attestors[2] = vm.envAddress("ATTESTOR_3");
         attestors[3] = vm.envAddress("ATTESTOR_4");
 
-        vm.startBroadcast();
+        // Broadcast as msg.sender (forge sets it to --sender or the single
+        // signer), the address the interim admin role below is given to.
+        vm.startBroadcast(msg.sender);
 
-        MigrationVault vault = new MigrationVault(
+        vault = new MigrationVault(
             msg.sender, // interim admin for setToken; handed over below
             guardianSafe,
             attestors,
@@ -52,7 +68,7 @@ contract Deploy is Script {
             dailyCap,
             earliestSweepTs
         );
-        PEN pen = new PEN(address(vault), maxIssuance);
+        pen = new PEN(address(vault), maxIssuance);
         vault.setToken(IERC20(address(pen)));
         vault.transferAdmin(adminSafe);
 

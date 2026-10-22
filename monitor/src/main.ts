@@ -438,6 +438,8 @@ let lastRelayAnchorMs = Date.now();
 let lastBaseStallAlertMs = 0;
 let lastReadinessAlertMs = 0;
 let lastAdminScanFailureAlertMs = 0;
+/** Since when the Base admin scan fails, while it does. */
+let adminScanFailingSinceMs: number | undefined;
 let lastLogScanAlertMs = 0;
 /** Since when the Base log scan holds a range, while it does. */
 let logScanHeldSinceMs: number | undefined;
@@ -1771,14 +1773,20 @@ async function check(api: ApiPromise): Promise<boolean> {
 	let adminScanned = true;
 	try {
 		await watchBaseAdmin(baseBlock);
+		adminScanFailingSinceMs = undefined;
 	} catch (adminError) {
 		adminScanned = false;
+		const failingMs = adminScanFailingSinceMs === undefined ? 0 : Date.now() - adminScanFailingSinceMs;
+		adminScanFailingSinceMs ??= Date.now();
 		if (Date.now() - lastAdminScanFailureAlertMs > config.unmatchedEventGraceSeconds * 1000) {
 			lastAdminScanFailureAlertMs = Date.now();
+			// Meanwhile the veto window of any operation scheduled since runs unseen.
+			const critical = failingMs > config.unmatchedEventGraceSeconds * 1000;
 			await alert(
-				"BASE ADMIN SCAN FAILED",
-				`${adminError}; vault admin events and the governance queue are not paged until the scan reads again, ` +
-					"and it then resumes where it stopped; every other check still runs",
+				`${critical ? "CRITICAL: " : ""}BASE ADMIN SCAN FAILED`,
+				`${adminError}; vault admin events and the governance queue are not paged until the scan reads again` +
+					(critical ? ` (failing for ${Math.round(failingMs / 1000)}s)` : "") +
+					", and it then resumes where it stopped; every other check still runs",
 			);
 		}
 	}

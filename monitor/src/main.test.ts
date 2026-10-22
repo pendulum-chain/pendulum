@@ -1416,6 +1416,28 @@ test("a failed admin scan pages, every other check still runs and the scan resum
 	assert.equal(persisted().baseAdminFromBlock, "1011");
 });
 
+test("an admin scan that keeps failing past the grace pages critical", async (t) => {
+	const { base, api, monitor, pages } = await setup(t, { env: { UNMATCHED_EVENT_GRACE_SECONDS: "0" } });
+	const guardianUpdated = toEventSelector("GuardianUpdated(address)"); // only the admin scan asks for it
+	const failing = (method: string, params: unknown[]) => method === "eth_getLogs" && JSON.stringify(params).includes(guardianUpdated);
+	base.failing = failing;
+	await monitor.poll(api);
+	await new Promise((resolve) => setTimeout(resolve, 5));
+	await monitor.poll(api);
+	const failed = () => pages.filter((page) => page.subject.endsWith("BASE ADMIN SCAN FAILED"));
+	assert.deepEqual(failed().map((page) => [page.subject, page.severity]), [
+		["BASE ADMIN SCAN FAILED", "WARNING"],
+		["CRITICAL: BASE ADMIN SCAN FAILED", "CRITICAL"],
+	]);
+	assert.match(failed()[1].detail, /\(failing for \d+s\)/);
+	base.failing = undefined;
+	await monitor.poll(api); // the scan reads again
+	base.failing = failing;
+	base.safe = 1_020n; // a new range for the admin scan
+	await monitor.poll(api);
+	assert.equal(failed()[2]?.subject, "BASE ADMIN SCAN FAILED"); // a new failure starts as a warning
+});
+
 test("a monitor without a guardian key says so at startup", async (t) => {
 	const { startup } = await setup(t);
 	assert.ok(startup.some((page) => page.subject === "AUTO-PAUSE DISABLED"), JSON.stringify(startup));

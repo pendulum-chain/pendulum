@@ -259,6 +259,8 @@ function pendulumState() {
 		failure: undefined as Error | undefined,
 		/** Holds every finalized-head read until it settles, as a slow node would. */
 		gate: undefined as Promise<void> | undefined,
+		/** Finalized-head reads so far. */
+		finalizedReads: 0,
 		events: new Map<number, PendulumEvent[]>(),
 		totalMigrated: 0n,
 		nextNonce: 0n,
@@ -349,6 +351,7 @@ function pendulumChain(chain: Pendulum = pendulumState()) {
 		rpc: {
 			chain: {
 				getFinalizedHead: async () => {
+					chain.finalizedReads++;
 					await chain.gate;
 					if (chain.failure) throw chain.failure;
 					return hash(pendulumHash(chain, chain.finalized));
@@ -670,19 +673,22 @@ test("a slow Pendulum source does not delay the vault balance check", async (t) 
 	}
 });
 
-/** Holds every finalized-head read of `pendulum` until the returned function is called. */
-function holdSource(pendulum: Pendulum): () => void {
+/** Holds every finalized-head read of `pendulum` until `respond` is called;
+ *  `waiting` resolves once a read waits. */
+function holdSource(pendulum: Pendulum) {
 	let respond = () => {};
 	pendulum.gate = new Promise((resolve) => (respond = resolve));
-	return respond;
+	const reads = pendulum.finalizedReads;
+	return { respond, waiting: () => until(() => pendulum.finalizedReads > reads, "a poll waiting on the source") };
 }
 
 test("while a poll waits on a slow source, the vault balance check runs on its own", async (t) => {
 	const { base, pendulum, api, monitor, subjects } = await setup(t, { env: { POLL_INTERVAL_MS: "20" } });
-	const respond = holdSource(pendulum);
+	const { respond, waiting } = holdSource(pendulum);
 	const polling = monitor.poll(api); // checks the balance, then waits on the source
 	try {
-		await new Promise((resolve) => setTimeout(resolve, 40));
+		await waiting();
+		await new Promise((resolve) => setTimeout(resolve, 30)); // a poll interval later
 		base.vaultBalance -= 1n;
 		await monitor.watchVaultBalance();
 		assert.ok(subjects().includes("VAULT BALANCE DEFICIT"), JSON.stringify(subjects()));
@@ -693,18 +699,18 @@ test("while a poll waits on a slow source, the vault balance check runs on its o
 });
 
 test("the vault balance check does not run on its own within a poll interval of a poll's, or between polls", async (t) => {
-	const { base, pendulum, api, monitor, subjects } = await setup(t, { env: { POLL_INTERVAL_MS: "200" } });
-	const respond = holdSource(pendulum);
+	const { base, pendulum, api, monitor, subjects } = await setup(t, { env: { POLL_INTERVAL_MS: "500" } });
+	const { respond, waiting } = holdSource(pendulum);
 	const polling = monitor.poll(api);
 	try {
-		await new Promise((resolve) => setTimeout(resolve, 40));
+		await waiting();
 		base.vaultBalance -= 1n;
 		await monitor.watchVaultBalance(); // the poll checked the balance less than an interval ago
 	} finally {
 		respond();
 		await polling;
 	}
-	await new Promise((resolve) => setTimeout(resolve, 250));
+	await new Promise((resolve) => setTimeout(resolve, 550));
 	await monitor.watchVaultBalance(); // no poll is running: the next one checks it
 	assert.ok(!subjects().includes("VAULT BALANCE DEFICIT"), JSON.stringify(subjects()));
 });
@@ -726,11 +732,12 @@ test("a pause attempt in flight is joined, not started again", async (t) => {
 	base.totalReleased += tokenAmount;
 	base.vaultBalance -= tokenAmount;
 	base.safe = 1_020n;
-	const respond = holdSource(pendulum);
+	const { respond, waiting } = holdSource(pendulum);
 	const polling = monitor.poll(api);
 	const failedPauses = () => pages.filter((page) => page.subject === "AUTO-PAUSE FAILED").length;
 	try {
-		await new Promise((resolve) => setTimeout(resolve, 40));
+		await waiting();
+		await new Promise((resolve) => setTimeout(resolve, 30)); // a poll interval later
 		base.vaultBalance -= 1n;
 		const watching = monitor.watchVaultBalance(); // a deficit: the first pause attempt
 		await until(() => failedPauses() === 1, "the first failed pause page");
@@ -860,15 +867,17 @@ test("a second node whose best chain holds another newest block, not yet finaliz
 	assert.equal(persisted().lastPendulumBlock, 101);
 });
 
-test("a second node with other migration totals at the finalized head pages critical and nothing is ingested", async (t) => {
-	const { pendulum, api, monitor, pages, persisted } = await crossCheckSetup(t, { nextNonce: 1n, totalMigrated: 7n * PEN });
-	burn(pendulum, 0n, 100n * PEN);
-	await monitor.poll(api);
-	assert.match(
-		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
-		/at Pendulum block 101 the second node has nextNonce 1 and totalMigrated 7000000000000, the source 1 and 100000000000000;/,
-	);
-	assert.equal(persisted().lastPendulumBlock, 100);
+test("a second node with another nonce or total at the finalized head pages critical and nothing is ingested", async (t) => {
+	for (const own of [{ nextNonce: 2n }, { totalMigrated: 7n * PEN }]) {
+		const { pendulum, api, monitor, pages, persisted } = await crossCheckSetup(t, own);
+		burn(pendulum, 0n, 100n * PEN);
+		await monitor.poll(api);
+		assert.match(
+			pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+			/at Pendulum block 101 the second node has nextNonce (2|1) and totalMigrated (100|7)000000000000, the source 1 and 100000000000000;/,
+		);
+		assert.equal(persisted().lastPendulumBlock, 100);
+	}
 });
 
 test("a second node with other migration events in a block pages critical and nothing is ingested", async (t) => {
@@ -1045,6 +1054,32 @@ test("a relay chain that records another hash at a height it anchored pages crit
 		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
 		/relay chain now records 0x0+10+65 as Pendulum block 101, where it recorded 0x0+65;/,
 	);
+});
+
+test("a relay record below the block ingested last is checked down the source's chain", async (t) => {
+	for (const recorded of [pendulumHash({}, 100), pendulumHash({ forkFrom: 0 }, 100)]) {
+		let relayDown = true;
+		const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, {
+			head: () => ({ number: 100, hash: recorded }),
+			failing: () => relayDown,
+		});
+		burn(pendulum, 0n, 100n * PEN);
+		await monitor.poll(api); // ingested up to block 101 without the anchor
+		relayDown = false;
+		burn(pendulum, 1n, 100n * PEN, 102);
+		await monitor.poll(api);
+		if (recorded === pendulumHash({}, 100)) {
+			assert.deepEqual(pages.map((page) => page.subject), ["RELAY ANCHOR UNAVAILABLE"]);
+			assert.deepEqual(persisted().relayAnchor, { number: 100, hash: recorded });
+			assert.equal(persisted().lastPendulumBlock, 102);
+		} else {
+			assert.match(
+				pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+				/relay chain records 0x0+10+64 as Pendulum block 100, the source's chain has 0x0+64;/,
+			);
+			assert.equal(persisted().lastPendulumBlock, 101);
+		}
+	}
 });
 
 test("an unreadable relay chain warns, the source is used, and it turns critical after the grace", async (t) => {

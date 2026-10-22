@@ -123,6 +123,8 @@ async function main() {
 
 	// --- governance deployment ----------------------------------------------
 	section("Governance deployment (first execution of DeployGovernance.s.sol)");
+	// The drill reuses the guardian key as canceller; production uses a
+	// dedicated canceller Safe, separate from the guardian.
 	const { timelock, governor, params } = deployGovernanceToSepolia({ env, pen, vault, canceller: ctx.roles.guardian.address, log });
 	log(`timelock ${timelock}\n  governor ${governor}`);
 	const G = { address: governor, abi: governorAbi };

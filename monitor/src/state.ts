@@ -37,6 +37,8 @@ export interface PersistedMonitorState {
 	/** Approvals that disagreed with the finalized burn, until their nonce is
 	 *  released; absent in older state. */
 	mismatchedApprovals?: PersistedApproval[];
+	/** The hash of `lastPendulumBlock`; absent in older state. */
+	lastPendulumHash?: `0x${string}`;
 }
 
 export interface PersistedApproval {
@@ -47,6 +49,7 @@ export interface PersistedApproval {
 }
 
 const isAddress = (value: unknown) => typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value);
+const isHash = (value: unknown) => typeof value === "string" && /^0x[0-9a-fA-F]{64}$/.test(value);
 
 function isMissing(error: unknown): boolean {
 	return (error as NodeJS.ErrnoException)?.code === "ENOENT";
@@ -108,6 +111,7 @@ export function loadMonitorState(path: string): PersistedMonitorState | undefine
 		!isUint(state.baseFromBlock) ||
 		(state.issuanceAnchor !== undefined && !isUint(state.issuanceAnchor)) ||
 		(state.baseAdminFromBlock !== undefined && !isUint(state.baseAdminFromBlock)) ||
+		(state.lastPendulumHash !== undefined && !isHash(state.lastPendulumHash)) ||
 		badMigration ||
 		badAlerts ||
 		badApprovals ||

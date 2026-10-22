@@ -228,9 +228,14 @@ interface PendulumEvent {
 }
 
 /** The Pendulum side: finalized blocks with their events, the migration
- *  pallet's totals and the governance queues. Block numbers double as hashes. */
+ *  pallet's totals and the governance queues. A block hash encodes the block
+ *  number, and whether it is on the fork the node serves from `forkFrom` on. */
 function pendulumChain() {
 	const chain = {
+		/** Where set, the node serves another chain from this block on. */
+		forkFrom: undefined as number | undefined,
+		/** Blocks whose header the node alters, so it no longer hashes to its hash. */
+		alteredHeaders: new Set<number>(),
 		finalized: 100,
 		/** Age of the finalized head; earlier blocks are 12 s apart. */
 		headAgeMs: 0,
@@ -324,16 +329,31 @@ function pendulumChain() {
 				getFinalizedHead: async () => {
 					await chain.gate;
 					if (chain.failure) throw chain.failure;
-					return chain.finalized;
+					return hash(pendulumHash(chain, chain.finalized));
 				},
-				getHeader: async (block: number) => ({ number: codec(block) }),
-				getBlockHash: async (block: number) => block,
+				getHeader: async (value: string | { toHex(): string }) => {
+					const requested = typeof value === "string" ? value : value.toHex();
+					const block = blockOf(requested);
+					return {
+						number: codec(block),
+						parentHash: hash(pendulumHash(chain, block - 1)),
+						hash: hash(chain.alteredHeaders.has(block) ? pendulumHash(chain, block + 1_000_000) : requested),
+					};
+				},
+				getBlockHash: async (block: number) => hash(pendulumHash(chain, block)),
 			},
 		},
-		at: async (block: number) => at(block),
+		at: async (value: string | { toHex(): string }) => at(blockOf(typeof value === "string" ? value : value.toHex())),
 	};
 	return { chain, api: api as unknown as ApiPromise };
 }
+
+/** The hash of `block` on the chain the node serves. */
+function pendulumHash(chain: { forkFrom?: number }, block: number): string {
+	const fork = chain.forkFrom !== undefined && block >= chain.forkFrom ? 1n << 64n : 0n;
+	return toHex(fork + BigInt(block), { size: 32 });
+}
+const blockOf = (blockHash: string) => Number(BigInt(blockHash) & 0xffff_ffff_ffff_ffffn);
 type Pendulum = ReturnType<typeof pendulumChain>["chain"];
 
 /** A finalized burn on Pendulum, in block 101 unless stated. */
@@ -463,6 +483,8 @@ async function setup(
 		restart: launch,
 		subjects: () => pages.map((page) => page.subject),
 		persisted: () => JSON.parse(readFileSync(stateFile, "utf8")) as {
+			lastPendulumBlock: number;
+			lastPendulumHash: string;
 			baseFromBlock: string;
 			baseAdminFromBlock: string;
 			migrations: Array<{ nonce: string }>;
@@ -578,6 +600,33 @@ test("a slow Pendulum source does not delay the vault balance check", async (t) 
 		respond();
 		await polling;
 	}
+});
+
+test("a source whose chain leaves the blocks ingested so far pages critical and ingests nothing", async (t) => {
+	const { pendulum, api, monitor, restart, pages, subjects, persisted } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	const restarted = await restart();
+	pendulum.forkFrom = 101; // the node now serves another chain from block 101 on
+	burn(pendulum, 1n, 100n * PEN, 102);
+	await restarted.poll(api);
+	const page = pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED");
+	assert.equal(page?.severity, "CRITICAL", JSON.stringify(pages));
+	assert.match(page.detail, /chain has 0x0+10+65 at Pendulum block 101, where the monitor ingested 0x0+65;/);
+	assert.ok(!subjects().includes("PENDULUM SOURCE UNREADABLE"), JSON.stringify(subjects()));
+	assert.equal(persisted().lastPendulumBlock, 101);
+	assert.deepEqual(persisted().migrations.map((migration) => migration.nonce), ["0"]);
+});
+
+test("a source header that does not hash to its block hash pages critical", async (t) => {
+	const { pendulum, api, monitor, pages } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN, 102);
+	pendulum.alteredHeaders.add(102);
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		/header for Pendulum block 102 does not hash to 0x0+66;/,
+	);
 });
 
 test("while Pendulum cannot be read, a Base event with an unknown nonce pauses after the grace", async (t) => {

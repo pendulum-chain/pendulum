@@ -275,6 +275,8 @@ interface RuntimeState {
 	vaultAddress: `0x${string}`;
 	pendulumGenesisHash: `0x${string}` | undefined;
 	lastPendulumBlock: number;
+	/** The hash of `lastPendulumBlock`: the next blocks must descend from it. */
+	lastPendulumHash: string | undefined;
 	nextExpectedNonce: bigint;
 	baseFromBlock: bigint;
 	/** The admin scan's own cursor: it only pages, so nothing waits for it. */
@@ -301,6 +303,7 @@ function hydrateState(): RuntimeState {
 			vaultAddress: config.vaultAddress,
 			pendulumGenesisHash: undefined,
 			lastPendulumBlock: config.pendulumStartBlock - 1,
+			lastPendulumHash: undefined,
 			nextExpectedNonce: config.pendulumStartNonce,
 			baseFromBlock: config.baseStartBlock,
 			baseAdminFromBlock: config.baseStartBlock,
@@ -316,6 +319,7 @@ function hydrateState(): RuntimeState {
 		vaultAddress: persisted.vaultAddress,
 		pendulumGenesisHash: persisted.pendulumGenesisHash,
 		lastPendulumBlock: persisted.lastPendulumBlock,
+		lastPendulumHash: persisted.lastPendulumHash,
 		nextExpectedNonce: BigInt(persisted.nextExpectedNonce),
 		baseFromBlock: BigInt(persisted.baseFromBlock),
 		baseAdminFromBlock: BigInt(persisted.baseAdminFromBlock ?? persisted.baseFromBlock),
@@ -346,6 +350,7 @@ function cloneState(source: RuntimeState): RuntimeState {
 		vaultAddress: source.vaultAddress,
 		pendulumGenesisHash: source.pendulumGenesisHash,
 		lastPendulumBlock: source.lastPendulumBlock,
+		lastPendulumHash: source.lastPendulumHash,
 		nextExpectedNonce: source.nextExpectedNonce,
 		baseFromBlock: source.baseFromBlock,
 		baseAdminFromBlock: source.baseAdminFromBlock,
@@ -365,6 +370,7 @@ function persistState(state: RuntimeState): void {
 		vaultAddress: state.vaultAddress,
 		pendulumGenesisHash: state.pendulumGenesisHash,
 		lastPendulumBlock: state.lastPendulumBlock,
+		lastPendulumHash: state.lastPendulumHash as `0x${string}` | undefined,
 		nextExpectedNonce: state.nextExpectedNonce.toString(),
 		baseFromBlock: state.baseFromBlock.toString(),
 		baseAdminFromBlock: state.baseAdminFromBlock.toString(),
@@ -392,6 +398,7 @@ let state: RuntimeState;
 let multicallUnavailable = false;
 let lastSourceStallAlertMs = 0;
 let lastSourceFailureAlertMs = 0;
+let lastSourceIntegrityAlertMs = 0;
 let lastBaseStallAlertMs = 0;
 let lastReadinessAlertMs = 0;
 let lastAdminScanFailureAlertMs = 0;
@@ -629,6 +636,46 @@ function unmatchedDisposition(
 		: "expired";
 }
 
+interface BlockRef {
+	number: number;
+	hash: string;
+}
+
+/** The Pendulum source contradicts the chain it must be on: the one ingested
+ *  so far, the second node's or the relay chain's. Handled as unreadable. */
+class SourceIntegrityError extends Error {}
+
+/** Walks parent hashes down from `top` to `bottom` through headers fetched
+ *  from the node, recomputing each hash here, so that the result is one
+ *  chain the node cannot fake: block hashes by height, `bottom` included. */
+async function walkHeaders(api: ApiPromise, top: BlockRef, bottom: number): Promise<Map<number, string>> {
+	const hashes = new Map([[top.number, top.hash]]);
+	let hash = top.hash;
+	for (let height = top.number; height > bottom; height--) {
+		const header = await api.rpc.chain.getHeader(hash);
+		if (header.hash.toHex() !== hash || header.number.toNumber() !== height) {
+			throw new SourceIntegrityError(`the source's header for Pendulum block ${height} does not hash to ${hash}`);
+		}
+		hash = header.parentHash.toHex();
+		hashes.set(height - 1, hash);
+	}
+	return hashes;
+}
+
+/** The hashes of the finalized blocks to ingest, on one chain with every
+ *  block ingested before. */
+async function sourceHashes(api: ApiPromise, draft: RuntimeState, finalized: BlockRef): Promise<Map<number, string>> {
+	const hashes = await walkHeaders(api, finalized, draft.lastPendulumBlock);
+	const hash = hashes.get(draft.lastPendulumBlock);
+	if (draft.lastPendulumHash && hash !== undefined && hash !== draft.lastPendulumHash) {
+		throw new SourceIntegrityError(
+			`the source's chain has ${hash} at Pendulum block ${draft.lastPendulumBlock}, ` +
+				`where the monitor ingested ${draft.lastPendulumHash}`,
+		);
+	}
+	return hashes;
+}
+
 /** The migration pallet's admin events, each with what to check. */
 const PALLET_ADMIN_EVENTS = new Map([
 	["MigrationPauseSet", "migrations were paused or resumed; check that it was intended"],
@@ -638,9 +685,17 @@ const PALLET_ADMIN_EVENTS = new Map([
 	],
 ]);
 
-async function ingestPendulumEvents(api: ApiPromise, draft: RuntimeState, finalizedBlock: number): Promise<void> {
+/** Ingests the blocks after the cursor up to `finalizedBlock`, each read at
+ *  its hash in `hashes`: the chain that `sourceHashes` verified. */
+async function ingestPendulumEvents(
+	api: ApiPromise,
+	draft: RuntimeState,
+	finalizedBlock: number,
+	hashes: Map<number, string>,
+): Promise<void> {
 	for (let block = draft.lastPendulumBlock + 1; block <= finalizedBlock; block++) {
-		const blockHash = await api.rpc.chain.getBlockHash(block);
+		const blockHash = hashes.get(block);
+		if (!blockHash) throw new Error(`no verified hash for Pendulum block ${block}`);
 		const apiAt = await api.at(blockHash);
 		const firstSeenMs = Number((await apiAt.query.timestamp.now()).toString().replaceAll(",", ""));
 		const records = (await apiAt.query.system.events()) as unknown as {
@@ -699,6 +754,7 @@ async function ingestPendulumEvents(api: ApiPromise, draft: RuntimeState, finali
 			});
 		}
 		draft.lastPendulumBlock = block;
+		draft.lastPendulumHash = blockHash;
 		// Checkpoint a long catch-up as it goes: the Pendulum-side cursor is
 		// self-consistent on its own (the Base cursor only ever trails it), so a
 		// transient RPC error hours into a replay must not discard the progress
@@ -1248,7 +1304,8 @@ async function readSource(api: ApiPromise, draft: RuntimeState): Promise<SourceV
 				`the ${config.unmatchedEventGraceSeconds}s unmatched-event grace forces a pause`,
 		);
 	}
-	await ingestPendulumEvents(api, draft, finalizedBlock);
+	const hashes = await sourceHashes(api, draft, { number: finalizedBlock, hash: finalizedHash.toHex() });
+	await ingestPendulumEvents(api, draft, finalizedBlock, hashes);
 	const [totalMigratedValue, chainNextNonceValue, totalIssuanceValue] = await Promise.all([
 		apiAt.query.tokenMigration.totalMigrated(),
 		apiAt.query.tokenMigration.nextNonce(),
@@ -1362,14 +1419,20 @@ async function check(api: ApiPromise): Promise<boolean> {
 		source = await readSource(api, draft);
 	} catch (sourceError) {
 		draft = cloneState(state); // drops a half-ingested block; the 200-block checkpoints already moved `state`
-		if (Date.now() - lastSourceFailureAlertMs > config.unmatchedEventGraceSeconds * 1000) {
-			lastSourceFailureAlertMs = Date.now();
+		const contradicted = sourceError instanceof SourceIntegrityError;
+		const consequence = `Base events are checked against the last Pendulum view read in full: one whose nonce ` +
+			`that view lacks pauses the vault ${config.unmatchedEventGraceSeconds}s after its first sighting, and M2a ` +
+			"and liveness are skipped";
+		if (contradicted && Date.now() - lastSourceIntegrityAlertMs > config.unmatchedEventGraceSeconds * 1000) {
+			lastSourceIntegrityAlertMs = Date.now();
 			await alert(
-				"PENDULUM SOURCE UNREADABLE",
-				`${sourceError}; until the source reads again, Base events are checked against the last Pendulum view ` +
-					`read in full: one whose nonce that view lacks pauses the vault ${config.unmatchedEventGraceSeconds}s ` +
-					"after its first sighting, and M2a and liveness are skipped",
+				"CRITICAL: PENDULUM SOURCE CONTRADICTED",
+				`${sourceError}; nothing from the source is ingested until it verifies again, and until then ` +
+					`${consequence} — stop trusting the source node and compare it with other nodes and the relay chain`,
 			);
+		} else if (!contradicted && Date.now() - lastSourceFailureAlertMs > config.unmatchedEventGraceSeconds * 1000) {
+			lastSourceFailureAlertMs = Date.now();
+			await alert("PENDULUM SOURCE UNREADABLE", `${sourceError}; until the source reads again, ${consequence}`);
 		}
 	}
 

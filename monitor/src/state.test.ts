@@ -80,10 +80,19 @@ test("optional fields are checked when present", () => {
 		attestor: "0x4444444444444444444444444444444444444444",
 	} as const;
 	try {
-		const complete = { ...state, baseAdminFromBlock: "150", mismatchedApprovals: [approval] };
+		const complete = {
+			...state,
+			baseAdminFromBlock: "150",
+			mismatchedApprovals: [approval],
+			lastPendulumHash: `0x${"55".repeat(32)}` as const,
+		};
 		saveMonitorState(path, complete);
 		assert.deepEqual(loadMonitorState(path), complete);
-		for (const bad of [{ baseAdminFromBlock: "-1" }, { mismatchedApprovals: [{ ...approval, attestor: "0x44" }] }]) {
+		for (const bad of [
+			{ baseAdminFromBlock: "-1" },
+			{ mismatchedApprovals: [{ ...approval, attestor: "0x44" }] },
+			{ lastPendulumHash: "0x55" },
+		]) {
 			writeFileSync(path, JSON.stringify({ ...state, ...bad }));
 			assert.throws(() => loadMonitorState(path), /invalid or legacy schema/);
 		}

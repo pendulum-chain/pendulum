@@ -15,6 +15,7 @@ Checks every poll:
 | Source supply | `totalIssuance + TotalMigrated` on Pendulum must never grow past its first-seen anchor. | Alert (`SOURCE SUPPLY GREW`) |
 | Unreleasable burns | A burn to the zero or vault address can never be approved or released; it is paged once and excluded from the pending count so it cannot page liveness forever or block RB-7. | Alert once |
 | Pendulum source | The finalized Pendulum view must stay fresh and readable. While it cannot be read (an RPC error, a nonce discontinuity, an event-shape change), the Base-side checks — vault balance and its auto-pause, Base view, auto-pause readiness, vault admin events, governance queue — still run, and Base events are reconciled against the last view read in full: an unreadable source counts as a stalled one, so a mismatch on a known nonce counts at once and an unknown nonce after `UNMATCHED_EVENT_GRACE_SECONDS`. M2a and liveness wait for the source. | Alert, throttled: `PENDULUM SOURCE VIEW STALLED` once the view is older than `SOURCE_STALE_ALERT_SECONDS`, `PENDULUM SOURCE UNREADABLE` on a failure |
+| Pendulum chain | Every finalized block the monitor ingests is read at a hash it verified: it walks the parent hashes down from the finalized head through headers it fetches from the node and hashes itself, and the walk must arrive at the hash of the block it ingested last (kept in the state file). | Alert (`CRITICAL: PENDULUM SOURCE CONTRADICTED`), throttled; nothing from the source is ingested, and it is treated as unreadable (see Pendulum source) until it verifies again |
 | Base log completeness | In every scanned block range the `Released` amounts must add up to the growth of `totalReleased`, and the `RemainderSwept` amounts to that of `totalSwept`, between the block before the range and its last block. A range whose logs do not (a backend serving truncated logs) is read once more, then held: the Base cursor stays on it and M2a and liveness wait until a read accounts for the totals. | Alert (`BASE LOG SCAN INCOMPLETE`), throttled |
 | Base view | The safe/finalized Base block must not be older than `BASE_STALE_ALERT_SECONDS`: a view that stops advancing hides every later vault event while every check still passes at the old block. | Alert (`BASE VIEW STALLED`), throttled |
 | Auto-pause readiness | At startup and every poll: the Base RPC serves `BASE_CHAIN_ID` and, with a guardian key configured, the key parses, is `vault.guardian()` and holds at least `GUARDIAN_MIN_BALANCE_WEI`. A read that fails pages as well and never stops the poll's other checks. | Alert (`AUTO-PAUSE NOT READY`), throttled; `AUTO-PAUSE DISABLED` once at startup without a key |
@@ -47,7 +48,7 @@ Checks every poll:
 | `PENDULUM_START_BLOCK` | **Required on first run:** first block to scan, normally the pallet activation block or the next finalized block before unpausing |
 | `PENDULUM_START_NONCE` | Nonce expected at that block (default 0; set explicitly when starting after any migrations) |
 | `BASE_START_BLOCK` | **Required on first run:** vault deployment block or an earlier block |
-| `STATE_FILE` | Durable cursors (Pendulum, Base, Base admin scan), pending tuples, and liveness timestamps (default `./monitor-state.json`) |
+| `STATE_FILE` | Durable cursors (Pendulum with the hash of its last block, Base, Base admin scan), pending tuples, and liveness timestamps (default `./monitor-state.json`) |
 | `BASE_FINALITY_TAG` | `safe` (default) or `finalized`; only events inside this boundary are trusted |
 | `BASE_MAX_BLOCK_RANGE` | Maximum `eth_getLogs` range (default 10,000 blocks) |
 
@@ -69,6 +70,7 @@ starts with `CRITICAL`; everything else is a `WARNING`.
 | `CRITICAL: MISMATCHED APPROVAL` | One attestor approved a tuple that disagrees with the finalized Pendulum view; check its key and its Pendulum node. A second attestor doing so for the same nonce pauses the vault |
 | `LIVENESS: migration below approval quorum`, `LIVENESS: quorum reached but not released` | Stalled migrations, one summary per kind and poll |
 | `PENDULUM SOURCE VIEW STALLED`, `PENDULUM SOURCE UNREADABLE`, `BASE VIEW STALLED`, `BASE ADMIN SCAN FAILED`, `BASE LOG SCAN INCOMPLETE` | The monitor is going blind on one chain |
+| `CRITICAL: PENDULUM SOURCE CONTRADICTED` | The Pendulum source contradicts the chain the monitor verified; stop trusting that node |
 | `AUTO-PAUSE NOT READY`, `AUTO-PAUSE DISABLED` | The next violation would not pause the vault automatically |
 | `SOURCE SUPPLY GREW`, `CRITICAL: unreleasable migration burned on Pendulum` | Supply problems at the source |
 | `PENDULUM GOVERNANCE ITEM`, `CRITICAL: Pendulum governance item mints, moves or unlocks balances, or changes the runtime`, `CRITICAL: Pendulum governance item cannot be read`, `MIGRATION PALLET ADMIN EVENT` | Pendulum governance |

@@ -728,6 +728,14 @@ test("a second node that cannot answer only warns", async (t) => {
 	assert.equal(pages.length, 1); // throttled
 });
 
+test("the URLs of the checking nodes are validated at startup", async (t) => {
+	await assert.rejects(setup(t, { env: { POLKADOT_WS: "wss://relay.test, https://relay.test" } }), /invalid POLKADOT_WS/);
+	await assert.rejects(
+		setup(t, { env: { PENDULUM_WS_CROSSCHECK: "wss://a.test,wss://b.test" } }),
+		/invalid PENDULUM_WS_CROSSCHECK: expected one ws/,
+	);
+});
+
 test("a node connection that fails with an event says why", async (t) => {
 	const { pendulum, api, monitor, pages } = await setup(t, {
 		env: { PENDULUM_WS_CROSSCHECK: SECOND_NODE },

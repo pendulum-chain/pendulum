@@ -194,6 +194,16 @@ function optionalAddress(name: string): `0x${string}` | undefined {
 	return value as `0x${string}`;
 }
 
+/** Comma-separated WebSocket URLs from the environment, at most `most`,
+ *  validated at startup. */
+function wsUrls(name: string, most = Infinity): string[] {
+	const urls = (process.env[name] ?? "").split(",").map((url) => url.trim()).filter(Boolean);
+	if (urls.length > most || urls.some((url) => !/^wss?:\/\//i.test(url))) {
+		throw new Error(`invalid ${name}: expected ${most === 1 ? "one ws:// or wss:// URL" : "ws:// or wss:// URLs"}`);
+	}
+	return urls;
+}
+
 function finalityTag(): "safe" | "finalized" {
 	const value = process.env.BASE_FINALITY_TAG ?? "safe";
 	if (value !== "safe" && value !== "finalized") throw new Error(`invalid BASE_FINALITY_TAG ${value}`);
@@ -205,10 +215,10 @@ const baseFinalityTag = finalityTag();
 const config = {
 	pendulumWs: required("PENDULUM_WS"),
 	/** Optional: a second Pendulum node whose block hashes must agree. */
-	pendulumWsCrossCheck: process.env.PENDULUM_WS_CROSSCHECK,
+	pendulumWsCrossCheck: wsUrls("PENDULUM_WS_CROSSCHECK", 1)[0] as string | undefined,
 	/** Optional: third-party Polkadot RPCs, tried in order, whose record of
 	 *  the Pendulum head anchors the source. */
-	polkadotWs: (process.env.POLKADOT_WS ?? "").split(",").map((url) => url.trim()).filter(Boolean),
+	polkadotWs: wsUrls("POLKADOT_WS"),
 	pendulumParaId: envNumber("PENDULUM_PARA_ID", 2094),
 	/** How long the source may go without a relay-anchored head before that pages critical. */
 	relayAnchorGraceMs: envNumber("RELAY_ANCHOR_GRACE_SECONDS", 3600) * 1000,

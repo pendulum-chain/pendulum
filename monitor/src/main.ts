@@ -969,8 +969,9 @@ async function motionCall(apiAt: ApiAt, collective: "council" | "technicalCommit
  * CRITICAL: minted PEN burned through the migration drains the fixed-supply
  * vault, and only Pendulum governance can stop the call before enactment.
  * So does a call the watcher cannot read; until it can, it is re-checked
- * every poll. Alert-only; it runs after the conservation checks and decodes
- * within fixed bounds, so it can neither stop nor delay them.
+ * every poll. Alert-only; it runs after the poll's conservation checks, so it
+ * cannot stop or delay them, and decodes within fixed bounds, so its cost to
+ * the next poll is bounded.
  */
 async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
 	const finalizedHash = await api.rpc.chain.getFinalizedHead();

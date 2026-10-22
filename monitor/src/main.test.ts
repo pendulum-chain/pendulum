@@ -950,6 +950,47 @@ test("the relay RPCs are tried in order", async (t) => {
 	assert.equal(persisted().relayAnchor?.number, 101);
 });
 
+/** A monitor with two relay RPCs; each records `head` or, without one, is down. */
+async function twoRelaySetup(t: { after(fn: () => void): void }, heads: Array<((pendulum: Pendulum) => Head) | undefined>) {
+	let chain: Pendulum | undefined;
+	const urls = ["wss://first.test", "wss://second.test"];
+	const relays = heads.map((head) => relayChain(() => head!(chain!), () => !head));
+	return setup(t, {
+		env: { POLKADOT_WS: urls.join(",") },
+		prepare: (_base, pendulum) => (chain = pendulum),
+		connect: async (url) => relays[urls.indexOf(url)] ?? assert.fail(url),
+	});
+}
+const honestHead = (pendulum: Pendulum) => ({ number: pendulum.finalized, hash: pendulumHash({}, pendulum.finalized) });
+const forkedHead = (pendulum: Pendulum) => ({ number: pendulum.finalized, hash: pendulumHash({ forkFrom: 0 }, pendulum.finalized) });
+
+test("a relay contradiction the next relay RPC does not confirm only warns, without the anchor", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [forkedHead, honestHead]);
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.deepEqual(pages.map((page) => [page.subject, page.severity]), [["RELAY RPCS DISAGREE", "WARNING"]]);
+	assert.match(pages[0].detail, /^relay RPC 1 reports that the relay chain records 0x0+10+65 as Pendulum block 101, .*; relay RPC 2 does not;/);
+	assert.equal(persisted().relayAnchor, undefined);
+	assert.equal(persisted().lastPendulumBlock, 101);
+});
+
+test("a relay contradiction the next relay RPC confirms pages critical", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [forkedHead, forkedHead]);
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.ok(pages.some((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED"), JSON.stringify(pages));
+	assert.equal(persisted().lastPendulumBlock, 100);
+});
+
+test("a relay contradiction no other relay RPC can confirm only warns", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [forkedHead, undefined]);
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.deepEqual(pages.map((page) => page.subject), ["RELAY ANCHOR UNAVAILABLE"]);
+	assert.match(pages[0].detail, /and no other relay RPC answered to confirm it \(relay RPC 2: Error: relay RPC unavailable\)/);
+	assert.equal(persisted().lastPendulumBlock, 101);
+});
+
 test("while Pendulum cannot be read, a Base event with an unknown nonce pauses after the grace", async (t) => {
 	const { base, pendulum, api, monitor, subjects } = await setup(t, { env: { UNMATCHED_EVENT_GRACE_SECONDS: "0" } });
 	pendulum.failure = new Error("node unreachable");

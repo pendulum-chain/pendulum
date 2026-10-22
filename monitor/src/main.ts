@@ -431,6 +431,7 @@ let lastSourceFailureAlertMs = 0;
 let lastSourceIntegrityAlertMs = 0;
 let lastCrossCheckAlertMs = 0;
 let lastRelayAlertMs = 0;
+let lastRelayDisagreementAlertMs = 0;
 let lastRelayStaleAlertMs = 0;
 /** When the source last verified against a new relay-chain record (or the start). */
 let lastRelayAnchorMs = Date.now();
@@ -765,31 +766,23 @@ async function walkHeaders(api: ApiPromise, top: BlockRef, bottom: number): Prom
 	return hashes;
 }
 
-/** The Pendulum head that the relay chain recorded at its finalized block,
- *  from the first relay RPC in POLKADOT_WS that answers. */
-async function relayHead(api: ApiPromise): Promise<BlockRef> {
-	const failures: string[] = [];
-	for (const [index, url] of config.polkadotWs.entries()) {
-		try {
-			return await onNode(url, async (relay) => {
-				const relayFinalized = await relay.rpc.chain.getFinalizedHead();
-				const head = (await (await relay.at(relayFinalized)).query.paras.heads(config.pendulumParaId)) as unknown as {
-					isSome: boolean;
-					unwrap(): { toU8a(bare: boolean): Uint8Array };
-				};
-				if (!head.isSome) throw new Error(`no head recorded for para ${config.pendulumParaId}`);
-				// The head data is the Pendulum header; its hash is computed here.
-				const header = api.createType("Header", head.unwrap().toU8a(true)) as unknown as {
-					number: { toNumber(): number };
-					hash: { toHex(): string };
-				};
-				return { number: header.number.toNumber(), hash: header.hash.toHex() };
-			});
-		} catch (relayError) {
-			failures.push(`relay RPC ${index + 1}: ${relayError}`);
-		}
-	}
-	throw new Error(failures.join("; "));
+/** The Pendulum head that the relay chain behind the RPC at `url` recorded
+ *  at its finalized block. */
+function relayHead(api: ApiPromise, url: string): Promise<BlockRef> {
+	return onNode(url, async (relay) => {
+		const relayFinalized = await relay.rpc.chain.getFinalizedHead();
+		const head = (await (await relay.at(relayFinalized)).query.paras.heads(config.pendulumParaId)) as unknown as {
+			isSome: boolean;
+			unwrap(): { toU8a(bare: boolean): Uint8Array };
+		};
+		if (!head.isSome) throw new Error(`no head recorded for para ${config.pendulumParaId}`);
+		// The head data is the Pendulum header; its hash is computed here.
+		const header = api.createType("Header", head.unwrap().toU8a(true)) as unknown as {
+			number: { toNumber(): number };
+			hash: { toHex(): string };
+		};
+		return { number: header.number.toNumber(), hash: header.hash.toHex() };
+	});
 }
 
 /** Why the relay chain's record `head` does not anchor the source this poll,
@@ -838,9 +831,12 @@ async function relayVerdict(
 }
 
 /** Anchors the source to the relay chain's record of the Pendulum head, kept
- *  as `draft.relayAnchor`. Pages while no new head is anchored: a warning when
- *  the relay RPCs fail, critical once none was for RELAY_ANCHOR_GRACE_SECONDS.
- *  Both throttled. */
+ *  as `draft.relayAnchor`, from the first relay RPC in POLKADOT_WS that
+ *  answers. A record that contradicts the source counts only when the next
+ *  relay RPC that answers contradicts it too, or when POLKADOT_WS lists one
+ *  RPC; otherwise the poll goes on without the anchor. Pages while no new head
+ *  is anchored: a warning when the relay RPCs fail or disagree, critical once
+ *  none was for RELAY_ANCHOR_GRACE_SECONDS. All throttled. */
 async function anchorToRelay(
 	api: ApiPromise,
 	draft: RuntimeState,
@@ -849,12 +845,47 @@ async function anchorToRelay(
 	bottom: BlockRef,
 ): Promise<void> {
 	if (!config.polkadotWs.length) return;
-	let head: BlockRef | undefined;
+	const failures: string[] = [];
+	let contradiction: { rpc: number; error: SourceIntegrityError } | undefined;
 	let reason: string | undefined;
-	try {
-		head = await relayHead(api);
-	} catch (relayError) {
-		reason = `the relay chain cannot be read: ${relayError}`;
+	for (const [index, url] of config.polkadotWs.entries()) {
+		let head: BlockRef;
+		try {
+			head = await relayHead(api, url);
+		} catch (relayError) {
+			failures.push(`relay RPC ${index + 1}: ${relayError}`);
+			continue;
+		}
+		try {
+			reason = await relayVerdict(api, draft, hashes, top, bottom, head);
+		} catch (verdictError) {
+			if (!(verdictError instanceof SourceIntegrityError)) throw verdictError;
+			if (contradiction || config.polkadotWs.length === 1) throw contradiction?.error ?? verdictError;
+			contradiction = { rpc: index + 1, error: verdictError };
+			continue;
+		}
+		if (contradiction) {
+			reason = `relay RPC ${contradiction.rpc} reports that ${contradiction.error.message}; relay RPC ${index + 1} does not`;
+			if (Date.now() - lastRelayDisagreementAlertMs > config.graceSeconds * 1000) {
+				lastRelayDisagreementAlertMs = Date.now();
+				await alert(
+					"RELAY RPCS DISAGREE",
+					`${reason}; the Pendulum source is used without the relay-chain anchor until they agree — check relay ` +
+						`RPC ${contradiction.rpc}`,
+				);
+			}
+		} else if (reason === undefined) {
+			draft.relayAnchor = head;
+			lastRelayAnchorMs = Date.now();
+			return;
+		}
+		break;
+	}
+	if (reason === undefined) {
+		reason = contradiction
+			? `relay RPC ${contradiction.rpc} reports that ${contradiction.error.message}, and no other relay RPC ` +
+				`answered to confirm it (${failures.join("; ")})`
+			: `the relay chain cannot be read: ${failures.join("; ")}`;
 		if (Date.now() - lastRelayAlertMs > config.graceSeconds * 1000) {
 			lastRelayAlertMs = Date.now();
 			await alert(
@@ -862,14 +893,6 @@ async function anchorToRelay(
 				`${reason}; the Pendulum source is used without the relay-chain anchor until a relay RPC answers, ` +
 					`and this turns critical after ${config.relayAnchorGraceMs / 1000}s`,
 			);
-		}
-	}
-	if (head) {
-		reason = await relayVerdict(api, draft, hashes, top, bottom, head);
-		if (reason === undefined) {
-			draft.relayAnchor = head;
-			lastRelayAnchorMs = Date.now();
-			return;
 		}
 	}
 	const unanchoredMs = Date.now() - lastRelayAnchorMs;

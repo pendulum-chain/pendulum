@@ -125,6 +125,10 @@ test("a lagging backend's missing-block answers at the finality boundary are tra
 	assert.equal(isTransientRpcError(new BlockNotFoundError({})), true);
 });
 
+test("a receipt lookup on a backend still indexing its transactions is transient", () => {
+	assert.equal(isTransientRpcError(new InvalidInputRpcError(rpcError(-32000, "transaction indexing is in progress"))), true);
+});
+
 test("a pruned Base state window, an endpoint limit and a silent Pendulum node are transient", () => {
 	// reth asked for state at the pinned safe block outside its retained window.
 	assert.equal(isTransientRpcError(new InvalidInputRpcError(rpcError(-32000, "state at block #36000000 is pruned"))), true);

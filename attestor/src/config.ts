@@ -9,11 +9,13 @@ function required(name: string): string {
 /** A numeric environment value, validated at startup: a typo must fail loudly
  *  here, not surface later as NaN-driven behavior (a NaN timeout, for
  *  instance, silently turns a backoff into a busy loop). */
-function envNumber(name: string, fallback: number, min = 0): number {
+function envNumber(name: string, fallback: number, min = 0, integer = false): number {
 	const raw = process.env[name];
 	if (raw === undefined || raw === "") return fallback;
 	const value = Number(raw);
-	if (!Number.isFinite(value) || value < min) throw new Error(`invalid ${name}: ${raw}`);
+	if (!Number.isFinite(value) || value < min || (integer && !Number.isInteger(value))) {
+		throw new Error(`invalid ${name}: ${raw}`);
+	}
 	return value;
 }
 
@@ -67,5 +69,5 @@ export const config = {
 	 *  this attestor's own approval landing (and again every as many more):
 	 *  lost races do not count, so this means the submission path is broken
 	 *  while the rest of the fleet carries the releases. */
-	missedApprovalAlertCount: envNumber("MISSED_APPROVAL_ALERT_COUNT", 3, 1),
+	missedApprovalAlertCount: envNumber("MISSED_APPROVAL_ALERT_COUNT", 3, 1, true),
 };

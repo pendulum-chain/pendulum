@@ -46,7 +46,7 @@ point.
 | `BASE_FINALITY_TAG` | Base confirmation boundary the checkpoint waits for: `safe` (default) or `finalized` |
 | `BASE_FINALITY_TIMEOUT_MS` | How long a block's approvals may stay outside that boundary before an alert + idempotent re-submission (default 15 min for `safe`, 45 min for `finalized`) |
 | `HEAD_STALL_ALERT_MS` | Page when no finalized Pendulum head has arrived for this long (default 5 min): the daemon is push-driven, so a node that stops finalizing would otherwise idle undetected |
-| `MISSED_APPROVAL_ALERT_COUNT` | Page after this many consecutive migrations resolved on-chain without this attestor's own approval landing, and again every as many more (default 3, at least 1) |
+| `MISSED_APPROVAL_ALERT_COUNT` | Page after this many consecutive migrations resolved on-chain without this attestor's own approval landing, and again every as many more (default 3, a whole number of at least 1) |
 
 ## Run
 

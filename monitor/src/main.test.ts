@@ -776,4 +776,5 @@ test("once-only pages the webhook rejects are sent again on the next poll", asyn
 	const delivered = pages.filter((page) => page.status === 200).map((page) => page.subject);
 	assert.ok(delivered.includes("GOVERNANCE OPERATION SCHEDULED"), `delivered: ${delivered}`);
 	assert.ok(delivered.includes("PENDULUM GOVERNANCE ITEM"), `delivered: ${delivered}`);
+	assert.ok(delivered.includes("AUTO-PAUSE DISABLED"), `delivered: ${delivered}`); // first sent at startup
 });

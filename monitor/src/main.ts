@@ -1376,7 +1376,8 @@ export async function start(api: ApiPromise): Promise<void> {
 		state.pendulumGenesisHash = pendulumGenesisHash;
 	}
 	if (!config.guardianPrivateKey) {
-		await alert(
+		await pageOnce(
+			"autopause-disabled",
 			"AUTO-PAUSE DISABLED",
 			"no GUARDIAN_PRIVATE_KEY configured: violations page, but nothing pauses the vault automatically",
 		);

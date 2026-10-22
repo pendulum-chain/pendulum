@@ -913,6 +913,21 @@ test("a second node that disagrees on the newest block pages critical and nothin
 	assert.equal(persisted().lastPendulumBlock, 101);
 });
 
+test("a second node that disagrees on the block ingested last, its finalized head, pages critical", async (t) => {
+	const { pendulum, api, monitor, pages, persisted, own } = await crossCheckSetup(t, { finalized: 101 });
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.equal(persisted().lastPendulumBlock, 101);
+	own.forkFrom = 101; // the second node now has another block 101
+	burn(pendulum, 1n, 100n * PEN, 102);
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		/second Pendulum node has 0x0+10+65 at block 101, the source 0x0+65;/,
+	);
+	assert.equal(persisted().lastPendulumBlock, 101);
+});
+
 test("a second node that cannot answer only warns", async (t) => {
 	let connections = 0;
 	const { pendulum, api, monitor, pages, persisted, heartbeats } = await setup(t, {

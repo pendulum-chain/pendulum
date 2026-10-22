@@ -45,6 +45,7 @@ contract RawAnswerStub {
 
 contract DeployScriptsTest is Test {
     uint256 internal constant SWEEP_FLOOR = 1803859200; // 2027-03-01 00:00 UTC
+    uint256 internal constant DEPLOY_TIME = 1792000000; // October 2026
     uint256 internal constant SUPPLY = 150_000_000e18;
 
     Deploy internal deployScript;
@@ -59,7 +60,7 @@ contract DeployScriptsTest is Test {
     address internal guardian = address(new SafeStub(2));
 
     function setUp() public {
-        vm.warp(1792000000); // October 2026
+        vm.warp(DEPLOY_TIME);
         deployScript = new Deploy();
         governanceScript = new DeployGovernance();
         address[] memory attestors = new address[](3);
@@ -105,6 +106,16 @@ contract DeployScriptsTest is Test {
         string memory sweep = "EARLIEST_SWEEP_TS must be a future unix time in seconds, at most two years ahead";
         _expectDeployRefused("EARLIEST_SWEEP_TS", vm.toString(SWEEP_FLOOR * 1000), sweep); // milliseconds
         _expectDeployRefused("EARLIEST_SWEEP_TS", vm.toString(block.timestamp), sweep);
+        string memory sweepSoon = "EARLIEST_SWEEP_TS is less than 30 days after the deploy block";
+        _expectDeployRefused("EARLIEST_SWEEP_TS", vm.toString(block.timestamp + 2 hours), sweepSoon);
+        _expectDeployRefused("EARLIEST_SWEEP_TS", vm.toString(block.timestamp + 30 days - 1), sweepSoon);
+        // The decided floor still passes for a deploy up to 30 days before it.
+        vm.warp(SWEEP_FLOOR - 30 days + 1);
+        _expectDeployRefused("EARLIEST_SWEEP_TS", vm.toString(SWEEP_FLOOR), sweepSoon);
+        vm.warp(SWEEP_FLOOR - 30 days); // 2027-01-30 00:00 UTC
+        _setValidDeployEnv();
+        deployScript.run();
+        vm.warp(DEPLOY_TIME);
 
         address adminEoa = makeAddr("adminEoa");
         _expectDeployRefused(
@@ -129,12 +140,15 @@ contract DeployScriptsTest is Test {
         assertEq(newVault.admin(), address(this), "interim admin until the Safe accepts");
         assertEq(newVault.pendingAdmin(), adminSafe);
 
-        // Testnet drills and local runs: an EOA as admin.
+        // Testnet drills and local runs: an EOA as admin and a sweep floor an
+        // hour ahead.
         _setValidDeployEnv();
         vm.setEnv("TEST_DEPLOY", "true");
         vm.setEnv("ADMIN_SAFE", vm.toString(adminEoa));
+        vm.setEnv("EARLIEST_SWEEP_TS", vm.toString(block.timestamp + 1 hours));
         (, newVault) = deployScript.run();
         assertEq(newVault.pendingAdmin(), adminEoa);
+        assertEq(newVault.earliestSweepTimestamp(), block.timestamp + 1 hours);
     }
 
     function _setValidGovernanceEnv() internal {

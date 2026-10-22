@@ -24,9 +24,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 ///   PER_RELEASE_CAP       initial per-release cap, 18-decimal units
 ///   DAILY_CAP             initial daily cap, 18-decimal units
 ///   EARLIEST_SWEEP_TS     unix timestamp in SECONDS before which no remainder
-///                         sweep (D5); must lie in the next MAX_SWEEP_FLOOR_AHEAD
+///                         sweep (D5); at least MIN_SWEEP_FLOOR_AHEAD after
+///                         the deploy block and at most MAX_SWEEP_FLOOR_AHEAD
 ///   TEST_DEPLOY           optional, testnet drills and local runs only: allows
-///                         an ADMIN_SAFE without code. Refused on Base mainnet.
+///                         an ADMIN_SAFE without code and an EARLIEST_SWEEP_TS
+///                         any time in the future. Refused on Base mainnet.
 contract Deploy is Script {
     uint256 internal constant BASE_MAINNET = 8453;
     // 12-decimal pallet amounts -> 18-decimal token amounts (decision D2).
@@ -39,6 +41,8 @@ contract Deploy is Script {
     // A sweep floor further out than this is a units slip (milliseconds land
     // ~1000x further) or a typo, not a decision.
     uint256 internal constant MAX_SWEEP_FLOOR_AHEAD = 2 * 365 days;
+    // A sweep floor closer than this is a drill value, not a migration window.
+    uint256 internal constant MIN_SWEEP_FLOOR_AHEAD = 30 days;
 
     function run() external returns (PEN pen, MigrationVault vault) {
         bool testDeploy = vm.envOr("TEST_DEPLOY", false);
@@ -60,6 +64,10 @@ contract Deploy is Script {
         require(
             earliestSweepTs > block.timestamp && earliestSweepTs <= block.timestamp + MAX_SWEEP_FLOOR_AHEAD,
             "EARLIEST_SWEEP_TS must be a future unix time in seconds, at most two years ahead"
+        );
+        require(
+            earliestSweepTs >= block.timestamp + MIN_SWEEP_FLOOR_AHEAD || testDeploy,
+            "EARLIEST_SWEEP_TS is less than 30 days after the deploy block"
         );
 
         address[] memory attestors = new address[](4);

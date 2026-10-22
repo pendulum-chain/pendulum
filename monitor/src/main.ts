@@ -712,10 +712,8 @@ async function reconcileBaseEvents(
 					observedAt,
 					sourceFinalizedTsMs,
 				);
-				if (disposition === "await") {
-					awaitingSource ??= `Approved nonce ${actual.nonce} at Base block ${event.blockNumber}`;
-					continue;
-				}
+				if (disposition !== "proven") awaitingSource ??= `Approved nonce ${actual.nonce} at Base block ${event.blockNumber}`;
+				if (disposition === "await") continue;
 				firstViolation ??= `Approved at Base block ${event.blockNumber}: ${mismatch} (` +
 					(disposition === "proven"
 						? "source view has passed the event's timestamp — fabricated"
@@ -748,10 +746,8 @@ async function reconcileBaseEvents(
 					observedAt,
 					sourceFinalizedTsMs,
 				);
-				if (disposition === "await") {
-					awaitingSource ??= `Released nonce ${actual.nonce} at Base block ${event.blockNumber}`;
-					continue;
-				}
+				if (disposition !== "proven") awaitingSource ??= `Released nonce ${actual.nonce} at Base block ${event.blockNumber}`;
+				if (disposition === "await") continue;
 				firstViolation ??= `Released at Base block ${event.blockNumber}: ${mismatch} (` +
 					(disposition === "proven"
 						? "source view has passed the event's timestamp — fabricated"
@@ -760,7 +756,10 @@ async function reconcileBaseEvents(
 			}
 			firstViolation ??= `Released at Base block ${event.blockNumber}: ${mismatch}`;
 		}
-		if (awaitingSource && !firstViolation) return { awaitingSource };
+		// A range holding an event the source may still reveal (awaiting it, or
+		// past the grace) is replayed later even after a violation: passing it
+		// would lose a legitimate release for good.
+		if (awaitingSource) return { violation: firstViolation, awaitingSource };
 
 		for (const event of releases) {
 			const actual = event.args as {

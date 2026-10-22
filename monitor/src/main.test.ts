@@ -635,6 +635,23 @@ test("first sightings of unmatched events do not delay the pause", async (t) => 
 	assert.deepEqual(events, ["first sighting paged", "violation paged", "first sighting answered"]);
 });
 
+test("after a violation the Base cursor stays on events still awaiting their source", async (t) => {
+	const { base, pendulum, api, monitor, subjects, persisted } = await setup(t, {
+		env: { UNMATCHED_EVENT_GRACE_SECONDS: "0", GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY },
+	});
+	base.paused = true; // so the pause is confirmed and the poll persists its state
+	release(base, 0n, 100n * PEN); // the burn is not in the lagging source view yet
+	await monitor.poll(api);
+	await new Promise((resolve) => setTimeout(resolve, 5));
+	await monitor.poll(api); // the grace has run out: a cannot-verify violation
+	assert.ok(subjects().includes("MIGRATION TUPLE VIOLATION"), JSON.stringify(subjects()));
+	assert.equal(persisted().baseFromBlock, "1000");
+	burn(pendulum, 0n, 100n * PEN); // the source view catches up
+	await monitor.poll(api);
+	assert.deepEqual(persisted().migrations, []);
+	assert.equal(persisted().baseFromBlock, "1011");
+});
+
 /** A timelock operation scheduling the vault's `pause()`, ready in 48 h. */
 function schedule(base: Base, id: Hex, blockNumber = 1_005n): void {
 	const call = { target: VAULT, value: 0n, data: "0x8456cb59", predecessor: toHex(0, { size: 32 }), delay: 172_800n };

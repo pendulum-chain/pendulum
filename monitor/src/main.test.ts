@@ -221,6 +221,7 @@ function pendulumChain() {
 		totalMigrated: 0n,
 		nextNonce: 0n,
 		publicProps: [] as Array<[number, Bounded]>,
+		external: undefined as Bounded | undefined,
 		referenda: new Map<number, Bounded>(),
 		/** Noted preimages by `${hash}:${len}`, and their lengths by hash. */
 		preimages: new Map<string, string>(),
@@ -228,14 +229,18 @@ function pendulumChain() {
 		preimageReads: 0,
 		/** Preimage reads still to fail, as an RPC error would. */
 		preimageFailures: 0,
-		/** Open motions by hash, the stored size where it is not the call's,
-		 *  and the motions whose call was fetched. */
+		/** Open motions by hash, their index where it is not 0, the stored size
+		 *  where it is not the call's, and the motions whose call was fetched. */
 		motions: { council: new Map<string, string>(), technicalCommittee: new Map<string, string>() },
+		motionIndices: new Map<string, number>(),
 		motionSizes: new Map<string, number>(),
 		motionReads: new Set<string>(),
 	};
 	const collective = (motions: Map<string, string>) => ({
 		proposals: async () => [...motions.keys()].map(hash),
+		voting: async (motion: { toHex(): string }) => ({
+			toJSON: () => (motions.has(motion.toHex()) ? { index: chain.motionIndices.get(motion.toHex()) ?? 0 } : null),
+		}),
 		proposalOf: Object.assign(
 			async (motion: { toHex(): string }) => {
 				chain.motionReads.add(motion.toHex());
@@ -262,7 +267,7 @@ function pendulumChain() {
 			balances: { totalIssuance: async () => codec(100_000_000n * PEN - chain.totalMigrated) },
 			democracy: {
 				publicProps: async () => chain.publicProps.map(([index, bounded]) => [codec(index), bounded, "5Proposer"]),
-				nextExternal: async () => optional(undefined),
+				nextExternal: async () => optional(chain.external && [chain.external, "SimpleMajority"]),
 				referendumCount: async () => codec(chain.referenda.size ? Math.max(...chain.referenda.keys()) + 1 : 0),
 				lowestUnbaked: async () => codec(chain.referenda.size ? Math.min(...chain.referenda.keys()) : 0),
 				referendumInfoOf: async (index: number) => {
@@ -612,6 +617,22 @@ test("council and technical-committee motions are decoded with the same risk rul
 	assert.ok(pageFor(pages, "PENDULUM GOVERNANCE ITEM", `technical committee motion ${remark}`), JSON.stringify(pages));
 	assert.match(pageFor(pages, UNREADABLE, `council motion ${huge}`)?.detail ?? "", /100000 bytes/);
 	assert.ok(!pendulum.motionReads.has(huge));
+});
+
+test("a motion or external proposal made again with the same call pages again", async (t) => {
+	const { pendulum, api, monitor, pages } = await setup(t);
+	const motion = `0x04${"00".repeat(31)}`;
+	pendulum.motions.council.set(motion, "remark");
+	pendulum.motionIndices.set(motion, 3);
+	pendulum.external = inline("remark");
+	await monitor.poll(api);
+	pendulum.motionIndices.set(motion, 4); // closed and proposed again between two polls
+	pendulum.external = undefined; // tabled
+	await monitor.poll(api);
+	pendulum.external = inline("remark"); // proposed again
+	await monitor.poll(api);
+	assert.equal(pages.filter((page) => page.detail.startsWith(`council motion ${motion}`)).length, 2, JSON.stringify(pages));
+	assert.equal(pages.filter((page) => page.detail.startsWith("the council's external proposal")).length, 2, JSON.stringify(pages));
 });
 
 test("admin events of the migration pallet page from the ingest", async (t) => {

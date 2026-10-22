@@ -994,6 +994,11 @@ async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
 			hint: `it can become a referendum at block ${nextLaunch}`,
 			read: () => boundedCall(apiAt, bounded),
 		});
+	} else {
+		// Only its call identifies an external proposal, so once it has left the
+		// queue the same call proposed again pages again.
+		// ponytail: one tabled and proposed again between two polls pages again only as a referendum.
+		for (const key of onceOnlyPages.keys()) if (key.startsWith("external:")) onceOnlyPages.delete(key);
 	}
 	const [count, lowest] = (await Promise.all([democracy.referendumCount(), democracy.lowestUnbaked()])).map((value) =>
 		Number(value.toString())
@@ -1015,8 +1020,11 @@ async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
 	for (const collective of ["council", "technicalCommittee"] as const) {
 		const motions = (await apiAt.query[collective].proposals()) as unknown as Array<{ toHex(): string }>;
 		for (const hash of motions) {
+			// A closed motion can be proposed again with the same call and hash,
+			// but never with the same index, so the index keys the page.
+			const votes = (await apiAt.query[collective].voting(hash)).toJSON() as { index: number } | null;
 			items.push({
-				key: `${collective}:${hash.toHex()}`,
+				key: `${collective}:${votes?.index}:${hash.toHex()}`,
 				label: `${collective === "council" ? "council" : "technical committee"} motion ${hash.toHex()}`,
 				hint: "it executes as soon as enough members vote aye; a hostile one needs nay votes",
 				read: () => motionCall(apiAt, collective, hash),

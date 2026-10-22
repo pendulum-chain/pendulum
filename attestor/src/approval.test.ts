@@ -208,6 +208,24 @@ test("own approvals that never land are counted and paged every MISSED_APPROVAL_
 	assert.match(alerts[1].detail, /^4 consecutive migrations resolved without this attestor; last nonce=4 /);
 });
 
+test("when our own approval cannot be read after the others released, the miss is skipped and the read error logged", async () => {
+	const chain = new FakeVault();
+	const readError = new Error("backend answered 0x for hasApproved");
+	chain.onSend = (event) => {
+		chain.consumed.add(event.nonce);
+		chain.hasApproved = async () => {
+			throw readError;
+		};
+		return new InsufficientFundsError();
+	};
+	const { attestor, alerts, logs } = attestorOn(chain);
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.equal(attestor.missedApprovals, 0);
+	assert.equal(alerts.length, 0);
+	assert.ok(logs.includes(`own-approval read failed: nonce=7 recipient=${EVENT.recipient} amount=${EVENT.palletAmount} ${readError}`));
+	assert.ok(logs.some((line) => line.startsWith("skip (resolved on-chain; could not read whether our own approval is recorded)")));
+});
+
 test("a failed approval of an unresolved migration propagates after the rechecks", async () => {
 	const chain = new FakeVault();
 	const failure = new InsufficientFundsError();

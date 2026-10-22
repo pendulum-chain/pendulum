@@ -13,6 +13,7 @@ import {
 	BaseError,
 	BlockNotFoundError,
 	ContractFunctionRevertedError,
+	ContractFunctionZeroDataError,
 	HttpRequestError,
 	LimitExceededRpcError,
 	TimeoutError,
@@ -112,6 +113,9 @@ export function isTransientRpcError(error: unknown): boolean {
 		if (cause instanceof TimeoutError || cause instanceof BlockNotFoundError) return true;
 		// JSON-RPC -32005: the endpoint's request or rate limit, answered at HTTP 200.
 		if (cause instanceof LimitExceededRpcError) return true;
+		// An eth_call answered with no data ("0x"): a syncing backend without the
+		// vault's state yet. Startup has read the vault, so its code is there.
+		if (cause instanceof ContractFunctionZeroDataError) return true;
 		const code = (cause as { code?: unknown }).code;
 		if (typeof code === "string" && TRANSIENT_SOCKET_CODES.has(code)) return true;
 		const texts = [

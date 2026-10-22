@@ -154,7 +154,12 @@ export async function approve(attestor: Attestor, event: MigrationEvent): Promis
 		// (or our own retried tx) landed between our pre-check and the
 		// transaction — benign.
 		if (!(await handledSettled(attestor, event))) throw error;
-		const missed = await ownApprovalMissed(error, mined, () => attestor.chain.hasApproved(payloadHash(event)));
+		const missed = await ownApprovalMissed(error, mined, () =>
+			attestor.chain.hasApproved(payloadHash(event)).catch((readError: unknown) => {
+				attestor.log(`own-approval read failed: ${label}`, readError);
+				throw readError;
+			}),
+		);
 		if (missed === undefined) {
 			attestor.log(`skip (resolved on-chain; could not read whether our own approval is recorded): ${label}`, error);
 			return true;

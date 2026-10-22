@@ -136,6 +136,22 @@ test("a pruned Base state window, an endpoint limit and a silent Pendulum node a
 	assert.equal(isTransientRpcError(new Error("No response received from RPC endpoint in 60s")), true);
 });
 
+test("an eth_call answered with no data by a syncing backend is transient", () => {
+	const zeroData = new ContractFunctionZeroDataError({ functionName: "hasApproved" });
+	assert.equal(isTransientRpcError(zeroData), true);
+	// How readContract raises it.
+	assert.equal(
+		isTransientRpcError(
+			new ContractFunctionExecutionError(zeroData, {
+				abi: vaultAbi,
+				functionName: "hasApproved",
+				args: [`0x${"00".repeat(32)}`, NORMAL],
+			}),
+		),
+		true,
+	);
+});
+
 test("a pruned Pendulum node stays fatal", () => {
 	assert.equal(
 		isTransientRpcError(new Error("-32000: Client error: UnknownBlock: State already discarded for 0xabc")),

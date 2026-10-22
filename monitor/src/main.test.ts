@@ -307,6 +307,18 @@ function pendulumChain(chain: Pendulum = pendulumState()) {
 		),
 	});
 	const optional = <T>(value: T | undefined) => (value === undefined ? { isSome: false } : { isSome: true, unwrap: () => value });
+	/** The migration totals at `block`: the current ones less the burns of later blocks. */
+	const totalsAt = (block: number) => {
+		let { nextNonce, totalMigrated } = chain;
+		for (const [later, events] of chain.events) {
+			for (const { method, data } of later > block ? events : []) {
+				if (method !== "MigrationInitiated") continue;
+				nextNonce--;
+				totalMigrated -= (data[3] as { toBigInt(): bigint }).toBigInt();
+			}
+		}
+		return { nextNonce, totalMigrated };
+	};
 	const at = (block: number) => ({
 		registry: { createType: (_type: string, bytes: Uint8Array) => decodeCall(bytes) },
 		consts: { democracy: { launchPeriod: codec(36_000) } },
@@ -314,10 +326,10 @@ function pendulumChain(chain: Pendulum = pendulumState()) {
 			timestamp: { now: async () => codec(Date.now() - chain.headAgeMs - (chain.finalized - block) * 12_000) },
 			system: { events: async () => (chain.events.get(block) ?? []).map((event) => ({ event })) },
 			tokenMigration: {
-				totalMigrated: async () => codec(chain.totalMigrated),
-				nextNonce: async () => codec(chain.nextNonce),
+				totalMigrated: async () => codec(totalsAt(block).totalMigrated),
+				nextNonce: async () => codec(totalsAt(block).nextNonce),
 			},
-			balances: { totalIssuance: async () => codec(100_000_000n * PEN - chain.totalMigrated) },
+			balances: { totalIssuance: async () => codec(100_000_000n * PEN - totalsAt(block).totalMigrated) },
 			democracy: {
 				publicProps: async () => chain.publicProps.map(([index, bounded]) => [codec(index), bounded, "5Proposer"]),
 				nextExternal: async () => optional(chain.external && [chain.external, "SimpleMajority"]),
@@ -864,20 +876,55 @@ test("a node connection that fails with an event says why", async (t) => {
 	assert.match(pages[0]?.detail ?? "", /cannot be read: Error: getaddrinfo ENOTFOUND second-node\.test;/);
 });
 
-test("a second node that has not reached the newest block only warns", async (t) => {
-	const { pendulum, api, monitor, pages, persisted } = await crossCheckSetup(t, { finalized: 100 });
+test("a block the second node has not finalized yet waits for it, without a page", async (t) => {
+	const { pendulum, api, monitor, pages, persisted, own } = await crossCheckSetup(t, { finalized: 100 });
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api);
-	assert.deepEqual(pages.map((page) => page.subject), ["PENDULUM CROSS-CHECK UNAVAILABLE"]);
-	assert.match(pages[0].detail, /has not finalized block 101 yet;/);
+	assert.deepEqual(pages, []);
+	assert.equal(persisted().lastPendulumBlock, 100);
+	own.finalized = 101;
+	await monitor.poll(api);
+	assert.deepEqual(pages, []);
 	assert.equal(persisted().lastPendulumBlock, 101);
+	assert.deepEqual(persisted().migrations.map((migration) => migration.nonce), ["0"]);
 });
 
-test("a second node whose best chain holds another newest block, not yet finalized, only warns", async (t) => {
+test("a second node whose best chain holds another newest block, not yet finalized, holds that block back", async (t) => {
 	const { pendulum, api, monitor, pages, persisted } = await crossCheckSetup(t, { finalized: 100, best: 101, forkFrom: 101 });
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api);
-	assert.deepEqual(pages.map((page) => page.subject), ["PENDULUM CROSS-CHECK UNAVAILABLE"]);
+	assert.deepEqual(pages, []);
+	assert.equal(persisted().lastPendulumBlock, 100);
+});
+
+test("a source on another chain one block past the second node's head ingests nothing from that chain", async (t) => {
+	const { base, pendulum, api, monitor, pages, persisted, own } = await crossCheckSetup(t, { finalized: 101, forkFrom: undefined });
+	burn(pendulum, 0n, 100n * PEN);
+	pendulum.forkFrom = 102; // the source serves another chain from block 102 on...
+	burn(pendulum, 1n, 999n * PEN, 102); // ...with a fabricated burn, one block past the second node's head
+	release(base, 1n, 999n * PEN);
+	await monitor.poll(api);
+	assert.equal(persisted().lastPendulumBlock, 101);
+	assert.deepEqual(persisted().migrations.map((migration) => migration.nonce), ["0"]);
+	assert.equal(persisted().baseFromBlock, "1000"); // the release of the fabricated nonce awaits its burn
+	assert.deepEqual([...new Set(pages.map((page) => page.subject))], ["UNVERIFIED BASE EVENT"]);
+	own.finalized = 102; // the second node finalizes its own block 102...
+	burn(pendulum, 2n, 999n * PEN, 103); // ...and the source stays one block ahead
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		/second Pendulum node has 0x0+66 at block 102, the source 0x0+10+66;/,
+	);
+	assert.equal(persisted().lastPendulumBlock, 101);
+	assert.deepEqual(persisted().migrations.map((migration) => migration.nonce), ["0"]);
+});
+
+test("a second node whose finalized head is stale counts as unavailable", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await crossCheckSetup(t, { finalized: 100, headAgeMs: 400_000 });
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.deepEqual(pages.map((page) => [page.subject, page.severity]), [["PENDULUM CROSS-CHECK UNAVAILABLE", "WARNING"]]);
+	assert.match(pages[0].detail, /has a finalized head 40\ds old;/);
 	assert.equal(persisted().lastPendulumBlock, 101);
 });
 
@@ -911,11 +958,11 @@ test("a second node with other migration events in a block pages critical and no
 });
 
 test("a second node that cannot read a block's events only warns", async (t) => {
-	const failing = {
-		get: () => {
+	const failing = new (class extends Map<number, PendulumEvent[]> {
+		get(): never {
 			throw new Error("state discarded");
-		},
-	} as unknown as Pendulum["events"];
+		}
+	})();
 	const { pendulum, api, monitor, pages, persisted } = await crossCheckSetup(t, { events: failing });
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api);

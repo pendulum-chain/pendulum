@@ -35,11 +35,14 @@ itself:
   node and hashed by the monitor. The walk must arrive at the hash of the block
   ingested last, which the state file keeps, so every ingested block lies on
   one chain.
-- **Second node** (`PENDULUM_WS_CROSSCHECK`). The second node must have the
-  same hash at the finalized head's height, compared once it has finalized
-  that height itself, and the same migration totals there (`nextNonce`,
-  `totalMigrated`). Every ingested block with migration pallet events must
-  carry the same ones on the second node.
+- **Second node** (`PENDULUM_WS_CROSSCHECK`). The source's chain must have
+  the second node's hash at the height of the second node's finalized head
+  (at the source's head once the second node has finalized past it), and no
+  block above that height is ingested. The migration totals (`nextNonce`,
+  `totalMigrated`) must agree at the block the monitor reads them, and every
+  ingested block with migration pallet events must carry the same ones on the
+  second node. A second node whose finalized head is older than
+  `SOURCE_STALE_ALERT_SECONDS` counts as unavailable.
 - **Relay-chain anchor** (`POLKADOT_WS`). Each poll reads the Pendulum head
   that the Polkadot relay chain recorded at its finalized block
   (`paras.heads(PENDULUM_PARA_ID)`), from the first relay RPC that answers. The
@@ -66,7 +69,7 @@ advance).
 | Variable | Meaning |
 |---|---|
 | `PENDULUM_WS` | WebSocket of the monitor's own Pendulum node, run with `--state-pruning archive` (see below) |
-| `PENDULUM_WS_CROSSCHECK` | Optional: WebSocket of a second Pendulum node, not the one behind `PENDULUM_WS`; it must agree with the source on the finalized head's hash and migration totals in every poll, and on the migration events of every ingested block that has some. Run it with `--state-pruning archive` too, or those events cannot be compared after a monitor outage longer than its pruning horizon (`PENDULUM CROSS-CHECK UNAVAILABLE`) |
+| `PENDULUM_WS_CROSSCHECK` | Optional: WebSocket of a second Pendulum node, not the one behind `PENDULUM_WS`; only blocks on its finalized chain are ingested, and it must agree with the source on the migration totals in every poll and on the migration events of every ingested block that has some. Run it with `--state-pruning archive` too, or those events cannot be compared after a monitor outage longer than its pruning horizon (`PENDULUM CROSS-CHECK UNAVAILABLE`) |
 | `POLKADOT_WS` | Optional: comma-separated WebSocket RPCs of the Polkadot relay chain, run by third parties and tried in order (for example `wss://rpc.polkadot.io`); turns on the relay-chain anchor. List at least two: a record that contradicts the source needs a second relay RPC's confirmation, unless only one is listed |
 | `PENDULUM_PARA_ID` | Pendulum's parachain id on the relay chain (default 2094) |
 | `RELAY_ANCHOR_GRACE_SECONDS` | How long the source may go without a relay-anchored head before `CRITICAL: RELAY ANCHOR STALE` pages (default 3600) |
@@ -76,7 +79,7 @@ advance).
 | `GRACE_SECONDS` | Liveness alert threshold (default 30 min) |
 | `UNMATCHED_EVENT_GRACE_SECONDS` | Time a lagging or unreadable Pendulum source view gets to reveal the burn behind a safe Base event before a cannot-verify pause (default 10 min). The first sighting of an unmatched event pages immediately, so this is the window operators have to repair a stalled or failing node. Size it to your node-ops response time |
 | `SOURCE_CLOCK_SKEW_MARGIN_SECONDS` | Clock-skew allowance for the fabrication proof (default 120s): once the finalized Pendulum view has passed the moment the monitor first observed an unmatched Base event by this margin and the nonce still does not exist, the event is provably fabricated and pauses without waiting out the grace. The anchor is the monitor's own clock, not the Base block timestamp (which trails real time after a sequencer outage); a future-dated source view proves nothing |
-| `SOURCE_STALE_ALERT_SECONDS` | Age of the finalized Pendulum view (vs. wall clock) past which the monitor pages that it is going blind (default 300s) |
+| `SOURCE_STALE_ALERT_SECONDS` | Age of the verified Pendulum view (vs. wall clock) past which the monitor pages that it is going blind (default 300s); a second node whose finalized head is older counts as unavailable |
 | `BASE_STALE_ALERT_SECONDS` | Age of the safe/finalized Base block (vs. wall clock) past which `BASE VIEW STALLED` pages (default 600s for `safe`, 1800s for `finalized`; Base's safe head normally trails by about a minute, its finalized head by about 20) |
 | `ISSUANCE_TOLERANCE` | Growth of Pendulum `totalIssuance + TotalMigrated` over its first-seen anchor (12-decimal pallet units) tolerated before `SOURCE SUPPLY GREW` pages (default 0) |
 | `ACKNOWLEDGED_RELEASE_EXCESS` | Excess of released over migrated, in token units (18 decimals), that operators quantified and accepted after a real loss; M2a fires only beyond it (default 0). Set it at the RB-3 sign-off and restart; the startup log shows it |
@@ -114,7 +117,7 @@ subject that starts with `CRITICAL`; everything else is a `WARNING`.
 | `PENDULUM SOURCE VIEW STALLED`, `PENDULUM SOURCE UNREADABLE`, `BASE VIEW STALLED`, `BASE ADMIN SCAN FAILED`, `BASE LOG SCAN INCOMPLETE` | The monitor is going blind on one chain |
 | `CRITICAL: BASE LOG SCAN INCOMPLETE`, `CRITICAL: BASE ADMIN SCAN FAILED` | For longer than `UNMATCHED_EVENT_GRACE_SECONDS`, a Base block range has been held, so no later Base event is matched against its burn, or the admin scan has failed, so no vault admin event or scheduled governance operation is paged while its veto window runs; fix the Base RPC |
 | `CRITICAL: PENDULUM SOURCE CONTRADICTED` | The Pendulum source contradicts the chain the monitor verified; stop trusting that node |
-| `PENDULUM CROSS-CHECK UNAVAILABLE`, `RELAY ANCHOR UNAVAILABLE` | The second Pendulum node or every relay RPC does not answer, or the only relay RPC that answers records a head that contradicts the source, so the source is used without that check |
+| `PENDULUM CROSS-CHECK UNAVAILABLE`, `RELAY ANCHOR UNAVAILABLE` | The second Pendulum node does not answer or its finalized head is stale, or every relay RPC does not answer, or the only relay RPC that answers records a head that contradicts the source, so the source is used without that check |
 | `RELAY RPCS DISAGREE` | One relay RPC records a Pendulum head that contradicts the source and the next one that answers does not; the source is used without the anchor until they agree. Check the first one |
 | `CRITICAL: RELAY ANCHOR STALE` | No Pendulum head was checked against the relay chain for `RELAY_ANCHOR_GRACE_SECONDS` |
 | `AUTO-PAUSE NOT READY`, `AUTO-PAUSE DISABLED` | The next violation would not pause the vault automatically |

@@ -751,33 +751,55 @@ async function migrationTotals(apiAt: ApiAt): Promise<MigrationTotals> {
 	};
 }
 
-/** The second node must have finalized the source's finalized head, with the
- *  same hash and the same migration totals there. One that cannot answer, or
- *  has not finalized that block yet, only warns, throttled: it is a check,
- *  not a source. */
-async function crossCheckSource(finalized: BlockRef, totals: MigrationTotals): Promise<void> {
+/** The height up to which the second node confirms the source's chain
+ *  `hashes`, walked down from `top` to `bottom`: the hashes must agree at its
+ *  finalized head, or at `top` once it has finalized past it. Undefined while
+ *  it cannot be read or its finalized head is older than
+ *  SOURCE_STALE_ALERT_SECONDS, which only warns, throttled: it is a check, not
+ *  a source. */
+async function crossCheckSource(hashes: Map<number, string>, top: BlockRef, bottom: number): Promise<number | undefined> {
 	const url = config.pendulumWsCrossCheck;
-	if (!url) return;
-	let other: { hash: string; totals?: MigrationTotals } | undefined;
+	if (!url) return undefined;
+	let other: BlockRef & { ageMs: number };
 	try {
 		other = await onNode(url, async (node) => {
+			const finalizedHash = await node.rpc.chain.getFinalizedHead();
+			const finalized = (await node.rpc.chain.getHeader(finalizedHash)).number.toNumber();
+			const timestamp = await (await node.at(finalizedHash)).query.timestamp.now();
 			// Above its finalized head, a node's block at a height may still lose.
-			const head = await node.rpc.chain.getHeader(await node.rpc.chain.getFinalizedHead());
-			if (head.number.toNumber() < finalized.number) return undefined;
-			const hash = (await node.rpc.chain.getBlockHash(finalized.number)).toHex();
-			return { hash, totals: hash === finalized.hash ? await migrationTotals(await node.at(hash)) : undefined };
+			const number = Math.min(finalized, top.number);
+			const hash = number === finalized ? finalizedHash.toHex() : (await node.rpc.chain.getBlockHash(number)).toHex();
+			return { number, hash, ageMs: Date.now() - Number(timestamp.toString().replaceAll(",", "")) };
 		});
+	} catch (crossCheckError) {
+		await crossCheckUnavailable(`cannot be read: ${crossCheckError}`);
+		return undefined;
+	}
+	if (other.ageMs > config.sourceStaleAlertMs) {
+		await crossCheckUnavailable(`has a finalized head ${Math.round(other.ageMs / 1000)}s old`);
+		return undefined;
+	}
+	if (other.number >= bottom && hashes.get(other.number) !== other.hash) {
+		throw new SourceIntegrityError(
+			`the second Pendulum node has ${other.hash} at block ${other.number}, the source ${hashes.get(other.number)}`,
+		);
+	}
+	return other.number;
+}
+
+/** The second node must have the source's migration totals at `blockHash`, a
+ *  block it confirmed. One that cannot answer only warns, throttled. */
+async function crossCheckTotals(block: number, blockHash: string, totals: MigrationTotals): Promise<void> {
+	let other: MigrationTotals;
+	try {
+		other = await onNode(config.pendulumWsCrossCheck as string, async (node) => migrationTotals(await node.at(blockHash)));
 	} catch (crossCheckError) {
 		return crossCheckUnavailable(`cannot be read: ${crossCheckError}`);
 	}
-	if (other === undefined) return crossCheckUnavailable(`has not finalized block ${finalized.number} yet`);
-	if (other.hash !== finalized.hash) {
-		throw new SourceIntegrityError(`the second Pendulum node has ${other.hash} at block ${finalized.number}, the source ${finalized.hash}`);
-	}
-	if (other.totals?.nextNonce !== totals.nextNonce || other.totals.totalMigrated !== totals.totalMigrated) {
+	if (other.nextNonce !== totals.nextNonce || other.totalMigrated !== totals.totalMigrated) {
 		throw new SourceIntegrityError(
-			`at Pendulum block ${finalized.number} the second node has nextNonce ${other.totals?.nextNonce} and ` +
-				`totalMigrated ${other.totals?.totalMigrated}, the source ${totals.nextNonce} and ${totals.totalMigrated}`,
+			`at Pendulum block ${block} the second node has nextNonce ${other.nextNonce} and ` +
+				`totalMigrated ${other.totalMigrated}, the source ${totals.nextNonce} and ${totals.totalMigrated}`,
 		);
 	}
 }
@@ -983,8 +1005,14 @@ async function anchorToRelay(
 
 /** The hashes of the finalized blocks to ingest, on one chain with every
  *  block ingested before and with the relay-chain record kept from an earlier
- *  poll; the source is then anchored to the relay chain's newest record. */
-async function sourceHashes(api: ApiPromise, draft: RuntimeState, finalized: BlockRef): Promise<Map<number, string>> {
+ *  poll, and the newest of them that the second node confirms (`confirmed`,
+ *  at most the source's finalized head; `crossChecked` while the second node
+ *  answers). The source is then anchored to the relay chain's newest record. */
+async function sourceHashes(
+	api: ApiPromise,
+	draft: RuntimeState,
+	finalized: BlockRef,
+): Promise<{ hashes: Map<number, string>; confirmed: number; crossChecked: number | undefined }> {
 	// A kept record past the finalized head binds the source too: the walk starts there.
 	const known = draft.relayAnchor;
 	const top = known && known.number > finalized.number ? known : finalized;
@@ -1002,8 +1030,9 @@ async function sourceHashes(api: ApiPromise, draft: RuntimeState, finalized: Blo
 		}
 	}
 	const lowest = Math.min(top.number, draft.lastPendulumBlock);
+	const crossChecked = await crossCheckSource(hashes, top, lowest);
 	await anchorToRelay(api, draft, hashes, top, { number: lowest, hash: hashes.get(lowest) as string });
-	return hashes;
+	return { hashes, confirmed: Math.min(finalized.number, crossChecked ?? Infinity), crossChecked };
 }
 
 /** The migration pallet's admin events, each with what to check. */
@@ -1015,22 +1044,24 @@ const PALLET_ADMIN_EVENTS = new Map([
 	],
 ]);
 
-/** Ingests the blocks after the cursor up to `finalizedBlock`, each read at
- *  its hash in `hashes`: the chain that `sourceHashes` verified. */
+/** Ingests the blocks after the cursor up to `lastBlock`, each read at its
+ *  hash in `hashes`: the chain that `sourceHashes` verified. Their migration
+ *  events are compared with the second node's while it answers. */
 async function ingestPendulumEvents(
 	api: ApiPromise,
 	draft: RuntimeState,
-	finalizedBlock: number,
+	lastBlock: number,
 	hashes: Map<number, string>,
+	crossChecked: boolean,
 ): Promise<void> {
-	for (let block = draft.lastPendulumBlock + 1; block <= finalizedBlock; block++) {
+	for (let block = draft.lastPendulumBlock + 1; block <= lastBlock; block++) {
 		const blockHash = hashes.get(block);
 		if (!blockHash) throw new Error(`no verified hash for Pendulum block ${block}`);
 		const apiAt = await api.at(blockHash);
 		const firstSeenMs = Number((await apiAt.query.timestamp.now()).toString().replaceAll(",", ""));
 		const records = (await apiAt.query.system.events()) as unknown as EventRecords;
 		const migrationEvents = migrationEventText(records);
-		if (migrationEvents) await crossCheckEvents(block, blockHash, migrationEvents);
+		if (migrationEvents && crossChecked) await crossCheckEvents(block, blockHash, migrationEvents);
 		for (const [index, record] of records.entries()) {
 			const { section, method, data } = record.event;
 			if (section !== "tokenMigration") continue;
@@ -1641,8 +1672,15 @@ async function readSource(api: ApiPromise, draft: RuntimeState): Promise<SourceV
 	// grow, so this ordering cannot false-positive if a burn finalizes mid-poll.
 	const finalizedHash = await api.rpc.chain.getFinalizedHead();
 	const finalizedHeader = await api.rpc.chain.getHeader(finalizedHash);
-	const finalizedBlock = finalizedHeader.number.toNumber();
-	const apiAt = await api.at(finalizedHash);
+	const finalized = { number: finalizedHeader.number.toNumber(), hash: finalizedHash.toHex() };
+	const { hashes, confirmed, crossChecked } = await sourceHashes(api, draft, finalized);
+	// The view: the newest block the checkers confirm, or the block ingested
+	// last while they confirm none after it. Every value read from Pendulum
+	// below is read there.
+	const viewBlock = Math.max(confirmed, draft.lastPendulumBlock);
+	const viewHash = hashes.get(viewBlock) ?? draft.lastPendulumHash;
+	if (!viewHash) throw new Error(`no verified hash for Pendulum block ${viewBlock}`);
+	const apiAt = await api.at(viewHash);
 	const sourceFinalizedTsMs = Number((await apiAt.query.timestamp.now()).toString().replaceAll(",", ""));
 	// A stalling source view is this daemon going blind: it cannot verify any
 	// new Base event, and once the unmatched-event grace expires that forces a
@@ -1655,17 +1693,16 @@ async function readSource(api: ApiPromise, draft: RuntimeState): Promise<SourceV
 		lastSourceStallAlertMs = Date.now();
 		await alert(
 			"PENDULUM SOURCE VIEW STALLED",
-			`finalized head ${finalizedBlock} is ${Math.round((Date.now() - sourceFinalizedTsMs) / 1000)}s old; ` +
-				`the monitor cannot verify new Base events against a stalled source — restore the node before ` +
+			`verified Pendulum block ${viewBlock} is ${Math.round((Date.now() - sourceFinalizedTsMs) / 1000)}s old` +
+				(finalized.number > viewBlock ? ` (the source finalized ${finalized.number}, not confirmed yet)` : "") +
+				`; the monitor cannot verify new Base events against a stalled source — restore the node before ` +
 				`the ${config.unmatchedEventGraceSeconds}s unmatched-event grace forces a pause`,
 		);
 	}
-	const finalized = { number: finalizedBlock, hash: finalizedHash.toHex() };
 	const [totals, totalIssuanceValue] = await Promise.all([migrationTotals(apiAt), apiAt.query.balances.totalIssuance()]);
 	const { nextNonce: chainNextNonce, totalMigrated } = totals;
-	await crossCheckSource(finalized, totals);
-	const hashes = await sourceHashes(api, draft, finalized);
-	await ingestPendulumEvents(api, draft, finalizedBlock, hashes);
+	if (crossChecked !== undefined && crossChecked >= viewBlock) await crossCheckTotals(viewBlock, viewHash, totals);
+	await ingestPendulumEvents(api, draft, confirmed, hashes, crossChecked !== undefined);
 	if (chainNextNonce !== draft.nextExpectedNonce) {
 		throw new Error(`finalized nextNonce ${chainNextNonce} != monitor event cursor ${draft.nextExpectedNonce}`);
 	}
@@ -1693,7 +1730,7 @@ async function readSource(api: ApiPromise, draft: RuntimeState): Promise<SourceV
 				`source and can be burned against the fixed-supply vault — investigate before it migrates (RB-3)`,
 		);
 	}
-	return { finalizedBlock, timestampMs: sourceFinalizedTsMs, totalMigrated };
+	return { finalizedBlock: viewBlock, timestampMs: sourceFinalizedTsMs, totalMigrated };
 }
 
 /** When the vault balance check last started, and whether a poll is running. */

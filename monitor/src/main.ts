@@ -1093,11 +1093,19 @@ async function ingestPendulumEvents(
 			if (section !== "tokenMigration") continue;
 			const adminCheck = PALLET_ADMIN_EVENTS.get(method);
 			if (adminCheck) {
-				// Every admin change, however fast the motion behind it passed.
+				// Every admin change, however fast the motion behind it passed; a
+				// treasury destination other than the expected one is critical.
+				const expected = config.expectedTreasuryDestination;
+				const unexpected = method === "TreasuryDestinationSet" && expected !== undefined &&
+					String(data[0]).toLowerCase() !== expected.toLowerCase();
 				await pageOnce(
 					`pallet:${block}:${index}`,
-					"MIGRATION PALLET ADMIN EVENT",
-					`tokenMigration.${method}(${data.join(", ")}) in finalized Pendulum block ${block}: ${adminCheck}`,
+					`${unexpected ? "CRITICAL: " : ""}MIGRATION PALLET ADMIN EVENT`,
+					`tokenMigration.${method}(${data.join(", ")}) in finalized Pendulum block ${block}: ` +
+						(unexpected
+							? `treasury migrations are released to this Base address from now on, not to ` +
+								`EXPECTED_TREASURY_DESTINATION ${expected}, and each one pauses the vault — check the motion behind it`
+							: adminCheck),
 				);
 				continue;
 			}

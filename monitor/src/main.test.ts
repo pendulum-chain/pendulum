@@ -1909,6 +1909,23 @@ test("admin events of the migration pallet page from the ingest", async (t) => {
 	assert.match(adminPages[1], /MigrationPauseSet\(false\)/);
 });
 
+test("a treasury destination set to any but the expected address pages critical", async (t) => {
+	const { pendulum, api, monitor, pages } = await setup(t, { env: { EXPECTED_TREASURY_DESTINATION: TREASURY_DESTINATION } });
+	pendulum.finalized = 102;
+	pendulum.events.set(101, [{ section: "tokenMigration", method: "TreasuryDestinationSet", data: [TREASURY_DESTINATION] }]);
+	pendulum.events.set(102, [{ section: "tokenMigration", method: "TreasuryDestinationSet", data: [TOKEN] }]);
+	await monitor.poll(api);
+	const set = pages.filter((page) => page.subject.endsWith("MIGRATION PALLET ADMIN EVENT"));
+	assert.deepEqual(set.map((page) => [page.subject, page.severity]), [
+		["MIGRATION PALLET ADMIN EVENT", "WARNING"],
+		["CRITICAL: MIGRATION PALLET ADMIN EVENT", "CRITICAL"],
+	]);
+	assert.match(
+		set[1].detail,
+		new RegExp(`^tokenMigration.TreasuryDestinationSet\\(${TOKEN}\\) in finalized Pendulum block 102: .* not to EXPECTED_TREASURY_DESTINATION ${TREASURY_DESTINATION}, `, "i"),
+	);
+});
+
 test("the governance watch runs after the conservation checks", async (t) => {
 	const { base, pendulum, api, monitor, subjects } = await setup(t);
 	base.vaultBalance -= 1n;

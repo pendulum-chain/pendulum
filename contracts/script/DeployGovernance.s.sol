@@ -33,7 +33,7 @@ import {MigrationVault} from "../src/MigrationVault.sol";
 ///                         50000 is refused
 ///   QUORUM_FRACTION       percent of CIRCULATING supply (total minus the
 ///                         vault's unmigrated balance parked at the vote
-///                         sink, see PRD G1)
+///                         sink, see PRD G1), 1 to 100
 ///   QUORUM_FLOOR          absolute quorum lower bound, 18-decimal token
 ///                         units, 1 PEN (1e18) to total supply; PERMANENT.
 ///                         Keeps early proposals from being trivially cheap
@@ -54,8 +54,8 @@ import {MigrationVault} from "../src/MigrationVault.sol";
 ///   TEST_DEPLOY           optional, testnet drills only: allows a shorter
 ///                         TIMELOCK_DELAY, VOTING_DELAY and VOTING_PERIOD, a
 ///                         TIMELOCK_CANCELLER that is not a Safe or is the
-///                         guardian, and QUORUM_FLOOR=0. Refused on Base
-///                         mainnet.
+///                         guardian, QUORUM_FRACTION=0 and QUORUM_FLOOR=0.
+///                         Refused on Base mainnet.
 contract DeployGovernance is Script {
     uint256 internal constant BASE_MAINNET = 8453;
     uint256 internal constant MIN_TIMELOCK_DELAY = 2 days;
@@ -95,7 +95,10 @@ contract DeployGovernance is Script {
             proposalThreshold >= 1e18 && proposalThreshold <= supply,
             "PROPOSAL_THRESHOLD must be 18-decimal units, 1 PEN to total supply"
         );
+        // Zero leaves quorum at the permanent floor however much PEN
+        // circulates.
         uint256 quorumFraction = vm.envUint("QUORUM_FRACTION");
+        require(quorumFraction > 0 || testDeploy, "QUORUM_FRACTION must be above 0");
         uint256 quorumFloor = vm.envUint("QUORUM_FLOOR");
         require(
             (quorumFloor >= 1e18 || (testDeploy && quorumFloor == 0)) && quorumFloor <= supply,

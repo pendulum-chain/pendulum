@@ -154,6 +154,7 @@ contract DeployGovernanceScriptTest is Test {
         string memory threshold = "PROPOSAL_THRESHOLD must be 18-decimal units, 1 PEN to total supply";
         _expectRefused("PROPOSAL_THRESHOLD", "1000", threshold); // whole PEN
         _expectRefused("PROPOSAL_THRESHOLD", vm.toString(SUPPLY + 1), threshold);
+        _expectRefused("QUORUM_FRACTION", "0", "QUORUM_FRACTION must be above 0");
         string memory floor = "QUORUM_FLOOR must be 18-decimal units, 1 PEN to total supply";
         _expectRefused("QUORUM_FLOOR", "100000", floor); // whole PEN
         _expectRefused("QUORUM_FLOOR", "0", floor);
@@ -216,10 +217,11 @@ contract DeployGovernanceScriptTest is Test {
         assertEq(governor.votingDelay(), 1 days);
         assertEq(governor.votingPeriod(), 5 days);
         assertEq(governor.proposalThreshold(), 1_000e18);
+        assertEq(governor.quorumNumerator(), 2);
         assertEq(governor.quorumFloor(), 100_000e18);
 
-        // Testnet drills: short delays and voting, no floor and the guardian
-        // key, not a Safe, as canceller.
+        // Testnet drills: short delays and voting, no quorum fraction or floor
+        // and the guardian key, not a Safe, as canceller.
         address guardianKey = makeAddr("guardianKey");
         vault.setGuardian(guardianKey);
         _setValidEnv();
@@ -227,6 +229,7 @@ contract DeployGovernanceScriptTest is Test {
         vm.setEnv("TIMELOCK_DELAY", "180");
         vm.setEnv("VOTING_DELAY", "60");
         vm.setEnv("VOTING_PERIOD", "240");
+        vm.setEnv("QUORUM_FRACTION", "0");
         vm.setEnv("QUORUM_FLOOR", "0");
         vm.setEnv("TIMELOCK_CANCELLER", vm.toString(guardianKey));
         (timelock, governor) = script.run();

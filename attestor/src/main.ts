@@ -22,10 +22,10 @@
  */
 
 import { ApiPromise, WsProvider } from "@polkadot/api";
-import { createPublicClient, defineChain, http, TransactionReceiptNotFoundError } from "viem";
+import { createPublicClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { alertText, pingHeartbeat, postAlert, type Severity } from "./alert.js";
-import { confirmDurable, processBlock, type Attestor, type UnconfirmedBlock, type VaultChain } from "./approval.js";
+import { advanceCheckpoint, processBlock, viemVaultChain, type Attestor, type UnconfirmedBlock } from "./approval.js";
 import { decodeMigrationEvent, isTransientRpcError, type MigrationEvent } from "./checks.js";
 import { config } from "./config.js";
 import {
@@ -93,56 +93,8 @@ async function migrationEventsInBlock(api: ApiPromise, blockNumber: number): Pro
 	return events;
 }
 
-const atBlock = (blockNumber?: bigint) => (blockNumber === undefined ? {} : { blockNumber });
-
-const chain: VaultChain = {
-	nonceConsumed: (nonce, blockNumber) =>
-		publicClient.readContract({
-			address: config.vaultAddress,
-			abi: vaultAbi,
-			functionName: "nonceConsumed",
-			args: [nonce],
-			...atBlock(blockNumber),
-		}),
-	hasApproved: (payload, blockNumber) =>
-		publicClient.readContract({
-			address: config.vaultAddress,
-			abi: vaultAbi,
-			functionName: "hasApproved",
-			args: [payload, account.address],
-			...atBlock(blockNumber),
-		}),
-	approveGas: async (event) => {
-		const call = {
-			account,
-			address: config.vaultAddress,
-			abi: vaultAbi,
-			functionName: "approve",
-			args: [event.nonce, event.recipient, event.palletAmount],
-		} as const;
-		const { request } = await publicClient.simulateContract(call);
-		return request.gas ?? publicClient.estimateContractGas(call);
-	},
-	accountNonce: (blockTag) => publicClient.getTransactionCount({ address: account.address, blockTag }),
-	fees: async () => {
-		const { maxFeePerGas, maxPriorityFeePerGas } = await publicClient.estimateFeesPerGas();
-		return { maxFeePerGas, maxPriorityFeePerGas };
-	},
-	sendRawTransaction: (serializedTransaction) => publicClient.sendRawTransaction({ serializedTransaction }),
-	receipt: (hash) =>
-		publicClient.getTransactionReceipt({ hash }).catch((error: unknown) => {
-			if (error instanceof TransactionReceiptNotFoundError) return undefined;
-			throw error;
-		}),
-	boundaryBlock: async () => {
-		const confirmed = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
-		if (confirmed.number === null) throw new Error(`${config.baseFinalityTag} Base block has no number`);
-		return confirmed.number;
-	},
-};
-
 const attestor: Attestor = {
-	chain,
+	chain: viemVaultChain(publicClient, account, config.vaultAddress, config.baseFinalityTag),
 	account,
 	baseChainId: config.baseChainId,
 	vaultAddress: config.vaultAddress,
@@ -231,11 +183,7 @@ async function main(): Promise<void> {
 				await processBlock(attestor, block, await migrationEventsInBlock(api, block), unconfirmed);
 				processedThrough = block;
 			}
-			const confirmed = await confirmDurable(attestor, unconfirmed);
-			if (confirmed !== undefined) {
-				checkpoint.lastProcessedBlock = confirmed;
-				saveCheckpoint(config.checkpointFile, checkpoint);
-			}
+			if (await advanceCheckpoint(attestor, unconfirmed, checkpoint)) saveCheckpoint(config.checkpointFile, checkpoint);
 			if (config.heartbeatUrl) void pingHeartbeat(config.heartbeatUrl);
 		}).catch(async (error) => {
 			if (isTransientRpcError(error)) {

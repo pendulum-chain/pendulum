@@ -17,19 +17,23 @@ import {
 	keccak256,
 	parseTransaction,
 	RpcRequestError,
+	TimeoutError,
+	TransactionReceiptNotFoundError,
 	type Hash,
 	type Hex,
+	type PublicClient,
 	type TransactionReceipt,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import {
+	advanceCheckpoint,
 	approve,
 	bumpedFees,
 	cappedFees,
-	confirmDurable,
 	GAS_LIMIT_MULTIPLIER,
 	payloadHash,
 	processBlock,
+	viemVaultChain,
 	type Attestor,
 	type Fees,
 	type UnconfirmedBlock,
@@ -242,6 +246,58 @@ function approveArgs(tx: Sent): readonly unknown[] {
 /** The fields a replacement must keep from the attempt it replaces. */
 const callOf = (tx: Sent) => ({ nonce: tx.nonce, to: tx.to, data: tx.data, value: tx.value, gas: tx.gas, chainId: tx.chainId });
 
+test("the viem chain reads the boundary at the finality tag and everything else as the signer", async () => {
+	const account = privateKeyToAccount(`0x${"11".repeat(32)}`);
+	const calls: [string, Record<string, unknown>][] = [];
+	const answers: Record<string, (args: Record<string, unknown>) => unknown> = {
+		getBlock: () => ({ number: 100n }),
+		readContract: () => true,
+		simulateContract: () => ({ request: {} }),
+		estimateContractGas: () => 90_000n,
+		getTransactionCount: () => 6,
+		estimateFeesPerGas: () => ({ maxFeePerGas: 7n, maxPriorityFeePerGas: 1n, gasPrice: undefined }),
+		sendRawTransaction: () => "0xhash",
+		getTransactionReceipt: () => {
+			throw new TransactionReceiptNotFoundError({ hash: `0x${"ab".repeat(32)}` });
+		},
+	};
+	const client = Object.fromEntries(
+		Object.keys(answers).map((name) => [
+			name,
+			async (args: Record<string, unknown> = {}) => {
+				calls.push([name, args]);
+				return answers[name](args);
+			},
+		]),
+	) as unknown as PublicClient;
+	const chain = viemVaultChain(client, account, VAULT, "finalized");
+	const payload = payloadHash(EVENT);
+
+	assert.equal(await chain.boundaryBlock(), 100n);
+	assert.equal(await chain.hasApproved(payload, 100n), true);
+	assert.equal(await chain.nonceConsumed(EVENT.nonce), true);
+	assert.equal(await chain.approveGas(EVENT), 90_000n);
+	assert.equal(await chain.accountNonce("pending"), 6);
+	assert.deepEqual(await chain.fees(), { maxFeePerGas: 7n, maxPriorityFeePerGas: 1n });
+	assert.equal(await chain.receipt(`0x${"ab".repeat(32)}`), undefined, "not mined yet");
+	const pick = (name: string) => calls.filter(([n]) => n === name).map(([, args]) => args);
+	assert.deepEqual(pick("getBlock"), [{ blockTag: "finalized" }]);
+	const [approved, consumed] = pick("readContract");
+	assert.deepEqual([approved.functionName, approved.args, approved.blockNumber], ["hasApproved", [payload, account.address], 100n]);
+	assert.deepEqual([consumed.functionName, consumed.args, "blockNumber" in consumed], ["nonceConsumed", [EVENT.nonce], false]);
+	assert.ok([approved, consumed].every((read) => read.address === VAULT));
+	const [simulated] = pick("simulateContract");
+	assert.deepEqual([simulated.account, simulated.functionName, simulated.args], [account, "approve", [EVENT.nonce, EVENT.recipient, EVENT.palletAmount]]);
+	assert.deepEqual(pick("getTransactionCount"), [{ address: account.address, blockTag: "pending" }]);
+
+	answers.getBlock = () => ({ number: null });
+	await assert.rejects(chain.boundaryBlock(), /finalized Base block has no number/);
+	answers.getTransactionReceipt = () => {
+		throw new HttpRequestError({ url: "http://rpc", status: 503 });
+	};
+	await assert.rejects(chain.receipt(`0x${"ab".repeat(32)}`), HttpRequestError);
+});
+
 test("the payload hash is the vault's payloadHash(nonce, recipient, palletAmount)", () => {
 	// keccak256(abi.encode(uint64 7, address 0x…deadbeef, uint256 5e12)), from Foundry's cast.
 	assert.equal(payloadHash(EVENT), "0xe214823af04c4036de666eabddeae5ad457bbd53132a20cf8509f918e8591844");
@@ -262,15 +318,17 @@ test("an unreleasable event is skipped with a critical alert and never sent", as
 	);
 });
 
-test("a migration already released or approved by us is not sent again", async () => {
+test("a migration already released or approved by us is not sent again, nor simulated", async () => {
 	const chain = new FakeVault();
-	const { attestor, alerts } = attestorOn(chain);
+	const { attestor, alerts, logs } = attestorOn(chain);
 	chain.consumed.add(EVENT.nonce);
 	assert.equal(await approve(attestor, EVENT), true);
 	chain.consumed.clear();
 	chain.approved.add(payloadHash(EVENT));
 	assert.equal(await approve(attestor, EVENT), true);
 	assert.equal(chain.sent.length, 0);
+	assert.equal(chain.approveGasCalls, 0);
+	assert.equal(logs.filter((line) => line.startsWith("skip (already released or approved): nonce=7 ")).length, 2);
 	assert.equal(alerts.length, 0);
 });
 
@@ -593,6 +651,46 @@ test("a refused replacement keeps the earlier attempt, and the next bump goes hi
 	assert.equal(alerts.length, 0);
 });
 
+test("an earlier attempt mined after a refused bump is still found as ours", async () => {
+	const chain = new FakeVault();
+	chain.baseFee = 8_000_000n;
+	chain.refuse = (index) => (index === 1 ? "txpool is full" : undefined);
+	const { attestor, logs } = attestorOn(chain, {}, () => {
+		// Fees fall after the refused bump, and the first attempt is mined.
+		if (chain.sent.length >= 2) chain.baseFee = 5_000_000n;
+		chain.mine();
+	});
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.ok(chain.receipts.has(chain.sent[0].hash));
+	assert.ok(logs.some((line) => line.startsWith("approved: nonce=7 ") && line.includes(`tx=${chain.sent[0].hash}`)));
+	assert.equal(attestor.missedApprovals, 0);
+});
+
+test("a first attempt the node took although its answer was lost is followed, not sent anew", async () => {
+	const chain = new FakeVault();
+	chain.baseFee = 8_000_000n;
+	const send = chain.sendRawTransaction.bind(chain);
+	let lose = true;
+	chain.sendRawTransaction = async (serialized) => {
+		const hash = await send(serialized);
+		if (lose) {
+			lose = false;
+			throw new TimeoutError({ body: {}, url: "http://rpc" });
+		}
+		return hash;
+	};
+	const { attestor, logs } = attestorOn(chain);
+	await assert.rejects(approve(attestor, EVENT), TimeoutError);
+	// The retry asks a backend whose pending count has not seen it, so it signs
+	// the very same transaction, which the node answers it already knows.
+	chain.pendingNonce = 5;
+	chain.baseFee = 5_000_000n;
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.equal(chain.sent[1].hash, chain.sent[0].hash);
+	assert.ok(logs.some((line) => line.startsWith("approved: nonce=7 ") && line.includes(`tx=${chain.sent[0].hash}`)));
+	assert.equal(attestor.nextNonce, 6, "its nonce is reserved");
+});
+
 test("a first attempt refused for its price or a full pool is tried again at the same nonce", async () => {
 	const chain = new FakeVault();
 	chain.refuse = (index) => (index === 0 ? "txpool is full" : undefined);
@@ -696,6 +794,28 @@ test("when another transaction takes the nonce, the approval is sent again at a 
 	assert.ok(chain.approved.has(payloadHash(EVENT)));
 });
 
+test("the new transaction after another took the nonce starts from the current estimate, with bumps of its own", async () => {
+	const chain = new FakeVault();
+	chain.baseFee = 100_000_000n;
+	let replaced = false;
+	const feeBump = { afterMs: AFTER_MS, percent: 20, max: 1, maxFeePerGas: 1_000_000_000n };
+	const { attestor, alerts } = attestorOn(chain, { feeBump }, (elapsed) => {
+		if (!replaced && elapsed >= 3 * AFTER_MS) {
+			// Replaced by hand after the page, while fees stay high.
+			replaced = true;
+			chain.pool.delete(5);
+			chain.minedNonce = 6;
+		}
+		if (elapsed >= 8 * AFTER_MS) chain.baseFee = 5_000_000n;
+		chain.mine();
+	});
+	assert.equal(await approve(attestor, EVENT), true);
+	const atNewNonce = chain.sent.filter((tx) => tx.nonce === 6).map((tx) => tx.maxFeePerGas);
+	assert.deepEqual([...new Set(atNewNonce)], [7_000_000n, 8_400_000n]);
+	assert.equal(alerts.length, 2, "each transaction pages once");
+	assert.ok(chain.approved.has(payloadHash(EVENT)));
+});
+
 test("unreleasable events are not tracked for durability; every other event is", async () => {
 	const chain = new FakeVault();
 	const { attestor } = attestorOn(chain);
@@ -714,19 +834,24 @@ test("the checkpoint passes only leading blocks whose events are durable at the 
 		{ block: 12, events: [], lastAttemptMs: at },
 		{ block: 13, events: [OTHER], lastAttemptMs: at },
 	];
+	const checkpoint = { lastProcessedBlock: 9 };
 	// Approved at latest is not enough.
 	chain.approved.add(payloadHash(EVENT));
-	assert.equal(await confirmDurable(attestor, unconfirmed), 10);
+	assert.equal(await advanceCheckpoint(attestor, unconfirmed, checkpoint), true);
+	assert.equal(checkpoint.lastProcessedBlock, 10);
 	assert.deepEqual(
 		unconfirmed.map((entry) => entry.block),
 		[11, 12, 13],
 	);
+	assert.equal(await advanceCheckpoint(attestor, unconfirmed, checkpoint), false);
 	// Our approval at the boundary, or the nonce released there, is.
 	chain.durableApproved.add(payloadHash(EVENT));
 	chain.durableConsumed.add(OTHER.nonce);
-	assert.equal(await confirmDurable(attestor, unconfirmed), 13);
+	assert.equal(await advanceCheckpoint(attestor, unconfirmed, checkpoint), true);
+	assert.equal(checkpoint.lastProcessedBlock, 13);
 	assert.equal(unconfirmed.length, 0);
-	assert.equal(await confirmDurable(attestor, unconfirmed), undefined);
+	assert.equal(await advanceCheckpoint(attestor, unconfirmed, checkpoint), false);
+	assert.equal(checkpoint.lastProcessedBlock, 13);
 });
 
 test("a boundary block without vault state means not yet, never fatal", async () => {
@@ -740,7 +865,9 @@ test("a boundary block without vault state means not yet, never fatal", async ()
 	};
 	const { attestor, logs } = attestorOn(chain);
 	const unconfirmed: UnconfirmedBlock[] = [{ block: 11, events: [EVENT], lastAttemptMs: attestor.now() }];
-	assert.equal(await confirmDurable(attestor, unconfirmed), undefined);
+	const checkpoint = { lastProcessedBlock: 10 };
+	assert.equal(await advanceCheckpoint(attestor, unconfirmed, checkpoint), false);
+	assert.equal(checkpoint.lastProcessedBlock, 10);
 	assert.equal(unconfirmed.length, 1);
 	assert.ok(logs.includes("vault has no state at safe block 100 yet; checkpoint waits"));
 });
@@ -749,12 +876,14 @@ test("approvals that stay outside the boundary are re-submitted after the timeou
 	const chain = new FakeVault();
 	const { attestor, alerts, advance } = attestorOn(chain);
 	const unconfirmed: UnconfirmedBlock[] = [{ block: 11, events: [EVENT], lastAttemptMs: attestor.now() }];
+	const checkpoint = { lastProcessedBlock: 10 };
 	advance(attestor.baseFinalityTimeoutMs - 1);
-	assert.equal(await confirmDurable(attestor, unconfirmed), undefined);
+	assert.equal(await advanceCheckpoint(attestor, unconfirmed, checkpoint), false);
 	assert.equal(chain.sent.length, 0);
 	advance(1);
 	const resubmittedAt = attestor.now();
-	assert.equal(await confirmDurable(attestor, unconfirmed), undefined);
+	assert.equal(await advanceCheckpoint(attestor, unconfirmed, checkpoint), false);
+	assert.equal(checkpoint.lastProcessedBlock, 10, "the checkpoint stays before the unsettled block");
 	assert.deepEqual(
 		alerts.map((a) => `${a.severity} ${a.subject}`),
 		["warning approvals not durable at the Base finality boundary, re-submitting"],

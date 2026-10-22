@@ -14,9 +14,11 @@ import {
 	encodeFunctionData,
 	formatGwei,
 	keccak256,
+	TransactionReceiptNotFoundError,
 	type Hash,
 	type Hex,
 	type LocalAccount,
+	type PublicClient,
 	type TransactionReceipt,
 } from "viem";
 import type { Severity } from "./alert.js";
@@ -106,6 +108,61 @@ export interface VaultChain {
 	boundaryBlock(): Promise<bigint>;
 }
 
+/** `VaultChain` on a viem client, reading and sending as `account`. */
+export function viemVaultChain(
+	client: PublicClient,
+	account: LocalAccount,
+	vaultAddress: `0x${string}`,
+	finalityTag: "safe" | "finalized",
+): VaultChain {
+	const atBlock = (blockNumber?: bigint) => (blockNumber === undefined ? {} : { blockNumber });
+	return {
+		nonceConsumed: (nonce, blockNumber) =>
+			client.readContract({
+				address: vaultAddress,
+				abi: vaultAbi,
+				functionName: "nonceConsumed",
+				args: [nonce],
+				...atBlock(blockNumber),
+			}),
+		hasApproved: (payload, blockNumber) =>
+			client.readContract({
+				address: vaultAddress,
+				abi: vaultAbi,
+				functionName: "hasApproved",
+				args: [payload, account.address],
+				...atBlock(blockNumber),
+			}),
+		approveGas: async (event) => {
+			const call = {
+				account,
+				address: vaultAddress,
+				abi: vaultAbi,
+				functionName: "approve",
+				args: [event.nonce, event.recipient, event.palletAmount],
+			} as const;
+			const { request } = await client.simulateContract(call);
+			return request.gas ?? client.estimateContractGas(call);
+		},
+		accountNonce: (blockTag) => client.getTransactionCount({ address: account.address, blockTag }),
+		fees: async () => {
+			const { maxFeePerGas, maxPriorityFeePerGas } = await client.estimateFeesPerGas();
+			return { maxFeePerGas, maxPriorityFeePerGas };
+		},
+		sendRawTransaction: (serializedTransaction) => client.sendRawTransaction({ serializedTransaction }),
+		receipt: (hash) =>
+			client.getTransactionReceipt({ hash }).catch((error: unknown) => {
+				if (error instanceof TransactionReceiptNotFoundError) return undefined;
+				throw error;
+			}),
+		boundaryBlock: async () => {
+			const confirmed = await client.getBlock({ blockTag: finalityTag });
+			if (confirmed.number === null) throw new Error(`${finalityTag} Base block has no number`);
+			return confirmed.number;
+		},
+	};
+}
+
 export interface Attestor {
 	chain: VaultChain;
 	account: LocalAccount;
@@ -147,7 +204,7 @@ export function payloadHash(event: MigrationEvent): Hex {
  *  already approved) at the given Base block, or at latest when omitted. With
  *  4 attestors racing to the same event, losing the race is the NORMAL case,
  *  not an error, and concluding that at latest needs no finality — durability
- *  is enforced separately before the checkpoint moves (see `confirmDurable`). */
+ *  is enforced separately before the checkpoint moves (see `advanceCheckpoint`). */
 async function handledAt(attestor: Attestor, event: MigrationEvent, blockNumber?: bigint): Promise<boolean> {
 	if (await attestor.chain.nonceConsumed(event.nonce, blockNumber)) return true;
 	return attestor.chain.hasApproved(payloadHash(event), blockNumber);
@@ -480,15 +537,19 @@ async function eventsDurableAt(attestor: Attestor, entry: UnconfirmedBlock, bloc
 	}
 }
 
-/** Drop every leading block whose events are resolved inside the Base finality
- *  boundary, and return the last one dropped: the durable checkpoint may move
- *  there. A block that refuses to settle (our approval reorged out and nothing
- *  replaced it) is re-approved after `baseFinalityTimeoutMs` rather than waited
- *  on forever — the checkpoint cannot pass it until it settles, so nothing is
+/** Advance the durable checkpoint through every leading block whose events are
+ *  resolved inside the Base finality boundary, and say whether it moved. A
+ *  block that refuses to settle (our approval reorged out and nothing replaced
+ *  it) is re-approved after `baseFinalityTimeoutMs` rather than waited on
+ *  forever — the checkpoint cannot pass it until it settles, so nothing is
  *  ever skipped. */
-export async function confirmDurable(attestor: Attestor, unconfirmed: UnconfirmedBlock[]): Promise<number | undefined> {
+export async function advanceCheckpoint(
+	attestor: Attestor,
+	unconfirmed: UnconfirmedBlock[],
+	checkpoint: { lastProcessedBlock: number },
+): Promise<boolean> {
 	let boundary: bigint | undefined;
-	let confirmed: number | undefined;
+	let advanced = false;
 	while (unconfirmed.length > 0) {
 		const head = unconfirmed[0];
 		if (head.events.length > 0) {
@@ -507,8 +568,9 @@ export async function confirmDurable(attestor: Attestor, unconfirmed: Unconfirme
 				break;
 			}
 		}
-		confirmed = head.block;
+		checkpoint.lastProcessedBlock = head.block;
 		unconfirmed.shift();
+		advanced = true;
 	}
-	return confirmed;
+	return advanced;
 }

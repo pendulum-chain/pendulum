@@ -60,6 +60,11 @@ jobs:
             pendulum|amplitude) ;;
             *) echo "cannot derive the chain from '$TAG'; expected <chain>-release-<spec>"; exit 1 ;;
           esac
+          # A dispatched run takes the chain from its input, so it must match the tag.
+          if [ -n "$TAG" ] && [ "${TAG%%-release-*}" != "$CHAIN" ]; then
+            echo "::error::$TAG is not a $CHAIN release tag; expected $CHAIN-release-<spec>"
+            exit 1
+          fi
           echo "chain=$CHAIN" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "ref=${TAG:-${{ github.ref }}}" >> "$GITHUB_OUTPUT"

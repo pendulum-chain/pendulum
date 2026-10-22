@@ -26,8 +26,8 @@ import {MigrationVault} from "../src/MigrationVault.sol";
 ///                         PEN_TOKEN minted the whole supply into it)
 ///   TIMELOCK_DELAY        seconds, 48h (172800) to 30 days (PRD V5)
 ///   VOTING_DELAY          seconds before voting starts (timestamp clock),
-///                         at most 30 days
-///   VOTING_PERIOD         seconds of voting, at most 30 days
+///                         1 hour to 30 days
+///   VOTING_PERIOD         seconds of voting, 1 day to 30 days
 ///   PROPOSAL_THRESHOLD    18-decimal token units needed to propose, 1 PEN
 ///                         (1e18) to total supply; a whole-PEN figure such as
 ///                         50000 is refused
@@ -52,12 +52,17 @@ import {MigrationVault} from "../src/MigrationVault.sol";
 ///                         must not be the deployer, PEN_TOKEN, VAULT_ADDRESS
 ///                         or the vault's guardian.
 ///   TEST_DEPLOY           optional, testnet drills only: allows a shorter
-///                         TIMELOCK_DELAY, a TIMELOCK_CANCELLER that is not a
-///                         Safe or is the guardian, and QUORUM_FLOOR=0.
-///                         Refused on Base mainnet.
+///                         TIMELOCK_DELAY, VOTING_DELAY and VOTING_PERIOD, a
+///                         TIMELOCK_CANCELLER that is not a Safe or is the
+///                         guardian, and QUORUM_FLOOR=0. Refused on Base
+///                         mainnet.
 contract DeployGovernance is Script {
     uint256 internal constant BASE_MAINNET = 8453;
     uint256 internal constant MIN_TIMELOCK_DELAY = 2 days;
+    // Shorter windows are a units slip (days entered as seconds), and a vote
+    // too short for holders to take part in could not be undone by one.
+    uint256 internal constant MIN_VOTING_DELAY = 1 hours;
+    uint256 internal constant MIN_VOTING_PERIOD = 1 days;
     // Longer periods are a units slip (milliseconds land ~1000x further), and
     // a governor whose votes never end could not vote to shorten them.
     uint256 internal constant MAX_PERIOD = 30 days;
@@ -75,8 +80,10 @@ contract DeployGovernance is Script {
         require(timelockDelay >= MIN_TIMELOCK_DELAY || testDeploy, "TIMELOCK_DELAY is below 48h");
         require(timelockDelay <= MAX_PERIOD, "TIMELOCK_DELAY is above 30 days (seconds expected)");
         uint256 votingDelay = vm.envUint("VOTING_DELAY");
+        require(votingDelay >= MIN_VOTING_DELAY || testDeploy, "VOTING_DELAY is below 1h (seconds expected)");
         require(votingDelay <= MAX_PERIOD, "VOTING_DELAY is above 30 days (seconds expected)");
         uint256 votingPeriod = vm.envUint("VOTING_PERIOD");
+        require(votingPeriod >= MIN_VOTING_PERIOD || testDeploy, "VOTING_PERIOD is below 1 day (seconds expected)");
         require(votingPeriod <= MAX_PERIOD, "VOTING_PERIOD is above 30 days (seconds expected)");
 
         // 18-decimal units: below one PEN is a whole-PEN figure entered as

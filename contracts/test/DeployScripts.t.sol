@@ -129,7 +129,11 @@ contract DeployGovernanceScriptTest is Test {
         _expectRefused("TIMELOCK_DELAY", "0", "TIMELOCK_DELAY is below 48h");
         _expectRefused("TIMELOCK_DELAY", "172799", "TIMELOCK_DELAY is below 48h");
         _expectRefused("TIMELOCK_DELAY", "172800000", "TIMELOCK_DELAY is above 30 days (seconds expected)");
+        _expectRefused("VOTING_DELAY", "1", "VOTING_DELAY is below 1h (seconds expected)"); // days
+        _expectRefused("VOTING_DELAY", "3599", "VOTING_DELAY is below 1h (seconds expected)");
         _expectRefused("VOTING_DELAY", "86400000", "VOTING_DELAY is above 30 days (seconds expected)");
+        _expectRefused("VOTING_PERIOD", "5", "VOTING_PERIOD is below 1 day (seconds expected)"); // days
+        _expectRefused("VOTING_PERIOD", "86399", "VOTING_PERIOD is below 1 day (seconds expected)");
         // Would have been narrowed to 432000 by a bare uint32 cast.
         _expectRefused("VOTING_PERIOD", "4295399296", "VOTING_PERIOD is above 30 days (seconds expected)");
 
@@ -183,17 +187,20 @@ contract DeployGovernanceScriptTest is Test {
         assertEq(governor.proposalThreshold(), 1_000e18);
         assertEq(governor.quorumFloor(), 100_000e18);
 
-        // Testnet drills: a short delay, no floor and the guardian key, not a
-        // Safe, as canceller.
+        // Testnet drills: short delays and voting, no floor and the guardian
+        // key, not a Safe, as canceller.
         address guardianKey = makeAddr("guardianKey");
         vault.setGuardian(guardianKey);
         _setValidEnv();
         vm.setEnv("TEST_DEPLOY", "true");
         vm.setEnv("TIMELOCK_DELAY", "180");
+        vm.setEnv("VOTING_DELAY", "60");
+        vm.setEnv("VOTING_PERIOD", "240");
         vm.setEnv("QUORUM_FLOOR", "0");
         vm.setEnv("TIMELOCK_CANCELLER", vm.toString(guardianKey));
-        (timelock,) = script.run();
+        (timelock, governor) = script.run();
         assertEq(timelock.getMinDelay(), 180);
+        assertEq(governor.votingPeriod(), 240);
         assertTrue(timelock.hasRole(timelock.CANCELLER_ROLE(), guardianKey));
     }
 }

@@ -810,8 +810,44 @@ test("a nonce held by a transaction this process did not send is skipped, never 
 		chain.sent.map((tx) => tx.nonce),
 		[5, 6],
 	);
+	assert.equal(chain.sent[1].maxFeePerGas, chain.sent[0].maxFeePerGas, "tried at once, no bump spent");
 	assert.ok(chain.receipts.has(foreign.hash), "the other transaction kept its nonce");
 	assert.ok(chain.receipts.has(chain.sent[1].hash));
+	assert.ok(chain.approved.has(payloadHash(EVENT)));
+});
+
+test("a pending count a few nonces behind costs no wait and no bump", async () => {
+	const chain = new FakeVault();
+	chain.pendingNonce = 2;
+	const { attestor, alerts } = attestorOn(chain);
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.deepEqual(
+		chain.sent.map((tx) => [tx.nonce, tx.maxFeePerGas]),
+		[
+			[2, 7_000_000n],
+			[3, 7_000_000n],
+			[4, 7_000_000n],
+			[5, 7_000_000n],
+		],
+	);
+	assert.ok(chain.approved.has(payloadHash(EVENT)));
+	assert.equal(alerts.length, 0);
+});
+
+test("nonces refused as taken are tried at most five at a time", async () => {
+	const chain = new FakeVault();
+	chain.pendingNonce = 0;
+	chain.minedNonce = 12;
+	const { attestor } = attestorOn(chain);
+	const sentAt: number[] = [];
+	chain.refuse = () => {
+		sentAt.push(attestor.now());
+		return undefined;
+	};
+	assert.equal(await approve(attestor, EVENT), true);
+	const perInstant = [...new Set(sentAt)].map((at) => sentAt.filter((t) => t === at).length);
+	assert.deepEqual(perInstant, [5, 5, 3]);
+	assert.equal(chain.sent.at(-1)?.nonce, 12);
 	assert.ok(chain.approved.has(payloadHash(EVENT)));
 });
 

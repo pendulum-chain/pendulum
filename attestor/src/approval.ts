@@ -42,6 +42,11 @@ export const MIN_REPLACEMENT_PERCENT = 10;
 /** How often a sent approval's receipt is polled: about one Base block. */
 const RECEIPT_POLL_MS = 2000;
 
+/** How many nonces in a row a first attempt tries at once when each is taken:
+ *  enough for a backend whose pending count trails by a few blocks, and a
+ *  bound for one that refuses every nonce. */
+const NONCE_TRIES = 5;
+
 export interface Fees {
 	maxFeePerGas: bigint;
 	maxPriorityFeePerGas: bigint;
@@ -312,21 +317,27 @@ async function sendAttempt(
 /** Send a submission the node has not accepted yet, at the lowest nonce that no
  *  other transaction of this process holds. A refusal for the price or a full
  *  pool is retried at the next bump; a nonce some transaction this process
- *  does not track holds is skipped, never replaced. */
+ *  does not track holds is skipped at once, never replaced, at most
+ *  `NONCE_TRIES` nonces in a row. */
 async function sendFirst(attestor: Attestor, submission: Submission, label: string): Promise<void> {
 	submission.fees ??= cappedFees(await attestor.chain.fees(), attestor.feeBump.maxFeePerGas);
-	const nonce = Math.max(await attestor.chain.accountNonce("pending"), attestor.nextNonce);
-	const { hash, error } = await sendAttempt(attestor, submission, nonce, submission.fees);
-	const rejection = error === undefined ? undefined : sendRejection(error);
-	if (error === undefined || rejection === "known") {
-		submission.nonce = nonce;
-		submission.hashes.push(hash);
+	const pending = await attestor.chain.accountNonce("pending");
+	for (let tries = 1; ; tries++) {
+		const nonce = Math.max(pending, attestor.nextNonce);
+		const { hash, error } = await sendAttempt(attestor, submission, nonce, submission.fees);
+		const rejection = error === undefined ? undefined : sendRejection(error);
+		if (error === undefined || rejection === "known") {
+			submission.nonce = nonce;
+			submission.hashes.push(hash);
+			attestor.nextNonce = nonce + 1;
+			return;
+		}
+		if (rejection === undefined) throw error;
+		attestor.log(`approval not accepted at nonce ${nonce}: ${label}`, error);
+		if (rejection === "fees") return;
 		attestor.nextNonce = nonce + 1;
-		return;
+		if (tries === NONCE_TRIES) return;
 	}
-	if (rejection === undefined) throw error;
-	if (rejection === "nonce") attestor.nextNonce = nonce + 1;
-	attestor.log(`approval not accepted at nonce ${nonce}, trying again later: ${label}`, error);
 }
 
 /** Send the latest attempt again, unchanged. That is no bump, but it brings

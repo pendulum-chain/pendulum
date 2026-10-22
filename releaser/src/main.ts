@@ -85,11 +85,10 @@ function redact(text: string): string {
  *  classifies it properly (and pruneConsumed drops it if a peer won). */
 class MinedRevert extends Error {}
 
-/** Log the alert and page it. Returns whether the webhook accepted it. */
-async function alert(subject: string, detail: string): Promise<boolean> {
+async function alert(subject: string, detail: string): Promise<void> {
 	console.error(`${new Date().toISOString()} ALERT: ${subject} — ${detail}`);
-	if (!config.alertWebhookUrl) return false;
-	return postAlert(config.alertWebhookUrl, {
+	if (!config.alertWebhookUrl) return;
+	await postAlert(config.alertWebhookUrl, {
 		service: "pen-releaser",
 		releaser: account.address,
 		subject,

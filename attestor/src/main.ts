@@ -100,11 +100,10 @@ function redact(text: string): string {
 	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
 }
 
-/** Log the alert and page it. Returns whether the webhook accepted it. */
-async function alert(subject: string, detail: unknown): Promise<boolean> {
+async function alert(subject: string, detail: unknown): Promise<void> {
 	console.error(`${new Date().toISOString()} ALERT: ${subject}`, detail);
-	if (!config.alertWebhookUrl) return false;
-	return postAlert(config.alertWebhookUrl, {
+	if (!config.alertWebhookUrl) return;
+	await postAlert(config.alertWebhookUrl, {
 		service: "pen-attestor",
 		attestor: account.address,
 		subject,

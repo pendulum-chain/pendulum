@@ -47,6 +47,10 @@ point.
 | `BASE_FINALITY_TIMEOUT_MS` | How long a block's approvals may stay outside that boundary before an alert + idempotent re-submission (default 15 min for `safe`, 45 min for `finalized`) |
 | `HEAD_STALL_ALERT_MS` | Page when no finalized Pendulum head has arrived for this long (default 5 min): the daemon is push-driven, so a node that stops finalizing would otherwise idle undetected |
 | `MISSED_APPROVAL_ALERT_COUNT` | Page after this many consecutive migrations resolved on-chain without this attestor's own approval landing, and again every as many more (default 3, a whole number of at least 1) |
+| `FEE_BUMP_AFTER_SECONDS` | Re-send an own approval that is still not mined after this long (default 60: Base mines a block every 2 s, so this means stuck, not slow) |
+| `FEE_BUMP_PERCENT` | Raise both fees by at least this many percent per re-send (default 20; a whole number of at least 10, the minimum a node accepts for a replacement) |
+| `FEE_BUMP_MAX` | Re-sends per approval before the `own approval not mined` page (default 3) |
+| `MAX_FEE_PER_GAS_GWEI` | No approval ever offers a higher `maxFeePerGas` (default 1, about 200 times Base's usual base fee; one approval uses at most about 300k gas) |
 
 ## Run
 
@@ -101,6 +105,23 @@ WantedBy=multi-user.target
   check cannot be read. Under a burst, where each failed submission can take
   minutes, the page therefore comes after that many failed submissions, which
   may span many more migrations.
+- Each approval is signed locally at the node's pending nonce, or higher when
+  an earlier approval of this process already holds that nonce: a nonce one
+  migration's approval was sent at is never signed for another. An approval
+  still not mined after `FEE_BUMP_AFTER_SECONDS` is re-sent as the identical
+  call at the same nonce, with both fees raised by `FEE_BUMP_PERCENT` and at
+  least to the node's current estimate, at most `FEE_BUMP_MAX` times and never
+  above `MAX_FEE_PER_GAS_GWEI`. Before each re-send the daemon checks that the
+  approval is still needed and stops once the migration is released or its
+  own approval is recorded. When no bump is left, or the cap stops one, it
+  pages `own approval not mined` once (with the nonce, the account's next
+  mined nonce and the fees) and keeps waiting, since later approvals would
+  queue behind that nonce anyway. A node refusing a send for its price, an
+  underpriced replacement or a full pool is retried at the next bump instead
+  of being fatal. Transactions in flight are kept in memory only: after a
+  restart, an approval whose transaction is still pending is sent again at the
+  next nonce, so a pending transaction stuck below the cap has to be replaced
+  by hand.
 - Checkpoints are atomically replaced, bound to the Pendulum genesis plus the
   configured Base chain and vault, and malformed files are fatal. Never delete or replace one merely to
   clear an alert; reconcile it against both chains first.

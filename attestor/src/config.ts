@@ -1,3 +1,6 @@
+import { parseGwei } from "viem";
+import { MIN_REPLACEMENT_PERCENT } from "./approval.js";
+
 function required(name: string): string {
 	const value = process.env[name];
 	if (!value) {
@@ -17,6 +20,13 @@ function envNumber(name: string, fallback: number, min = 0, integer = false): nu
 		throw new Error(`invalid ${name}: ${raw}`);
 	}
 	return value;
+}
+
+/** A positive gwei amount given as a decimal, e.g. `0.5`. */
+function envGwei(name: string, fallback: string): bigint {
+	const raw = process.env[name] || fallback;
+	if (!/^\d+(\.\d{1,9})?$/.test(raw) || parseGwei(raw) === 0n) throw new Error(`invalid ${name}: ${raw}`);
+	return parseGwei(raw);
 }
 
 function finalityTag(): "safe" | "finalized" {
@@ -70,4 +80,21 @@ export const config = {
 	 *  lost races do not count, so this means the submission path is broken
 	 *  while the rest of the fleet carries the releases. */
 	missedApprovalAlertCount: envNumber("MISSED_APPROVAL_ALERT_COUNT", 3, 1, true),
+	/** An own approval still not mined after `afterMs` is re-sent at the same
+	 *  nonce with both fees raised by `percent` (at least the 10 % a replacement
+	 *  needs, and at least to the current estimate), at most `max` times and
+	 *  never above `maxFeePerGas`; then it pages once. Base mines a block every
+	 *  2 s and an approval priced at the estimate lands in the next one or two,
+	 *  so 60 s means stuck, not slow. Since each bump also catches up with the
+	 *  estimate, one normally suffices; when three do not, the price is not the
+	 *  problem and the page (about 4 min after the first send) goes to a person.
+	 *  The cap is 200 times Base's usual base fee (about 0.005 gwei): only an
+	 *  extreme spike stops a bump, and one approval (at most about 300k gas)
+	 *  never costs more than about 0.0003 ETH. */
+	feeBump: {
+		afterMs: envNumber("FEE_BUMP_AFTER_SECONDS", 60, 1) * 1000,
+		percent: envNumber("FEE_BUMP_PERCENT", 20, MIN_REPLACEMENT_PERCENT, true),
+		max: envNumber("FEE_BUMP_MAX", 3, 0, true),
+		maxFeePerGas: envGwei("MAX_FEE_PER_GAS_GWEI", "1"),
+	},
 };

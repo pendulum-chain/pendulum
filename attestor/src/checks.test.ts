@@ -31,6 +31,7 @@ import {
 	isTransientRpcError,
 	isUnreleasable,
 	ownApprovalMissed,
+	sendRejection,
 	ZERO_ADDRESS,
 } from "./checks.js";
 import { vaultAbi } from "./vaultAbi.js";
@@ -164,6 +165,22 @@ test("a pruned Pendulum node stays fatal", () => {
 		),
 		false,
 	);
+});
+
+test("a node's refusal of a sent transaction is told apart from any other send failure", () => {
+	// What eth_sendRawTransaction raises for the node's answer.
+	const refused = (message: string) => new InvalidInputRpcError(rpcError(-32000, message));
+	assert.equal(sendRejection(refused("already known")), "known");
+	assert.equal(sendRejection(refused("nonce too low: next nonce 6, tx nonce 5")), "nonce");
+	assert.equal(sendRejection(refused("replacement transaction underpriced")), "nonce");
+	assert.equal(sendRejection(refused("transaction underpriced: tip needed 1, tip permitted 0")), "fees");
+	assert.equal(sendRejection(refused("max fee per gas less than block base fee: address 0x1, maxFeePerGas: 1, baseFee: 2")), "fees");
+	assert.equal(sendRejection(refused("fee cap below base fee")), "fees");
+	assert.equal(sendRejection(refused("txpool is full")), "fees");
+	// Not the pool's verdict on this transaction: these keep their usual handling.
+	assert.equal(sendRejection(refused("insufficient funds for gas * price + value")), undefined);
+	assert.equal(sendRejection(new HttpRequestError({ url: "https://rpc", status: 503 })), undefined);
+	assert.equal(sendRejection(new Error("nonce=429 approve transaction reverted")), undefined);
 });
 
 test("only a vault rejection for a released or already-approved migration is a lost race", () => {

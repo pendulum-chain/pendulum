@@ -22,7 +22,7 @@
  */
 
 import { ApiPromise, WsProvider } from "@polkadot/api";
-import { createPublicClient, createWalletClient, defineChain, http } from "viem";
+import { createPublicClient, defineChain, http, TransactionReceiptNotFoundError } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { postAlert } from "./alert.js";
 import { confirmDurable, processBlock, type Attestor, type UnconfirmedBlock, type VaultChain } from "./approval.js";
@@ -44,11 +44,6 @@ const baseChain = defineChain({
 
 const account = privateKeyToAccount(config.attestorPrivateKey);
 const publicClient = createPublicClient({ chain: baseChain, transport: http(config.baseRpcUrl) });
-const walletClient = createWalletClient({
-	account,
-	chain: baseChain,
-	transport: http(config.baseRpcUrl),
-});
 
 function log(message: string, extra?: unknown): void {
 	console.log(`${new Date().toISOString()} ${message}`, extra ?? "");
@@ -118,16 +113,17 @@ const chain: VaultChain = {
 		const { request } = await publicClient.simulateContract(call);
 		return request.gas ?? publicClient.estimateContractGas(call);
 	},
-	sendApprove: (event, gas) =>
-		walletClient.writeContract({
-			account,
-			address: config.vaultAddress,
-			abi: vaultAbi,
-			functionName: "approve",
-			args: [event.nonce, event.recipient, event.palletAmount],
-			gas,
+	accountNonce: (blockTag) => publicClient.getTransactionCount({ address: account.address, blockTag }),
+	fees: async () => {
+		const { maxFeePerGas, maxPriorityFeePerGas } = await publicClient.estimateFeesPerGas();
+		return { maxFeePerGas, maxPriorityFeePerGas };
+	},
+	sendRawTransaction: (serializedTransaction) => publicClient.sendRawTransaction({ serializedTransaction }),
+	receipt: (hash) =>
+		publicClient.getTransactionReceipt({ hash }).catch((error: unknown) => {
+			if (error instanceof TransactionReceiptNotFoundError) return undefined;
+			throw error;
 		}),
-	waitForReceipt: (hash) => publicClient.waitForTransactionReceipt({ hash }),
 	boundaryBlock: async () => {
 		const confirmed = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
 		if (confirmed.number === null) throw new Error(`${config.baseFinalityTag} Base block has no number`);
@@ -137,15 +133,20 @@ const chain: VaultChain = {
 
 const attestor: Attestor = {
 	chain,
+	account,
+	baseChainId: config.baseChainId,
 	vaultAddress: config.vaultAddress,
 	baseFinalityTag: config.baseFinalityTag,
 	baseFinalityTimeoutMs: config.baseFinalityTimeoutMs,
 	missedApprovalAlertCount: config.missedApprovalAlertCount,
+	feeBump: config.feeBump,
 	alert,
 	log,
 	now: Date.now,
 	sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 	missedApprovals: 0,
+	submissions: new Map(),
+	nextNonce: 0,
 };
 
 async function checkGasBalance(): Promise<void> {

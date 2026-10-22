@@ -128,6 +128,37 @@ export function isTransientRpcError(error: unknown): boolean {
 	return false;
 }
 
+/** Why a node refused a transaction it was sent. */
+export type SendRejection =
+	/** The identical transaction is already in its pool. */
+	| "known"
+	/** The nonce is taken: mined, or held by a pending transaction that the
+	 *  sent one does not out-bid. */
+	| "nonce"
+	/** Priced below what the node takes now, or no room in its pool. */
+	| "fees";
+
+/** Checked in this order: a replacement that is underpriced is a nonce answer. */
+const SEND_REJECTIONS: [SendRejection, RegExp][] = [
+	["known", /already known|transaction already imported/i],
+	["nonce", /nonce too low|replacement transaction underpriced/i],
+	["fees", /transaction underpriced|fee cap (?:less than|below) (?:block )?base fee|max fee per gas less than block base fee|txpool is full/i],
+];
+
+/** How the node refused a sent transaction, or undefined for any other failure
+ *  (a transport error, an empty wallet, a malformed transaction). */
+export function sendRejection(error: unknown): SendRejection | undefined {
+	const texts: string[] = [];
+	let depth = 0;
+	for (let cause: unknown = error; cause && depth < 10; cause = (cause as { cause?: unknown }).cause, depth++) {
+		for (const key of ["details", "shortMessage", "message"] as const) {
+			const text = (cause as Record<string, unknown>)[key];
+			if (typeof text === "string") texts.push(text);
+		}
+	}
+	return SEND_REJECTIONS.find(([, pattern]) => texts.some((text) => pattern.test(text)))?.[0];
+}
+
 /** Vault reverts that only mean another submission got there first. */
 const LOST_RACE_ERRORS = new Set(["NonceAlreadyConsumed", "AlreadyApproved"]);
 

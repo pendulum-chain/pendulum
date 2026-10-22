@@ -249,6 +249,8 @@ function pendulumState() {
 		forkFrom: undefined as number | undefined,
 		/** Blocks whose header the node alters, so it no longer hashes to its hash. */
 		alteredHeaders: new Set<number>(),
+		/** Blocks whose header names the next block number. */
+		renumberedHeaders: new Set<number>(),
 		/** Whether the node names block hashes by number from the chain without the fork. */
 		canonicalBlockHashes: false,
 		finalized: 100,
@@ -361,7 +363,7 @@ function pendulumChain(chain: Pendulum = pendulumState()) {
 					const block = blockOf(requested);
 					const onFork = BigInt(requested) >> 64n !== 0n;
 					return {
-						number: codec(block),
+						number: codec(chain.renumberedHeaders.has(block) ? block + 1 : block),
 						parentHash: hash(pendulumHash(onFork ? chain : {}, block - 1)),
 						hash: hash(chain.alteredHeaders.has(block) ? pendulumHash(chain, block + 1_000_000) : requested),
 					};
@@ -779,6 +781,18 @@ test("a source header that does not hash to its block hash pages critical", asyn
 		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
 		/header for Pendulum block 102 does not hash to 0x0+66;/,
 	);
+});
+
+test("a source header that names another block number pages critical", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN, 102);
+	pendulum.renumberedHeaders.add(101);
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		/header for Pendulum block 101 does not hash to 0x0+65;/,
+	);
+	assert.equal(persisted().lastPendulumBlock, 100);
 });
 
 const SECOND_NODE = "ws://second-node.test:9944?apikey=secret";
@@ -1332,13 +1346,22 @@ test("a vault total that cannot be read where the vault has code fails the poll,
 	assert.ok(!subjects().includes("BASE LOG SCAN INCOMPLETE"), JSON.stringify(subjects()));
 });
 
-test("a release in the first block of a range accounts for the totals", async (t) => {
+test("releases and sweeps in the first and the last block of a range account for the totals", async (t) => {
 	const { base, pendulum, api, monitor, subjects, persisted } = await setup(t);
 	burn(pendulum, 0n, 100n * PEN);
+	burn(pendulum, 1n, 100n * PEN);
 	release(base, 0n, 100n * PEN, 1_000n);
+	release(base, 1n, 100n * PEN, 1_010n);
+	for (const blockNumber of [1_000n, 1_010n]) {
+		base.logs.push({ address: VAULT, eventName: "RemainderSwept", args: { to: TOKEN, amount: 5n }, blockNumber });
+		base.totalSwept += 5n;
+		base.vaultBalance -= 5n;
+	}
 	await monitor.poll(api);
-	assert.deepEqual(subjects(), []);
 	assert.equal(persisted().baseFromBlock, "1011");
+	assert.deepEqual(persisted().migrations, []);
+	await new Promise((resolve) => setTimeout(resolve, 50)); // an incomplete scan page is sent without waiting
+	assert.deepEqual([...new Set(subjects())], ["VAULT ADMIN EVENT"]); // the sweeps
 });
 
 test("the totals count as zero before the vault existed", async (t) => {
@@ -1728,7 +1751,7 @@ test("first sightings of unmatched events do not delay the pause", async (t) => 
 	base.totalReleased += 1n;
 	base.vaultBalance -= 1n;
 	await monitor.poll(api);
-	while (!events.includes("first sighting answered")) await new Promise((resolve) => setTimeout(resolve, 10));
+	await until(() => events.includes("first sighting answered"), "the first sighting's answer", 5_000);
 	assert.deepEqual(events, ["first sighting paged", "violation paged", "first sighting answered"]);
 });
 

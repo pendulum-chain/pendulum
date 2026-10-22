@@ -2,8 +2,8 @@
 # workflow used to trigger.
 #
 # The wasm that goes into a runtime-upgrade referendum must be reproducible:
-# anyone with the same commit and the same srtool image must arrive at the
-# same hash. This job builds the runtime inside the pinned srtool image
+# anyone with the same commit, srtool image and build options must arrive at
+# the same hash. This job builds the runtime inside the pinned srtool image
 # (rustc matching rust-toolchain.toml), records the srtool/subwasm report,
 # and — when a release tag is known — attaches the compressed wasm and the
 # report to the GitHub release for that tag.
@@ -38,6 +38,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      # srtool passes this to cargo. The runtimes keep CheckMetadataHash in
+      # their signed extensions; without the embedded metadata hash every
+      # transaction signed with it (mode 1, as Ledger signs) is rejected.
+      BUILD_OPTS: --features metadata-hash
     steps:
       - name: Resolve chain and tag
         id: meta
@@ -71,6 +76,22 @@ jobs:
           runtime_dir: runtime/${{ steps.meta.outputs.chain }}
           tag: "1.81.0"
 
+      - name: Check that the metadata hash is embedded
+        shell: bash
+        env:
+          WASM: ${{ steps.srtool.outputs.wasm }}
+        run: |
+          # wasm-builder compiles the hash in as a 0x-prefixed hex string; a runtime
+          # without it rejects every transaction signed with the metadata hash.
+          # Depending on the data layout, core::fmt's "0x" literal can sit right before
+          # one of its digit-only tables ("000102…", "000…0"), so a match must contain
+          # a hex letter; a real hash has none with probability 0.625^64.
+          HASH="$(LC_ALL=C grep -a -o -E '0x[0-9a-f]{64}' "$WASM" | grep '[a-f]')" || {
+            echo "::error::the built runtime embeds no metadata hash; check BUILD_OPTS"
+            exit 1
+          }
+          echo "Metadata hash compiled into the runtime: $HASH"
+
       - name: Record the srtool report
         shell: bash
         run: |
@@ -78,7 +99,7 @@ jobs:
           {
             echo "## ${{ steps.meta.outputs.chain }} runtime — srtool build"
             echo
-            echo "Commit: \`${{ github.sha }}\`  ·  srtool image: \`paritytech/srtool:1.81.0\`  ·  reproduce with the same commit and image."
+            echo "Commit: \`${{ github.sha }}\`  ·  srtool image: \`paritytech/srtool:1.81.0\`  ·  BUILD_OPTS: \`$BUILD_OPTS\`  ·  reproduce with the same commit, image and BUILD_OPTS."
             echo
             echo "For \`parachainSystem.authorizeUpgrade\` use **\`blake2_256\`** below (the code hash the chain recomputes from the wasm at enactment); \`proposal_hash\` is the preimage hash of a \`system.setCode\` call and \`parachain_authorize_upgrade_hash\` is derived from the authorize call — neither is the value to authorize."
             echo

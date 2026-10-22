@@ -22,6 +22,7 @@
 
 import { createPublicClient, createWalletClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { postAlert } from "./alert.js";
 import { blockRanges, chunks, classifyReleaseFailure, contractErrorName, toPalletAmount } from "./checks.js";
 import { config } from "./config.js";
 import {
@@ -84,19 +85,16 @@ function redact(text: string): string {
  *  classifies it properly (and pruneConsumed drops it if a peer won). */
 class MinedRevert extends Error {}
 
-async function alert(subject: string, detail: string): Promise<void> {
+/** Log the alert and page it. Returns whether the webhook accepted it. */
+async function alert(subject: string, detail: string): Promise<boolean> {
 	console.error(`${new Date().toISOString()} ALERT: ${subject} — ${detail}`);
-	if (!config.alertWebhookUrl) return;
-	try {
-		await fetch(config.alertWebhookUrl, {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ service: "pen-releaser", releaser: account.address, subject, detail: redact(detail) }),
-			signal: AbortSignal.timeout(10_000),
-		});
-	} catch (webhookError) {
-		console.error("alert webhook failed", webhookError);
-	}
+	if (!config.alertWebhookUrl) return false;
+	return postAlert(config.alertWebhookUrl, {
+		service: "pen-releaser",
+		releaser: account.address,
+		subject,
+		detail: redact(detail),
+	});
 }
 
 function loadState(): void {

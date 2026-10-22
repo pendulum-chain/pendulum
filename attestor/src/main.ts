@@ -33,6 +33,7 @@ import {
 	keccak256,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { postAlert } from "./alert.js";
 import { isTransientRpcError, isUnreleasable } from "./checks.js";
 import { config } from "./config.js";
 import { assertCheckpointIdentity, loadCheckpoint, saveCheckpoint, type Checkpoint } from "./state.js";
@@ -95,19 +96,16 @@ function redact(text: string): string {
 	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
 }
 
-async function alert(subject: string, detail: unknown): Promise<void> {
+/** Log the alert and page it. Returns whether the webhook accepted it. */
+async function alert(subject: string, detail: unknown): Promise<boolean> {
 	console.error(`${new Date().toISOString()} ALERT: ${subject}`, detail);
-	if (!config.alertWebhookUrl) return;
-	try {
-		await fetch(config.alertWebhookUrl, {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ service: "pen-attestor", attestor: account.address, subject, detail: redact(`${detail}`) }),
-			signal: AbortSignal.timeout(10_000),
-		});
-	} catch (webhookError) {
-		console.error("alert webhook failed", webhookError);
-	}
+	if (!config.alertWebhookUrl) return false;
+	return postAlert(config.alertWebhookUrl, {
+		service: "pen-attestor",
+		attestor: account.address,
+		subject,
+		detail: redact(`${detail}`),
+	});
 }
 
 function payloadHash(event: MigrationEvent): `0x${string}` {

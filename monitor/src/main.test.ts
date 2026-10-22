@@ -484,6 +484,16 @@ test("auto-pause readiness is checked at startup and each problem pages", async 
 	assert.match(detail, /holds 0 wei/);
 });
 
+test("the guardian balance floor rejects a negative value and keeps its default when empty", async (t) => {
+	await assert.rejects(setup(t, { env: { GUARDIAN_MIN_BALANCE_WEI: "-1" } }), /invalid GUARDIAN_MIN_BALANCE_WEI: -1/);
+	const { startup } = await setup(t, {
+		env: { GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY, GUARDIAN_MIN_BALANCE_WEI: "" },
+		prepare: (base) => base.balances.clear(),
+	});
+	const detail = startup.find((page) => page.subject === "AUTO-PAUSE NOT READY")?.detail ?? "";
+	assert.match(detail, /holds 0 wei, less than GUARDIAN_MIN_BALANCE_WEI 1000000000000000/);
+});
+
 test("auto-pause readiness is re-checked every poll", async (t) => {
 	const { base, api, monitor, startup, subjects } = await setup(t, { env: { GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY } });
 	assert.ok(!startup.some((page) => page.subject.startsWith("AUTO-PAUSE")), JSON.stringify(startup));

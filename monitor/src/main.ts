@@ -170,8 +170,8 @@ function envNumber(name: string, fallback: number | undefined): number {
 }
 
 /** A non-negative integer amount from the environment, validated at startup. */
-function envAmount(name: string): bigint {
-	const raw = process.env[name] || "0";
+function envAmount(name: string, fallback = "0"): bigint {
+	const raw = process.env[name] || fallback;
 	if (!/^\d+$/.test(raw)) throw new Error(`invalid ${name}: ${raw}`);
 	return BigInt(raw);
 }
@@ -235,7 +235,7 @@ const config = {
 	 *  about a minute, `finalized` by about 20 minutes. */
 	baseStaleAlertMs: envNumber("BASE_STALE_ALERT_SECONDS", baseFinalityTag === "finalized" ? 1800 : 600) * 1000,
 	/** Guardian balance (wei) below which the auto-pause counts as not ready. */
-	guardianMinBalanceWei: BigInt(process.env.GUARDIAN_MIN_BALANCE_WEI ?? "1000000000000000"),
+	guardianMinBalanceWei: envAmount("GUARDIAN_MIN_BALANCE_WEI", "1000000000000000"),
 	/** Excess of released over migrated, in token units, that operators have
 	 *  quantified and accepted after a real loss (RB-3); M2a fires beyond it. */
 	acknowledgedReleaseExcess: envAmount("ACKNOWLEDGED_RELEASE_EXCESS"),

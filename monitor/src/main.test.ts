@@ -54,6 +54,7 @@ const abi = parseAbi([
 	"function getTimestamp(bytes32 id) view returns (uint256)",
 	"event Approved(uint64 indexed nonce, address indexed recipient, uint256 palletAmount, address indexed attestor)",
 	"event Released(uint64 indexed nonce, address indexed recipient, uint256 palletAmount, uint256 tokenAmount)",
+	"event RemainderSwept(address indexed to, uint256 amount)",
 	"event GuardianUpdated(address indexed guardian)",
 	"event CapsUpdated(uint256 perReleaseCap, uint256 dailyCap)",
 	"event CallScheduled(bytes32 indexed id, uint256 indexed index, address target, uint256 value, bytes data, bytes32 predecessor, uint256 delay)",
@@ -84,9 +85,19 @@ function baseChain() {
 		/** Ether balances by lowercased address. */
 		balances: new Map<string, bigint>([[GUARDIAN.toLowerCase(), 10n ** 18n]]),
 		logs: [] as Log[],
+		/** Where set, log queries answer as a backend whose head is this block. */
+		logsHead: undefined as bigint | undefined,
+		/** Where set, the vault has no code before this block. */
+		deployedAt: undefined as bigint | undefined,
 		/** Requests to answer with an RPC error. */
 		failing: undefined as ((method: string, params: unknown[]) => boolean) | undefined,
 	};
+}
+
+/** A vault total at `block`: its current value less what later events added. */
+function totalAt(base: Base, total: bigint, eventName: string, field: string, block: bigint | undefined): bigint {
+	const later = base.logs.filter((log) => log.eventName === eventName && block !== undefined && log.blockNumber > block);
+	return later.reduce((sum, log) => sum - (log.args[field] as bigint), total);
 }
 type Base = ReturnType<typeof baseChain>;
 
@@ -96,8 +107,11 @@ function answer(base: Base, method: string, params: any[]): unknown {
 	switch (method) {
 		case "eth_chainId":
 			return toHex(base.chainId);
-		case "eth_getCode":
-			return "0x";
+		case "eth_getCode": {
+			const block = String(params[1]).startsWith("0x") ? BigInt(params[1]) : undefined;
+			const deployed = base.deployedAt !== undefined && (block === undefined || block >= base.deployedAt);
+			return String(params[0]).toLowerCase() === VAULT && deployed ? "0x6001" : "0x";
+		}
 		case "eth_getBalance":
 			return toHex(base.balances.get(String(params[0]).toLowerCase()) ?? 0n);
 		case "eth_getBlockByNumber": {
@@ -108,9 +122,12 @@ function answer(base: Base, method: string, params: any[]): unknown {
 		case "eth_call": {
 			const { functionName, args } = decodeFunctionData({ abi, data: params[0].data });
 			const key = (args as readonly unknown[] | undefined)?.[0] as string;
+			const block = String(params[1]).startsWith("0x") ? BigInt(params[1]) : undefined;
+			const undeployed = base.deployedAt !== undefined && block !== undefined && block < base.deployedAt;
+			if (params[0].to.toLowerCase() === VAULT && undeployed) return "0x";
 			const result = {
-				totalReleased: base.totalReleased,
-				totalSwept: base.totalSwept,
+				totalReleased: totalAt(base, base.totalReleased, "Released", "tokenAmount", block),
+				totalSwept: totalAt(base, base.totalSwept, "RemainderSwept", "amount", block),
 				conversionFactor: CF,
 				token: TOKEN,
 				paused: base.paused,
@@ -130,6 +147,7 @@ function answer(base: Base, method: string, params: any[]): unknown {
 			return base.logs.flatMap((log, index) => {
 				if (log.address.toLowerCase() !== String(address).toLowerCase()) return [];
 				if (log.blockNumber < BigInt(fromBlock) || log.blockNumber > BigInt(toBlock)) return [];
+				if (base.logsHead !== undefined && log.blockNumber > base.logsHead) return [];
 				const logTopics = encodeEventTopics({ abi, eventName: log.eventName, args: log.args } as never) as Hex[];
 				if (wanted.length && !wanted.includes(logTopics[0])) return [];
 				const { inputs } = abi.find((item) => item.type === "event" && item.name === log.eventName) as AbiEvent;
@@ -589,6 +607,58 @@ test("while Pendulum cannot be read, a mismatching release of a known nonce paus
 	assert.match(pages.find((page) => page.subject === "MIGRATION TUPLE VIOLATION")?.detail ?? "", /recipient/);
 });
 
+test("logs that miss a release hold the Base cursor and page until a read accounts for the totals", async (t) => {
+	const { base, pendulum, api, monitor, pages, persisted } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	release(base, 0n, 100n * PEN, 1_005n);
+	base.logsHead = 1_003n; // logs from a backend that has not reached the release
+	await monitor.poll(api);
+	await until(() => pages.some((page) => page.subject === "BASE LOG SCAN INCOMPLETE"), "the incomplete scan page");
+	assert.match(
+		pages.find((page) => page.subject === "BASE LOG SCAN INCOMPLETE")!.detail,
+		/in Base blocks 1000-1010 the Released events add up to 0 .* totalReleased grew by 100000000000000000000/,
+	);
+	assert.equal(persisted().baseFromBlock, "1000");
+	assert.deepEqual(persisted().migrations.map((migration) => migration.nonce), ["0"]);
+	base.logsHead = undefined;
+	await monitor.poll(api);
+	assert.equal(persisted().baseFromBlock, "1011");
+	assert.deepEqual(persisted().migrations, []);
+});
+
+test("logs that miss a sweep hold the Base cursor too", async (t) => {
+	const { base, api, monitor, pages, persisted } = await setup(t);
+	base.logs.push({ address: VAULT, eventName: "RemainderSwept", args: { to: TOKEN, amount: 5n }, blockNumber: 1_005n });
+	base.totalSwept += 5n;
+	base.vaultBalance -= 5n;
+	base.logsHead = 1_003n;
+	await monitor.poll(api);
+	await until(() => pages.some((page) => page.subject === "BASE LOG SCAN INCOMPLETE"), "the incomplete scan page");
+	assert.match(pages.find((page) => page.subject === "BASE LOG SCAN INCOMPLETE")!.detail, /RemainderSwept events to 0, .* totalSwept by 5/);
+	assert.equal(persisted().baseFromBlock, "1000");
+	base.logsHead = undefined;
+	await monitor.poll(api);
+	assert.equal(persisted().baseFromBlock, "1011");
+});
+
+test("a release in the first block of a range accounts for the totals", async (t) => {
+	const { base, pendulum, api, monitor, subjects, persisted } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	release(base, 0n, 100n * PEN, 1_000n);
+	await monitor.poll(api);
+	assert.deepEqual(subjects(), []);
+	assert.equal(persisted().baseFromBlock, "1011");
+});
+
+test("the totals count as zero before the vault existed", async (t) => {
+	const { base, pendulum, api, monitor, subjects, persisted } = await setup(t, { prepare: (base) => (base.deployedAt = 1_000n) });
+	burn(pendulum, 0n, 100n * PEN);
+	release(base, 0n, 100n * PEN, 1_005n);
+	await monitor.poll(api);
+	assert.deepEqual(subjects(), []);
+	assert.equal(persisted().baseFromBlock, "1011");
+});
+
 /** An approval of `nonce` for `recipient` from attestor `attestor`. */
 function approve(base: Base, nonce: bigint, recipient: string, attestor: string, blockNumber: bigint): void {
 	base.logs.push({ address: VAULT, eventName: "Approved", args: { nonce, recipient, palletAmount: 100n * PEN, attestor }, blockNumber });
@@ -896,6 +966,8 @@ test("first sightings of unmatched events do not delay the pause", async (t) => 
 		args: { nonce: 0n, recipient: RECIPIENT, palletAmount: 100n * PEN, tokenAmount: 1n },
 		blockNumber: 1_006n,
 	});
+	base.totalReleased += 1n;
+	base.vaultBalance -= 1n;
 	await monitor.poll(api);
 	while (!events.includes("first sighting answered")) await new Promise((resolve) => setTimeout(resolve, 10));
 	assert.deepEqual(events, ["first sighting paged", "violation paged", "first sighting answered"]);

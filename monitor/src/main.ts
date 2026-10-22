@@ -85,6 +85,14 @@ const vaultAbi = [
 			{ name: "tokenAmount", type: "uint256", indexed: false },
 		],
 	},
+	{
+		type: "event",
+		name: "RemainderSwept",
+		inputs: [
+			{ name: "to", type: "address", indexed: true },
+			{ name: "amount", type: "uint256", indexed: false },
+		],
+	},
 ] as const;
 
 /** The vault events of its admin (and of the guardian's pause). */
@@ -387,6 +395,7 @@ let lastSourceFailureAlertMs = 0;
 let lastBaseStallAlertMs = 0;
 let lastReadinessAlertMs = 0;
 let lastAdminScanFailureAlertMs = 0;
+let lastLogScanAlertMs = 0;
 let lastIssuanceAlertMs = 0;
 /** Once-only pages by key, each held until the webhook accepts it. */
 // ponytail: in memory; a restart re-pages what it finds again (Base admin events after the persisted cursor, pending governance items) and drops undelivered pages it does not find again.
@@ -702,12 +711,48 @@ async function ingestPendulumEvents(api: ApiPromise, draft: RuntimeState, finali
 	}
 }
 
+/** A vault total at `blockNumber`: zero before the vault existed. */
+async function vaultTotalAt(functionName: "totalReleased" | "totalSwept", blockNumber: bigint): Promise<bigint> {
+	if (blockNumber < 0n) return 0n;
+	try {
+		return await publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName, blockNumber });
+	} catch (readError) {
+		if (!(await publicClient.getBytecode({ address: config.vaultAddress, blockNumber }))) return 0n;
+		throw readError;
+	}
+}
+
+/** The vault's events in one block range, and `gap` when they do not account
+ *  for the change of its running totals over the range: the Released amounts
+ *  must add up to the growth of totalReleased, the RemainderSwept amounts to
+ *  that of totalSwept. A backend that serves a truncated log result fails it. */
+async function readVaultRange(start: bigint, end: bigint) {
+	const [events, releasedBefore, sweptBefore, releasedAfter, sweptAfter] = await Promise.all([
+		publicClient.getContractEvents({ address: config.vaultAddress, abi: vaultAbi, fromBlock: start, toBlock: end }),
+		vaultTotalAt("totalReleased", start - 1n),
+		vaultTotalAt("totalSwept", start - 1n),
+		vaultTotalAt("totalReleased", end),
+		vaultTotalAt("totalSwept", end),
+	]);
+	const approvals = events.filter((event) => event.eventName === "Approved");
+	const releases = events.filter((event) => event.eventName === "Released");
+	const released = releases.reduce((sum, event) => sum + (event.args as { tokenAmount: bigint }).tokenAmount, 0n);
+	const swept = events
+		.filter((event) => event.eventName === "RemainderSwept")
+		.reduce((sum, event) => sum + (event.args as { amount: bigint }).amount, 0n);
+	const gap = released !== releasedAfter - releasedBefore || swept !== sweptAfter - sweptBefore
+		? `in Base blocks ${start}-${end} the Released events add up to ${released} and the RemainderSwept events to ` +
+			`${swept}, but totalReleased grew by ${releasedAfter - releasedBefore} and totalSwept by ${sweptAfter - sweptBefore}`
+		: undefined;
+	return { approvals, releases, gap };
+}
+
 async function reconcileBaseEvents(
 	draft: RuntimeState,
 	toBlock: bigint,
 	conversionFactor: bigint,
 	sourceFinalizedTsMs: number,
-): Promise<{ violation?: string; awaitingSource?: string }> {
+): Promise<{ violation?: string; awaitingSource?: string; incomplete?: string }> {
 	const releasedInScan = new Set<bigint>();
 	let firstViolation: string | undefined;
 	for (const [start, end] of blockRanges(draft.baseFromBlock, toBlock, config.baseMaxBlockRange)) {
@@ -717,20 +762,23 @@ async function reconcileBaseEvents(
 		// would advance the cursor past events this monitor never reconciled. A
 		// lagging node fails this probe loudly instead, and the cycle replays.
 		await publicClient.getBlock({ blockNumber: end });
-		const approvals = await publicClient.getContractEvents({
-			address: config.vaultAddress,
-			abi: vaultAbi,
-			eventName: "Approved",
-			fromBlock: start,
-			toBlock: end,
-		});
-		const releases = await publicClient.getContractEvents({
-			address: config.vaultAddress,
-			abi: vaultAbi,
-			eventName: "Released",
-			fromBlock: start,
-			toBlock: end,
-		});
+		// The probe and the log query can still reach different backends, so the
+		// logs must also account for the vault's totals; a range whose logs do
+		// not is read once more, then held for the next poll.
+		let range = await readVaultRange(start, end);
+		if (range.gap) range = await readVaultRange(start, end);
+		if (range.gap) {
+			if (Date.now() - lastLogScanAlertMs > config.unmatchedEventGraceSeconds * 1000) {
+				lastLogScanAlertMs = Date.now();
+				void alert(
+					"BASE LOG SCAN INCOMPLETE",
+					`${range.gap}; the Base RPC served logs that miss events, so the range is read again every poll ` +
+						`and the Base cursor stays at block ${start} — check the Base RPC`,
+				);
+			}
+			return { violation: firstViolation, incomplete: range.gap };
+		}
+		const { approvals, releases } = range;
 		const observedAt = Date.now();
 		let awaitingSource: string | undefined;
 
@@ -1339,12 +1387,14 @@ async function check(api: ApiPromise): Promise<boolean> {
 		return false;
 	}
 	const { finalizedBlock, totalMigrated } = source;
-	if (reconciliation.awaitingSource) {
+	if (reconciliation.awaitingSource || reconciliation.incomplete) {
 		state = draft;
 		persistState(state);
 		log(
-			`waiting up to ${config.unmatchedEventGraceSeconds}s for Pendulum RPC to catch up with ` +
-				reconciliation.awaitingSource,
+			reconciliation.incomplete
+				? `holding the Base cursor at ${draft.baseFromBlock}: ${reconciliation.incomplete}`
+				: `waiting up to ${config.unmatchedEventGraceSeconds}s for Pendulum RPC to catch up with ` +
+					reconciliation.awaitingSource,
 		);
 		return false;
 	}

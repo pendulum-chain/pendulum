@@ -28,6 +28,7 @@ import {
 
 const VAULT = "0x1111111111111111111111111111111111111111";
 const TOKEN = "0x2222222222222222222222222222222222222222";
+const TIMELOCK = "0x3333333333333333333333333333333333333333";
 const RECIPIENT = "0x4444444444444444444444444444444444444444";
 const ATTESTORS = ["0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1", "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2", "0xa3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3"];
 const CF = 1_000_000n;
@@ -360,4 +361,27 @@ test("a vault balance deficit pages and asks for the auto-pause", async (t) => {
 	base.vaultBalance -= 1n;
 	await monitor.poll(api);
 	assert.deepEqual(subjects(), ["VAULT BALANCE DEFICIT", "AUTO-PAUSE UNAVAILABLE"]);
+});
+
+/** A timelock operation scheduling the vault's `pause()`, ready in 48 h. */
+function schedule(base: Base, id: Hex, blockNumber = 1_005n): void {
+	const call = { target: VAULT, value: 0n, data: "0x8456cb59", predecessor: toHex(0, { size: 32 }), delay: 172_800n };
+	base.logs.push({ address: TIMELOCK, eventName: "CallScheduled", args: { id, index: 0n, ...call }, blockNumber });
+	base.readyAt.set(id, BigInt(Math.floor(Date.now() / 1000) + 172_800));
+}
+
+test("once-only pages the webhook rejects are sent again on the next poll", async (t) => {
+	const failedOnce = new Set<string>();
+	const { base, pendulum, api, monitor, pages } = await setup(t, { TIMELOCK_ADDRESS: TIMELOCK }, ({ subject }) => {
+		if (failedOnce.has(subject)) return 200;
+		failedOnce.add(subject);
+		return 500;
+	});
+	schedule(base, toHex(1, { size: 32 }));
+	pendulum.publicProps.push([7, inline("remark")]);
+	await monitor.poll(api);
+	await monitor.poll(api);
+	const delivered = pages.filter((page) => page.status === 200).map((page) => page.subject);
+	assert.ok(delivered.includes("GOVERNANCE OPERATION SCHEDULED"), `delivered: ${delivered}`);
+	assert.ok(delivered.includes("PENDULUM GOVERNANCE ITEM"), `delivered: ${delivered}`);
 });

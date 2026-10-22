@@ -327,10 +327,9 @@ let lastIssuanceAlertMs = 0;
  *  throws on failure, so the persisted Base cursor never passes a range it has
  *  not scanned; a restart resumes from that cursor. */
 let timelockFromBlock: bigint | undefined;
-// ponytail: in-memory dedupe; a restart can re-page operations between the persisted cursor and the last scan.
-const pagedTimelockOperations = new Set<string>();
-// ponytail: in-memory dedupe; a restart re-pages the Pendulum governance items still pending.
-const pagedGovernanceItems = new Set<string>();
+/** Once-only pages by key, each held until the webhook accepts it. */
+// ponytail: in memory; a restart re-pages what it finds again (timelock operations after the persisted cursor, pending governance items) and drops undelivered pages it does not find again.
+const onceOnlyPages = new Map<string, { subject: string; detail: string; delivered: boolean }>();
 let lastGovernanceWatchFailureMs = 0;
 
 function log(message: string): void {
@@ -343,11 +342,13 @@ function redact(text: string): string {
 	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
 }
 
-async function alert(subject: string, detail: string): Promise<void> {
+/** Sends one page and resolves to whether it was delivered: the webhook must
+ *  answer 2xx within the timeout. Without a webhook the log line is the page. */
+async function alert(subject: string, detail: string): Promise<boolean> {
 	console.error(`${new Date().toISOString()} ALERT: ${subject} — ${detail}`);
-	if (!config.alertWebhookUrl) return;
+	if (!config.alertWebhookUrl) return true;
 	try {
-		await fetch(config.alertWebhookUrl, {
+		const response = await fetch(config.alertWebhookUrl, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify({ service: "pen-monitor", subject, detail: redact(detail) }),
@@ -355,9 +356,27 @@ async function alert(subject: string, detail: string): Promise<void> {
 			// check loop (or the pause that follows a violation) indefinitely.
 			signal: AbortSignal.timeout(10_000),
 		});
+		if (response.ok) return true;
+		console.error(`alert webhook answered ${response.status} for: ${subject}`);
 	} catch (webhookError) {
-		console.error("alert webhook failed", webhookError);
+		console.error(`alert webhook failed for: ${subject}: ${redact(`${webhookError}`)}`);
 	}
+	return false;
+}
+
+/** Pages `key` once. A page the webhook does not accept stays queued, and
+ *  every poll retries it until it is delivered. */
+async function pageOnce(key: string, subject: string, detail: string): Promise<void> {
+	if (onceOnlyPages.has(key)) return;
+	const page = { subject, detail, delivered: false };
+	onceOnlyPages.set(key, page);
+	page.delivered = await alert(subject, detail);
+}
+
+async function retryUndeliveredPages(): Promise<void> {
+	await Promise.all([...onceOnlyPages.values()].filter((page) => !page.delivered).map(async (page) => {
+		page.delivered = await alert(page.subject, page.detail);
+	}));
 }
 
 async function waitForBaseFinality(
@@ -477,7 +496,8 @@ async function unmatchedDisposition(
 	const firstSeen = draft.unmatchedBaseFirstSeenAt.get(key) ?? observedAt;
 	draft.unmatchedBaseFirstSeenAt.set(key, firstSeen);
 	if (!alreadyKnown) {
-		await alert(
+		await pageOnce(
+			`unverified:${key}`,
 			"UNVERIFIED BASE EVENT",
 			`${kind} nonce ${nonce} at Base block ${eventBlockNumber} has no finalized Pendulum source yet; ` +
 				`waiting up to ${config.unmatchedEventGraceSeconds}s for the source view to reveal its burn`,
@@ -523,7 +543,8 @@ async function ingestPendulumEvents(api: ApiPromise, draft: RuntimeState, finali
 				// non-zero forever and page liveness every grace period (and make
 				// RB-7's "zero outstanding nonces" unsatisfiable). Record it once
 				// and leave it out of reconciliation.
-				await alert(
+				await pageOnce(
+					`unreleasable:${nonce}`,
 					"CRITICAL: unreleasable migration burned on Pendulum",
 					`nonce ${nonce} in block ${block} burned ${amountValue.toBigInt()} to ${recipient}; the vault can never release it`,
 				);
@@ -718,7 +739,7 @@ async function watchTimelock(toBlock: bigint): Promise<void> {
 			[config.timelockAddress.toLowerCase()]: "timelock",
 		};
 		for (const [id, calls] of operations) {
-			if (pagedTimelockOperations.has(id)) continue;
+			if (onceOnlyPages.has(`timelock:${id}`)) continue;
 			const readyAt = await publicClient.readContract({
 				address: config.timelockAddress,
 				abi: timelockAbi,
@@ -726,11 +747,11 @@ async function watchTimelock(toBlock: bigint): Promise<void> {
 				args: [id],
 				blockNumber: toBlock,
 			});
-			await alert(
+			await pageOnce(
+				`timelock:${id}`,
 				"GOVERNANCE OPERATION SCHEDULED",
 				describeTimelockOperation(id, calls, readyAt, Date.now(), labels, KNOWN_FUNCTIONS),
 			);
-			pagedTimelockOperations.add(id);
 		}
 	}
 	timelockFromBlock = toBlock + 1n;
@@ -817,16 +838,16 @@ async function watchPendulumGovernance(apiAt: ApiAt, finalizedBlock: number): Pr
 		});
 	}
 	for (const item of items) {
-		if (pagedGovernanceItems.has(item.key)) continue;
+		if (onceOnlyPages.has(item.key)) continue;
 		const call = await boundedCall(apiAt, item.bounded);
 		const risky = call.node ? riskyCalls(call.node) : [];
-		await alert(
+		await pageOnce(
+			item.key,
 			risky.length
 				? "CRITICAL: Pendulum governance item mints, moves or unlocks balances, or changes the runtime"
 				: "PENDULUM GOVERNANCE ITEM",
 			`${item.label}: ${call.text}${risky.length ? ` (flagged: ${risky.join(", ")})` : ""}; ${item.hint}`,
 		);
-		pagedGovernanceItems.add(item.key);
 	}
 }
 
@@ -1079,6 +1100,7 @@ export async function poll(api: ApiPromise): Promise<void> {
 	} catch (checkError) {
 		await alert("monitor check failed", `${checkError}`);
 	}
+	await retryUndeliveredPages();
 }
 
 async function main(): Promise<void> {

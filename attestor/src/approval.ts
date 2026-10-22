@@ -78,6 +78,9 @@ export interface Submission {
 	fees?: Fees;
 	/** Every attempt at `nonce`; any of them may be the one that is mined. */
 	hashes: Hash[];
+	/** When the latest attempt was sent: a follow-up an error interrupted
+	 *  resumes the bump interval from there instead of starting it anew. */
+	sentAtMs?: number;
 	bumps: number;
 	/** The page that it is not being mined went out. */
 	paged: boolean;
@@ -307,6 +310,7 @@ async function sendAttempt(
 		...fees,
 	});
 	const hash = keccak256(serialized);
+	submission.sentAtMs = attestor.now();
 	try {
 		await attestor.chain.sendRawTransaction(serialized);
 		return { hash };
@@ -360,9 +364,10 @@ async function resendLatest(attestor: Attestor, submission: Submission, nonce: n
 /**
  * Send the submission and follow it until one of its attempts is mined.
  *
- * An attempt still not mined after `feeBump.afterMs` is re-sent: the identical
- * call at the same nonce with both fees raised (`bumpedFees`), at most
- * `feeBump.max` times. When no bump is left or the cap stops one, it pages once
+ * An attempt still not mined `feeBump.afterMs` after it was sent, also across
+ * a retry after an error, is re-sent: the identical call at the same nonce with
+ * both fees raised (`bumpedFees`), at most `feeBump.max` times. When no bump is
+ * left or the cap stops one, it pages once
  * and keeps waiting, re-sending the latest attempt unchanged: later approvals
  * would queue behind this nonce anyway. An approval no longer needed (released,
  * or ours recorded) is followed the same way while its nonce is pending, as
@@ -379,7 +384,8 @@ async function sendUntilMined(
 	const policy = attestor.feeBump;
 	for (;;) {
 		if (submission.nonce === undefined) await sendFirst(attestor, submission, label);
-		const receipt = await minedReceipt(attestor, submission.hashes, policy.afterMs);
+		const waited = submission.sentAtMs === undefined ? 0 : attestor.now() - submission.sentAtMs;
+		const receipt = await minedReceipt(attestor, submission.hashes, Math.max(0, policy.afterMs - waited));
 		if (receipt) return receipt;
 		const { nonce } = submission;
 		const needed = !(await handledAt(attestor, event));

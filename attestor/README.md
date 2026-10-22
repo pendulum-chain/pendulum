@@ -125,7 +125,8 @@ WantedBy=multi-user.target
   counting its nonce gets it back instead of leaving a gap. An approval that an
   RPC error interrupted keeps its transaction, also one whose send got no
   answer and may or may not have reached the node: the retry, or the next
-  approval before it sends anything, follows it at that nonce to the end. A
+  approval before it sends anything, follows it at that nonce to the end,
+  counting `FEE_BUMP_AFTER_SECONDS` from its last send. A
   first attempt whose nonce is taken (mined already, or held by a transaction
   this process did not send) moves on to the next nonce at once, at most five
   in a row, without spending a bump. A node refusing a send for its price, an

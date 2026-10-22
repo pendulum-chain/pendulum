@@ -1022,6 +1022,42 @@ test("a retry after a failed read resumes the same transaction at its nonce", as
 	assert.equal(attestor.submissions.size, 0);
 });
 
+test("a follow-up that an error interrupts once a window still re-sends at its nonce a bump interval after the send", async () => {
+	const chain = new FakeVault();
+	const { attestor } = attestorOn(chain);
+	const sends: [number, number | undefined][] = [];
+	const send = chain.sendRawTransaction.bind(chain);
+	chain.sendRawTransaction = async (serialized) => {
+		sends.push([attestor.now(), parseTransaction(serialized).nonce]);
+		// The first send is lost on its way to the node: nothing is pending.
+		if (sends.length === 1) throw new HttpRequestError({ url: "http://rpc", status: 502 });
+		return send(serialized);
+	};
+	const receipt = chain.receipt.bind(chain);
+	let failAt: number | undefined;
+	chain.receipt = async (hash) => {
+		failAt ??= attestor.now() + AFTER_MS / 2;
+		if (attestor.now() >= failAt) {
+			failAt += (AFTER_MS * 5) / 6;
+			throw new HttpRequestError({ url: "http://rpc", status: 503 });
+		}
+		return receipt(hash);
+	};
+	for (let retries = 0; ; retries++) {
+		try {
+			assert.equal(await approve(attestor, EVENT), true);
+			break;
+		} catch (error) {
+			assert.ok(error instanceof HttpRequestError);
+			assert.ok(retries < 5, "never re-sent");
+		}
+	}
+	const [first] = sends;
+	assert.deepEqual(sends, [first, [first[0] + AFTER_MS, 5]]);
+	assert.equal(first[1], 5);
+	assert.ok(chain.approved.has(payloadHash(EVENT)));
+});
+
 test("an approval interrupted before any send is dropped once the migration resolved", async () => {
 	const chain = new FakeVault();
 	const fees = chain.fees.bind(chain);

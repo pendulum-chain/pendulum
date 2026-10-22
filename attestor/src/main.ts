@@ -24,7 +24,7 @@
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { createPublicClient, defineChain, http, TransactionReceiptNotFoundError } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { alertText, postAlert, type Severity } from "./alert.js";
+import { alertText, pingHeartbeat, postAlert, type Severity } from "./alert.js";
 import { confirmDurable, processBlock, type Attestor, type UnconfirmedBlock, type VaultChain } from "./approval.js";
 import { decodeMigrationEvent, isTransientRpcError, type MigrationEvent } from "./checks.js";
 import { config } from "./config.js";
@@ -236,6 +236,7 @@ async function main(): Promise<void> {
 				checkpoint.lastProcessedBlock = confirmed;
 				saveCheckpoint(config.checkpointFile, checkpoint);
 			}
+			if (config.heartbeatUrl) void pingHeartbeat(config.heartbeatUrl);
 		}).catch(async (error) => {
 			if (isTransientRpcError(error)) {
 				// Not a statement about any event — resume from the in-memory

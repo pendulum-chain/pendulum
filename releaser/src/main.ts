@@ -22,7 +22,7 @@
 
 import { createPublicClient, createWalletClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { alertText, postAlert, type Severity } from "./alert.js";
+import { alertText, pingHeartbeat, postAlert, type Severity } from "./alert.js";
 import { blockRanges, chunks, classifyReleaseFailure, contractErrorName, toPalletAmount } from "./checks.js";
 import { config } from "./config.js";
 import {
@@ -364,6 +364,7 @@ async function main(): Promise<void> {
 			await drainPending(conversionFactor, dailyCap);
 			saveState();
 			log(`ok: ${pending.size} pending, scanned ${config.baseFinalityTag} through block ${fromBlock - 1n}`);
+			if (config.heartbeatUrl) void pingHeartbeat(config.heartbeatUrl);
 		} catch (cycleError) {
 			await alert("releaser cycle failed", `${cycleError}`);
 		}

@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import { alertText, postAlert } from "./alert.js";
+import { inspect } from "node:util";
+import { alertText, pingHeartbeat, postAlert } from "./alert.js";
 
 /** A local webhook answering every POST with `status`, or never when null. */
 async function webhook(status: number | null): Promise<{ url: string; server: Server }> {
@@ -57,4 +58,38 @@ test("a webhook error status, a timeout or a dead relay is a failed delivery, an
 	closed.server.close();
 	assert.equal(await postAlert(closed.url, { subject: "s" }), false, "connection refused");
 	assert.equal(logged.mock.callCount(), 5);
+});
+
+test("a heartbeat requests its URL, and a failing endpoint is logged without the URL, never thrown", async (t) => {
+	const logged = t.mock.method(console, "error", () => {});
+	const seen: string[] = [];
+	const ok = createServer((request, response) => {
+		seen.push(`${request.method} ${request.url}`);
+		response.writeHead(200).end("OK");
+	});
+	await new Promise<void>((resolve) => ok.listen(0, "127.0.0.1", resolve));
+	try {
+		await pingHeartbeat(`http://127.0.0.1:${(ok.address() as AddressInfo).port}/ping/secret-token?rid=1`);
+	} finally {
+		ok.close();
+	}
+	assert.deepEqual(seen, ["GET /ping/secret-token?rid=1"]);
+	assert.equal(logged.mock.callCount(), 0);
+
+	const failing = await webhook(500);
+	await pingHeartbeat(`${failing.url}/secret-token`);
+	failing.server.close();
+	const hanging = await webhook(null);
+	const settled = await Promise.race([
+		pingHeartbeat(`${hanging.url}/secret-token`, 200).then(() => "gave up"),
+		new Promise((resolve) => setTimeout(resolve, 2000, "still waiting").unref()),
+	]);
+	hanging.server.closeAllConnections();
+	hanging.server.close();
+	assert.equal(settled, "gave up", "a silent endpoint must not hold the request open");
+	const closed = await webhook(200);
+	closed.server.close();
+	await pingHeartbeat(`${closed.url}/secret-token`);
+	assert.equal(logged.mock.callCount(), 3);
+	assert.ok(logged.mock.calls.every((call) => !inspect(call.arguments).includes("secret-token")));
 });

@@ -206,6 +206,7 @@ function attestorOn(chain: FakeVault, overrides: Partial<Attestor> = {}, tick?: 
 	const logs: string[] = [];
 	const start = 1_000_000;
 	let clock = start;
+	let readsSinceSleep = 0;
 	const attestor: Attestor = {
 		chain,
 		account: privateKeyToAccount(`0x${"11".repeat(32)}`),
@@ -221,8 +222,14 @@ function attestorOn(chain: FakeVault, overrides: Partial<Attestor> = {}, tick?: 
 		log: (message, extra) => {
 			logs.push(extra === undefined ? message : `${message} ${extra}`);
 		},
-		now: () => clock,
+		now: () => {
+			// A loop that never waits would never move this clock: fail it
+			// instead of hanging the suite.
+			if (++readsSinceSleep > 10_000) throw new Error("the flow loops without ever waiting");
+			return clock;
+		},
 		sleep: async (ms) => {
+			readsSinceSleep = 0;
 			clock += ms;
 			if (clock - start > 24 * 3600_000) throw new Error("a day of test time passed without the flow settling");
 			if (tick) tick(clock - start);
@@ -417,6 +424,25 @@ test("when our own approval cannot be read after the others released, the miss i
 	assert.equal(alerts.length, 0);
 	assert.ok(logs.includes(`own-approval read failed: nonce=7 recipient=${EVENT.recipient} amount=${EVENT.palletAmount} ${readError}`));
 	assert.ok(logs.some((line) => line.startsWith("skip (resolved on-chain; could not read whether our own approval is recorded)")));
+});
+
+test("a recheck read that fails is retried, not taken for the answer", async () => {
+	const chain = new FakeVault();
+	chain.refuse = () => "insufficient funds for gas * price + value";
+	const nonceConsumed = chain.nonceConsumed.bind(chain);
+	let reads = 0;
+	chain.nonceConsumed = async (nonce, blockNumber) => {
+		reads += 1;
+		// The pre-check reads first; the first recheck fails, and the others
+		// release before the second.
+		if (reads === 2) throw new HttpRequestError({ url: "http://rpc", status: 503 });
+		if (reads === 3) chain.consumed.add(EVENT.nonce);
+		return nonceConsumed(nonce, blockNumber);
+	};
+	const { attestor, logs } = attestorOn(chain);
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.ok(logs.some((line) => line.startsWith("recheck failed, retrying")));
+	assert.equal(attestor.missedApprovals, 1);
 });
 
 test("a failed approval of an unresolved migration propagates after the rechecks", async () => {
@@ -810,6 +836,30 @@ test("a first attempt the node took although its answer was lost is followed at 
 	assert.ok(logs.some((line) => line.startsWith("approved: nonce=7 ") && line.includes(`tx=${chain.sent[0].hash}`)));
 });
 
+test("a first attempt the node already holds, from before a restart, is followed as ours", async () => {
+	const chain = new FakeVault();
+	chain.baseFee = 8_000_000n;
+	const receipt = chain.receipt.bind(chain);
+	let failures = 1;
+	chain.receipt = async (hash) => {
+		if (failures-- > 0) throw new HttpRequestError({ url: "http://rpc", status: 503 });
+		return receipt(hash);
+	};
+	await assert.rejects(approve(attestorOn(chain).attestor, EVENT), HttpRequestError);
+	// A restarted process asks a backend whose count has not seen that
+	// transaction, and signs the very same one.
+	chain.pendingNonce = 5;
+	chain.baseFee = 5_000_000n;
+	const { attestor, logs } = attestorOn(chain);
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.deepEqual(
+		chain.sent.map((tx) => tx.hash),
+		[chain.sent[0].hash, chain.sent[0].hash],
+	);
+	assert.ok(logs.some((line) => line.startsWith("approved: nonce=7 ") && line.includes(`tx=${chain.sent[0].hash}`)));
+	assert.equal(attestor.nextNonce, 6);
+});
+
 test("a first attempt lost on its way to the node keeps its nonce, which is filled before a later approval is sent", async () => {
 	const chain = new FakeVault();
 	const send = chain.sendRawTransaction.bind(chain);
@@ -856,6 +906,21 @@ test("a first attempt refused for its price or a full pool is tried again at the
 	assert.equal(chain.sent[1].nonce, chain.sent[0].nonce);
 	assert.ok(chain.sent[1].maxFeePerGas > chain.sent[0].maxFeePerGas);
 	assert.ok(chain.approved.has(payloadHash(EVENT)));
+});
+
+test("a first attempt refused for its price is not sent again once the others released, and counts as our miss", async () => {
+	const chain = new FakeVault();
+	chain.refuse = (index) => (index === 0 ? "txpool is full" : undefined);
+	const { attestor, alerts } = attestorOn(chain, {}, (elapsed) => {
+		if (elapsed > AFTER_MS / 2) chain.consumed.add(EVENT.nonce);
+		chain.mine();
+	});
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.equal(chain.sent.length, 1);
+	assert.equal(attestor.missedApprovals, 1);
+	assert.equal(alerts.length, 0);
+	assert.equal(attestor.submissions.size, 0);
+	assert.equal(attestor.nextNonce, 0, "the refused attempt holds no nonce");
 });
 
 test("a nonce held by a transaction this process did not send is skipped, never replaced", async () => {
@@ -1072,6 +1137,30 @@ test("a boundary block without vault state means not yet, never fatal", async ()
 	assert.equal(checkpoint.lastProcessedBlock, 10);
 	assert.equal(unconfirmed.length, 1);
 	assert.ok(logs.includes("vault has no state at safe block 100 yet; checkpoint waits"));
+});
+
+test("a boundary read that fails for any other reason is not taken for missing state", async () => {
+	const chain = new FakeVault();
+	chain.nonceConsumed = async () => {
+		throw new HttpRequestError({ url: "http://rpc", status: 503 });
+	};
+	const { attestor } = attestorOn(chain);
+	const unconfirmed: UnconfirmedBlock[] = [{ block: 11, events: [EVENT], lastAttemptMs: attestor.now() }];
+	await assert.rejects(advanceCheckpoint(attestor, unconfirmed, { lastProcessedBlock: 10 }), HttpRequestError);
+	assert.equal(unconfirmed.length, 1);
+});
+
+test("a block is passed only once every one of its events is durable", async () => {
+	const chain = new FakeVault();
+	const { attestor } = attestorOn(chain);
+	const unconfirmed: UnconfirmedBlock[] = [{ block: 11, events: [EVENT, OTHER], lastAttemptMs: attestor.now() }];
+	const checkpoint = { lastProcessedBlock: 10 };
+	chain.durableApproved.add(payloadHash(EVENT));
+	assert.equal(await advanceCheckpoint(attestor, unconfirmed, checkpoint), false);
+	assert.equal(checkpoint.lastProcessedBlock, 10);
+	chain.durableConsumed.add(OTHER.nonce);
+	assert.equal(await advanceCheckpoint(attestor, unconfirmed, checkpoint), true);
+	assert.equal(checkpoint.lastProcessedBlock, 11);
 });
 
 test("approvals that stay outside the boundary are re-submitted after the timeout, with an alert", async () => {

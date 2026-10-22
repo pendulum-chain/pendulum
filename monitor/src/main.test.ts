@@ -177,7 +177,14 @@ const lookup = (hex: string, len: number) => ({
 	isLegacy: false,
 	toString: () => `lookup ${hex}`,
 });
-type Bounded = ReturnType<typeof inline> | ReturnType<typeof lookup>;
+const legacy = (hex: string) => ({
+	isInline: false,
+	isLookup: false,
+	isLegacy: true,
+	asLegacy: { hash_: hash(hex) },
+	toString: () => `legacy ${hex}`,
+});
+type Bounded = ReturnType<typeof inline> | ReturnType<typeof lookup> | ReturnType<typeof legacy>;
 
 interface PendulumEvent {
 	section: string;
@@ -198,9 +205,12 @@ function pendulumChain() {
 		nextNonce: 0n,
 		publicProps: [] as Array<[number, Bounded]>,
 		referenda: new Map<number, Bounded>(),
-		/** Noted preimages by `${hash}:${len}`. */
+		/** Noted preimages by `${hash}:${len}`, and their lengths by hash. */
 		preimages: new Map<string, string>(),
+		notedLengths: new Map<string, number>(),
 		preimageReads: 0,
+		/** Preimage reads still to fail, as an RPC error would. */
+		preimageFailures: 0,
 	};
 	const optional = <T>(value: T | undefined) => (value === undefined ? { isSome: false } : { isSome: true, unwrap: () => value });
 	const at = (block: number) => ({
@@ -227,8 +237,13 @@ function pendulumChain() {
 			preimage: {
 				preimageFor: async ([preimage, len]: [{ toHex(): string }, unknown]) => {
 					chain.preimageReads++;
+					if (chain.preimageFailures > 0 && chain.preimageFailures--) throw new Error("request timed out");
 					const name = chain.preimages.get(`${preimage.toHex()}:${len}`);
 					return optional(name === undefined ? undefined : encodeCall(name));
+				},
+				requestStatusFor: async (preimage: { toHex(): string }) => {
+					const len = chain.notedLengths.get(preimage.toHex());
+					return { toJSON: () => (len === undefined ? null : { unrequested: { ticket: ["5Noter", 1], len } }) };
 				},
 			},
 		},
@@ -400,6 +415,41 @@ test("an oversized governance call pages as unreadable without being fetched", a
 	await monitor.poll(api);
 	assert.match(pageFor(pages, UNREADABLE, "public proposal #5")?.detail ?? "", /3900000 bytes/);
 	assert.equal(pendulum.preimageReads, 0);
+});
+
+test("a governance call that cannot be read yet is re-checked and pages critical once readable", async (t) => {
+	const { pendulum, api, monitor, pages } = await setup(t);
+	const preimage = `0x${"cd".repeat(32)}`;
+	pendulum.referenda.set(9, lookup(preimage, 4));
+	await monitor.poll(api);
+	assert.match(pageFor(pages, UNREADABLE, "referendum #9")?.detail ?? "", /not noted yet/);
+	pendulum.preimages.set(`${preimage}:4`, "mint");
+	await monitor.poll(api);
+	assert.ok(pageFor(pages, RISKY, "referendum #9"), JSON.stringify(pages));
+});
+
+test("a governance item whose read fails is retried and hides nothing after it", async (t) => {
+	const { pendulum, api, monitor, pages } = await setup(t);
+	const preimage = `0x${"aa".repeat(32)}`;
+	pendulum.publicProps.push([5, lookup(preimage, 4)]);
+	pendulum.preimages.set(`${preimage}:4`, "mint");
+	pendulum.referenda.set(9, inline("mint"));
+	pendulum.preimageFailures = 1;
+	await monitor.poll(api);
+	assert.match(pageFor(pages, UNREADABLE, "public proposal #5")?.detail ?? "", /reading the call failed/);
+	assert.ok(pageFor(pages, RISKY, "referendum #9"), JSON.stringify(pages));
+	await monitor.poll(api);
+	assert.ok(pageFor(pages, RISKY, "public proposal #5"), JSON.stringify(pages));
+});
+
+test("a legacy call reference is read through the noted preimage's length", async (t) => {
+	const { pendulum, api, monitor, pages } = await setup(t);
+	const preimage = `0x${"ef".repeat(32)}`;
+	pendulum.referenda.set(9, legacy(preimage));
+	pendulum.notedLengths.set(preimage, 4);
+	pendulum.preimages.set(`${preimage}:4`, "mint");
+	await monitor.poll(api);
+	assert.ok(pageFor(pages, RISKY, "referendum #9"), JSON.stringify(pages));
 });
 
 test("the governance watch runs after the conservation checks", async (t) => {

@@ -766,7 +766,16 @@ interface BoundedCall {
 	asInline: Uint8Array;
 	isLookup: boolean;
 	asLookup: { hash_: { toHex(): string }; len: { toNumber(): number } };
+	asLegacy: { hash_: { toHex(): string } };
 	toString(): string;
+}
+
+/** A governance item's call: decoded, `pending` while it cannot be read yet
+ *  (re-checked every poll), or neither when it is unreadable for good. */
+interface CallRead {
+	node?: CallNode;
+	text: string;
+	pending?: boolean;
 }
 
 /**
@@ -778,24 +787,38 @@ interface BoundedCall {
  */
 const MAX_GOVERNANCE_CALL_BYTES = 64 * 1024;
 
-/** Decodes a proposal's call; a preimage that is not noted yet cannot be read. */
-async function boundedCall(apiAt: ApiAt, bounded: BoundedCall): Promise<{ node?: CallNode; text: string }> {
-	let bytes: Uint8Array;
-	if (bounded.isInline) bytes = bounded.asInline;
-	else if (bounded.isLookup) {
-		const { hash_, len } = bounded.asLookup;
-		if (len.toNumber() > MAX_GOVERNANCE_CALL_BYTES) {
-			throw new Error(`the call is ${len.toNumber()} bytes, over the ${MAX_GOVERNANCE_CALL_BYTES} bytes the monitor decodes`);
-		}
-		const preimage = (await apiAt.query.preimage.preimageFor([hash_, len])) as unknown as {
-			isSome: boolean;
-			unwrap(): Uint8Array;
-		};
-		if (!preimage.isSome) return { text: `preimage ${hash_.toHex()} is not noted yet; review the call once it is` };
-		bytes = preimage.unwrap();
-	} else return { text: `legacy call reference ${bounded.toString()}; review it manually` };
-	const node = toCallNode(apiAt.registry.createType("Call", bytes) as unknown as Parameters<typeof toCallNode>[0]);
-	return { node, text: describeCall(node) };
+function decodeCall(apiAt: ApiAt, bytes: Uint8Array): CallRead {
+	try {
+		const node = toCallNode(apiAt.registry.createType("Call", bytes) as unknown as Parameters<typeof toCallNode>[0]);
+		return { node, text: describeCall(node) };
+	} catch (decodeError) {
+		return { text: `the call cannot be decoded: ${String(decodeError).slice(0, 300)}` };
+	}
+}
+
+/** The length of a noted preimage, which a legacy call reference leaves out. */
+async function notedLength(apiAt: ApiAt, hash: { toHex(): string }): Promise<number | undefined> {
+	const status = (await apiAt.query.preimage.requestStatusFor(hash)).toJSON() as {
+		unrequested?: { len: number };
+		requested?: { maybeLen: number | null };
+	} | null;
+	return status?.unrequested?.len ?? status?.requested?.maybeLen ?? undefined;
+}
+
+/** Reads a proposal's call. Its preimage may be noted at any time before
+ *  enactment, so until then the call is pending, not unreadable. */
+async function boundedCall(apiAt: ApiAt, bounded: BoundedCall): Promise<CallRead> {
+	if (bounded.isInline) return decodeCall(apiAt, bounded.asInline);
+	const hash = bounded.isLookup ? bounded.asLookup.hash_ : bounded.asLegacy.hash_;
+	const len = bounded.isLookup ? bounded.asLookup.len.toNumber() : await notedLength(apiAt, hash);
+	if (len !== undefined && len > MAX_GOVERNANCE_CALL_BYTES) {
+		return { text: `the call is ${len} bytes, over the ${MAX_GOVERNANCE_CALL_BYTES} bytes the monitor decodes` };
+	}
+	const preimage = len === undefined
+		? undefined
+		: (await apiAt.query.preimage.preimageFor([hash, len])) as unknown as { isSome: boolean; unwrap(): Uint8Array };
+	if (!preimage?.isSome) return { text: `preimage ${hash.toHex()} is not noted yet`, pending: true };
+	return decodeCall(apiAt, preimage.unwrap());
 }
 
 /**
@@ -804,8 +827,9 @@ async function boundedCall(apiAt: ApiAt, bounded: BoundedCall): Promise<{ node?:
  * Calls that mint, move or unlock balances or change the runtime page as
  * CRITICAL: minted PEN burned through the migration drains the fixed-supply
  * vault, and only Pendulum governance can stop the call before enactment.
- * Alert-only; it runs after the conservation checks and decodes within fixed
- * bounds, so it can neither stop nor delay them.
+ * So does a call the watcher cannot read; until it can, it is re-checked
+ * every poll. Alert-only; it runs after the conservation checks and decodes
+ * within fixed bounds, so it can neither stop nor delay them.
  */
 async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
 	const finalizedHash = await api.rpc.chain.getFinalizedHead();
@@ -858,19 +882,25 @@ async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
 	const pages: Promise<void>[] = [];
 	for (const item of items) {
 		if (onceOnlyPages.has(item.key)) continue;
-		let call: { node?: CallNode; text: string };
+		let call: CallRead;
 		try {
 			call = await boundedCall(apiAt, item.bounded);
 		} catch (readError) {
-			// One unreadable item must never hide the items after it.
+			// One item must never hide the items after it; a failed read is retried.
+			call = { text: `reading the call failed: ${String(readError).slice(0, 300)}`, pending: true };
+		}
+		if (!call.node) {
+			// A call nobody can review is critical. One that cannot be read yet
+			// is re-checked every poll and pages again once it can be read.
 			pages.push(pageOnce(
-				item.key,
+				call.pending ? `${item.key}:unread` : item.key,
 				"CRITICAL: Pendulum governance item cannot be read",
-				`${item.label}: ${String(readError).slice(0, 300)}; review it manually; ${item.hint}`,
+				`${item.label}: ${call.text}; ` +
+					`${call.pending ? "the monitor pages its call once it can read it" : "review it manually"}; ${item.hint}`,
 			));
 			continue;
 		}
-		const risky = call.node ? riskyCalls(call.node) : [];
+		const risky = riskyCalls(call.node);
 		pages.push(pageOnce(
 			item.key,
 			risky.length

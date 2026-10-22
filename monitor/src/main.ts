@@ -15,6 +15,7 @@ import {
 	encodeAbiParameters,
 	http,
 	keccak256,
+	parseAbi,
 	toFunctionSelector,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -82,6 +83,22 @@ const vaultAbi = [
 		],
 	},
 ] as const;
+
+/** The vault events of its admin (and of the guardian's pause). */
+const vaultAdminEventsAbi = parseAbi([
+	"event TokenSet(address indexed token)",
+	"event Paused(address indexed by)",
+	"event Unpaused(address indexed by)",
+	"event AttestorAdded(address indexed attestor)",
+	"event AttestorRemoved(address indexed attestor)",
+	"event ThresholdUpdated(uint256 threshold)",
+	"event CapsUpdated(uint256 perReleaseCap, uint256 dailyCap)",
+	"event GuardianUpdated(address indexed guardian)",
+	"event AdminTransferStarted(address indexed pendingAdmin)",
+	"event AdminTransferred(address indexed newAdmin)",
+	"event RemainderSwept(address indexed to, uint256 amount)",
+	"event StalePendingCleared(bytes32 indexed payload, uint256 tokenAmount)",
+]);
 
 const erc20Abi = [
 	{ type: "function", name: "totalSupply", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
@@ -333,12 +350,13 @@ let lastSourceFailureAlertMs = 0;
 let lastBaseStallAlertMs = 0;
 let lastReadinessAlertMs = 0;
 let lastIssuanceAlertMs = 0;
-/** The governance-queue scan runs ahead of everything else in a poll and
- *  throws on failure, so the persisted Base cursor never passes a range it has
- *  not scanned; a restart resumes from that cursor. */
-let timelockFromBlock: bigint | undefined;
+/** The Base admin scan (vault admin events and the governance queue) runs
+ *  ahead of the vault checks in a poll and throws on failure, so the persisted
+ *  Base cursor never passes a range it has not scanned; a restart resumes from
+ *  that cursor. */
+let baseAdminFromBlock: bigint | undefined;
 /** Once-only pages by key, each held until the webhook accepts it. */
-// ponytail: in memory; a restart re-pages what it finds again (timelock operations after the persisted cursor, pending governance items) and drops undelivered pages it does not find again.
+// ponytail: in memory; a restart re-pages what it finds again (Base admin events after the persisted cursor, pending governance items) and drops undelivered pages it does not find again.
 const onceOnlyPages = new Map<string, { subject: string; detail: string; delivered: boolean }>();
 let lastGovernanceWatchFailureMs = 0;
 
@@ -765,15 +783,33 @@ async function reconcileBaseEvents(
 	return { violation: firstViolation };
 }
 
-/** Page every operation the governance Timelock scheduled up to `toBlock`,
- *  the poll's `safe`/`finalized` Base block. */
-async function watchTimelock(toBlock: bigint): Promise<void> {
-	if (!config.timelockAddress) return;
+/** Page every vault admin event, and every operation the governance Timelock
+ *  scheduled, up to `toBlock`, the poll's `safe`/`finalized` Base block.
+ *  Before the governance handover the vault admin acts without a delay, so
+ *  its events are the only trace of a guardian, attestor or cap change. */
+async function watchBaseAdmin(toBlock: bigint): Promise<void> {
+	const timelock = config.timelockAddress;
 	const operations = new Map<`0x${string}`, ScheduledCall[]>();
-	for (const [start, end] of blockRanges(timelockFromBlock ?? state.baseFromBlock, toBlock, config.baseMaxBlockRange)) {
+	const pages: Promise<void>[] = [];
+	for (const [start, end] of blockRanges(baseAdminFromBlock ?? state.baseFromBlock, toBlock, config.baseMaxBlockRange)) {
 		await publicClient.getBlock({ blockNumber: end }); // same lagging-node probe as the vault scan
+		const adminEvents = await publicClient.getContractEvents({
+			address: config.vaultAddress,
+			abi: vaultAdminEventsAbi,
+			fromBlock: start,
+			toBlock: end,
+		});
+		for (const event of adminEvents) {
+			const args = Object.entries(event.args).map(([name, value]) => `${name}=${value}`).join(", ");
+			pages.push(pageOnce(
+				`vault:${event.transactionHash}:${event.logIndex}`,
+				"VAULT ADMIN EVENT",
+				`${event.eventName}(${args}) at Base block ${event.blockNumber}, tx ${event.transactionHash}`,
+			));
+		}
+		if (!timelock) continue;
 		const scheduled = await publicClient.getContractEvents({
-			address: config.timelockAddress,
+			address: timelock,
 			abi: timelockAbi,
 			eventName: "CallScheduled",
 			fromBlock: start,
@@ -792,7 +828,7 @@ async function watchTimelock(toBlock: bigint): Promise<void> {
 			operations.set(id, calls);
 		}
 	}
-	if (operations.size > 0) {
+	if (timelock && operations.size > 0) {
 		const token = await publicClient.readContract({
 			address: config.vaultAddress,
 			abi: vaultAbi,
@@ -802,25 +838,26 @@ async function watchTimelock(toBlock: bigint): Promise<void> {
 		const labels = {
 			[config.vaultAddress.toLowerCase()]: "vault",
 			[token.toLowerCase()]: "token",
-			[config.timelockAddress.toLowerCase()]: "timelock",
+			[timelock.toLowerCase()]: "timelock",
 		};
 		for (const [id, calls] of operations) {
 			if (onceOnlyPages.has(`timelock:${id}`)) continue;
 			const readyAt = await publicClient.readContract({
-				address: config.timelockAddress,
+				address: timelock,
 				abi: timelockAbi,
 				functionName: "getTimestamp",
 				args: [id],
 				blockNumber: toBlock,
 			});
-			await pageOnce(
+			pages.push(pageOnce(
 				`timelock:${id}`,
 				"GOVERNANCE OPERATION SCHEDULED",
 				describeTimelockOperation(id, calls, readyAt, Date.now(), labels, KNOWN_FUNCTIONS),
-			);
+			));
 		}
 	}
-	timelockFromBlock = toBlock + 1n;
+	await Promise.all(pages);
+	baseAdminFromBlock = toBlock + 1n;
 }
 
 type ApiAt = Awaited<ReturnType<ApiPromise["at"]>>;
@@ -1130,7 +1167,7 @@ async function check(api: ApiPromise): Promise<void> {
 		);
 	}
 	await checkAutoPauseReadiness();
-	await watchTimelock(baseBlock);
+	await watchBaseAdmin(baseBlock);
 
 	// A Pendulum failure must not switch off the Base-side checks: the vault
 	// balance check and its pause run without the source. Reconciliation, M2a

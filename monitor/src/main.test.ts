@@ -52,6 +52,8 @@ const abi = parseAbi([
 	"function getTimestamp(bytes32 id) view returns (uint256)",
 	"event Approved(uint64 indexed nonce, address indexed recipient, uint256 palletAmount, address indexed attestor)",
 	"event Released(uint64 indexed nonce, address indexed recipient, uint256 palletAmount, uint256 tokenAmount)",
+	"event GuardianUpdated(address indexed guardian)",
+	"event CapsUpdated(uint256 perReleaseCap, uint256 dailyCap)",
 	"event CallScheduled(bytes32 indexed id, uint256 indexed index, address target, uint256 value, bytes data, bytes32 predecessor, uint256 delay)",
 ]);
 
@@ -454,6 +456,20 @@ test("auto-pause readiness is re-checked every poll", async (t) => {
 	base.guardian = "0x5555555555555555555555555555555555555555";
 	await monitor.poll(api);
 	assert.deepEqual(subjects(), ["AUTO-PAUSE NOT READY"]);
+});
+
+test("vault admin events page once each from the Base scan", async (t) => {
+	const { base, api, monitor, pages } = await setup(t);
+	const guardian = "0x5555555555555555555555555555555555555555";
+	base.logs.push({ address: VAULT, eventName: "GuardianUpdated", args: { guardian }, blockNumber: 1_004n });
+	base.logs.push({ address: VAULT, eventName: "CapsUpdated", args: { perReleaseCap: 5n, dailyCap: 7n }, blockNumber: 1_012n });
+	await monitor.poll(api);
+	base.safe = 1_020n;
+	await monitor.poll(api);
+	const adminPages = pages.filter((page) => page.subject === "VAULT ADMIN EVENT").map((page) => page.detail);
+	assert.equal(adminPages.length, 2, JSON.stringify(pages));
+	assert.match(adminPages[0], /^GuardianUpdated\(guardian=0x5{40}\) at Base block 1004/i);
+	assert.match(adminPages[1], /^CapsUpdated\(perReleaseCap=5, dailyCap=7\) at Base block 1012/);
 });
 
 test("a monitor without a guardian key says so at startup", async (t) => {

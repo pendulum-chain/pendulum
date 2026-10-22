@@ -280,6 +280,14 @@ async function main(): Promise<void> {
 	if (!isAttestor) {
 		throw new Error(`${account.address} is not an attestor of ${config.vaultAddress}`);
 	}
+	const attestorGeneration = Number(
+		await publicClient.readContract({
+			address: config.vaultAddress,
+			abi: vaultAbi,
+			functionName: "attestorGeneration",
+			args: [account.address],
+		}),
+	);
 	await checkGasBalance();
 
 	const api = await ApiPromise.create({ provider: new WsProvider(config.pendulumWs) });
@@ -289,10 +297,21 @@ async function main(): Promise<void> {
 		baseChainId: config.baseChainId,
 		vaultAddress: config.vaultAddress,
 		pendulumGenesisHash,
+		attestorAddress: account.address,
+		attestorGeneration,
 		lastProcessedBlock: config.startBlock - 1,
 	} satisfies Checkpoint;
-	assertCheckpointIdentity(checkpoint, { ...config, pendulumGenesisHash });
-	log(`attestor ${account.address} starting after block ${checkpoint.lastProcessedBlock}`);
+	assertCheckpointIdentity(checkpoint, {
+		...config,
+		pendulumGenesisHash,
+		attestorAddress: account.address,
+		attestorGeneration,
+	});
+	// A checkpoint written before the signer was recorded is bound to it from
+	// the next save on.
+	checkpoint.attestorAddress ??= account.address;
+	checkpoint.attestorGeneration ??= attestorGeneration;
+	log(`attestor ${account.address} (generation ${attestorGeneration}) starting after block ${checkpoint.lastProcessedBlock}`);
 
 	/** Blocks processed at the latest Base state, oldest first, that the
 	 *  checkpoint has not yet passed. Bounded by the Base finality lag. */

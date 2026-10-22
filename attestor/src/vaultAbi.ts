@@ -35,4 +35,11 @@ export const vaultAbi = [
 		inputs: [{ name: "attestor", type: "address" }],
 		outputs: [{ type: "bool" }],
 	},
+	{
+		type: "function",
+		name: "attestorGeneration",
+		stateMutability: "view",
+		inputs: [{ name: "attestor", type: "address" }],
+		outputs: [{ type: "uint64" }],
+	},
 ] as const;

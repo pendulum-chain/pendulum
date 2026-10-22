@@ -5,13 +5,15 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { assertCheckpointIdentity, loadCheckpoint, saveCheckpoint, type Checkpoint } from "./state.js";
 
-const checkpoint: Checkpoint = {
+const checkpoint = {
 	version: 1,
 	baseChainId: 8453,
 	vaultAddress: "0x1111111111111111111111111111111111111111",
 	pendulumGenesisHash: `0x${"22".repeat(32)}`,
+	attestorAddress: "0x4444444444444444444444444444444444444444",
+	attestorGeneration: 1,
 	lastProcessedBlock: 42,
-};
+} satisfies Checkpoint;
 
 test("checkpoint replacement is readable and identity-bound", () => {
 	const directory = mkdtempSync(join(tmpdir(), "pen-attestor-state-"));
@@ -30,6 +32,46 @@ test("checkpoint replacement is readable and identity-bound", () => {
 			() => assertCheckpointIdentity(loaded!, { ...checkpoint, pendulumGenesisHash: `0x${"33".repeat(32)}` }),
 			/Pendulum genesis/,
 		);
+	} finally {
+		rmSync(directory, { recursive: true, force: true });
+	}
+});
+
+test("a checkpoint made by another key or an earlier generation of this key is refused", () => {
+	// A replacement key resuming its predecessor's progress would never approve
+	// the unreleased migrations before it.
+	assert.throws(
+		() =>
+			assertCheckpointIdentity(checkpoint, {
+				...checkpoint,
+				attestorAddress: "0x5555555555555555555555555555555555555555",
+			}),
+		/belongs to attestor .* start with no checkpoint/,
+	);
+	// The address is matched case-insensitively.
+	assert.doesNotThrow(() =>
+		assertCheckpointIdentity(checkpoint, { ...checkpoint, attestorAddress: checkpoint.attestorAddress.toUpperCase() }),
+	);
+	// A removed and re-added key: its approvals from generation 1 stopped counting.
+	assert.throws(
+		() => assertCheckpointIdentity(checkpoint, { ...checkpoint, attestorGeneration: 2 }),
+		/generation 1, .* lower lastProcessedBlock .* set attestorGeneration to 2/,
+	);
+});
+
+test("a checkpoint from before the signer was recorded still loads", () => {
+	const directory = mkdtempSync(join(tmpdir(), "pen-attestor-state-"));
+	const path = join(directory, "checkpoint.json");
+	try {
+		const { attestorAddress, attestorGeneration, ...legacy } = checkpoint;
+		writeFileSync(path, JSON.stringify(legacy));
+		const loaded = loadCheckpoint(path);
+		assert.deepEqual(loaded, legacy);
+		assert.doesNotThrow(() => assertCheckpointIdentity(loaded!, { ...legacy, attestorAddress, attestorGeneration }));
+		writeFileSync(path, JSON.stringify({ ...checkpoint, attestorGeneration: 0 }));
+		assert.throws(() => loadCheckpoint(path), /invalid or legacy schema/);
+		writeFileSync(path, JSON.stringify({ ...checkpoint, attestorAddress: [checkpoint.attestorAddress] }));
+		assert.throws(() => loadCheckpoint(path), /invalid or legacy schema/);
 	} finally {
 		rmSync(directory, { recursive: true, force: true });
 	}

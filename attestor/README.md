@@ -90,6 +90,16 @@ WantedBy=multi-user.target
 - Checkpoints are atomically replaced, bound to the Pendulum genesis plus the
   configured Base chain and vault, and malformed files are fatal. Never delete or replace one merely to
   clear an alert; reconcile it against both chains first.
+- Checkpoints are also bound to the attestor address and its vault attestor
+  generation (bumped by every `addAttestor`). A new key started on another
+  key's checkpoint, or a removed and re-added key on its old one, refuses to
+  start: resuming would skip the unreleased migrations before it, whose earlier
+  approvals no longer count. The error says how to recover: a new key starts
+  with no checkpoint and `START_BLOCK` before the oldest unreleased migration;
+  a re-added key lowers `lastProcessedBlock` to such a block and sets
+  `attestorGeneration` to the current value, keeping every other field.
+  Checkpoints written before these fields existed are bound to the first key
+  that starts on them.
 - The daemon verifies at startup that its address is in the vault's attestor
   set and refuses to run otherwise.
 - After a Pendulum **runtime upgrade**, verify event decoding against the new

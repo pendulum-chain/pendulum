@@ -123,12 +123,14 @@ WantedBy=multi-user.target
   behind that nonce anyway. Whenever it stops bumping, it re-sends the last
   attempt unchanged, so a node that dropped the transaction while still
   counting its nonce gets it back instead of leaving a gap. An approval that an
-  RPC error interrupted keeps its transaction: the retry, or the next approval
-  before it sends anything, follows it to the end. A first attempt whose nonce
-  is taken (mined already, or held by a transaction this process did not send)
-  moves on to the next nonce at once, at most five in a row, without spending
-  a bump. A node refusing a send for its price, an underpriced replacement or
-  a full pool is retried at the next bump instead of being fatal. Transactions
+  RPC error interrupted keeps its transaction, also one whose send got no
+  answer and may or may not have reached the node: the retry, or the next
+  approval before it sends anything, follows it at that nonce to the end. A
+  first attempt whose nonce is taken (mined already, or held by a transaction
+  this process did not send) moves on to the next nonce at once, at most five
+  in a row, without spending a bump. A node refusing a send for its price, an
+  underpriced replacement or a full pool is retried at the next bump instead
+  of being fatal. Transactions
   in flight are kept in memory only: after a restart, an approval whose
   transaction is still pending is sent again at the next nonce, so a pending
   transaction stuck below the cap has to be replaced by hand.

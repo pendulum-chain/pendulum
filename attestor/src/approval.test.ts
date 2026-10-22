@@ -750,7 +750,7 @@ test("an earlier attempt mined after a refused bump is still found as ours", asy
 	assert.equal(attestor.missedApprovals, 0);
 });
 
-test("a first attempt the node took although its answer was lost is followed, not sent anew", async () => {
+test("a first attempt the node took although its answer was lost is followed at its nonce, not sent anew", async () => {
 	const chain = new FakeVault();
 	chain.baseFee = 8_000_000n;
 	const send = chain.sendRawTransaction.bind(chain);
@@ -765,14 +765,50 @@ test("a first attempt the node took although its answer was lost is followed, no
 	};
 	const { attestor, logs } = attestorOn(chain);
 	await assert.rejects(approve(attestor, EVENT), TimeoutError);
-	// The retry asks a backend whose pending count has not seen it, so it signs
-	// the very same transaction, which the node answers it already knows.
-	chain.pendingNonce = 5;
+	assert.equal(attestor.nextNonce, 6, "its nonce is reserved");
+	// The node counts it as pending: a send anew would go to nonce 6.
+	assert.equal(await chain.accountNonce("pending"), 6);
 	chain.baseFee = 5_000_000n;
 	assert.equal(await approve(attestor, EVENT), true);
-	assert.equal(chain.sent[1].hash, chain.sent[0].hash);
+	assert.equal(chain.sent.length, 1);
 	assert.ok(logs.some((line) => line.startsWith("approved: nonce=7 ") && line.includes(`tx=${chain.sent[0].hash}`)));
-	assert.equal(attestor.nextNonce, 6, "its nonce is reserved");
+});
+
+test("a first attempt lost on its way to the node keeps its nonce, which is filled before a later approval is sent", async () => {
+	const chain = new FakeVault();
+	const send = chain.sendRawTransaction.bind(chain);
+	let lose = true;
+	chain.sendRawTransaction = async (serialized) => {
+		if (lose) {
+			lose = false;
+			throw new HttpRequestError({ url: "http://rpc", status: 502 });
+		}
+		return send(serialized);
+	};
+	const { attestor } = attestorOn(chain);
+	await assert.rejects(approve(attestor, EVENT), HttpRequestError);
+	assert.equal(await approve(attestor, OTHER), true);
+	assert.deepEqual(
+		chain.sent.map((tx) => [approveArgs(tx)[0], tx.nonce]),
+		[
+			[EVENT.nonce, 5],
+			[OTHER.nonce, 6],
+		],
+	);
+	assert.equal(chain.minedNonce, 7);
+	assert.ok(chain.approved.has(payloadHash(EVENT)));
+	assert.ok(chain.approved.has(payloadHash(OTHER)));
+});
+
+test("a first send the node answered with a refusal holds no nonce", async () => {
+	const chain = new FakeVault();
+	chain.refuse = (index) => (index === 0 ? "intrinsic gas too low" : undefined);
+	const { attestor } = attestorOn(chain);
+	await assert.rejects(approve(attestor, EVENT), /intrinsic gas too low/);
+	assert.equal(attestor.nextNonce, 0);
+	assert.equal(attestor.submissions.get(payloadHash(EVENT))?.nonce, undefined);
+	assert.equal(await approve(attestor, OTHER), true);
+	assert.equal(chain.sent[1].nonce, 5, "no gap is left at the refused nonce");
 });
 
 test("a first attempt refused for its price or a full pool is tried again at the same nonce", async () => {

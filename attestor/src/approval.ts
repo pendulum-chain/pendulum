@@ -22,7 +22,7 @@ import {
 	type TransactionReceipt,
 } from "viem";
 import type { Severity } from "./alert.js";
-import { isUnreleasable, ownApprovalMissed, sendRejection, type MigrationEvent } from "./checks.js";
+import { isTransientRpcError, isUnreleasable, ownApprovalMissed, sendRejection, type MigrationEvent } from "./checks.js";
 import { vaultAbi } from "./vaultAbi.js";
 
 /** Multiplier applied to the estimated gas for `approve`. See the note in
@@ -326,12 +326,16 @@ async function sendFirst(attestor: Attestor, submission: Submission, label: stri
 		const nonce = Math.max(pending, attestor.nextNonce);
 		const { hash, error } = await sendAttempt(attestor, submission, nonce, submission.fees);
 		const rejection = error === undefined ? undefined : sendRejection(error);
-		if (error === undefined || rejection === "known") {
+		// A send that met a failing transport may have reached the node all the
+		// same, so its nonce stays this approval's too: the follow-up re-sends
+		// there either way.
+		const maybeTaken = error !== undefined && rejection === undefined && isTransientRpcError(error);
+		if (error === undefined || rejection === "known" || maybeTaken) {
 			submission.nonce = nonce;
 			submission.hashes.push(hash);
 			attestor.nextNonce = nonce + 1;
-			return;
 		}
+		if (error === undefined || rejection === "known") return;
 		if (rejection === undefined) throw error;
 		attestor.log(`approval not accepted at nonce ${nonce}: ${label}`, error);
 		if (rejection === "fees") return;

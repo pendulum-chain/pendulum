@@ -80,6 +80,19 @@ contract SafeStub {
     }
 }
 
+// Answers every call with the given raw bytes.
+contract RawAnswerStub {
+    bytes internal answer;
+
+    constructor(bytes memory answer_) {
+        answer = answer_;
+    }
+
+    fallback(bytes calldata) external returns (bytes memory) {
+        return answer;
+    }
+}
+
 contract DeployGovernanceScriptTest is Test {
     uint256 internal constant SUPPLY = 150_000_000e18;
 
@@ -155,13 +168,27 @@ contract DeployGovernanceScriptTest is Test {
         _expectRefused(
             "TIMELOCK_CANCELLER", vm.toString(guardian), "TIMELOCK_CANCELLER must be separate from the guardian"
         );
-        string memory notSafe = "TIMELOCK_CANCELLER is not a Safe on this chain (getThreshold() failed)";
-        _expectRefused("TIMELOCK_CANCELLER", vm.toString(makeAddr("codeless")), notSafe);
-        _expectRefused("TIMELOCK_CANCELLER", vm.toString(address(new PEN(makeAddr("other"), SUPPLY))), notSafe);
-        _expectRefused("TIMELOCK_CANCELLER", vm.toString(address(new SafeStub(0))), notSafe);
+        _expectRefused(
+            "TIMELOCK_CANCELLER",
+            vm.toString(makeAddr("codeless")),
+            "TIMELOCK_CANCELLER has no code on this chain (create the Safe first)"
+        );
         address delegated = makeAddr("delegatedEoa");
         vm.etch(delegated, abi.encodePacked(hex"ef0100", canceller)); // EIP-7702 delegation to a Safe
-        _expectRefused("TIMELOCK_CANCELLER", vm.toString(delegated), notSafe);
+        _expectRefused(
+            "TIMELOCK_CANCELLER", vm.toString(delegated), "TIMELOCK_CANCELLER is an EIP-7702 delegated EOA, not a Safe"
+        );
+        string memory notSafe = "TIMELOCK_CANCELLER is not a Safe (getThreshold() failed)";
+        _expectRefused("TIMELOCK_CANCELLER", vm.toString(address(new PEN(makeAddr("other"), SUPPLY))), notSafe);
+        // Answers that are not exactly one word, whatever their first bytes say.
+        _expectRefused("TIMELOCK_CANCELLER", vm.toString(address(new RawAnswerStub(hex"03"))), notSafe);
+        bytes memory twoWords = abi.encode(uint256(3), uint256(3));
+        _expectRefused("TIMELOCK_CANCELLER", vm.toString(address(new RawAnswerStub(twoWords))), notSafe);
+        _expectRefused(
+            "TIMELOCK_CANCELLER",
+            vm.toString(address(new SafeStub(0))),
+            "TIMELOCK_CANCELLER Safe has threshold 0 (not set up)"
+        );
 
         vm.chainId(8453);
         _expectRefused("TEST_DEPLOY", "true", "TEST_DEPLOY is refused on Base mainnet");

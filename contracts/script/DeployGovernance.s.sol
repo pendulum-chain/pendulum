@@ -105,9 +105,7 @@ contract DeployGovernance is Script {
         require(canceller != msg.sender, "TIMELOCK_CANCELLER must not be the deployer");
         require(canceller != token && canceller != address(vault), "TIMELOCK_CANCELLER must not be PEN or the vault");
         require(canceller != vault.guardian() || testDeploy, "TIMELOCK_CANCELLER must be separate from the guardian");
-        require(
-            _isSafe(canceller) || testDeploy, "TIMELOCK_CANCELLER is not a Safe on this chain (getThreshold() failed)"
-        );
+        if (!testDeploy) _safeThreshold(canceller);
 
         // Broadcast as msg.sender (forge sets it to --sender or the single
         // signer), the deployer that is temporary admin so the roles below
@@ -144,11 +142,15 @@ contract DeployGovernance is Script {
         console.log("PENGovernor:        ", address(governor));
     }
 
-    // Any contract has code; a Safe answers getThreshold() with its non-zero
-    // threshold. An EIP-7702 delegated EOA stays a single key whatever it
-    // delegates to.
-    function _isSafe(address account) internal view returns (bool) {
+    // A Safe answers getThreshold() with its non-zero threshold. An EIP-7702
+    // delegated EOA stays a single key whatever it delegates to.
+    function _safeThreshold(address account) internal view returns (uint256) {
+        require(account.code.length > 0, "TIMELOCK_CANCELLER has no code on this chain (create the Safe first)");
+        require(bytes3(account.code) != 0xef0100, "TIMELOCK_CANCELLER is an EIP-7702 delegated EOA, not a Safe");
         (bool ok, bytes memory threshold) = account.staticcall(abi.encodeWithSignature("getThreshold()"));
-        return ok && threshold.length == 32 && abi.decode(threshold, (uint256)) > 0 && bytes3(account.code) != 0xef0100;
+        require(ok && threshold.length == 32, "TIMELOCK_CANCELLER is not a Safe (getThreshold() failed)");
+        uint256 value = abi.decode(threshold, (uint256));
+        require(value > 0, "TIMELOCK_CANCELLER Safe has threshold 0 (not set up)");
+        return value;
     }
 }

@@ -719,33 +719,38 @@ async function onNode<T>(url: string, read: (node: ApiPromise) => Promise<T>): P
 	}
 }
 
-/** The second node must have the source's finalized head at its height. One
- *  that cannot answer only warns, throttled: it is a check, not a source. */
+/** The second node must have finalized the source's finalized head, with the
+ *  same hash. One that cannot answer, or has not finalized that block yet,
+ *  only warns, throttled: it is a check, not a source. */
 async function crossCheckSource(finalized: BlockRef): Promise<void> {
 	const url = config.pendulumWsCrossCheck;
 	if (!url) return;
-	let reason: string;
+	let other: string | undefined;
 	try {
-		const other = await onNode(url, (node) => node.rpc.chain.getBlockHash(finalized.number));
-		if (!other.isEmpty && other.toHex() !== finalized.hash) {
-			throw new SourceIntegrityError(
-				`the second Pendulum node has ${other.toHex()} at block ${finalized.number}, the source ${finalized.hash}`,
-			);
-		}
-		if (!other.isEmpty) return;
-		reason = `has no block ${finalized.number} yet`;
+		other = await onNode(url, async (node) => {
+			// Above its finalized head, a node's block at a height may still lose.
+			const head = await node.rpc.chain.getHeader(await node.rpc.chain.getFinalizedHead());
+			if (head.number.toNumber() < finalized.number) return undefined;
+			return (await node.rpc.chain.getBlockHash(finalized.number)).toHex();
+		});
 	} catch (crossCheckError) {
-		if (crossCheckError instanceof SourceIntegrityError) throw crossCheckError;
-		reason = `cannot be read: ${crossCheckError}`;
+		return crossCheckUnavailable(`cannot be read: ${crossCheckError}`);
 	}
-	if (Date.now() - lastCrossCheckAlertMs > config.graceSeconds * 1000) {
-		lastCrossCheckAlertMs = Date.now();
-		await alert(
-			"PENDULUM CROSS-CHECK UNAVAILABLE",
-			`the second Pendulum node (PENDULUM_WS_CROSSCHECK) ${reason}; the source's blocks are not compared ` +
-				"with it until it answers — restore it",
-		);
+	if (other === undefined) return crossCheckUnavailable(`has not finalized block ${finalized.number} yet`);
+	if (other !== finalized.hash) {
+		throw new SourceIntegrityError(`the second Pendulum node has ${other} at block ${finalized.number}, the source ${finalized.hash}`);
 	}
+}
+
+/** Pages, throttled, that the source cannot be compared with the second node. */
+async function crossCheckUnavailable(reason: string): Promise<void> {
+	if (Date.now() - lastCrossCheckAlertMs <= config.graceSeconds * 1000) return;
+	lastCrossCheckAlertMs = Date.now();
+	await alert(
+		"PENDULUM CROSS-CHECK UNAVAILABLE",
+		`the second Pendulum node (PENDULUM_WS_CROSSCHECK) ${reason}; the source's blocks are not compared ` +
+			"with it until it answers — restore it",
+	);
 }
 
 /** Walks parent hashes down from `top` to `bottom` through headers fetched

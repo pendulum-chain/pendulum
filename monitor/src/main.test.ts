@@ -755,7 +755,21 @@ test("a second node that has not reached the newest block only warns", async (t)
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api);
 	assert.deepEqual(pages.map((page) => page.subject), ["PENDULUM CROSS-CHECK UNAVAILABLE"]);
-	assert.match(pages[0].detail, /has no block 101 yet;/);
+	assert.match(pages[0].detail, /has not finalized block 101 yet;/);
+	assert.equal(persisted().lastPendulumBlock, 101);
+});
+
+test("a second node whose best chain holds another newest block, not yet finalized, only warns", async (t) => {
+	const second = pendulumChain(); // finalized at 100
+	second.chain.best = 101;
+	second.chain.forkFrom = 101;
+	const { pendulum, api, monitor, pages, persisted } = await setup(t, {
+		env: { PENDULUM_WS_CROSSCHECK: SECOND_NODE },
+		connect: async () => second.api,
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.deepEqual(pages.map((page) => page.subject), ["PENDULUM CROSS-CHECK UNAVAILABLE"]);
 	assert.equal(persisted().lastPendulumBlock, 101);
 });
 

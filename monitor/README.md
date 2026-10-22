@@ -36,7 +36,8 @@ itself:
   ingested last, which the state file keeps, so every ingested block lies on
   one chain.
 - **Second node** (`PENDULUM_WS_CROSSCHECK`). The second node must have the
-  same hash at the finalized head's height.
+  same hash at the finalized head's height, compared once it has finalized
+  that height itself.
 - **Relay-chain anchor** (`POLKADOT_WS`). Each poll reads the Pendulum head
   that the Polkadot relay chain recorded at its finalized block
   (`paras.heads(PENDULUM_PARA_ID)`), from the first relay RPC that answers. The

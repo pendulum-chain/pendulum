@@ -160,7 +160,7 @@ The script starts the four attestors, the monitor and the releaser itself,
 each with its own key and checkpoint file. To run them by hand instead:
 
 ```bash
-PENDULUM_WS=ws://127.0.0.1:9944 BASE_RPC_URL=http://localhost:8545 BASE_CHAIN_ID=31337 \
+PENDULUM_WS=ws://127.0.0.1:8000 BASE_RPC_URL=http://localhost:8545 BASE_CHAIN_ID=31337 \
 VAULT_ADDRESS=0x… ATTESTOR_PRIVATE_KEY=0x… CHECKPOINT_FILE=./cp1.json \
 npm start   # repeat for attestors 2–4 with distinct keys/checkpoints
 ```
@@ -178,7 +178,7 @@ that can contain a migration (plus the nonce expected there) and the vault's
 Base deployment block. Afterwards its atomic state file owns both cursors:
 
 ```bash
-PENDULUM_WS=ws://127.0.0.1:9944 BASE_RPC_URL=http://localhost:8545 BASE_CHAIN_ID=31337 \
+PENDULUM_WS=ws://127.0.0.1:8000 BASE_RPC_URL=http://localhost:8545 BASE_CHAIN_ID=31337 \
 VAULT_ADDRESS=0x… GUARDIAN_PRIVATE_KEY=0x… \
 PENDULUM_START_BLOCK=123 PENDULUM_START_NONCE=0 BASE_START_BLOCK=45 \
 STATE_FILE=./monitor-state.json npm start

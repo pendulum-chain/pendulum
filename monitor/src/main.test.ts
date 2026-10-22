@@ -1143,6 +1143,32 @@ test("logs that miss a sweep hold the Base cursor too", async (t) => {
 	assert.equal(persisted().baseFromBlock, "1011");
 });
 
+test("a Base log range held past the grace pages critical", async (t) => {
+	const { base, pendulum, api, monitor, pages } = await setup(t, { env: { UNMATCHED_EVENT_GRACE_SECONDS: "0" } });
+	burn(pendulum, 0n, 100n * PEN);
+	release(base, 0n, 100n * PEN, 1_005n);
+	base.logsHead = 1_003n;
+	await monitor.poll(api);
+	await new Promise((resolve) => setTimeout(resolve, 5));
+	await monitor.poll(api);
+	const held = () => pages.filter((page) => page.subject.endsWith("BASE LOG SCAN INCOMPLETE"));
+	await until(() => held().length === 2, "two incomplete scan pages");
+	assert.deepEqual(held().map((page) => [page.subject, page.severity]), [
+		["BASE LOG SCAN INCOMPLETE", "WARNING"],
+		["CRITICAL: BASE LOG SCAN INCOMPLETE", "CRITICAL"],
+	]);
+	assert.match(held()[1].detail, /stays at block 1000 \(for \d+s\): no later Base event is matched against its burn/);
+	base.logsHead = undefined;
+	await monitor.poll(api); // the range reads in full
+	burn(pendulum, 1n, 100n * PEN, 102);
+	release(base, 1n, 100n * PEN, 1_015n);
+	base.logsHead = 1_012n;
+	base.safe = 1_020n;
+	await monitor.poll(api); // a new hold starts as a warning
+	await until(() => held().length === 3, "the next incomplete scan page");
+	assert.equal(held()[2].subject, "BASE LOG SCAN INCOMPLETE");
+});
+
 test("the conservation check still runs while a Base log range is held", async (t) => {
 	const { base, pendulum, api, monitor, subjects } = await setup(t);
 	burn(pendulum, 0n, 100n * PEN);

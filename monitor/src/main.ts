@@ -439,6 +439,8 @@ let lastBaseStallAlertMs = 0;
 let lastReadinessAlertMs = 0;
 let lastAdminScanFailureAlertMs = 0;
 let lastLogScanAlertMs = 0;
+/** Since when the Base log scan holds a range, while it does. */
+let logScanHeldSinceMs: number | undefined;
 let lastIssuanceAlertMs = 0;
 /** Once-only pages by key, each held until the webhook accepts it. */
 // ponytail: in memory; a restart re-pages what it finds again (Base admin events after the persisted cursor, pending governance items) and drops undelivered pages it does not find again.
@@ -1153,16 +1155,23 @@ async function reconcileBaseEvents(
 		let range = await readVaultRange(start, end);
 		if (range.gap) range = await readVaultRange(start, end);
 		if (range.gap) {
+			const heldMs = logScanHeldSinceMs === undefined ? 0 : Date.now() - logScanHeldSinceMs;
+			logScanHeldSinceMs ??= Date.now();
 			if (Date.now() - lastLogScanAlertMs > config.unmatchedEventGraceSeconds * 1000) {
 				lastLogScanAlertMs = Date.now();
+				// Held past the grace, no later Base event has been matched against its burn for that long.
+				const critical = heldMs > config.unmatchedEventGraceSeconds * 1000;
 				void alert(
-					"BASE LOG SCAN INCOMPLETE",
+					`${critical ? "CRITICAL: " : ""}BASE LOG SCAN INCOMPLETE`,
 					`${range.gap}; the Base RPC served logs that miss events, so the range is read again every poll ` +
-						`and the Base cursor stays at block ${start} — check the Base RPC`,
+						`and the Base cursor stays at block ${start}` +
+						(critical ? ` (for ${Math.round(heldMs / 1000)}s): no later Base event is matched against its burn` : "") +
+						" — check the Base RPC",
 				);
 			}
 			return { violation: firstViolation, incomplete: range.gap };
 		}
+		logScanHeldSinceMs = undefined;
 		const { approvals, releases } = range;
 		const observedAt = Date.now();
 		let awaitingSource: string | undefined;

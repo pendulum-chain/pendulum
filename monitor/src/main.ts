@@ -928,12 +928,15 @@ async function relayVerdict(
 }
 
 /** Anchors the source to the relay chain's record of the Pendulum head, kept
- *  as `draft.relayAnchor`, from the first relay RPC in POLKADOT_WS that
- *  answers. A record that contradicts the source counts only when the next
- *  relay RPC that answers contradicts it too, or when POLKADOT_WS lists one
- *  RPC; otherwise the poll goes on without the anchor. Pages while no new head
- *  is anchored: a warning when the relay RPCs fail or disagree, critical once
- *  none was for RELAY_ANCHOR_GRACE_SECONDS. All throttled. */
+ *  as `draft.relayAnchor`, from the first relay RPC in POLKADOT_WS whose
+ *  record anchors it; while a record does not, the next RPC is asked. A
+ *  record that contradicts the source counts only when another relay RPC's
+ *  record contradicts it too, or when POLKADOT_WS lists one RPC. A record that
+ *  anchors the source at or above the contradicting record's height outvotes
+ *  it; any other answer leaves it unconfirmed. Pages while no new head is
+ *  anchored: a warning when the relay RPCs fail or a contradiction stays
+ *  unconfirmed, critical once none was anchored for
+ *  RELAY_ANCHOR_GRACE_SECONDS; and when relay RPCs disagree. All throttled. */
 async function anchorToRelay(
 	api: ApiPromise,
 	draft: RuntimeState,
@@ -942,47 +945,52 @@ async function anchorToRelay(
 	bottom: BlockRef,
 ): Promise<void> {
 	if (!config.polkadotWs.length) return;
-	const failures: string[] = [];
-	let contradiction: { rpc: number; error: SourceIntegrityError } | undefined;
-	let reason: string | undefined;
+	const answers: string[] = [];
+	let answered = false;
+	let contradiction: { rpc: number; height: number; error: SourceIntegrityError } | undefined;
 	for (const [index, url] of config.polkadotWs.entries()) {
 		let head: BlockRef;
 		try {
 			head = await relayHead(api, url);
 		} catch (relayError) {
-			failures.push(`relay RPC ${index + 1}: ${relayError}`);
+			answers.push(`relay RPC ${index + 1}: ${relayError}`);
 			continue;
 		}
+		answered = true;
+		let verdict: string | undefined;
 		try {
-			reason = await relayVerdict(api, draft, hashes, top, bottom, head);
+			verdict = await relayVerdict(api, draft, hashes, top, bottom, head);
 		} catch (verdictError) {
 			if (!(verdictError instanceof SourceIntegrityError)) throw verdictError;
 			if (contradiction || config.polkadotWs.length === 1) throw contradiction?.error ?? verdictError;
-			contradiction = { rpc: index + 1, error: verdictError };
+			contradiction = { rpc: index + 1, height: head.number, error: verdictError };
 			continue;
 		}
-		if (contradiction) {
-			reason = `relay RPC ${contradiction.rpc} reports that ${contradiction.error.message}; relay RPC ${index + 1} does not`;
-			if (Date.now() - lastRelayDisagreementAlertMs > config.graceSeconds * 1000) {
-				lastRelayDisagreementAlertMs = Date.now();
-				await alert(
-					"RELAY RPCS DISAGREE",
-					`${reason}; the Pendulum source is used without the relay-chain anchor until they agree — check relay ` +
-						`RPC ${contradiction.rpc}`,
-				);
-			}
-		} else if (reason === undefined) {
-			draft.relayAnchor = head;
-			lastRelayAnchorMs = Date.now();
-			return;
+		if (verdict === undefined && contradiction && head.number < contradiction.height) {
+			verdict = `its Pendulum head ${head.number} lies below the contradicting record`;
 		}
-		break;
+		if (verdict !== undefined) {
+			answers.push(`relay RPC ${index + 1}: ${verdict}`);
+			continue;
+		}
+		draft.relayAnchor = head;
+		lastRelayAnchorMs = Date.now();
+		if (contradiction && Date.now() - lastRelayDisagreementAlertMs > config.graceSeconds * 1000) {
+			lastRelayDisagreementAlertMs = Date.now();
+			await alert(
+				"RELAY RPCS DISAGREE",
+				`relay RPC ${contradiction.rpc} reports that ${contradiction.error.message}; relay RPC ${index + 1} records ` +
+					`${head.hash} as Pendulum block ${head.number}, on the source's chain, and the source is anchored to ` +
+					"that record — one of the two relay RPCs is wrong, check both",
+			);
+		}
+		return;
 	}
-	if (reason === undefined) {
-		reason = contradiction
-			? `relay RPC ${contradiction.rpc} reports that ${contradiction.error.message}, and no other relay RPC ` +
-				`answered to confirm it (${failures.join("; ")})`
-			: `the relay chain cannot be read: ${failures.join("; ")}`;
+	const reason = contradiction
+		? `relay RPC ${contradiction.rpc} reports that ${contradiction.error.message}, and no other relay RPC confirms ` +
+			`or outvotes it${answers.length ? ` (${answers.join("; ")})` : ""}`
+		: `${answered ? "" : "the relay chain cannot be read: "}${answers.join("; ")}`;
+	if (contradiction || !answered) {
 		if (Date.now() - lastRelayAlertMs > config.graceSeconds * 1000) {
 			lastRelayAlertMs = Date.now();
 			await alert(

@@ -1202,14 +1202,56 @@ async function twoRelaySetup(t: { after(fn: () => void): void }, heads: Array<((
 const honestHead = (pendulum: Pendulum) => ({ number: pendulum.finalized, hash: pendulumHash({}, pendulum.finalized) });
 const forkedHead = (pendulum: Pendulum) => ({ number: pendulum.finalized, hash: pendulumHash({ forkFrom: 0 }, pendulum.finalized) });
 
-test("a relay contradiction the next relay RPC does not confirm only warns, without the anchor", async (t) => {
+test("a relay contradiction the next relay RPC outvotes warns, and that RPC's record anchors the source", async (t) => {
 	const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [forkedHead, honestHead]);
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api);
 	assert.deepEqual(pages.map((page) => [page.subject, page.severity]), [["RELAY RPCS DISAGREE", "WARNING"]]);
-	assert.match(pages[0].detail, /^relay RPC 1 reports that the relay chain records 0x0+10+65 as Pendulum block 101, .*; relay RPC 2 does not;/);
-	assert.equal(persisted().relayAnchor, undefined);
+	assert.match(
+		pages[0].detail,
+		/^relay RPC 1 reports that the relay chain records 0x0+10+65 as Pendulum block 101, .*; relay RPC 2 records 0x0+65 as Pendulum block 101, on the source's chain, .* check both$/,
+	);
+	assert.deepEqual(persisted().relayAnchor, { number: 101, hash: pendulumHash({}, 101) });
 	assert.equal(persisted().lastPendulumBlock, 101);
+});
+
+test("a relay record below a contradicting one does not outvote it", async (t) => {
+	const below = (pendulum: Pendulum) => ({ number: pendulum.finalized - 1, hash: pendulumHash({}, pendulum.finalized - 1) });
+	const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [forkedHead, below]);
+	burn(pendulum, 0n, 100n * PEN, 102);
+	await monitor.poll(api);
+	assert.deepEqual(pages.map((page) => page.subject), ["RELAY ANCHOR UNAVAILABLE"]);
+	assert.match(pages[0].detail, /no other relay RPC confirms or outvotes it \(relay RPC 2: its Pendulum head 101 lies below the contradicting record\);/);
+	assert.equal(persisted().relayAnchor, undefined);
+});
+
+/** A relay RPC whose record stays at the source's block 101. */
+const stuckHead = () => ({ number: 101, hash: pendulumHash({}, 101) });
+
+test("a relay contradiction that only a stuck relay RPC answers stays unconfirmed", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [honestHead, stuckHead]);
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api); // relay RPC 1 anchors block 101
+	pendulum.forkFrom = 102; // the source moves to another chain...
+	burn(pendulum, 1n, 999n * PEN, 102); // ...with a fabricated burn, which relay RPC 1 contradicts
+	await monitor.poll(api);
+	assert.deepEqual(pages.map((page) => page.subject), ["RELAY ANCHOR UNAVAILABLE"]);
+	assert.match(
+		pages[0].detail,
+		/^relay RPC 1 reports that the relay chain records 0x0+66 as Pendulum block 102, the source's chain has 0x0+10+66, and no other relay RPC confirms or outvotes it \(relay RPC 2: the relay chain's Pendulum head 101 is not newer\);/,
+	);
+	assert.deepEqual(persisted().relayAnchor, { number: 101, hash: pendulumHash({}, 101) });
+});
+
+test("a relay RPC whose record does not anchor the source leaves it to the next one", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [stuckHead, honestHead]);
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api); // relay RPC 1 anchors block 101
+	burn(pendulum, 1n, 100n * PEN, 102);
+	await monitor.poll(api); // relay RPC 1 stays there
+	assert.deepEqual(pages, []);
+	assert.deepEqual(persisted().relayAnchor, { number: 102, hash: pendulumHash({}, 102) });
+	assert.equal(persisted().lastPendulumBlock, 102);
 });
 
 test("a relay contradiction the next relay RPC confirms pages critical", async (t) => {
@@ -1225,7 +1267,7 @@ test("a relay contradiction no other relay RPC can confirm only warns", async (t
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api);
 	assert.deepEqual(pages.map((page) => page.subject), ["RELAY ANCHOR UNAVAILABLE"]);
-	assert.match(pages[0].detail, /and no other relay RPC answered to confirm it \(relay RPC 2: Error: relay RPC unavailable\)/);
+	assert.match(pages[0].detail, /and no other relay RPC confirms or outvotes it \(relay RPC 2: Error: relay RPC unavailable\)/);
 	assert.equal(persisted().lastPendulumBlock, 101);
 });
 

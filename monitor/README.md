@@ -16,7 +16,7 @@ Checks every poll:
 | Unreleasable burns | A burn to the zero or vault address can never be approved or released; it is paged once and excluded from the pending count so it cannot page liveness forever or block RB-7. | Alert once |
 | Treasury destination | With `EXPECTED_TREASURY_DESTINATION` set, every finalized treasury migration (a `MigrationInitiated` whose `who` is the treasury account, `PalletId(*b"py/trsry")`) must pay that Base address. It is checked when the burn is ingested, before the attestors can release it; while the pause is not confirmed, the monitor holds at that block, and the violation pages again every poll saying so. | Alert + auto-pause (`TREASURY DESTINATION VIOLATION`) |
 | Pendulum source | The finalized Pendulum view must stay fresh and readable. While it cannot be read (an RPC error, a nonce discontinuity, an event-shape change), the Base-side checks — vault balance and its auto-pause, Base view, auto-pause readiness, vault admin events, governance queue — still run, and Base events are reconciled against the last view read in full: an unreadable source counts as a stalled one, so a mismatch on a known nonce counts at once and an unknown nonce after `UNMATCHED_EVENT_GRACE_SECONDS`. M2a and liveness wait for the source. | Alert, throttled: `PENDULUM SOURCE VIEW STALLED` once the view is older than `SOURCE_STALE_ALERT_SECONDS`, `PENDULUM SOURCE UNREADABLE` on a failure |
-| Pendulum chain | Every finalized block the monitor ingests is read at a hash it verified against the blocks it ingested before and, where configured, a second node and the relay chain; a second node must also agree on the migration totals and on the migration events of each ingested block (see [Pendulum chain verification](#pendulum-chain-verification)). | Alert (`CRITICAL: PENDULUM SOURCE CONTRADICTED`), throttled; nothing from the source is ingested, and it is treated as unreadable (see Pendulum source) until it verifies again. A second node or relay RPC that does not answer only warns, throttled (`PENDULUM CROSS-CHECK UNAVAILABLE`, `RELAY ANCHOR UNAVAILABLE`), and so do relay RPCs that disagree (`RELAY RPCS DISAGREE`); `CRITICAL: RELAY ANCHOR STALE` once no head was anchored for `RELAY_ANCHOR_GRACE_SECONDS` |
+| Pendulum chain | Every finalized block the monitor ingests is read at a hash it verified against the blocks it ingested before and, where configured, a second node and the relay chain; a second node must also agree on the migration totals and on the migration events of each ingested block (see [Pendulum chain verification](#pendulum-chain-verification)). | Alert (`CRITICAL: PENDULUM SOURCE CONTRADICTED`), throttled; nothing from the source is ingested, and it is treated as unreadable (see Pendulum source) until it verifies again. A second node or relay RPC that does not answer only warns, throttled (`PENDULUM CROSS-CHECK UNAVAILABLE`, `RELAY ANCHOR UNAVAILABLE`), and so does a relay RPC outvoted by another (`RELAY RPCS DISAGREE`); `CRITICAL: RELAY ANCHOR STALE` once no head was anchored for `RELAY_ANCHOR_GRACE_SECONDS` |
 | Base log completeness | In every scanned block range the `Released` amounts must add up to the growth of `totalReleased`, and the `RemainderSwept` amounts to that of `totalSwept`, between the block before the range and its last block. A range whose logs do not (a backend serving truncated logs) is read once more, then held: the Base cursor stays on it and liveness waits until a read accounts for the totals; M2a still runs. | Alert (`BASE LOG SCAN INCOMPLETE`), throttled; `CRITICAL: BASE LOG SCAN INCOMPLETE` once a range has been held for longer than `UNMATCHED_EVENT_GRACE_SECONDS`, since no later Base event is matched against its burn meanwhile |
 | Base view | The safe/finalized Base block must not be older than `BASE_STALE_ALERT_SECONDS`: a view that stops advancing hides every later vault event while every check still passes at the old block. | Alert (`BASE VIEW STALLED`), throttled |
 | Auto-pause readiness | At startup and every poll: the Base RPC serves `BASE_CHAIN_ID` and, with a guardian key configured, the key parses, is `vault.guardian()` and holds at least `GUARDIAN_MIN_BALANCE_WEI`. A read that fails pages as well and never stops the poll's other checks. | Alert (`AUTO-PAUSE NOT READY`), throttled; `AUTO-PAUSE DISABLED` once at startup without a key |
@@ -45,16 +45,19 @@ itself:
   `SOURCE_STALE_ALERT_SECONDS` counts as unavailable.
 - **Relay-chain anchor** (`POLKADOT_WS`). Each poll reads the Pendulum head
   that the Polkadot relay chain recorded at its finalized block
-  (`paras.heads(PENDULUM_PARA_ID)`), from the first relay RPC that answers. The
-  source's chain must have that hash at that height. A head above the source's
-  finalized head counts once the source's best chain holds it, and its chain
-  must then pass through the finalized head. The newest such head is kept in
-  the state file, and the chain must keep passing through it, also while it
-  lies above the finalized head. Blocks ingested while no relay RPC answered
-  are tied to the next head that arrives by the same walk. A head that
-  contradicts the source counts only when the next relay RPC that answers
-  contradicts it too, or when `POLKADOT_WS` lists one RPC; otherwise
-  `RELAY RPCS DISAGREE` pages and the poll goes on without the anchor.
+  (`paras.heads(PENDULUM_PARA_ID)`), asking the relay RPCs in turn until one
+  head anchors the source. The source's chain must have that hash at that
+  height. A head above the source's finalized head counts once the source's
+  best chain holds it, and its chain must then pass through the finalized
+  head. The newest such head is kept in the state file, and the chain must
+  keep passing through it, also while it lies above the finalized head.
+  Blocks ingested while no relay RPC answered are tied to the next head that
+  arrives by the same walk. A head that contradicts the source counts only
+  when another relay RPC's head contradicts it too, or when `POLKADOT_WS`
+  lists one RPC. A relay RPC whose head anchors the source at or above the
+  contradicting head's height outvotes it: `RELAY RPCS DISAGREE` pages and
+  that head anchors the source. Any other answer leaves the contradiction
+  unconfirmed.
 
 A contradiction pages `CRITICAL: PENDULUM SOURCE CONTRADICTED`, nothing from
 the source is ingested, and the source counts as unreadable until it verifies
@@ -117,8 +120,8 @@ subject that starts with `CRITICAL`; everything else is a `WARNING`.
 | `PENDULUM SOURCE VIEW STALLED`, `PENDULUM SOURCE UNREADABLE`, `BASE VIEW STALLED`, `BASE ADMIN SCAN FAILED`, `BASE LOG SCAN INCOMPLETE` | The monitor is going blind on one chain |
 | `CRITICAL: BASE LOG SCAN INCOMPLETE`, `CRITICAL: BASE ADMIN SCAN FAILED` | For longer than `UNMATCHED_EVENT_GRACE_SECONDS`, a Base block range has been held, so no later Base event is matched against its burn, or the admin scan has failed, so no vault admin event or scheduled governance operation is paged while its veto window runs; fix the Base RPC |
 | `CRITICAL: PENDULUM SOURCE CONTRADICTED` | The Pendulum source contradicts the chain the monitor verified; stop trusting that node |
-| `PENDULUM CROSS-CHECK UNAVAILABLE`, `RELAY ANCHOR UNAVAILABLE` | The second Pendulum node does not answer or its finalized head is stale, or every relay RPC does not answer, or the only relay RPC that answers records a head that contradicts the source, so the source is used without that check |
-| `RELAY RPCS DISAGREE` | One relay RPC records a Pendulum head that contradicts the source and the next one that answers does not; the source is used without the anchor until they agree. Check the first one |
+| `PENDULUM CROSS-CHECK UNAVAILABLE`, `RELAY ANCHOR UNAVAILABLE` | The second Pendulum node does not answer or its finalized head is stale, or every relay RPC does not answer, or a relay RPC records a head that contradicts the source and no other relay RPC confirms or outvotes it, so the source is used without that check |
+| `RELAY RPCS DISAGREE` | One relay RPC records a Pendulum head that contradicts the source, and another records one at or above that height on the source's chain, which anchors the source. One of them is wrong; check both |
 | `CRITICAL: RELAY ANCHOR STALE` | No Pendulum head was checked against the relay chain for `RELAY_ANCHOR_GRACE_SECONDS` |
 | `AUTO-PAUSE NOT READY`, `AUTO-PAUSE DISABLED` | The next violation would not pause the vault automatically |
 | `SOURCE SUPPLY GREW`, `CRITICAL: unreleasable migration burned on Pendulum` | Supply problems at the source |

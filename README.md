@@ -62,9 +62,8 @@ To run the collator, execute:
 --collator \
 --allow-private-ipv4 \
 --unsafe-ws-external \
---rpc-cors all \
---rpc-external \
---rpc-methods Unsafe \
+--unsafe-rpc-external \
+--rpc-methods Safe \
 --name <ASSIGN_A_NAME> \
 --ws-port <P_WS_PORT> --port <P_PORT> --rpc-port <P_RPC_PORT> \
 --chain <P_SPEC_RAW.json> \
@@ -90,9 +89,8 @@ An example for Amplitude will look like this:
 --collator \
 --allow-private-ipv4 \
 --unsafe-ws-external \
---rpc-cors all \
---rpc-external \
---rpc-methods Unsafe \
+--unsafe-rpc-external \
+--rpc-methods Safe \
 --name amplitude-collator-1 \
 --ws-port 9945 --port 30335 --rpc-port 9935 \
 --chain res/amplitude-spec-raw.json \

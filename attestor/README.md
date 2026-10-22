@@ -130,10 +130,10 @@ WantedBy=multi-user.target
   this process did not send) moves on to the next nonce at once, at most five
   in a row, without spending a bump. A node refusing a send for its price, an
   underpriced replacement or a full pool is retried at the next bump instead
-  of being fatal. Transactions
-  in flight are kept in memory only: after a restart, an approval whose
-  transaction is still pending is sent again at the next nonce, so a pending
-  transaction stuck below the cap has to be replaced by hand.
+  of being fatal. Transactions in flight are kept in memory only: after a
+  restart, an approval whose transaction is still pending is sent again at the
+  next nonce, so a pending transaction stuck below the cap has to be replaced
+  by hand.
 - Checkpoints are atomically replaced, bound to the Pendulum genesis plus the
   configured Base chain and vault, and malformed files are fatal. Never delete or replace one merely to
   clear an alert; reconcile it against both chains first.

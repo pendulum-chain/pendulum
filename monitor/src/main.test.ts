@@ -363,6 +363,14 @@ test("a vault balance deficit pages and asks for the auto-pause", async (t) => {
 	assert.deepEqual(subjects(), ["VAULT BALANCE DEFICIT", "AUTO-PAUSE UNAVAILABLE"]);
 });
 
+test("a Pendulum failure pages on its own and the vault balance check still runs", async (t) => {
+	const { base, pendulum, api, monitor, subjects } = await setup(t);
+	pendulum.failure = new Error("node unreachable");
+	base.vaultBalance -= 1n;
+	await monitor.poll(api);
+	assert.deepEqual(subjects(), ["PENDULUM SOURCE UNREADABLE", "VAULT BALANCE DEFICIT", "AUTO-PAUSE UNAVAILABLE"]);
+});
+
 /** A timelock operation scheduling the vault's `pause()`, ready in 48 h. */
 function schedule(base: Base, id: Hex, blockNumber = 1_005n): void {
 	const call = { target: VAULT, value: 0n, data: "0x8456cb59", predecessor: toHex(0, { size: 32 }), delay: 172_800n };

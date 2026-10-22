@@ -322,6 +322,7 @@ function persistState(state: RuntimeState): void {
 let state: RuntimeState;
 let multicallUnavailable = false;
 let lastSourceStallAlertMs = 0;
+let lastSourceFailureAlertMs = 0;
 let lastIssuanceAlertMs = 0;
 /** The governance-queue scan runs ahead of everything else in a poll and
  *  throws on failure, so the persisted Base cursor never passes a range it has
@@ -891,12 +892,15 @@ async function activeApprovalCounts(migrations: MigrationRecord[], blockNumber: 
 	return counts;
 }
 
-async function check(api: ApiPromise): Promise<void> {
-	const confirmedBase = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
-	if (confirmedBase.number === null) throw new Error(`${config.baseFinalityTag} Base block has no number`);
-	const baseBlock = confirmedBase.number;
-	await watchTimelock(baseBlock);
+interface SourceView {
+	finalizedBlock: number;
+	timestampMs: number;
+	totalMigrated: bigint;
+}
 
+/** Reads finalized Pendulum and ingests its new migrations into `draft`.
+ *  Throws on any read, decode or continuity failure. */
+async function readSource(api: ApiPromise, draft: RuntimeState): Promise<SourceView> {
 	// Read Pendulum after choosing the Base snapshot. TotalMigrated can only
 	// grow, so this ordering cannot false-positive if a burn finalizes mid-poll.
 	const finalizedHash = await api.rpc.chain.getFinalizedHead();
@@ -929,7 +933,6 @@ async function check(api: ApiPromise): Promise<void> {
 			await alert("pendulum governance watch failed", `${governanceError}`);
 		}
 	}
-	const draft = cloneState(state);
 	await ingestPendulumEvents(api, draft, finalizedBlock);
 	const [totalMigratedValue, chainNextNonceValue, totalIssuanceValue] = await Promise.all([
 		apiAt.query.tokenMigration.totalMigrated(),
@@ -965,6 +968,32 @@ async function check(api: ApiPromise): Promise<void> {
 				`source and can be burned against the fixed-supply vault — investigate before it migrates (RB-3)`,
 		);
 	}
+	return { finalizedBlock, timestampMs: sourceFinalizedTsMs, totalMigrated };
+}
+
+async function check(api: ApiPromise): Promise<void> {
+	const confirmedBase = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
+	if (confirmedBase.number === null) throw new Error(`${config.baseFinalityTag} Base block has no number`);
+	const baseBlock = confirmedBase.number;
+	await watchTimelock(baseBlock);
+
+	// A Pendulum failure must not switch off the Base-side checks: the vault
+	// balance check and its pause run without the source. Reconciliation, M2a
+	// and liveness need the source and wait for it.
+	let draft = cloneState(state);
+	let source: SourceView | undefined;
+	try {
+		source = await readSource(api, draft);
+	} catch (sourceError) {
+		draft = cloneState(state); // drops a half-ingested block; the 200-block checkpoints already moved `state`
+		if (Date.now() - lastSourceFailureAlertMs > config.unmatchedEventGraceSeconds * 1000) {
+			lastSourceFailureAlertMs = Date.now();
+			await alert(
+				"PENDULUM SOURCE UNREADABLE",
+				`${sourceError}; the vault balance check continues, but Base events are not reconciled until the source reads again`,
+			);
+		}
+	}
 
 	const [totalReleased, totalSwept, conversionFactor, tokenAddress] = await Promise.all([
 		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalReleased", blockNumber: baseBlock }),
@@ -973,7 +1002,9 @@ async function check(api: ApiPromise): Promise<void> {
 		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "token", blockNumber: baseBlock }),
 	]);
 
-	const reconciliation = await reconcileBaseEvents(draft, baseBlock, conversionFactor, sourceFinalizedTsMs);
+	const reconciliation = source
+		? await reconcileBaseEvents(draft, baseBlock, conversionFactor, source.timestampMs)
+		: { violation: undefined, awaitingSource: undefined };
 	if (reconciliation.violation) {
 		if (await securityViolation("MIGRATION TUPLE VIOLATION", reconciliation.violation)) {
 			state = draft;
@@ -1002,6 +1033,8 @@ async function check(api: ApiPromise): Promise<void> {
 		}
 		return;
 	}
+	if (!source) return;
+	const { finalizedBlock, totalMigrated } = source;
 	if (reconciliation.awaitingSource) {
 		state = draft;
 		persistState(state);

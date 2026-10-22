@@ -7,6 +7,7 @@ import {PENGovernor} from "../src/PENGovernor.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MigrationVault} from "../src/MigrationVault.sol";
+import {requireMultisigSafe} from "./SafeCheck.sol";
 
 /// @notice Deploys the on-chain governance stack (PRD rollout phase 5):
 ///         TimelockController + PENGovernor, wired so that only the Governor
@@ -66,8 +67,6 @@ contract DeployGovernance is Script {
     // Longer periods are a units slip (milliseconds land ~1000x further), and
     // a governor whose votes never end could not vote to shorten them.
     uint256 internal constant MAX_PERIOD = 30 days;
-    // A 1-of-n canceller is a single key holding a veto over every proposal.
-    uint256 internal constant MIN_CANCELLER_THRESHOLD = 2;
 
     function run() external returns (TimelockController timelock, PENGovernor governor) {
         bool testDeploy = vm.envOr("TEST_DEPLOY", false);
@@ -110,10 +109,8 @@ contract DeployGovernance is Script {
         require(canceller != msg.sender, "TIMELOCK_CANCELLER must not be the deployer");
         require(canceller != token && canceller != address(vault), "TIMELOCK_CANCELLER must not be PEN or the vault");
         require(canceller != vault.guardian() || testDeploy, "TIMELOCK_CANCELLER must be separate from the guardian");
-        require(
-            testDeploy || _safeThreshold(canceller) >= MIN_CANCELLER_THRESHOLD,
-            "TIMELOCK_CANCELLER Safe threshold is below 2"
-        );
+        // A 1-of-n canceller is a single key holding a veto over every proposal.
+        if (!testDeploy) requireMultisigSafe(canceller, "TIMELOCK_CANCELLER");
 
         // Broadcast as msg.sender (forge sets it to --sender or the single
         // signer), the deployer that is temporary admin so the roles below
@@ -148,17 +145,5 @@ contract DeployGovernance is Script {
 
         console.log("TimelockController: ", address(timelock));
         console.log("PENGovernor:        ", address(governor));
-    }
-
-    // A Safe answers getThreshold() with its non-zero threshold. An EIP-7702
-    // delegated EOA stays a single key whatever it delegates to.
-    function _safeThreshold(address account) internal view returns (uint256) {
-        require(account.code.length > 0, "TIMELOCK_CANCELLER has no code on this chain (create the Safe first)");
-        require(bytes3(account.code) != 0xef0100, "TIMELOCK_CANCELLER is an EIP-7702 delegated EOA, not a Safe");
-        (bool ok, bytes memory threshold) = account.staticcall(abi.encodeWithSignature("getThreshold()"));
-        require(ok && threshold.length == 32, "TIMELOCK_CANCELLER is not a Safe (getThreshold() failed)");
-        uint256 value = abi.decode(threshold, (uint256));
-        require(value > 0, "TIMELOCK_CANCELLER Safe has threshold 0 (not set up)");
-        return value;
     }
 }

@@ -1436,15 +1436,23 @@ test("a relay contradiction the next relay RPC outvotes warns, and that RPC's re
 	assert.equal(persisted().lastPendulumBlock, 101);
 });
 
-test("a relay record below a contradicting one does not outvote it", async (t) => {
+test("a relay record below a contradicting one does not outvote it, and anchors the source up to its own height", async (t) => {
 	const below = (pendulum: Pendulum) => ({ number: pendulum.finalized - 1, hash: pendulumHash({}, pendulum.finalized - 1) });
-	const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [forkedHead, below]);
-	burn(pendulum, 0n, 100n * PEN, 102);
-	await monitor.poll(api);
-	assert.deepEqual(pages.map((page) => page.subject), ["RELAY ANCHOR UNAVAILABLE"]);
-	assert.match(pages[0].detail, /no other relay RPC confirms or outvotes it \(relay RPC 2: its Pendulum head 101 lies below the contradicting record\);/);
-	assert.equal(persisted().relayAnchor, undefined);
-	assert.equal(persisted().lastPendulumBlock, 100);
+	for (const [heads, contradicting, lower] of [[[forkedHead, below], 1, 2], [[below, forkedHead], 2, 1]] as const) {
+		const { pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [...heads]);
+		burn(pendulum, 0n, 100n * PEN, 102);
+		await monitor.poll(api);
+		assert.deepEqual(pages.map((page) => page.subject), ["RELAY ANCHOR UNAVAILABLE"]);
+		assert.match(
+			pages[0].detail,
+			new RegExp(
+				`^relay RPC ${contradicting} reports that .* no other relay RPC confirms or outvotes it \\(relay RPC ${lower}: ` +
+					"its Pendulum head 101 lies below the contradicting record\\); no Pendulum block after 101 is ingested",
+			),
+		);
+		assert.deepEqual(persisted().relayAnchor, { number: 101, hash: pendulumHash({}, 101) });
+		assert.equal(persisted().lastPendulumBlock, 101);
+	}
 });
 
 /** A relay RPC whose record stays at the source's block 101. */
@@ -1476,6 +1484,20 @@ test("a relay RPC whose record does not anchor the source leaves it to the next 
 	assert.equal(pages.length, 0, JSON.stringify(pages));
 	assert.deepEqual(persisted().relayAnchor, { number: 102, hash: pendulumHash({}, 102) });
 	assert.equal(persisted().lastPendulumBlock, 102);
+});
+
+test("a relay RPC whose record lags the source's head leaves the newer blocks to the next one", async (t) => {
+	const lagging = (pendulum: Pendulum) => ({ number: pendulum.finalized - 70, hash: pendulumHash({}, pendulum.finalized - 70) });
+	const { base, pendulum, api, monitor, pages, persisted } = await twoRelaySetup(t, [lagging, honestHead]);
+	burn(pendulum, 0n, 100n * PEN, 190);
+	pendulum.finalized = 200;
+	release(base, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.equal(pages.length, 0, JSON.stringify(pages));
+	assert.deepEqual(persisted().relayAnchor, { number: 200, hash: pendulumHash({}, 200) });
+	assert.equal(persisted().lastPendulumBlock, 200);
+	assert.deepEqual(persisted().migrations, []);
+	assert.equal(persisted().baseFromBlock, "1011");
 });
 
 test("a relay contradiction the next relay RPC confirms pages critical", async (t) => {

@@ -940,20 +940,21 @@ async function relayVerdict(
 }
 
 /** Anchors the source to the relay chain's record of the Pendulum head, kept
- *  as `draft.relayAnchor`, from the first relay RPC in POLKADOT_WS whose
- *  record anchors it; while a record does not, the next RPC is asked. A relay
- *  RPC whose finalized relay block is older than SOURCE_STALE_ALERT_SECONDS
- *  counts as not answering. A record that contradicts the source counts only
- *  when another relay RPC's record contradicts it too, or when POLKADOT_WS
- *  lists one RPC. A record that anchors the source at or above the
- *  contradicting record's height outvotes it; any other answer leaves it
- *  unconfirmed. Resolves to the height up to which the relay chain confirms
- *  the source's chain `hashes`, walked down from `top` to `bottom`: the newest
- *  anchored head, or no higher than `bottom` before the first; undefined while
- *  no relay RPC answers. Pages while no new head is anchored and the source's
- *  blocks wait for one, a contradiction stays unconfirmed or no relay RPC
- *  answers: a warning, critical once none was anchored for
- *  RELAY_ANCHOR_GRACE_SECONDS; and when relay RPCs disagree. All throttled. */
+ *  as `draft.relayAnchor`: the highest record that anchors it, from the relay
+ *  RPCs in POLKADOT_WS, asked in turn until a record anchors the source's
+ *  head `top`. A relay RPC whose finalized relay block is older than
+ *  SOURCE_STALE_ALERT_SECONDS counts as not answering. A record that
+ *  contradicts the source counts only when another relay RPC's record
+ *  contradicts it too, or when POLKADOT_WS lists one RPC. A record that
+ *  anchors the source at or above the contradicting record's height outvotes
+ *  it; otherwise it stays unconfirmed. Resolves to the height up to which the
+ *  relay chain confirms the source's chain `hashes`, walked down from `top` to
+ *  `bottom`: the newest anchored head, or no higher than `bottom` before the
+ *  first; undefined while no relay RPC answers. Pages while no new head is
+ *  anchored and the source's blocks wait for one, a contradiction stays
+ *  unconfirmed or no relay RPC answers: a warning, critical once none was
+ *  anchored for RELAY_ANCHOR_GRACE_SECONDS; and when relay RPCs disagree. All
+ *  throttled. */
 async function anchorToRelay(
 	api: ApiPromise,
 	draft: RuntimeState,
@@ -964,8 +965,10 @@ async function anchorToRelay(
 	if (!config.polkadotWs.length) return undefined;
 	const answers: string[] = [];
 	let answered = false;
+	let anchor: (BlockRef & { rpc: number }) | undefined;
 	let contradiction: { rpc: number; height: number; error: SourceIntegrityError } | undefined;
 	for (const [index, url] of config.polkadotWs.entries()) {
+		if (anchor && anchor.number >= Math.max(top.number, contradiction?.height ?? 0)) break;
 		let head: BlockRef & { ageMs: number };
 		try {
 			head = await relayHead(api, url);
@@ -987,25 +990,26 @@ async function anchorToRelay(
 			contradiction = { rpc: index + 1, height: head.number, error: verdictError };
 			continue;
 		}
-		if (verdict === undefined && contradiction && head.number < contradiction.height) {
-			verdict = `its Pendulum head ${head.number} lies below the contradicting record`;
-		}
-		if (verdict !== undefined) {
-			answers.push(`relay RPC ${index + 1}: ${verdict}`);
-			continue;
-		}
-		draft.relayAnchor = { number: head.number, hash: head.hash };
+		if (verdict !== undefined) answers.push(`relay RPC ${index + 1}: ${verdict}`);
+		else if (!anchor || head.number > anchor.number) anchor = { number: head.number, hash: head.hash, rpc: index + 1 };
+	}
+	if (anchor) {
+		draft.relayAnchor = { number: anchor.number, hash: anchor.hash };
 		lastRelayAnchorMs = Date.now();
-		if (contradiction && Date.now() - lastRelayDisagreementAlertMs > config.graceSeconds * 1000) {
-			lastRelayDisagreementAlertMs = Date.now();
-			await alert(
-				"RELAY RPCS DISAGREE",
-				`relay RPC ${contradiction.rpc} reports that ${contradiction.error.message}; relay RPC ${index + 1} records ` +
-					`${head.hash} as Pendulum block ${head.number}, on the source's chain, and the source is anchored to ` +
-					"that record — one of the two relay RPCs is wrong, check both",
-			);
+		if (!contradiction) return anchor.number;
+		if (anchor.number >= contradiction.height) {
+			if (Date.now() - lastRelayDisagreementAlertMs > config.graceSeconds * 1000) {
+				lastRelayDisagreementAlertMs = Date.now();
+				await alert(
+					"RELAY RPCS DISAGREE",
+					`relay RPC ${contradiction.rpc} reports that ${contradiction.error.message}; relay RPC ${anchor.rpc} records ` +
+						`${anchor.hash} as Pendulum block ${anchor.number}, on the source's chain, and the source is anchored to ` +
+						"that record — one of the two relay RPCs is wrong, check both",
+				);
+			}
+			return anchor.number;
 		}
-		return head.number;
+		answers.push(`relay RPC ${anchor.rpc}: its Pendulum head ${anchor.number} lies below the contradicting record`);
 	}
 	const reason = contradiction
 		? `relay RPC ${contradiction.rpc} reports that ${contradiction.error.message}, and no other relay RPC confirms ` +

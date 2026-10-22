@@ -45,22 +45,24 @@ itself:
   `SOURCE_STALE_ALERT_SECONDS` counts as unavailable.
 - **Relay-chain anchor** (`POLKADOT_WS`). Each poll reads the Pendulum head
   that the Polkadot relay chain recorded at its finalized block
-  (`paras.heads(PENDULUM_PARA_ID)`), asking the relay RPCs in turn until one
-  head anchors the source. A relay RPC whose finalized relay block is older
-  than `SOURCE_STALE_ALERT_SECONDS` counts as not answering. The source's
-  chain must have that hash at that height. A head above the source's
-  finalized head counts once the source's best chain holds it, and its chain
-  must then pass through the finalized head. The newest such head is kept in
-  the state file, and the chain must keep passing through it, also while it
-  lies above the finalized head. Blocks ingested while no relay RPC answered
-  are tied to the next head that arrives by the same walk; a head more than
-  100 blocks below the block ingested last is not used. A head that
-  contradicts the source counts only when another relay RPC's head
+  (`paras.heads(PENDULUM_PARA_ID)`), asking the relay RPCs in turn until a
+  head at or above the source's finalized head anchors it; the highest head
+  that anchors the source is used. A relay RPC whose finalized relay block is
+  older than `SOURCE_STALE_ALERT_SECONDS` counts as not answering. The
+  source's chain must have that hash at that height. A head above the
+  source's finalized head counts once the source's best chain holds it, and
+  its chain must then pass through the finalized head. The newest such head
+  is kept in the state file, and the chain must keep passing through it,
+  also while it lies above the finalized head. Blocks ingested while no relay
+  RPC answered are tied to the next head that arrives by the same walk; a
+  head more than 100 blocks below the block ingested last is not used. A
+  head that contradicts the source counts only when another relay RPC's head
   contradicts it too, or when `POLKADOT_WS` lists one RPC. A relay RPC whose
   head anchors the source at or above the contradicting head's height
   outvotes it: `RELAY RPCS DISAGREE` pages and that head anchors the source.
-  Any other answer leaves the contradiction unconfirmed. No block above the
-  newest anchored head is ingested.
+  Any other answer leaves the contradiction unconfirmed; a lower head still
+  anchors the source up to its own height. No block above the newest
+  anchored head is ingested.
 
 Every block the monitor ingests is confirmed by each checker that answers,
 and the values the checks use (the view's timestamp, `nextNonce`,

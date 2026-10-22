@@ -693,6 +693,10 @@ interface BlockRef {
  *  so far, the second node's or the relay chain's. Handled as unreadable. */
 class SourceIntegrityError extends Error {}
 
+/** The source holds at a block whose violation must pause the vault first;
+ *  the violation's own page says so. */
+class PauseHold extends Error {}
+
 /** Bound on connecting to, and on each read from, the nodes of the integrity checks. */
 const NODE_TIMEOUT_MS = 20_000;
 
@@ -1068,9 +1072,10 @@ async function ingestPendulumEvents(
 				const paused = await securityViolation(
 					"TREASURY DESTINATION VIOLATION",
 					`treasury migration nonce ${nonce} in finalized Pendulum block ${block} pays ${amountValue.toBigInt()} ` +
-						`pallet units to ${recipient}, not EXPECTED_TREASURY_DESTINATION ${expectedTreasury}`,
+						`pallet units to ${recipient}, not EXPECTED_TREASURY_DESTINATION ${expectedTreasury}; the monitor ` +
+						"holds at that block until the vault is paused",
 				);
-				if (!paused) throw new Error(`the vault is not confirmed paused after treasury migration nonce ${nonce}`);
+				if (!paused) throw new PauseHold(`holding at Pendulum block ${block} until the vault is paused`);
 			}
 			if (recipient === ZERO_ADDRESS || recipient.toLowerCase() === config.vaultAddress.toLowerCase()) {
 				// The vault deterministically rejects this tuple (ZeroAddress /
@@ -1806,7 +1811,8 @@ async function check(api: ApiPromise): Promise<boolean> {
 		const consequence = `Base events are checked against the last Pendulum view read in full: one whose nonce ` +
 			`that view lacks pauses the vault ${config.unmatchedEventGraceSeconds}s after its first sighting, and M2a ` +
 			"and liveness are skipped";
-		if (contradicted && Date.now() - lastSourceIntegrityAlertMs > config.unmatchedEventGraceSeconds * 1000) {
+		if (sourceError instanceof PauseHold) log(sourceError.message);
+		else if (contradicted && Date.now() - lastSourceIntegrityAlertMs > config.unmatchedEventGraceSeconds * 1000) {
 			lastSourceIntegrityAlertMs = Date.now();
 			await alert(
 				"CRITICAL: PENDULUM SOURCE CONTRADICTED",

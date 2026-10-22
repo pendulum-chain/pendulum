@@ -1571,15 +1571,17 @@ test("a treasury migration to any but the expected address pages and pauses", as
 });
 
 test("while the pause after a treasury violation is not confirmed, the monitor holds at its block", async (t) => {
-	const { pendulum, api, monitor, subjects, persisted } = await setup(t, {
+	const { pendulum, api, monitor, pages, subjects, persisted } = await setup(t, {
 		env: { EXPECTED_TREASURY_DESTINATION: TREASURY_DESTINATION },
 	});
 	burn(pendulum, 0n, 100n * PEN, 101, { who: TREASURY_ACCOUNT, recipient: TOKEN });
 	await monitor.poll(api);
 	await monitor.poll(api);
-	assert.equal(subjects().filter((subject) => subject === "TREASURY DESTINATION VIOLATION").length, 2);
+	const violations = pages.filter((page) => page.subject === "TREASURY DESTINATION VIOLATION");
+	assert.equal(violations.length, 2);
+	assert.match(violations[1].detail, /; the monitor holds at that block until the vault is paused$/);
 	assert.equal(persisted().lastPendulumBlock, 100);
-	assert.ok(subjects().includes("PENDULUM SOURCE UNREADABLE"), JSON.stringify(subjects()));
+	assert.ok(!subjects().includes("PENDULUM SOURCE UNREADABLE"), JSON.stringify(subjects())); // the source reads fine
 });
 
 test("admin events of the migration pallet page from the ingest", async (t) => {

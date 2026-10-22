@@ -308,9 +308,11 @@ async function main() {
 	const pendulumHead = (await api.query.system.number()).toString();
 	const baseHead = String(await ctx.pub.getBlockNumber());
 	const monitorStartNonce = (await api.query.tokenMigration.nextNonce()).toString();
+	// The Zombienet chain has its own genesis, not Pendulum's.
+	const pendulumGenesisHash = api.genesisHash.toHex();
 	for (let i = 0; i < 4; i++) {
 		start(`attestor${i + 1}`, "attestor", {
-			...baseEnv, PENDULUM_WS: pendulumWs,
+			...baseEnv, PENDULUM_WS: pendulumWs, PENDULUM_GENESIS_HASH: pendulumGenesisHash,
 			ATTESTOR_PRIVATE_KEY: env[`ATTESTOR_${i + 1}_PRIVATE_KEY`],
 			CHECKPOINT_FILE: `./cp${i + 1}.json`, START_BLOCK: pendulumHead,
 		});
@@ -400,7 +402,7 @@ async function main() {
 	await check("a restarted attestor resumes from its checkpoint and stays up", async () => {
 		const releasedBefore = await read(V, "totalReleased", []);
 		start("attestor4", "attestor", {
-			...baseEnv, PENDULUM_WS: pendulumWs,
+			...baseEnv, PENDULUM_WS: pendulumWs, PENDULUM_GENESIS_HASH: pendulumGenesisHash,
 			ATTESTOR_PRIVATE_KEY: env.ATTESTOR_4_PRIVATE_KEY,
 			CHECKPOINT_FILE: "./cp4.json", START_BLOCK: pendulumHead,
 		});

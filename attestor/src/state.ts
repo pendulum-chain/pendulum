@@ -90,6 +90,24 @@ export function saveCheckpoint(path: string, checkpoint: Checkpoint): void {
 	}
 }
 
+/** The endpoints must serve the configured chains on every start, the first
+ *  one included: a first checkpoint written against another chain would bind
+ *  the daemon to it. */
+export function assertBaseChain(rpcChainId: number, configured: number): void {
+	if (rpcChainId !== configured) {
+		throw new Error(`BASE_RPC_URL serves chain ${rpcChainId}, but BASE_CHAIN_ID is ${configured}`);
+	}
+}
+
+export function assertPendulumGenesis(connected: string, expected: string): void {
+	if (connected.toLowerCase() !== expected.toLowerCase()) {
+		throw new Error(
+			`PENDULUM_WS serves the chain with genesis ${connected}, but PENDULUM_GENESIS_HASH is ${expected}; ` +
+				"point PENDULUM_WS at this operator's own Pendulum node",
+		);
+	}
+}
+
 export function assertCheckpointIdentity(
 	checkpoint: Checkpoint,
 	expected: {

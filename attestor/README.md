@@ -35,6 +35,7 @@ point.
 | Variable | Meaning |
 |---|---|
 | `PENDULUM_WS` | WebSocket of your own Pendulum node, e.g. `ws://127.0.0.1:9944` |
+| `PENDULUM_GENESIS_HASH` | Genesis hash that node must serve (default Pendulum's, `0x5d3c2986…462c86`); set it only for a local test chain |
 | `BASE_RPC_URL` | Base JSON-RPC endpoint |
 | `VAULT_ADDRESS` | MigrationVault address on Base |
 | `ATTESTOR_PRIVATE_KEY` | This attestor's signing key (0x-prefixed) |
@@ -136,7 +137,10 @@ WantedBy=multi-user.target
   Checkpoints written before these fields existed are bound to the first key
   that starts on them.
 - The daemon verifies at startup that its address is in the vault's attestor
-  set and refuses to run otherwise.
+  set, that `BASE_RPC_URL` serves `BASE_CHAIN_ID` (`eth_chainId`, which the
+  checkpoint's Base chain must match too) and that `PENDULUM_WS` serves
+  `PENDULUM_GENESIS_HASH`, and refuses to run otherwise. These checks run on
+  every start, the first one without a checkpoint included.
 - After a Pendulum **runtime upgrade**, verify event decoding against the new
   metadata on a staging node before letting the fleet advance past the
   upgrade block.

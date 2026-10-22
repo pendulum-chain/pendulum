@@ -30,6 +30,20 @@ test("MISSED_APPROVAL_ALERT_COUNT must be a whole number of at least 1", () => {
 	}
 });
 
+test("the expected Pendulum genesis defaults to Pendulum's and must be a block hash", () => {
+	assert.equal(
+		loadConfig({}, "config.pendulumGenesisHash").stdout,
+		"0x5d3c298622d5634ed019bf61ea4b71655030015bde9beb0d6a24743714462c86",
+	);
+	const local = `0x${"ab".repeat(32)}`;
+	assert.equal(loadConfig({ PENDULUM_GENESIS_HASH: local }, "config.pendulumGenesisHash").stdout, local);
+	for (const value of ["0x1234", "pendulum", `${"ab".repeat(32)}`]) {
+		const { status, stderr } = loadConfig({ PENDULUM_GENESIS_HASH: value });
+		assert.notEqual(status, 0, value);
+		assert.match(stderr, /invalid PENDULUM_GENESIS_HASH/, value);
+	}
+});
+
 test("fee bumping defaults to 60 s, 20 %, 3 bumps and a 1 gwei cap, and refuses invalid settings", () => {
 	const print = "[config.feeBump.afterMs, config.feeBump.percent, config.feeBump.max, config.feeBump.maxFeePerGas].join(' ')";
 	assert.equal(loadConfig({}, print).stdout, "60000 20 3 1000000000");

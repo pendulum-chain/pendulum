@@ -37,12 +37,24 @@ function finalityTag(): "safe" | "finalized" {
 
 const baseFinalityTag = finalityTag();
 
+/** Pendulum's genesis block hash. */
+const PENDULUM_GENESIS_HASH = "0x5d3c298622d5634ed019bf61ea4b71655030015bde9beb0d6a24743714462c86";
+
+function genesisHash(): `0x${string}` {
+	const value = process.env.PENDULUM_GENESIS_HASH || PENDULUM_GENESIS_HASH;
+	if (!/^0x[0-9a-fA-F]{64}$/.test(value)) throw new Error(`invalid PENDULUM_GENESIS_HASH ${value}`);
+	return value as `0x${string}`;
+}
+
 export const config = {
 	/** WebSocket endpoint of THIS OPERATOR'S OWN Pendulum full node (PRD A1).
 	 *  Never point this at a public RPC: the attestor would inherit its honesty.
 	 *  The node must retain historical state (`--state-pruning archive`), or any
 	 *  daemon outage longer than the pruning horizon wedges the catch-up. */
 	pendulumWs: required("PENDULUM_WS"),
+	/** The genesis that node must serve; startup refuses any other chain. A
+	 *  local test chain sets its own. */
+	pendulumGenesisHash: genesisHash(),
 	/** Base JSON-RPC endpoint. */
 	baseRpcUrl: required("BASE_RPC_URL"),
 	/** MigrationVault contract address on Base. */

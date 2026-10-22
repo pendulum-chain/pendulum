@@ -3,7 +3,14 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { assertCheckpointIdentity, loadCheckpoint, saveCheckpoint, type Checkpoint } from "./state.js";
+import {
+	assertBaseChain,
+	assertCheckpointIdentity,
+	assertPendulumGenesis,
+	loadCheckpoint,
+	saveCheckpoint,
+	type Checkpoint,
+} from "./state.js";
 
 const checkpoint = {
 	version: 1,
@@ -75,6 +82,17 @@ test("a checkpoint from before the signer was recorded still loads", () => {
 	} finally {
 		rmSync(directory, { recursive: true, force: true });
 	}
+});
+
+test("the Base endpoint must serve the configured chain and the Pendulum node the pinned genesis", () => {
+	assert.doesNotThrow(() => assertBaseChain(8453, 8453));
+	assert.throws(() => assertBaseChain(84532, 8453), /BASE_RPC_URL serves chain 84532, but BASE_CHAIN_ID is 8453/);
+	const pendulum = `0x${"5d".repeat(32)}`;
+	assert.doesNotThrow(() => assertPendulumGenesis(pendulum.toUpperCase().replace("0X", "0x"), pendulum));
+	assert.throws(
+		() => assertPendulumGenesis(`0x${"aa".repeat(32)}`, pendulum),
+		/PENDULUM_WS serves the chain with genesis 0xaaaa.*, but PENDULUM_GENESIS_HASH is 0x5d5d/,
+	);
 });
 
 test("a malformed checkpoint fails loudly instead of resetting progress", () => {

@@ -142,6 +142,8 @@ async function main() {
 	const monitorStartNonce = (await api.query.tokenMigration.nextNonce()).toString();
 	const attestorEnv = (i) => ({
 		...baseEnv, PENDULUM_WS: pendulumWs,
+		// The Zombienet chain has its own genesis, not Pendulum's.
+		PENDULUM_GENESIS_HASH: api.genesisHash.toHex(),
 		ATTESTOR_PRIVATE_KEY: env[`ATTESTOR_${i}_PRIVATE_KEY`],
 		CHECKPOINT_FILE: `./cp${i}.json`, START_BLOCK: pendulumHead,
 	});

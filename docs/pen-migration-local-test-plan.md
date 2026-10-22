@@ -160,7 +160,7 @@ The script starts the four attestors, the monitor and the releaser itself,
 each with its own key and checkpoint file. To run them by hand instead:
 
 ```bash
-PENDULUM_WS=ws://127.0.0.1:9944 BASE_RPC_URL=http://localhost:8545 \
+PENDULUM_WS=ws://127.0.0.1:9944 BASE_RPC_URL=http://localhost:8545 BASE_CHAIN_ID=31337 \
 VAULT_ADDRESS=0x… ATTESTOR_PRIVATE_KEY=0x… CHECKPOINT_FILE=./cp1.json \
 npm start   # repeat for attestors 2–4 with distinct keys/checkpoints
 ```

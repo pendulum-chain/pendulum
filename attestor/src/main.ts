@@ -28,7 +28,14 @@ import { postAlert } from "./alert.js";
 import { confirmDurable, processBlock, type Attestor, type UnconfirmedBlock, type VaultChain } from "./approval.js";
 import { decodeMigrationEvent, isTransientRpcError, type MigrationEvent } from "./checks.js";
 import { config } from "./config.js";
-import { assertCheckpointIdentity, loadCheckpoint, saveCheckpoint, type Checkpoint } from "./state.js";
+import {
+	assertBaseChain,
+	assertCheckpointIdentity,
+	assertPendulumGenesis,
+	loadCheckpoint,
+	saveCheckpoint,
+	type Checkpoint,
+} from "./state.js";
 import { vaultAbi } from "./vaultAbi.js";
 
 /** Repeated transient failures (a sustained RPC outage) page at most this
@@ -157,6 +164,8 @@ async function checkGasBalance(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+	const baseChainId = await publicClient.getChainId();
+	assertBaseChain(baseChainId, config.baseChainId);
 	const isAttestor = await publicClient.readContract({
 		address: config.vaultAddress,
 		abi: vaultAbi,
@@ -178,9 +187,10 @@ async function main(): Promise<void> {
 
 	const api = await ApiPromise.create({ provider: new WsProvider(config.pendulumWs) });
 	const pendulumGenesisHash = api.genesisHash.toHex();
+	assertPendulumGenesis(pendulumGenesisHash, config.pendulumGenesisHash);
 	const checkpoint = loadCheckpoint(config.checkpointFile) ?? {
 		version: 1,
-		baseChainId: config.baseChainId,
+		baseChainId,
 		vaultAddress: config.vaultAddress,
 		pendulumGenesisHash,
 		attestorAddress: account.address,
@@ -189,6 +199,7 @@ async function main(): Promise<void> {
 	} satisfies Checkpoint;
 	assertCheckpointIdentity(checkpoint, {
 		...config,
+		baseChainId,
 		pendulumGenesisHash,
 		attestorAddress: account.address,
 		attestorGeneration,

@@ -9,7 +9,13 @@
  * transport-level noise rather than statements about an event.
  */
 
-import { BlockNotFoundError, HttpRequestError, TimeoutError } from "viem";
+import {
+	BaseError,
+	BlockNotFoundError,
+	ContractFunctionRevertedError,
+	HttpRequestError,
+	TimeoutError,
+} from "viem";
 
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -81,6 +87,23 @@ export function isTransientRpcError(error: unknown): boolean {
 		if (texts.some((text) => typeof text === "string" && TRANSIENT_TEXT.test(text))) return true;
 	}
 	return false;
+}
+
+/** Vault reverts that only mean another submission got there first. */
+const LOST_RACE_ERRORS = new Set(["NonceAlreadyConsumed", "AlreadyApproved"]);
+
+/**
+ * True when a failed approval merely lost the k-of-n race: the vault rejected
+ * it in simulation or gas estimation because the migration is already
+ * released or our approval is already recorded. Anything else (a send that
+ * failed, a receipt that never came, an empty gas wallet, a removed attestor)
+ * means our own submission did not land, even when the migration resolved
+ * without us. A mined revert carries no reason and is told apart by the caller.
+ */
+export function isLostRace(error: unknown): boolean {
+	if (!(error instanceof BaseError)) return false;
+	const reverted = error.walk((cause) => cause instanceof ContractFunctionRevertedError);
+	return reverted instanceof ContractFunctionRevertedError && LOST_RACE_ERRORS.has(reverted.data?.errorName ?? "");
 }
 
 /**

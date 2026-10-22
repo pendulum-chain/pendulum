@@ -12,13 +12,19 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
 	BlockNotFoundError,
+	ContractFunctionExecutionError,
+	ContractFunctionRevertedError,
+	encodeErrorResult,
 	HttpRequestError,
+	InsufficientFundsError,
 	InvalidInputRpcError,
 	ResourceNotFoundRpcError,
 	RpcRequestError,
 	TimeoutError,
+	WaitForTransactionReceiptTimeoutError,
 } from "viem";
-import { isTransientRpcError, isUnreleasable, ZERO_ADDRESS } from "./checks.js";
+import { isLostRace, isTransientRpcError, isUnreleasable, ZERO_ADDRESS } from "./checks.js";
+import { vaultAbi } from "./vaultAbi.js";
 
 const VAULT = "0x1111111111111111111111111111111111111111";
 const NORMAL = "0x00000000000000000000000000000000deadbeef";
@@ -113,6 +119,28 @@ test("a pruned Pendulum node stays fatal", () => {
 		isTransientRpcError(new Error("-32000: Client error: UnknownBlock: State already discarded for 0xabc")),
 		false,
 	);
+});
+
+test("only a vault rejection for a released or already-approved migration is a lost race", () => {
+	const args = [7n, "0x00000000000000000000000000000000deadbeef", AMOUNT] as const;
+	// What simulateContract and estimateContractGas raise for a revert.
+	const reverted = (data: `0x${string}`) =>
+		new ContractFunctionExecutionError(new ContractFunctionRevertedError({ abi: vaultAbi, data, functionName: "approve" }), {
+			abi: vaultAbi,
+			functionName: "approve",
+			args,
+		});
+	const consumed = encodeErrorResult({ abi: vaultAbi, errorName: "NonceAlreadyConsumed", args: [7n] });
+	const approved = encodeErrorResult({ abi: vaultAbi, errorName: "AlreadyApproved", args: [NORMAL] });
+	assert.equal(isLostRace(reverted(consumed)), true);
+	assert.equal(isLostRace(reverted(approved)), true);
+	// Our own submission failed: these must surface even when the others
+	// released the migration meanwhile.
+	assert.equal(isLostRace(reverted("0xdde328f8")), false, "NotAttestor() after a removal");
+	assert.equal(isLostRace(new InsufficientFundsError()), false);
+	assert.equal(isLostRace(new WaitForTransactionReceiptTimeoutError({ hash: `0x${"ab".repeat(32)}` })), false);
+	assert.equal(isLostRace(new HttpRequestError({ url: "https://rpc", status: 503 })), false);
+	assert.equal(isLostRace(new Error("approve transaction reverted: 0xabc (nonce=7)")), false);
 });
 
 test("a decode failure is never transient", () => {

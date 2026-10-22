@@ -34,7 +34,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { postAlert } from "./alert.js";
-import { isTransientRpcError, isUnreleasable } from "./checks.js";
+import { isLostRace, isTransientRpcError, isUnreleasable } from "./checks.js";
 import { config } from "./config.js";
 import { assertCheckpointIdentity, loadCheckpoint, saveCheckpoint, type Checkpoint } from "./state.js";
 import { vaultAbi } from "./vaultAbi.js";
@@ -85,6 +85,10 @@ const walletClient = createWalletClient({
 	chain: baseChain,
 	transport: http(config.baseRpcUrl),
 });
+
+/** Consecutive migrations that resolved on-chain while our own approval never
+ *  landed. Lost races do not count; any mined approval of ours resets it. */
+let missedApprovals = 0;
 
 function log(message: string, extra?: unknown): void {
 	console.log(`${new Date().toISOString()} ${message}`, extra ?? "");
@@ -178,6 +182,17 @@ async function alreadyHandled(event: MigrationEvent): Promise<boolean> {
 	return alreadyHandledAt(event);
 }
 
+/** True when our own approval of this migration is recorded at latest, whether
+ *  or not the migration has been released since. */
+async function ownApprovalRecorded(event: MigrationEvent): Promise<boolean> {
+	return publicClient.readContract({
+		address: config.vaultAddress,
+		abi: vaultAbi,
+		functionName: "hasApproved",
+		args: [payloadHash(event), account.address],
+	});
+}
+
 /**
  * `alreadyHandled`, but tolerant of an RPC that has not caught up yet.
  *
@@ -220,6 +235,7 @@ async function approve(event: MigrationEvent): Promise<boolean> {
 		return true;
 	}
 
+	let mined = false;
 	try {
 		const { request } = await publicClient.simulateContract({
 			account,
@@ -246,19 +262,34 @@ async function approve(event: MigrationEvent): Promise<boolean> {
 		}))) * GAS_LIMIT_MULTIPLIER;
 		const txHash = await walletClient.writeContract({ ...request, gas: gasLimit });
 		const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+		// Mined, so our submission path works even if the race was lost.
+		mined = true;
+		missedApprovals = 0;
 		if (receipt.status !== "success") {
 			throw new Error(`approve transaction reverted: ${txHash} (${label})`);
 		}
 		log(`approved: ${label} tx=${txHash}`);
 	} catch (error) {
-		// Expected race: the release landed (or our own retried tx landed)
-		// between our pre-check and the transaction. Benign — anything else
-		// is a genuine failure and propagates to the fatal handler.
-		if (await alreadyHandledSettled(event)) {
+		// Unresolved on-chain, the failure is genuine and propagates to the
+		// fatal handler. Resolved, it is the expected race when the release
+		// (or our own retried tx) landed between our pre-check and the
+		// transaction — benign.
+		if (!(await alreadyHandledSettled(event))) throw error;
+		if (mined || isLostRace(error) || (await ownApprovalRecorded(event))) {
 			log(`skip (raced, resolved on-chain): ${label}`);
 			return true;
 		}
-		throw error;
+		// Resolved by the others while our own approval never landed: nothing
+		// is lost this time, but an attestor whose submissions keep failing
+		// silently leaves the fleet one short.
+		missedApprovals += 1;
+		log(`own approval did not land (${missedApprovals} in a row), resolved on-chain by others: ${label}`, error);
+		if (missedApprovals % config.missedApprovalAlertCount === 0) {
+			await alert(
+				"own approvals are not landing",
+				`${missedApprovals} consecutive migrations resolved without this attestor; last ${label}: ${error}`,
+			);
+		}
 	}
 	return true;
 }

@@ -46,6 +46,7 @@ point.
 | `BASE_FINALITY_TAG` | Base confirmation boundary the checkpoint waits for: `safe` (default) or `finalized` |
 | `BASE_FINALITY_TIMEOUT_MS` | How long a block's approvals may stay outside that boundary before an alert + idempotent re-submission (default 15 min for `safe`, 45 min for `finalized`) |
 | `HEAD_STALL_ALERT_MS` | Page when no finalized Pendulum head has arrived for this long (default 5 min): the daemon is push-driven, so a node that stops finalizing would otherwise idle undetected |
+| `MISSED_APPROVAL_ALERT_COUNT` | Page after this many consecutive migrations resolved on-chain without this attestor's own approval landing, and again every as many more (default 3, at least 1) |
 
 ## Run
 
@@ -87,6 +88,14 @@ WantedBy=multi-user.target
   refuse to settle (a reorg dropped them), they are re-submitted after
   `BASE_FINALITY_TIMEOUT_MS` with an alert; the checkpoint never passes an
   unsettled block.
+- A failed approval for a migration the other attestors released meanwhile
+  is a lost race only when our transaction was mined, or the vault rejected it
+  as already released or already approved by us. Any other failure (a send
+  error, a receipt that never arrived, an empty gas wallet, a removed key) is
+  logged with the original error as `own approval did not land` and counted;
+  `MISSED_APPROVAL_ALERT_COUNT` consecutive misses page `own approvals are not
+  landing`. The rest of the fleet still releases, so this is the only signal
+  that the fleet is one attestor short. Any mined approval resets the count.
 - Checkpoints are atomically replaced, bound to the Pendulum genesis plus the
   configured Base chain and vault, and malformed files are fatal. Never delete or replace one merely to
   clear an alert; reconcile it against both chains first.

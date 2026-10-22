@@ -42,7 +42,7 @@ point.
 | `CHECKPOINT_FILE` | Path persisting the last processed block (default `./checkpoint.json`) |
 | `START_BLOCK` | First Pendulum block to scan on the very first run |
 | `MIN_GAS_BALANCE_WEI` | Low-gas alert threshold (default 0.01 ETH) |
-| `ALERT_WEBHOOK_URL` | Optional webhook receiving JSON alerts; a non-2xx answer, a timeout (10 s) or a connection error is logged as a failed delivery |
+| `ALERT_WEBHOOK_URL` | Optional webhook receiving JSON alerts in Slack incoming-webhook form: `text` holds `[CRITICAL]` or `[WARNING]`, the attestor and the subject, then the detail; `severity`, `subject` and `detail` are also sent as fields. A non-2xx answer, a timeout (10 s) or a connection error is logged as a failed delivery |
 | `BASE_CHAIN_ID` | Default 8453 (Base mainnet) |
 | `BASE_FINALITY_TAG` | Base confirmation boundary the checkpoint waits for: `safe` (default) or `finalized` |
 | `BASE_FINALITY_TIMEOUT_MS` | How long a block's approvals may stay outside that boundary before an alert + idempotent re-submission (default 15 min for `safe`, 45 min for `finalized`) |

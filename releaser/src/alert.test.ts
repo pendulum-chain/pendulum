@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import { postAlert } from "./alert.js";
+import { alertText, postAlert } from "./alert.js";
 
 /** A local webhook answering every POST with `status`, or never when null. */
 async function webhook(status: number | null): Promise<{ url: string; server: Server }> {
@@ -13,6 +13,19 @@ async function webhook(status: number | null): Promise<{ url: string; server: Se
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 	return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, server };
 }
+
+test("an alert reads as a Slack message: severity, source and subject, then the detail", () => {
+	assert.equal(
+		alertText("critical", "pen-releaser 0xAb", "release blocked and needs operator action", "nonce=1 — ExceedsPerReleaseCap"),
+		"[CRITICAL] pen-releaser 0xAb: release blocked and needs operator action\nnonce=1 — ExceedsPerReleaseCap",
+	);
+	assert.equal(alertText("warning", "s", "gas balance low", "1 wei"), "[WARNING] s: gas balance low\n1 wei");
+	// Slack's control characters cannot mention a channel or form a link.
+	assert.equal(alertText("warning", "s", "x", "<!channel> a & b <url>"), "[WARNING] s: x\n&lt;!channel&gt; a &amp; b &lt;url&gt;");
+	const long = alertText("warning", "s", "x", "y".repeat(10_000));
+	assert.equal(long.length, 3001);
+	assert.ok(long.endsWith("y…"));
+});
 
 test("an accepted page is delivered", async () => {
 	const { url, server } = await webhook(200);

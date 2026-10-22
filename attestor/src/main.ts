@@ -24,7 +24,7 @@
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { createPublicClient, defineChain, http, TransactionReceiptNotFoundError } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { postAlert } from "./alert.js";
+import { alertText, postAlert, type Severity } from "./alert.js";
 import { confirmDurable, processBlock, type Attestor, type UnconfirmedBlock, type VaultChain } from "./approval.js";
 import { decodeMigrationEvent, isTransientRpcError, type MigrationEvent } from "./checks.js";
 import { config } from "./config.js";
@@ -62,14 +62,17 @@ function redact(text: string): string {
 	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
 }
 
-async function alert(subject: string, detail: unknown): Promise<void> {
+async function alert(subject: string, detail: unknown, severity: Severity = "warning"): Promise<void> {
 	console.error(`${new Date().toISOString()} ALERT: ${subject}`, detail);
 	if (!config.alertWebhookUrl) return;
+	const redacted = redact(`${detail}`);
 	await postAlert(config.alertWebhookUrl, {
+		text: alertText(severity, `pen-attestor ${account.address}`, subject, redacted),
+		severity,
 		service: "pen-attestor",
 		attestor: account.address,
 		subject,
-		detail: redact(`${detail}`),
+		detail: redacted,
 	});
 }
 
@@ -249,7 +252,7 @@ async function main(): Promise<void> {
 			// PRD A5: never skip an event silently. Alert and exit; the process
 			// manager restarts us and the checkpoint retries from the last block
 			// whose approvals were durable.
-			await alert("fatal error, exiting", error);
+			await alert("fatal error, exiting", error, "critical");
 			process.exit(1);
 		});
 	});
@@ -267,11 +270,12 @@ async function main(): Promise<void> {
 		void alert(
 			"no finalized Pendulum head received",
 			`${Math.round(silentMs / 1000)}s since the last finalized head; the node may have stopped finalizing or the subscription silently died`,
+			"critical",
 		);
 	}, 60_000);
 }
 
 main().catch(async (error) => {
-	await alert("startup failed", error);
+	await alert("startup failed", error, "critical");
 	process.exit(1);
 });

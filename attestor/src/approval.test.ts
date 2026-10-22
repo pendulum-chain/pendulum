@@ -198,7 +198,7 @@ class FakeVault implements VaultChain {
 /** An attestor on `chain` whose clock only moves when it sleeps; every sleep
  *  runs `tick` (by default: the chain mines what it can). */
 function attestorOn(chain: FakeVault, overrides: Partial<Attestor> = {}, tick?: (now: number) => void) {
-	const alerts: { subject: string; detail: string }[] = [];
+	const alerts: { subject: string; detail: string; severity: string }[] = [];
 	const logs: string[] = [];
 	const start = 1_000_000;
 	let clock = start;
@@ -211,8 +211,8 @@ function attestorOn(chain: FakeVault, overrides: Partial<Attestor> = {}, tick?: 
 		baseFinalityTimeoutMs: 900_000,
 		missedApprovalAlertCount: 2,
 		feeBump: { afterMs: AFTER_MS, percent: 20, max: 3, maxFeePerGas: 1_000_000_000n },
-		alert: async (subject, detail) => {
-			alerts.push({ subject, detail: `${detail}` });
+		alert: async (subject, detail, severity = "warning") => {
+			alerts.push({ subject, detail: `${detail}`, severity });
 		},
 		log: (message, extra) => {
 			logs.push(extra === undefined ? message : `${message} ${extra}`);
@@ -254,8 +254,11 @@ test("an unreleasable event is skipped with a critical alert and never sent", as
 	assert.equal(await approve(attestor, { ...EVENT, palletAmount: 0n }), false);
 	assert.equal(chain.sent.length, 0);
 	assert.deepEqual(
-		alerts.map((a) => a.subject),
-		["CRITICAL: unreleasable migration event skipped permanently", "CRITICAL: unreleasable migration event skipped permanently"],
+		alerts.map((a) => `${a.severity} ${a.subject}`),
+		[
+			"critical CRITICAL: unreleasable migration event skipped permanently",
+			"critical CRITICAL: unreleasable migration event skipped permanently",
+		],
 	);
 });
 
@@ -333,8 +336,8 @@ test("own approvals that never land are counted and paged every MISSED_APPROVAL_
 	for (const nonce of [1n, 2n, 3n, 4n]) assert.equal(await approve(attestor, { ...EVENT, nonce }), true);
 	assert.equal(attestor.missedApprovals, 4);
 	assert.deepEqual(
-		alerts.map((a) => a.subject),
-		["own approvals are not landing", "own approvals are not landing"],
+		alerts.map((a) => `${a.severity} ${a.subject}`),
+		["critical own approvals are not landing", "critical own approvals are not landing"],
 	);
 	assert.match(alerts[1].detail, /^4 consecutive migrations resolved without this attestor; last nonce=4 /);
 	assert.equal(attestor.submissions.size, 0);
@@ -487,8 +490,8 @@ test("after the last bump it pages once and keeps waiting until the approval is 
 	);
 	assert.ok(chain.sent.length > 4 && chain.sent.slice(4).every((tx) => tx.hash === chain.sent[3].hash));
 	assert.deepEqual(
-		alerts.map((a) => a.subject),
-		["own approval not mined"],
+		alerts.map((a) => `${a.severity} ${a.subject}`),
+		["critical own approval not mined"],
 	);
 	assert.match(
 		alerts[0].detail,
@@ -517,8 +520,8 @@ test("the fee cap stops a bump and pages once; no attempt offers more than the c
 	assert.ok(chain.sent.slice(2).every((tx) => tx.hash === chain.sent[1].hash));
 	assert.ok(chain.sent.every((tx) => tx.maxFeePerGas <= cap));
 	assert.deepEqual(
-		alerts.map((a) => a.subject),
-		["own approval not mined"],
+		alerts.map((a) => `${a.severity} ${a.subject}`),
+		["critical own approval not mined"],
 	);
 	assert.match(alerts[0].detail, /^the fee cap stops the next bump: transaction nonce 5,/);
 });
@@ -753,8 +756,8 @@ test("approvals that stay outside the boundary are re-submitted after the timeou
 	const resubmittedAt = attestor.now();
 	assert.equal(await confirmDurable(attestor, unconfirmed), undefined);
 	assert.deepEqual(
-		alerts.map((a) => a.subject),
-		["approvals not durable at the Base finality boundary, re-submitting"],
+		alerts.map((a) => `${a.severity} ${a.subject}`),
+		["warning approvals not durable at the Base finality boundary, re-submitting"],
 	);
 	assert.equal(chain.sent.length, 1, "our reorged-out approval is sent again");
 	assert.equal(unconfirmed[0].lastAttemptMs, resubmittedAt);

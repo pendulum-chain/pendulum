@@ -19,6 +19,7 @@ import {
 	type LocalAccount,
 	type TransactionReceipt,
 } from "viem";
+import type { Severity } from "./alert.js";
 import { isUnreleasable, ownApprovalMissed, sendRejection, type MigrationEvent } from "./checks.js";
 import { vaultAbi } from "./vaultAbi.js";
 
@@ -114,7 +115,8 @@ export interface Attestor {
 	baseFinalityTimeoutMs: number;
 	missedApprovalAlertCount: number;
 	feeBump: FeeBumpPolicy;
-	alert(subject: string, detail: unknown): Promise<void>;
+	/** Severity defaults to warning. */
+	alert(subject: string, detail: unknown, severity?: Severity): Promise<void>;
 	log(message: string, extra?: unknown): void;
 	now(): number;
 	sleep(ms: number): Promise<void>;
@@ -334,6 +336,7 @@ async function sendUntilMined(
 					"own approval not mined",
 					`${reason}: transaction nonce ${nonce ?? "not accepted by the node"}, account's next mined nonce ${minedNonce ?? "unknown"}, ` +
 						`maxFeePerGas ${formatGwei(last.maxFeePerGas)} gwei (cap ${formatGwei(policy.maxFeePerGas)} gwei); ${label}`,
+					"critical",
 				);
 			}
 			if (nonce !== undefined) await resendLatest(attestor, submission, nonce, label);
@@ -359,7 +362,7 @@ export async function approve(attestor: Attestor, event: MigrationEvent): Promis
 	const label = `nonce=${event.nonce} recipient=${event.recipient} amount=${event.palletAmount}`;
 
 	if (isUnreleasable(event.recipient, event.palletAmount, attestor.vaultAddress)) {
-		await attestor.alert("CRITICAL: unreleasable migration event skipped permanently", label);
+		await attestor.alert("CRITICAL: unreleasable migration event skipped permanently", label, "critical");
 		return false;
 	}
 
@@ -435,6 +438,7 @@ export async function approve(attestor: Attestor, event: MigrationEvent): Promis
 			await attestor.alert(
 				"own approvals are not landing",
 				`${attestor.missedApprovals} consecutive migrations resolved without this attestor; last ${label}: ${error}`,
+				"critical",
 			);
 		}
 	}

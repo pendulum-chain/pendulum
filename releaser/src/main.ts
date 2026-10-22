@@ -22,7 +22,7 @@
 
 import { createPublicClient, createWalletClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { postAlert } from "./alert.js";
+import { alertText, postAlert, type Severity } from "./alert.js";
 import { blockRanges, chunks, classifyReleaseFailure, contractErrorName, toPalletAmount } from "./checks.js";
 import { config } from "./config.js";
 import {
@@ -85,14 +85,17 @@ function redact(text: string): string {
  *  classifies it properly (and pruneConsumed drops it if a peer won). */
 class MinedRevert extends Error {}
 
-async function alert(subject: string, detail: string): Promise<void> {
+async function alert(subject: string, detail: string, severity: Severity = "warning"): Promise<void> {
 	console.error(`${new Date().toISOString()} ALERT: ${subject} — ${detail}`);
 	if (!config.alertWebhookUrl) return;
+	const redacted = redact(detail);
 	await postAlert(config.alertWebhookUrl, {
+		text: alertText(severity, `pen-releaser ${account.address}`, subject, redacted),
+		severity,
 		service: "pen-releaser",
 		releaser: account.address,
 		subject,
-		detail: redact(detail),
+		detail: redacted,
 	});
 }
 
@@ -308,12 +311,13 @@ async function drainPending(conversionFactor: bigint, dailyCap: bigint): Promise
 						await alert(
 							"release blocked and needs operator action",
 							`${label} — ${errorName}; it cannot self-heal`,
+							"critical",
 						);
 					}
 					break;
 				}
 				case "unexpected":
-					await alert("unexpected release failure", `${label} — ${reason}`);
+					await alert("unexpected release failure", `${label} — ${reason}`, "critical");
 					break;
 			}
 		}
@@ -373,6 +377,6 @@ setInterval(
 );
 
 main().catch(async (error) => {
-	await alert("releaser startup failed", `${error}`);
+	await alert("releaser startup failed", `${error}`, "critical");
 	process.exit(1);
 });

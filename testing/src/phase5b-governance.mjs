@@ -123,7 +123,7 @@ async function main() {
 
 	// --- governance deployment ----------------------------------------------
 	section("Governance deployment (first execution of DeployGovernance.s.sol)");
-	const { timelock, governor, params } = deployGovernanceToSepolia({ env, pen, canceller: ctx.roles.guardian.address, log });
+	const { timelock, governor, params } = deployGovernanceToSepolia({ env, pen, vault, canceller: ctx.roles.guardian.address, log });
 	log(`timelock ${timelock}\n  governor ${governor}`);
 	const G = { address: governor, abi: governorAbi };
 	const T = { address: timelock, abi: timelockAbi };

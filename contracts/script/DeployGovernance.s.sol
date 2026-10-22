@@ -5,6 +5,8 @@ import {Script, console} from "forge-std/Script.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {PENGovernor} from "../src/PENGovernor.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {MigrationVault} from "../src/MigrationVault.sol";
 
 /// @notice Deploys the on-chain governance stack (PRD rollout phase 5):
 ///         TimelockController + PENGovernor, wired so that only the Governor
@@ -16,48 +18,103 @@ import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 ///         (bootstrap Safe calls vault.transferAdmin(timelock), then a
 ///         governance proposal calls vault.acceptAdmin()).
 ///
-/// Environment:
-///   PEN_TOKEN             deployed PEN address
-///   TIMELOCK_DELAY        seconds (PRD V5: >= 48h = 172800)
-///   VOTING_DELAY          seconds before voting starts (timestamp clock)
-///   VOTING_PERIOD         seconds of voting
-///   PROPOSAL_THRESHOLD    token units needed to propose
+/// Environment (each value is checked before anything is broadcast: most are
+/// fixed at deploy or changeable only by a proposal through this governor, so
+/// a wrong one could not be corrected afterwards):
+///   PEN_TOKEN             deployed PEN address; must be VAULT_ADDRESS's token
+///   VAULT_ADDRESS         deployed MigrationVault (its setToken verified that
+///                         PEN_TOKEN minted the whole supply into it)
+///   TIMELOCK_DELAY        seconds, 48h (172800) to 30 days (PRD V5)
+///   VOTING_DELAY          seconds before voting starts (timestamp clock),
+///                         at most 30 days
+///   VOTING_PERIOD         seconds of voting, at most 30 days
+///   PROPOSAL_THRESHOLD    18-decimal token units needed to propose, 1 PEN
+///                         (1e18) to total supply; a whole-PEN figure such as
+///                         50000 is refused
 ///   QUORUM_FRACTION       percent of CIRCULATING supply (total minus the
 ///                         vault's unmigrated balance parked at the vote
 ///                         sink, see PRD G1 as revised in review round 8)
 ///   QUORUM_FLOOR          absolute quorum lower bound, 18-decimal token
-///                         units; keeps early proposals from being trivially
-///                         cheap while circulating supply is still small
-///   TIMELOCK_CANCELLER    required: an address (the guardian/council Safe)
-///                         that can cancel a QUEUED operation during the
-///                         timelock delay. Without it only the Governor holds
-///                         CANCELLER_ROLE, and OZ Governor lets only the
-///                         proposer cancel, only before voting starts — so a
-///                         hostile proposal that passed could not be stopped
-///                         during the 48h delay by anyone (review round 9).
+///                         units, 1 PEN (1e18) to total supply; PERMANENT.
+///                         Keeps early proposals from being trivially cheap
+///                         while circulating supply is still small
+///   TIMELOCK_CANCELLER    required: a dedicated canceller Safe, separate
+///                         from the guardian, that can cancel a QUEUED
+///                         operation during the timelock delay. Without it
+///                         only the Governor holds CANCELLER_ROLE, and OZ
+///                         Governor lets only the proposer cancel, only before
+///                         voting starts, so a hostile proposal that passed
+///                         could not be stopped during the delay by anyone.
 ///                         Once the delay has passed anyone may execute, so
-///                         the script refuses to deploy without it.
+///                         the script refuses to deploy without it. It must
+///                         have code on this chain and must not be the
+///                         deployer.
+///   TEST_DEPLOY           optional, testnet drills only: allows a shorter
+///                         TIMELOCK_DELAY, a codeless TIMELOCK_CANCELLER and
+///                         QUORUM_FLOOR=0. Refused on Base mainnet.
 contract DeployGovernance is Script {
-    function run() external {
+    uint256 internal constant BASE_MAINNET = 8453;
+    uint256 internal constant MIN_TIMELOCK_DELAY = 2 days;
+    // Longer periods are a units slip (milliseconds land ~1000x further), and
+    // a governor whose votes never end could not vote to shorten them.
+    uint256 internal constant MAX_PERIOD = 30 days;
+
+    function run() external returns (TimelockController timelock, PENGovernor governor) {
+        bool testDeploy = vm.envOr("TEST_DEPLOY", false);
+        require(!testDeploy || block.chainid != BASE_MAINNET, "TEST_DEPLOY is refused on Base mainnet");
+
         address token = vm.envAddress("PEN_TOKEN");
+        require(
+            address(MigrationVault(vm.envAddress("VAULT_ADDRESS")).token()) == token,
+            "PEN_TOKEN is not the migration vault's token"
+        );
+        uint256 supply = IERC20(token).totalSupply();
+
         uint256 timelockDelay = vm.envUint("TIMELOCK_DELAY");
-        uint48 votingDelay = uint48(vm.envUint("VOTING_DELAY"));
-        uint32 votingPeriod = uint32(vm.envUint("VOTING_PERIOD"));
+        require(timelockDelay >= MIN_TIMELOCK_DELAY || testDeploy, "TIMELOCK_DELAY is below 48h");
+        require(timelockDelay <= MAX_PERIOD, "TIMELOCK_DELAY is above 30 days (seconds expected)");
+        uint256 votingDelay = vm.envUint("VOTING_DELAY");
+        require(votingDelay <= MAX_PERIOD, "VOTING_DELAY is above 30 days (seconds expected)");
+        uint256 votingPeriod = vm.envUint("VOTING_PERIOD");
+        require(votingPeriod <= MAX_PERIOD, "VOTING_PERIOD is above 30 days (seconds expected)");
+
+        // 18-decimal units: below one PEN is a whole-PEN figure entered as
+        // wei, above the supply could never be met.
         uint256 proposalThreshold = vm.envUint("PROPOSAL_THRESHOLD");
+        require(
+            proposalThreshold >= 1e18 && proposalThreshold <= supply,
+            "PROPOSAL_THRESHOLD must be 18-decimal units, 1 PEN to total supply"
+        );
         uint256 quorumFraction = vm.envUint("QUORUM_FRACTION");
         uint256 quorumFloor = vm.envUint("QUORUM_FLOOR");
+        require(
+            (quorumFloor >= 1e18 || (testDeploy && quorumFloor == 0)) && quorumFloor <= supply,
+            "QUORUM_FLOOR must be 18-decimal units, 1 PEN to total supply"
+        );
+
         address canceller = vm.envOr("TIMELOCK_CANCELLER", address(0));
         require(canceller != address(0), "TIMELOCK_CANCELLER is required: no veto during the timelock delay otherwise");
+        require(canceller != msg.sender, "TIMELOCK_CANCELLER must not be the deployer");
+        require(
+            canceller.code.length > 0 || testDeploy, "TIMELOCK_CANCELLER has no code on this chain (expected a Safe)"
+        );
 
-        vm.startBroadcast();
+        // Broadcast as msg.sender (forge sets it to --sender or the single
+        // signer), the deployer that is temporary admin so the roles below
+        // can be wired.
+        vm.startBroadcast(msg.sender);
 
-        // Deployer is temporary admin so the roles below can be wired.
         address[] memory empty = new address[](0);
-        TimelockController timelock =
-            new TimelockController(timelockDelay, empty, empty, msg.sender);
+        timelock = new TimelockController(timelockDelay, empty, empty, msg.sender);
 
-        PENGovernor governor = new PENGovernor(
-            IVotes(token), timelock, votingDelay, votingPeriod, proposalThreshold, quorumFraction, quorumFloor
+        governor = new PENGovernor(
+            IVotes(token),
+            timelock,
+            uint48(votingDelay), // bounded by MAX_PERIOD above
+            uint32(votingPeriod),
+            proposalThreshold,
+            quorumFraction,
+            quorumFloor
         );
 
         // Only the Governor proposes; anyone may execute after the delay. The

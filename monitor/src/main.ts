@@ -359,11 +359,12 @@ let lastSourceStallAlertMs = 0;
 let lastSourceFailureAlertMs = 0;
 let lastBaseStallAlertMs = 0;
 let lastReadinessAlertMs = 0;
+let lastAdminScanFailureAlertMs = 0;
 let lastIssuanceAlertMs = 0;
 /** The Base admin scan (vault admin events and the governance queue) runs
- *  ahead of the vault checks in a poll and throws on failure, so the persisted
- *  Base cursor never passes a range it has not scanned; a restart resumes from
- *  that cursor. */
+ *  ahead of reconciliation in a poll, and reconciliation waits while it fails,
+ *  so the persisted Base cursor never passes a range it has not scanned; a
+ *  restart resumes from that cursor. */
 let baseAdminFromBlock: bigint | undefined;
 /** Once-only pages by key, each held until the webhook accepts it. */
 // ponytail: in memory; a restart re-pages what it finds again (Base admin events after the persisted cursor, pending governance items) and drops undelivered pages it does not find again.
@@ -1185,11 +1186,27 @@ async function check(api: ApiPromise): Promise<void> {
 		);
 	}
 	await checkAutoPauseReadiness();
-	await watchBaseAdmin(baseBlock);
+	// The admin scan only pages, so its failure must not skip the vault balance
+	// check. Reconciliation waits for it: a restart resumes the scan from the
+	// persisted Base cursor, which must never pass a range it has not covered.
+	let adminScanned = false;
+	try {
+		await watchBaseAdmin(baseBlock);
+		adminScanned = true;
+	} catch (adminError) {
+		if (Date.now() - lastAdminScanFailureAlertMs > config.unmatchedEventGraceSeconds * 1000) {
+			lastAdminScanFailureAlertMs = Date.now();
+			await alert(
+				"BASE ADMIN SCAN FAILED",
+				`${adminError}; the vault balance check continues, but vault admin events, the governance queue and ` +
+					"the reconciliation of Approved and Released events wait until the scan reads again",
+			);
+		}
+	}
 
 	// A Pendulum failure must not switch off the Base-side checks: the vault
 	// balance check and its pause run without the source. Reconciliation, M2a
-	// and liveness need the source and wait for it.
+	// and liveness need the source and the admin scan, and wait for them.
 	let draft = cloneState(state);
 	let source: SourceView | undefined;
 	try {
@@ -1212,7 +1229,7 @@ async function check(api: ApiPromise): Promise<void> {
 		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "token", blockNumber: baseBlock }),
 	]);
 
-	const reconciliation = source
+	const reconciliation = source && adminScanned
 		? await reconcileBaseEvents(draft, baseBlock, conversionFactor, source.timestampMs)
 		: { violation: undefined, awaitingSource: undefined };
 	if (reconciliation.violation) {
@@ -1243,7 +1260,7 @@ async function check(api: ApiPromise): Promise<void> {
 		}
 		return;
 	}
-	if (!source) return;
+	if (!source || !adminScanned) return;
 	const { finalizedBlock, totalMigrated } = source;
 	if (reconciliation.awaitingSource) {
 		state = draft;

@@ -22,6 +22,7 @@ import {
 	type Hex,
 	keccak256,
 	parseAbi,
+	toEventSelector,
 	toHex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -484,6 +485,25 @@ test("vault admin events page once each from the Base scan", async (t) => {
 	assert.equal(adminPages.length, 2, JSON.stringify(pages));
 	assert.match(adminPages[0], /^GuardianUpdated\(guardian=0x5{40}\) at Base block 1004/i);
 	assert.match(adminPages[1], /^CapsUpdated\(perReleaseCap=5, dailyCap=7\) at Base block 1012/);
+});
+
+test("a failed admin scan pages, the vault balance check still runs and the Base cursor waits", async (t) => {
+	const { base, pendulum, api, monitor, subjects, persisted } = await setup(t, { env: { GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY } });
+	burn(pendulum, 0n, 100n * PEN);
+	release(base, 0n, 100n * PEN);
+	base.logs.push({ address: VAULT, eventName: "GuardianUpdated", args: { guardian: GUARDIAN }, blockNumber: 1_004n });
+	const guardianUpdated = toEventSelector("GuardianUpdated(address)"); // only the admin scan asks for it
+	base.failing = (method, params) => method === "eth_getLogs" && JSON.stringify(params).includes(guardianUpdated);
+	base.vaultBalance -= 1n;
+	base.paused = true; // so the auto-pause only confirms and the poll persists its state
+	await monitor.poll(api);
+	assert.deepEqual(sorted(subjects()), ["BASE ADMIN SCAN FAILED", "VAULT BALANCE DEFICIT", "vault pause confirmed"]);
+	assert.equal(persisted().baseFromBlock, "1000");
+	base.failing = undefined;
+	base.vaultBalance += 1n;
+	await monitor.poll(api);
+	assert.ok(subjects().includes("VAULT ADMIN EVENT"), JSON.stringify(subjects()));
+	assert.equal(persisted().baseFromBlock, "1011");
 });
 
 test("a monitor without a guardian key says so at startup", async (t) => {

@@ -23,6 +23,7 @@ import {
 	keccak256,
 	parseAbi,
 	toEventSelector,
+	toFunctionSelector,
 	toHex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -87,6 +88,9 @@ function baseChain() {
 		logs: [] as Log[],
 		/** Where set, log queries answer as a backend whose head is this block. */
 		logsHead: undefined as bigint | undefined,
+		/** Where set and it returns a block, the log query for these topics
+		 *  answers as a backend whose head is that block. */
+		logsHeadFor: undefined as ((topics: string[]) => bigint | undefined) | undefined,
 		/** Where set, the vault has no code before this block. */
 		deployedAt: undefined as bigint | undefined,
 		/** Requests to answer with an RPC error. */
@@ -152,10 +156,11 @@ function answer(base: Base, method: string, params: any[]): unknown {
 		case "eth_getLogs": {
 			const [{ address, topics, fromBlock, toBlock }] = params;
 			const wanted = [topics?.[0] ?? []].flat() as string[];
+			const head = base.logsHeadFor?.(wanted) ?? base.logsHead;
 			return base.logs.flatMap((log, index) => {
 				if (log.address.toLowerCase() !== String(address).toLowerCase()) return [];
 				if (log.blockNumber < BigInt(fromBlock) || log.blockNumber > BigInt(toBlock)) return [];
-				if (base.logsHead !== undefined && log.blockNumber > base.logsHead) return [];
+				if (head !== undefined && log.blockNumber > head) return [];
 				const logTopics = encodeEventTopics({ abi, eventName: log.eventName, args: log.args } as never) as Hex[];
 				if (wanted.length && !wanted.includes(logTopics[0])) return [];
 				const { inputs } = abi.find((item) => item.type === "event" && item.name === log.eventName) as AbiEvent;
@@ -1262,6 +1267,34 @@ test("the conservation check waits while a Base event's burn is not in the sourc
 	release(base, 0n, 100n * PEN); // the burn is not in the lagging source view yet
 	await monitor.poll(api);
 	assert.deepEqual([...new Set(subjects())], ["UNVERIFIED BASE EVENT"]);
+});
+
+test("logs that miss an event once and then account for the totals hold nothing and page nothing", async (t) => {
+	const { base, pendulum, api, monitor, subjects, persisted } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	release(base, 0n, 100n * PEN, 1_005n);
+	const released = toEventSelector("Released(uint64,address,uint256,uint256)"); // only reconciliation asks for it
+	let reads = 0;
+	base.logsHeadFor = (topics) => (topics.includes(released) && reads++ === 0 ? 1_003n : undefined);
+	await monitor.poll(api);
+	assert.equal(reads, 2); // read once more
+	assert.equal(persisted().baseFromBlock, "1011");
+	assert.deepEqual(persisted().migrations, []);
+	await new Promise((resolve) => setTimeout(resolve, 50)); // an incomplete scan page is sent without waiting
+	assert.deepEqual(subjects(), []);
+});
+
+test("a vault total that cannot be read where the vault has code fails the poll, not counting as zero", async (t) => {
+	const { base, pendulum, api, monitor, subjects } = await setup(t, { prepare: (base) => (base.deployedAt = 900n) });
+	burn(pendulum, 0n, 100n * PEN);
+	release(base, 0n, 100n * PEN, 950n); // before the first Base block the monitor scans
+	const totalReleased = toFunctionSelector("totalReleased()");
+	base.failing = (method, params) =>
+		method === "eth_call" && (params[0] as { data: string }).data === totalReleased && params[1] === toHex(999n);
+	await monitor.poll(api);
+	await new Promise((resolve) => setTimeout(resolve, 50)); // an incomplete scan page is sent without waiting
+	assert.ok(subjects().includes("monitor check failed"), JSON.stringify(subjects()));
+	assert.ok(!subjects().includes("BASE LOG SCAN INCOMPLETE"), JSON.stringify(subjects()));
 });
 
 test("a release in the first block of a range accounts for the totals", async (t) => {

@@ -1,4 +1,5 @@
 name: 'Shared action'
+description: 'Frees runner disk space, installs protobuf and caches the cargo registry'
 runs:
   using: "composite"
   steps:

@@ -22,54 +22,18 @@
  */
 
 import { ApiPromise, WsProvider } from "@polkadot/api";
-import {
-	BaseError,
-	ContractFunctionZeroDataError,
-	createPublicClient,
-	createWalletClient,
-	defineChain,
-	encodeAbiParameters,
-	http,
-	keccak256,
-} from "viem";
+import { createPublicClient, createWalletClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { postAlert } from "./alert.js";
-import { isTransientRpcError, isUnreleasable, ownApprovalMissed } from "./checks.js";
+import { confirmDurable, processBlock, type Attestor, type UnconfirmedBlock, type VaultChain } from "./approval.js";
+import { decodeMigrationEvent, isTransientRpcError, type MigrationEvent } from "./checks.js";
 import { config } from "./config.js";
 import { assertCheckpointIdentity, loadCheckpoint, saveCheckpoint, type Checkpoint } from "./state.js";
 import { vaultAbi } from "./vaultAbi.js";
 
-/** Multiplier applied to the estimated gas for `approve`. See the note at the
- *  call site: the same call can take the cheap record path or the expensive
- *  threshold-crossing release path. */
-const GAS_LIMIT_MULTIPLIER = 4n;
-
-/** How persistently to confirm that a failed approval was merely a lost race
- *  before treating it as fatal. See `alreadyHandledSettled`. */
-const RACE_RECHECK_ATTEMPTS = 5;
-const RACE_RECHECK_DELAY_MS = 3000;
-
 /** Repeated transient failures (a sustained RPC outage) page at most this
  *  often; every occurrence is still logged. */
 const TRANSIENT_ALERT_INTERVAL_MS = 60_000;
-
-interface MigrationEvent {
-	nonce: bigint;
-	recipient: `0x${string}`;
-	palletAmount: bigint;
-}
-
-/** A block processed against the latest Base state whose releasable events are
- *  not yet confirmed inside the finality boundary. The checkpoint may not
- *  advance past it until they are. */
-interface UnconfirmedBlock {
-	block: number;
-	/** Events awaiting durability. Unreleasable tuples are excluded: they are
-	 *  permanently skipped (with a critical alert) and never resolve on Base. */
-	events: MigrationEvent[];
-	/** When this block's approvals were last (re-)submitted. */
-	lastAttemptMs: number;
-}
 
 const baseChain = defineChain({
 	id: config.baseChainId,
@@ -85,10 +49,6 @@ const walletClient = createWalletClient({
 	chain: baseChain,
 	transport: http(config.baseRpcUrl),
 });
-
-/** Consecutive migrations that resolved on-chain while our own approval never
- *  landed. Lost races do not count; any mined approval of ours resets it. */
-let missedApprovals = 0;
 
 function log(message: string, extra?: unknown): void {
 	console.log(`${new Date().toISOString()} ${message}`, extra ?? "");
@@ -111,15 +71,6 @@ async function alert(subject: string, detail: unknown): Promise<void> {
 	});
 }
 
-function payloadHash(event: MigrationEvent): `0x${string}` {
-	return keccak256(
-		encodeAbiParameters(
-			[{ type: "uint64" }, { type: "address" }, { type: "uint256" }],
-			[event.nonce, event.recipient, event.palletAmount],
-		),
-	);
-}
-
 /** Extract MigrationInitiated events from one finalized Pendulum block. */
 async function migrationEventsInBlock(api: ApiPromise, blockNumber: number): Promise<MigrationEvent[]> {
 	const blockHash = await api.rpc.chain.getBlockHash(blockNumber);
@@ -132,171 +83,70 @@ async function migrationEventsInBlock(api: ApiPromise, blockNumber: number): Pro
 	for (const record of records) {
 		const { section, method, data } = record.event;
 		if (section !== "tokenMigration" || method !== "MigrationInitiated") continue;
-		// Event shape: { nonce: u64, who: AccountId, base_address: H160, amount: u128 }.
-		// Guard the shape explicitly: a runtime upgrade changing the event must
-		// fail loudly (PRD A5), not decode garbage positionally.
-		if (data.length !== 4) {
-			throw new Error(`MigrationInitiated in block ${blockNumber} has ${data.length} fields, expected 4`);
-		}
-		const [nonce, , baseAddress, amount] = data as [
-			{ toBigInt(): bigint },
-			unknown,
-			{ toHex(): string },
-			{ toBigInt(): bigint },
-		];
-		const recipient = baseAddress.toHex() as `0x${string}`;
-		if (!/^0x[0-9a-fA-F]{40}$/.test(recipient)) {
-			throw new Error(`cannot decode base_address in block ${blockNumber}: ${recipient}`);
-		}
-		events.push({ nonce: nonce.toBigInt(), recipient, palletAmount: amount.toBigInt() });
+		events.push(decodeMigrationEvent(data, blockNumber));
 	}
 	return events;
 }
 
-/** True when this migration no longer needs our approval (released, or we
- *  already approved) at the given Base block, or at latest when omitted. */
-async function alreadyHandledAt(event: MigrationEvent, blockNumber?: bigint): Promise<boolean> {
-	const consumed = await publicClient.readContract({
-		address: config.vaultAddress,
-		abi: vaultAbi,
-		functionName: "nonceConsumed",
-		args: [event.nonce],
-		...(blockNumber === undefined ? {} : { blockNumber }),
-	});
-	if (consumed) return true;
-	return publicClient.readContract({
-		address: config.vaultAddress,
-		abi: vaultAbi,
-		functionName: "hasApproved",
-		args: [payloadHash(event), account.address],
-		...(blockNumber === undefined ? {} : { blockNumber }),
-	});
-}
+const atBlock = (blockNumber?: bigint) => (blockNumber === undefined ? {} : { blockNumber });
 
-/** Latest-state view: with 4 attestors racing to the same event, losing the
- *  race is the NORMAL case, not an error, and concluding that needs no
- *  finality — durability is enforced separately before the checkpoint moves
- *  (see `advanceCheckpoint`). */
-async function alreadyHandled(event: MigrationEvent): Promise<boolean> {
-	return alreadyHandledAt(event);
-}
-
-/** True when our own approval of this migration is recorded at latest, whether
- *  or not the migration has been released since. */
-async function ownApprovalRecorded(event: MigrationEvent): Promise<boolean> {
-	return publicClient.readContract({
-		address: config.vaultAddress,
-		abi: vaultAbi,
-		functionName: "hasApproved",
-		args: [payloadHash(event), account.address],
-	});
-}
-
-/**
- * `alreadyHandled`, but tolerant of an RPC that has not caught up yet.
- *
- * Public endpoints are load-balanced across nodes and give no read-after-write
- * consistency guarantee, so immediately after our transaction reverts the
- * state proving WHY it reverted may not be visible yet. A single read that
- * happens to hit a lagging node reports "not handled", which turns the most
- * ordinary event in this system — losing the k-of-n race — into an
- * unexplained failure and takes the daemon down. Re-check with backoff before
- * concluding anything is actually wrong.
- */
-async function alreadyHandledSettled(event: MigrationEvent): Promise<boolean> {
-	for (let attempt = 0; attempt < RACE_RECHECK_ATTEMPTS; attempt++) {
-		try {
-			if (await alreadyHandled(event)) return true;
-		} catch (error) {
-			log("recheck failed, retrying", error);
-		}
-		if (attempt < RACE_RECHECK_ATTEMPTS - 1) {
-			await new Promise((resolve) => setTimeout(resolve, RACE_RECHECK_DELAY_MS));
-		}
-	}
-	return false;
-}
-
-/** Submit the approval for one migration event, skipping work already done.
- *  Returns true when the event must later be confirmed durable at the Base
- *  finality boundary (submitted, raced, or already handled), false when it is
- *  permanently unreleasable and excluded from durability tracking. */
-async function approve(event: MigrationEvent): Promise<boolean> {
-	const label = `nonce=${event.nonce} recipient=${event.recipient} amount=${event.palletAmount}`;
-
-	if (isUnreleasable(event.recipient, event.palletAmount, config.vaultAddress)) {
-		await alert("CRITICAL: unreleasable migration event skipped permanently", label);
-		return false;
-	}
-
-	if (await alreadyHandled(event)) {
-		log(`skip (already released or approved): ${label}`);
-		return true;
-	}
-
-	let mined = false;
-	try {
-		const { request } = await publicClient.simulateContract({
+const chain: VaultChain = {
+	nonceConsumed: (nonce, blockNumber) =>
+		publicClient.readContract({
+			address: config.vaultAddress,
+			abi: vaultAbi,
+			functionName: "nonceConsumed",
+			args: [nonce],
+			...atBlock(blockNumber),
+		}),
+	hasApproved: (payload, blockNumber) =>
+		publicClient.readContract({
+			address: config.vaultAddress,
+			abi: vaultAbi,
+			functionName: "hasApproved",
+			args: [payload, account.address],
+			...atBlock(blockNumber),
+		}),
+	approveGas: async (event) => {
+		const call = {
 			account,
 			address: config.vaultAddress,
 			abi: vaultAbi,
 			functionName: "approve",
 			args: [event.nonce, event.recipient, event.palletAmount],
-		});
-		// Pad the gas limit generously. The SAME approve call executes one of two
-		// very different paths depending on what has landed by the time it is
-		// mined: either it merely records an approval, or it is the one that
-		// crosses the threshold and therefore performs the release, including an
-		// ERC-20 transfer. Gas estimated while the cheap path applied is not
-		// enough for the expensive one, and with several attestors racing the
-		// same migration that reordering is the normal case, not an edge case.
-		// An under-estimate reverts OutOfGas, which reads as an unexplained
-		// failure and takes the daemon down.
-		const gasLimit = (request.gas ?? (await publicClient.estimateContractGas({
+		} as const;
+		const { request } = await publicClient.simulateContract(call);
+		return request.gas ?? publicClient.estimateContractGas(call);
+	},
+	sendApprove: (event, gas) =>
+		walletClient.writeContract({
 			account,
 			address: config.vaultAddress,
 			abi: vaultAbi,
 			functionName: "approve",
 			args: [event.nonce, event.recipient, event.palletAmount],
-		}))) * GAS_LIMIT_MULTIPLIER;
-		const txHash = await walletClient.writeContract({ ...request, gas: gasLimit });
-		const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-		// Mined, so our submission path works even if the race was lost.
-		mined = true;
-		missedApprovals = 0;
-		if (receipt.status !== "success") {
-			throw new Error(`approve transaction reverted: ${txHash} (${label})`);
-		}
-		log(`approved: ${label} tx=${txHash}`);
-	} catch (error) {
-		// Unresolved on-chain, the failure is genuine and propagates to the
-		// fatal handler. Resolved, it is the expected race when the release
-		// (or our own retried tx) landed between our pre-check and the
-		// transaction — benign.
-		if (!(await alreadyHandledSettled(event))) throw error;
-		const missed = await ownApprovalMissed(error, mined, () => ownApprovalRecorded(event));
-		if (missed === undefined) {
-			log(`skip (resolved on-chain; could not read whether our own approval is recorded): ${label}`, error);
-			return true;
-		}
-		if (!missed) {
-			log(`skip (raced, resolved on-chain): ${label}`);
-			return true;
-		}
-		// Resolved by the others while our own approval never landed: nothing
-		// is lost this time, but an attestor whose submissions keep failing
-		// silently leaves the fleet one short.
-		missedApprovals += 1;
-		log(`own approval did not land (${missedApprovals} in a row), resolved on-chain by others: ${label}`, error);
-		if (missedApprovals % config.missedApprovalAlertCount === 0) {
-			await alert(
-				"own approvals are not landing",
-				`${missedApprovals} consecutive migrations resolved without this attestor; last ${label}: ${error}`,
-			);
-		}
-	}
-	return true;
-}
+			gas,
+		}),
+	waitForReceipt: (hash) => publicClient.waitForTransactionReceipt({ hash }),
+	boundaryBlock: async () => {
+		const confirmed = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
+		if (confirmed.number === null) throw new Error(`${config.baseFinalityTag} Base block has no number`);
+		return confirmed.number;
+	},
+};
+
+const attestor: Attestor = {
+	chain,
+	vaultAddress: config.vaultAddress,
+	baseFinalityTag: config.baseFinalityTag,
+	baseFinalityTimeoutMs: config.baseFinalityTimeoutMs,
+	missedApprovalAlertCount: config.missedApprovalAlertCount,
+	alert,
+	log,
+	now: Date.now,
+	sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+	missedApprovals: 0,
+};
 
 async function checkGasBalance(): Promise<void> {
 	const balance = await publicClient.getBalance({ address: account.address });
@@ -354,63 +204,6 @@ async function main(): Promise<void> {
 	let processedThrough = checkpoint.lastProcessedBlock;
 	let lastTransientAlertMs = 0;
 
-	/** All releasable events of `entry` are resolved at `blockNumber` — either
-	 *  the nonce is consumed (released) or our approval is recorded there. A
-	 *  boundary block that predates the vault (a fresh deployment on a chain
-	 *  whose safe head still trails it) cannot have anything durable in it:
-	 *  the read returns no data, which means "not yet", never "fatal". */
-	async function eventsDurableAt(entry: UnconfirmedBlock, blockNumber: bigint): Promise<boolean> {
-		try {
-			for (const event of entry.events) {
-				if (!(await alreadyHandledAt(event, blockNumber))) return false;
-			}
-			return true;
-		} catch (error) {
-			if (error instanceof BaseError && error.walk((e) => e instanceof ContractFunctionZeroDataError)) {
-				log(`vault has no state at ${config.baseFinalityTag} block ${blockNumber} yet; checkpoint waits`);
-				return false;
-			}
-			throw error;
-		}
-	}
-
-	/** Advance the durable checkpoint through every leading block whose events
-	 *  are resolved inside the Base finality boundary. A block that refuses to
-	 *  settle (our approval reorged out and nothing replaced it) is re-approved
-	 *  after `baseFinalityTimeoutMs` rather than waited on forever — the
-	 *  checkpoint cannot pass it until it settles, so nothing is ever skipped. */
-	async function advanceCheckpoint(): Promise<void> {
-		let confirmedNumber: bigint | undefined;
-		let advanced = false;
-		while (unconfirmed.length > 0) {
-			const head = unconfirmed[0];
-			if (head.events.length > 0) {
-				if (confirmedNumber === undefined) {
-					const confirmed = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
-					if (confirmed.number === null) throw new Error(`${config.baseFinalityTag} Base block has no number`);
-					confirmedNumber = confirmed.number;
-				}
-				if (!(await eventsDurableAt(head, confirmedNumber))) {
-					if (Date.now() - head.lastAttemptMs >= config.baseFinalityTimeoutMs) {
-						await alert(
-							"approvals not durable at the Base finality boundary, re-submitting",
-							`Pendulum block ${head.block} (${head.events.length} event(s), boundary ${config.baseFinalityTag})`,
-						);
-						head.lastAttemptMs = Date.now();
-						for (const event of head.events) {
-							await approve(event);
-						}
-					}
-					break;
-				}
-			}
-			checkpoint.lastProcessedBlock = head.block;
-			unconfirmed.shift();
-			advanced = true;
-		}
-		if (advanced) saveCheckpoint(config.checkpointFile, checkpoint);
-	}
-
 	let lastHeadAt = Date.now();
 	let lastHeadStallAlertMs = 0;
 	let processing = Promise.resolve();
@@ -420,15 +213,14 @@ async function main(): Promise<void> {
 		// Serialize: a slow Base transaction must not let block processing overlap.
 		processing = processing.then(async () => {
 			for (let block = processedThrough + 1; block <= finalized; block++) {
-				const events = await migrationEventsInBlock(api, block);
-				const tracked: MigrationEvent[] = [];
-				for (const event of events) {
-					if (await approve(event)) tracked.push(event);
-				}
-				unconfirmed.push({ block, events: tracked, lastAttemptMs: Date.now() });
+				await processBlock(attestor, block, await migrationEventsInBlock(api, block), unconfirmed);
 				processedThrough = block;
 			}
-			await advanceCheckpoint();
+			const confirmed = await confirmDurable(attestor, unconfirmed);
+			if (confirmed !== undefined) {
+				checkpoint.lastProcessedBlock = confirmed;
+				saveCheckpoint(config.checkpointFile, checkpoint);
+			}
 		}).catch(async (error) => {
 			if (isTransientRpcError(error)) {
 				// Not a statement about any event — resume from the in-memory

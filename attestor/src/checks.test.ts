@@ -25,7 +25,14 @@ import {
 	TimeoutError,
 	WaitForTransactionReceiptTimeoutError,
 } from "viem";
-import { isLostRace, isTransientRpcError, isUnreleasable, ownApprovalMissed, ZERO_ADDRESS } from "./checks.js";
+import {
+	decodeMigrationEvent,
+	isLostRace,
+	isTransientRpcError,
+	isUnreleasable,
+	ownApprovalMissed,
+	ZERO_ADDRESS,
+} from "./checks.js";
 import { vaultAbi } from "./vaultAbi.js";
 
 const VAULT = "0x1111111111111111111111111111111111111111";
@@ -190,4 +197,24 @@ test("a resolved migration counts as our miss only when our approval provably di
 
 test("a decode failure is never transient", () => {
 	assert.equal(isTransientRpcError(new Error("MigrationInitiated in block 7 has 5 fields, expected 4")), false);
+});
+
+test("a MigrationInitiated event decodes to the approval it asks for, and any other shape fails loudly", () => {
+	// polkadot-js codecs, reduced to the accessors the decoder uses.
+	const u = (value: bigint) => ({ toBigInt: () => value });
+	const h160 = (hex: string) => ({ toHex: () => hex });
+	const who = { toHex: () => `0x${"aa".repeat(32)}` };
+	assert.deepEqual(decodeMigrationEvent([u(7n), who, h160(NORMAL), u(AMOUNT)], 12), {
+		nonce: 7n,
+		recipient: NORMAL,
+		palletAmount: AMOUNT,
+	});
+	// A runtime upgrade that drops or adds a field must not decode positionally.
+	assert.throws(() => decodeMigrationEvent([u(7n), h160(NORMAL), u(AMOUNT)], 12), /block 12 has 3 fields, expected 4/);
+	assert.throws(
+		() => decodeMigrationEvent([u(7n), who, h160(NORMAL), u(AMOUNT), u(1n)], 12),
+		/block 12 has 5 fields, expected 4/,
+	);
+	// The account id in the address position is not a Base address.
+	assert.throws(() => decodeMigrationEvent([u(7n), who, who, u(AMOUNT)], 12), /cannot decode base_address in block 12/);
 });

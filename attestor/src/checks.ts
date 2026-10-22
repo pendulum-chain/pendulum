@@ -20,6 +20,36 @@ import {
 
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
+/** The approval one `MigrationInitiated` event asks for, in pallet units. */
+export interface MigrationEvent {
+	nonce: bigint;
+	recipient: `0x${string}`;
+	palletAmount: bigint;
+}
+
+/**
+ * Decode one `tokenMigration.MigrationInitiated` event's data:
+ * `{ nonce: u64, who: AccountId, base_address: H160, amount: u128 }`. The shape
+ * is guarded explicitly: a runtime upgrade changing the event must fail loudly
+ * (PRD A5), not decode garbage positionally.
+ */
+export function decodeMigrationEvent(data: unknown[], blockNumber: number): MigrationEvent {
+	if (data.length !== 4) {
+		throw new Error(`MigrationInitiated in block ${blockNumber} has ${data.length} fields, expected 4`);
+	}
+	const [nonce, , baseAddress, amount] = data as [
+		{ toBigInt(): bigint },
+		unknown,
+		{ toHex(): string },
+		{ toBigInt(): bigint },
+	];
+	const recipient = baseAddress.toHex() as `0x${string}`;
+	if (!/^0x[0-9a-fA-F]{40}$/.test(recipient)) {
+		throw new Error(`cannot decode base_address in block ${blockNumber}: ${recipient}`);
+	}
+	return { nonce: nonce.toBigInt(), recipient, palletAmount: amount.toBigInt() };
+}
+
 /** HTTP statuses that signal endpoint pressure or transient upstream failure —
  *  they carry no information about the migration event itself. */
 const TRANSIENT_HTTP_STATUS = new Set([408, 429, 500, 502, 503, 504]);

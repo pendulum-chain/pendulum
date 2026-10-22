@@ -205,6 +205,10 @@ const config = {
 	/** Optional: the governance TimelockController; every operation it
 	 *  schedules pages, because the canceller must veto inside the delay. */
 	timelockAddress: optionalAddress("TIMELOCK_ADDRESS"),
+	/** Age of the confirmed Base block (vs. wall clock) past which the monitor
+	 *  pages that its Base view stopped advancing. `safe` normally trails by
+	 *  about a minute, `finalized` by about 20 minutes. */
+	baseStaleAlertMs: envNumber("BASE_STALE_ALERT_SECONDS", baseFinalityTag === "finalized" ? 1800 : 600) * 1000,
 };
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -323,6 +327,7 @@ let state: RuntimeState;
 let multicallUnavailable = false;
 let lastSourceStallAlertMs = 0;
 let lastSourceFailureAlertMs = 0;
+let lastBaseStallAlertMs = 0;
 let lastIssuanceAlertMs = 0;
 /** The governance-queue scan runs ahead of everything else in a poll and
  *  throws on failure, so the persisted Base cursor never passes a range it has
@@ -1070,6 +1075,20 @@ async function check(api: ApiPromise): Promise<void> {
 	const confirmedBase = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
 	if (confirmedBase.number === null) throw new Error(`${config.baseFinalityTag} Base block has no number`);
 	const baseBlock = confirmedBase.number;
+	// A Base view that stops advancing hides every vault event after it while
+	// all checks keep passing at the old block; page it like a stalled source.
+	const baseAgeMs = Date.now() - Number(confirmedBase.timestamp) * 1000;
+	if (
+		baseAgeMs > config.baseStaleAlertMs &&
+		Date.now() - lastBaseStallAlertMs > config.unmatchedEventGraceSeconds * 1000
+	) {
+		lastBaseStallAlertMs = Date.now();
+		await alert(
+			"BASE VIEW STALLED",
+			`${config.baseFinalityTag} block ${baseBlock} is ${Math.round(baseAgeMs / 1000)}s old; vault events after it ` +
+				`are not being checked — restore the Base node, or check whether Base's ${config.baseFinalityTag} head stalled`,
+		);
+	}
 	await watchTimelock(baseBlock);
 
 	// A Pendulum failure must not switch off the Base-side checks: the vault

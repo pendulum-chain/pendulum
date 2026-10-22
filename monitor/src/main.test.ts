@@ -415,6 +415,13 @@ test("a Pendulum failure pages on its own and the vault balance check still runs
 	]);
 });
 
+test("a Base view that stops advancing pages", async (t) => {
+	const { base, api, monitor, pages } = await setup(t);
+	base.safeAgeSeconds = 601;
+	await monitor.poll(api);
+	assert.match(pages.find((page) => page.subject === "BASE VIEW STALLED")?.detail ?? "", /^safe block 1010 is 60\ds old/);
+});
+
 const UNREADABLE = "CRITICAL: Pendulum governance item cannot be read";
 const RISKY = "CRITICAL: Pendulum governance item mints, moves or unlocks balances, or changes the runtime";
 const pageFor = (pages: Page[], subject: string, label: string) =>

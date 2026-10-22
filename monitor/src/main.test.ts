@@ -848,9 +848,11 @@ test("a second node that disagrees on the newest block pages critical and nothin
 });
 
 test("a second node that cannot answer only warns", async (t) => {
+	let connections = 0;
 	const { pendulum, api, monitor, pages, persisted, heartbeats } = await setup(t, {
 		env: { PENDULUM_WS_CROSSCHECK: SECOND_NODE },
 		connect: async (url) => {
+			connections++;
 			throw new Error(`cannot connect to ${url}`);
 		},
 	});
@@ -859,6 +861,7 @@ test("a second node that cannot answer only warns", async (t) => {
 	assert.deepEqual(pages.map((page) => [page.subject, page.severity]), [["PENDULUM CROSS-CHECK UNAVAILABLE", "WARNING"]]);
 	assert.match(pages[0].detail, /cannot be read: Error: cannot connect to <url> /);
 	assert.equal(persisted().lastPendulumBlock, 101);
+	assert.equal(connections, 1); // not asked again for the ingested block's migration events
 	assert.deepEqual(heartbeats, ["GET"]);
 	await monitor.poll(api);
 	assert.equal(pages.length, 1); // throttled
@@ -946,6 +949,21 @@ test("with the second node and the relay chain, a block past both their heads wa
 	assert.equal(persisted().lastPendulumBlock, 101);
 });
 
+test("a second node behind the block ingested last holds newer blocks back, without a contradiction", async (t) => {
+	const { pendulum, api, monitor, pages, persisted, own } = await crossCheckSetup(t, { finalized: 100, headAgeMs: 400_000 });
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api); // the stale second node is left out: block 101 is ingested
+	assert.equal(persisted().lastPendulumBlock, 101);
+	own.headAgeMs = 0; // it answers again, still at block 100
+	burn(pendulum, 1n, 100n * PEN, 102);
+	await monitor.poll(api);
+	assert.deepEqual(pages.map((page) => page.subject), ["PENDULUM CROSS-CHECK UNAVAILABLE"]);
+	assert.equal(persisted().lastPendulumBlock, 101);
+	own.finalized = 102;
+	await monitor.poll(api);
+	assert.equal(persisted().lastPendulumBlock, 102);
+});
+
 test("a second node whose finalized head is stale counts as unavailable", async (t) => {
 	const { pendulum, api, monitor, pages, persisted } = await crossCheckSetup(t, { finalized: 100, headAgeMs: 400_000 });
 	burn(pendulum, 0n, 100n * PEN);
@@ -1024,6 +1042,19 @@ test("a relay-chain record of the source's head anchors it and is kept", async (
 	assert.equal(pages.length, 0, JSON.stringify(pages));
 	assert.deepEqual(persisted().relayAnchor, { number: 101, hash: pendulumHash({}, 101) });
 	assert.equal(persisted().lastPendulumBlock, 101);
+	await monitor.poll(api); // neither the record nor the source moved: nothing waits, nothing pages
+	assert.equal(pages.length, 0, JSON.stringify(pages));
+});
+
+test("the conservation check compares with the total of the view the relay chain confirms", async (t) => {
+	const { base, pendulum, api, monitor, subjects } = await relaySetup(t, { head: () => ({ number: 101, hash: pendulumHash({}, 101) }) });
+	burn(pendulum, 0n, 100n * PEN);
+	burn(pendulum, 1n, 999n * PEN, 102); // past the relay chain's record
+	release(base, 0n, 100n * PEN);
+	base.totalReleased += 50n * PEN * CF; // released without a burn behind it
+	base.vaultBalance -= 50n * PEN * CF;
+	await monitor.poll(api);
+	assert.ok(subjects().includes("CONSERVATION VIOLATION"), JSON.stringify(subjects()));
 });
 
 test("a source that names another hash than the relay chain's record pages critical", async (t) => {

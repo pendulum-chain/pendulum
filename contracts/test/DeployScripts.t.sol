@@ -99,7 +99,8 @@ contract DeployGovernanceScriptTest is Test {
     DeployGovernance internal script;
     PEN internal pen;
     MigrationVault internal vault;
-    // The dedicated canceller Safe, separate from the vault's guardian Safe.
+    // The dedicated canceller Safe, separate from the vault's guardian Safe,
+    // at the lowest threshold the script accepts.
     address internal canceller = address(new SafeStub(2));
     address internal guardian = address(new SafeStub(2));
 
@@ -188,6 +189,9 @@ contract DeployGovernanceScriptTest is Test {
             "TIMELOCK_CANCELLER",
             vm.toString(address(new SafeStub(0))),
             "TIMELOCK_CANCELLER Safe has threshold 0 (not set up)"
+        );
+        _expectRefused(
+            "TIMELOCK_CANCELLER", vm.toString(address(new SafeStub(1))), "TIMELOCK_CANCELLER Safe threshold is below 2"
         );
 
         vm.chainId(8453);

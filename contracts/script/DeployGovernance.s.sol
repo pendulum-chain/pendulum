@@ -47,10 +47,10 @@ import {MigrationVault} from "../src/MigrationVault.sol";
 ///                         could not be stopped during the delay by anyone.
 ///                         Once the delay has passed anyone may execute, so
 ///                         the script refuses to deploy without it. It must
-///                         be a Safe on this chain (getThreshold() returns a
-///                         non-zero threshold, no EIP-7702 delegated EOA) and
-///                         must not be the deployer, PEN_TOKEN, VAULT_ADDRESS
-///                         or the vault's guardian.
+///                         be a Safe on this chain with a threshold of at
+///                         least 2 (getThreshold(); no EIP-7702 delegated EOA)
+///                         and must not be the deployer, PEN_TOKEN,
+///                         VAULT_ADDRESS or the vault's guardian.
 ///   TEST_DEPLOY           optional, testnet drills only: allows a shorter
 ///                         TIMELOCK_DELAY, VOTING_DELAY and VOTING_PERIOD, a
 ///                         TIMELOCK_CANCELLER that is not a Safe or is the
@@ -66,6 +66,8 @@ contract DeployGovernance is Script {
     // Longer periods are a units slip (milliseconds land ~1000x further), and
     // a governor whose votes never end could not vote to shorten them.
     uint256 internal constant MAX_PERIOD = 30 days;
+    // A 1-of-n canceller is a single key holding a veto over every proposal.
+    uint256 internal constant MIN_CANCELLER_THRESHOLD = 2;
 
     function run() external returns (TimelockController timelock, PENGovernor governor) {
         bool testDeploy = vm.envOr("TEST_DEPLOY", false);
@@ -105,7 +107,10 @@ contract DeployGovernance is Script {
         require(canceller != msg.sender, "TIMELOCK_CANCELLER must not be the deployer");
         require(canceller != token && canceller != address(vault), "TIMELOCK_CANCELLER must not be PEN or the vault");
         require(canceller != vault.guardian() || testDeploy, "TIMELOCK_CANCELLER must be separate from the guardian");
-        if (!testDeploy) _safeThreshold(canceller);
+        require(
+            testDeploy || _safeThreshold(canceller) >= MIN_CANCELLER_THRESHOLD,
+            "TIMELOCK_CANCELLER Safe threshold is below 2"
+        );
 
         // Broadcast as msg.sender (forge sets it to --sender or the single
         // signer), the deployer that is temporary admin so the roles below

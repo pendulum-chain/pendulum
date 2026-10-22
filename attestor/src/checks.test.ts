@@ -1,8 +1,8 @@
 /**
  * Unit tests for the attestor's tuple-classification predicate.
  *
- * Run with `npm test` (compiles, then `node --test`). These lock in the round-6
- * fix: `isUnreleasable` must flag BOTH the zero address and the vault's own
+ * Run with `npm test` (compiles, then `node --test`). These lock in that
+ * `isUnreleasable` must flag BOTH the zero address and the vault's own
  * address (case-insensitively), so a `migrate(_, <vault address>)` event is
  * skipped with a critical alert instead of crash-looping the whole attestor
  * fleet on the vault's `RecipientIsVault` revert.
@@ -54,8 +54,8 @@ test("the zero address is unreleasable (vault reverts ZeroAddress)", () => {
 });
 
 test("the vault's own address is unreleasable (vault reverts RecipientIsVault)", () => {
-	// The round-6 finding: without this, a 1-PEN migration to the vault address
-	// crash-loops the entire fleet, since the pallet cannot reject it.
+	// Without this, a 1-PEN migration to the vault address crash-loops the
+	// entire fleet, since the pallet cannot reject it.
 	assert.equal(isUnreleasable(VAULT, AMOUNT, VAULT), true);
 });
 

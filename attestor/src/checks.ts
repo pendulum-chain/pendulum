@@ -2,11 +2,11 @@
  * Pure classification predicates for the attestor.
  *
  * Isolated from the chain-client plumbing in `main.ts` so they can be unit
- * tested exhaustively (see checks.test.ts). Two subtleties that have bitten
- * review rounds live here: which (nonce, recipient, amount) tuples the vault
- * will *deterministically* reject (must stay in exact lockstep with the input
- * reverts at the top of `MigrationVault.approve()`), and which failures are
- * transport-level noise rather than statements about an event.
+ * tested exhaustively (see checks.test.ts). Two subtleties live here: which
+ * (nonce, recipient, amount) tuples the vault will *deterministically* reject
+ * (must stay in exact lockstep with the input reverts at the top of
+ * `MigrationVault.approve()`), and which failures are transport-level noise
+ * rather than statements about an event.
  */
 
 import {
@@ -203,7 +203,7 @@ export async function ownApprovalMissed(
  * submits it or when. Such an event must be SKIPPED (with a critical alert),
  * never retried: because every attestor hits the identical revert at the same
  * finalized block, crash-looping on it would halt the entire fleet and block
- * every migration behind it (the round-2 zero-address DoS class).
+ * every migration behind it.
  *
  * `MigrationVault.approve` reverts up-front on exactly three input conditions:
  *   - a zero recipient            (`ZeroAddress`)

@@ -59,8 +59,8 @@ export function classifyReleaseFailure(errorName: string | undefined): ReleaseOu
 		errorName === "InsufficientVaultBalance" ||
 		// Synthetic: ExceedsDailyCap for an amount LARGER than dailyCap itself.
 		// The allowance can never reach it, so this is a governance setCaps
-		// matter, not a refill wait (the vault rejects such cap pairs since
-		// round 9, but a live vault deployed earlier may still carry one).
+		// matter, not a refill wait (the vault now rejects such cap pairs, but
+		// one deployed before that may still carry one).
 		errorName === "ExceedsDailyCapPermanently"
 	) {
 		return "blocked";

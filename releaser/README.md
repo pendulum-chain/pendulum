@@ -14,7 +14,7 @@ backlog sits pending until an operator clears it by hand, nonce by nonce.
 
 ## Why a separate process
 
-- The attestor's approve path is the most review-scarred code in the stack;
+- The attestor's approve path is the most delicate code in the stack;
   adding a second responsibility to it re-opens that risk.
 - The monitor must stay a cheap, read-only, independent watchdog.
 - **This key holds no privilege.** `release()` is permissionless and can only

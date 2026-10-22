@@ -371,7 +371,12 @@ test("a Pendulum failure pages on its own and the vault balance check still runs
 	pendulum.failure = new Error("node unreachable");
 	base.vaultBalance -= 1n;
 	await monitor.poll(api);
-	assert.deepEqual(sorted(subjects()), ["AUTO-PAUSE UNAVAILABLE", "PENDULUM SOURCE UNREADABLE", "VAULT BALANCE DEFICIT"]);
+	assert.deepEqual(sorted(subjects()), [
+		"AUTO-PAUSE UNAVAILABLE",
+		"PENDULUM SOURCE UNREADABLE",
+		"VAULT BALANCE DEFICIT",
+		"pendulum governance watch failed",
+	]);
 });
 
 const UNREADABLE = "CRITICAL: Pendulum governance item cannot be read";
@@ -386,6 +391,24 @@ test("an undecodable governance item pages as unreadable and hides nothing after
 	await monitor.poll(api);
 	assert.ok(pageFor(pages, UNREADABLE, "public proposal #5"), JSON.stringify(pages));
 	assert.ok(pageFor(pages, RISKY, "referendum #9"), JSON.stringify(pages));
+});
+
+test("an oversized governance call pages as unreadable without being fetched", async (t) => {
+	const { pendulum, api, monitor, pages } = await setup(t);
+	pendulum.publicProps.push([5, lookup(`0x${"ab".repeat(32)}`, 3_900_000)]);
+	pendulum.preimages.set(`0x${"ab".repeat(32)}:3900000`, "mint");
+	await monitor.poll(api);
+	assert.match(pageFor(pages, UNREADABLE, "public proposal #5")?.detail ?? "", /3900000 bytes/);
+	assert.equal(pendulum.preimageReads, 0);
+});
+
+test("the governance watch runs after the conservation checks", async (t) => {
+	const { base, pendulum, api, monitor, subjects } = await setup(t);
+	base.vaultBalance -= 1n;
+	pendulum.publicProps.push([5, inline("remark")]);
+	await monitor.poll(api);
+	assert.deepEqual(subjects().slice(2), ["PENDULUM GOVERNANCE ITEM"]);
+	assert.deepEqual(sorted(subjects().slice(0, 2)), ["AUTO-PAUSE UNAVAILABLE", "VAULT BALANCE DEFICIT"]);
 });
 
 /** A timelock operation scheduling the vault's `pause()`, ready in 48 h. */

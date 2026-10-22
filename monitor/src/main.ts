@@ -769,12 +769,24 @@ interface BoundedCall {
 	toString(): string;
 }
 
+/**
+ * Largest governance call the watcher fetches and decodes. Anyone can note a
+ * preimage and propose it, and the decoding cost grows with its size; 64 KiB
+ * decodes in about 0.15 s even when packed with the smallest calls.
+ * Legitimate calls stay far below it; a bigger one is never fetched and pages
+ * as unreadable.
+ */
+const MAX_GOVERNANCE_CALL_BYTES = 64 * 1024;
+
 /** Decodes a proposal's call; a preimage that is not noted yet cannot be read. */
 async function boundedCall(apiAt: ApiAt, bounded: BoundedCall): Promise<{ node?: CallNode; text: string }> {
 	let bytes: Uint8Array;
 	if (bounded.isInline) bytes = bounded.asInline;
 	else if (bounded.isLookup) {
 		const { hash_, len } = bounded.asLookup;
+		if (len.toNumber() > MAX_GOVERNANCE_CALL_BYTES) {
+			throw new Error(`the call is ${len.toNumber()} bytes, over the ${MAX_GOVERNANCE_CALL_BYTES} bytes the monitor decodes`);
+		}
 		const preimage = (await apiAt.query.preimage.preimageFor([hash_, len])) as unknown as {
 			isSome: boolean;
 			unwrap(): Uint8Array;
@@ -792,9 +804,13 @@ async function boundedCall(apiAt: ApiAt, bounded: BoundedCall): Promise<{ node?:
  * Calls that mint, move or unlock balances or change the runtime page as
  * CRITICAL: minted PEN burned through the migration drains the fixed-supply
  * vault, and only Pendulum governance can stop the call before enactment.
- * Alert-only.
+ * Alert-only; it runs after the conservation checks and decodes within fixed
+ * bounds, so it can neither stop nor delay them.
  */
-async function watchPendulumGovernance(apiAt: ApiAt, finalizedBlock: number): Promise<void> {
+async function watchPendulumGovernance(api: ApiPromise): Promise<void> {
+	const finalizedHash = await api.rpc.chain.getFinalizedHead();
+	const finalizedBlock = (await api.rpc.chain.getHeader(finalizedHash)).number.toNumber();
+	const apiAt = await api.at(finalizedHash);
 	const democracy = apiAt.query.democracy;
 	const launchPeriod = Number(apiAt.consts.democracy.launchPeriod.toString());
 	const nextLaunch = (Math.floor(finalizedBlock / launchPeriod) + 1) * launchPeriod;
@@ -838,6 +854,8 @@ async function watchPendulumGovernance(apiAt: ApiAt, finalizedBlock: number): Pr
 			bounded: ongoing.proposal,
 		});
 	}
+	// Pages go out together, so a burst of new items costs one webhook round trip.
+	const pages: Promise<void>[] = [];
 	for (const item of items) {
 		if (onceOnlyPages.has(item.key)) continue;
 		let call: { node?: CallNode; text: string };
@@ -845,22 +863,23 @@ async function watchPendulumGovernance(apiAt: ApiAt, finalizedBlock: number): Pr
 			call = await boundedCall(apiAt, item.bounded);
 		} catch (readError) {
 			// One unreadable item must never hide the items after it.
-			await pageOnce(
+			pages.push(pageOnce(
 				item.key,
 				"CRITICAL: Pendulum governance item cannot be read",
 				`${item.label}: ${String(readError).slice(0, 300)}; review it manually; ${item.hint}`,
-			);
+			));
 			continue;
 		}
 		const risky = call.node ? riskyCalls(call.node) : [];
-		await pageOnce(
+		pages.push(pageOnce(
 			item.key,
 			risky.length
 				? "CRITICAL: Pendulum governance item mints, moves or unlocks balances, or changes the runtime"
 				: "PENDULUM GOVERNANCE ITEM",
 			`${item.label}: ${call.text}${risky.length ? ` (flagged: ${risky.join(", ")})` : ""}; ${item.hint}`,
-		);
+		));
 	}
+	await Promise.all(pages);
 }
 
 function payloadHash(migration: MigrationRecord): `0x${string}` {
@@ -934,15 +953,6 @@ async function readSource(api: ApiPromise, draft: RuntimeState): Promise<SourceV
 				`the monitor cannot verify new Base events against a stalled source — restore the node before ` +
 				`the ${config.unmatchedEventGraceSeconds}s unmatched-event grace forces a pause`,
 		);
-	}
-	try {
-		await watchPendulumGovernance(apiAt, finalizedBlock);
-	} catch (governanceError) {
-		// Alert-only: an RPC or decode failure here must not stop the conservation checks.
-		if (Date.now() - lastGovernanceWatchFailureMs > config.graceSeconds * 1000) {
-			lastGovernanceWatchFailureMs = Date.now();
-			await alert("pendulum governance watch failed", `${governanceError}`);
-		}
 	}
 	await ingestPendulumEvents(api, draft, finalizedBlock);
 	const [totalMigratedValue, chainNextNonceValue, totalIssuanceValue] = await Promise.all([
@@ -1143,6 +1153,14 @@ export async function poll(api: ApiPromise): Promise<void> {
 		await check(api);
 	} catch (checkError) {
 		await alert("monitor check failed", `${checkError}`);
+	}
+	try {
+		await watchPendulumGovernance(api);
+	} catch (governanceError) {
+		if (Date.now() - lastGovernanceWatchFailureMs > config.graceSeconds * 1000) {
+			lastGovernanceWatchFailureMs = Date.now();
+			await alert("pendulum governance watch failed", `${governanceError}`);
+		}
 	}
 	await retryUndeliveredPages();
 }

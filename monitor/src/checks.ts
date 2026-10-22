@@ -223,14 +223,26 @@ function isCallLike(value: unknown): value is CallLike {
 	return typeof call?.section === "string" && typeof call.method === "string" && Array.isArray(call.args);
 }
 
-/** Walks a decoded call, descending into arguments that are calls or lists of calls (batch, dispatch_as, ...). */
+/** Bounds on a walked call tree. A governance call is untrusted data;
+ *  legitimate ones stay far below both, and a bigger tree is unreadable. */
+const MAX_CALL_NODES = 256;
+const MAX_CALL_DEPTH = 16;
+
+/** Walks a decoded call, descending into arguments that are calls or lists of
+ *  calls (batch, dispatch_as, ...). Throws past the node or depth bound. */
 export function toCallNode(call: CallLike): CallNode {
-	const calls: CallNode[] = [];
-	for (const arg of call.args) {
-		if (isCallLike(arg)) calls.push(toCallNode(arg));
-		else if (Array.isArray(arg)) for (const item of arg) if (isCallLike(item)) calls.push(toCallNode(item));
-	}
-	return { name: `${call.section}.${call.method}`, calls };
+	let nodes = 0;
+	const walk = (node: CallLike, depth: number): CallNode => {
+		if (++nodes > MAX_CALL_NODES) throw new Error(`call tree has more than ${MAX_CALL_NODES} calls`);
+		if (depth > MAX_CALL_DEPTH) throw new Error(`call tree is nested more than ${MAX_CALL_DEPTH} levels deep`);
+		const calls: CallNode[] = [];
+		for (const arg of node.args) {
+			if (isCallLike(arg)) calls.push(walk(arg, depth + 1));
+			else if (Array.isArray(arg)) for (const item of arg) if (isCallLike(item)) calls.push(walk(item, depth + 1));
+		}
+		return { name: `${node.section}.${node.method}`, calls };
+	};
+	return walk(call, 1);
 }
 
 /** Calls that mint, move or unlock balances outside normal transfers, or change

@@ -162,3 +162,14 @@ test("a governance call tree is walked through batches and minting calls are fla
 	assert.deepEqual(riskyCalls(nested), ["tokenMigration.setPaused"]);
 	assert.deepEqual(riskyCalls(toCallNode({ section: "system", method: "remark", args: ["0x00"] })), []);
 });
+
+test("the call-tree walk is bounded in size and depth", () => {
+	const remark = { section: "system", method: "remark", args: [] };
+	const batch = (calls: unknown[]) => ({ section: "utility", method: "batch", args: [calls] });
+	assert.equal(toCallNode(batch(Array(255).fill(remark))).calls.length, 255);
+	assert.throws(() => toCallNode(batch(Array(256).fill(remark))), /more than 256 calls/);
+	let nested: { section: string; method: string; args: unknown[] } = remark;
+	for (let depth = 1; depth < 16; depth++) nested = batch([nested]);
+	assert.equal(describeCall(toCallNode(nested)).split("(").length, 16);
+	assert.throws(() => toCallNode(batch([nested])), /more than 16 levels/);
+});

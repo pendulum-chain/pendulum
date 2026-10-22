@@ -1241,6 +1241,19 @@ test("a relay record below the block ingested last is checked down the source's 
 	}
 });
 
+test("a relay record far below the block ingested last is not walked down to", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, {
+		head: () => ({ number: 150, hash: pendulumHash({}, 150) }),
+		env: { PENDULUM_START_BLOCK: "300" },
+	});
+	burn(pendulum, 0n, 100n * PEN, 300);
+	await monitor.poll(api);
+	assert.deepEqual(pages.map((page) => page.subject), ["RELAY ANCHOR UNAVAILABLE"]);
+	assert.match(pages[0].detail, /^relay RPC 1: the relay chain's Pendulum head 150 lies more than 100 blocks below block 299;/);
+	assert.equal(persisted().relayAnchor, undefined);
+	assert.equal(persisted().lastPendulumBlock, 299);
+});
+
 test("an unreadable relay chain warns, the source is used, and it turns critical after the grace", async (t) => {
 	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, { failing: () => true });
 	burn(pendulum, 0n, 100n * PEN);

@@ -882,6 +882,10 @@ function relayHead(api: ApiPromise, url: string): Promise<BlockRef> {
 	});
 }
 
+/** How far below the block ingested last the relay chain's record may lie and
+ *  still be walked down to; a deeper one is not used. */
+const RELAY_HEAD_MAX_DEPTH = 100;
+
 /** Why the relay chain's record `head` does not anchor the source this poll,
  *  or undefined when it does. Throws when it contradicts the source's chain:
  *  `hashes`, walked down from `top` to `bottom`. */
@@ -917,6 +921,9 @@ async function relayVerdict(
 			);
 		}
 		return undefined;
+	}
+	if (head.number < bottom.number - RELAY_HEAD_MAX_DEPTH) {
+		return `the relay chain's Pendulum head ${head.number} lies more than ${RELAY_HEAD_MAX_DEPTH} blocks below block ${bottom.number}`;
 	}
 	const hash = head.number >= bottom.number
 		? hashes.get(head.number)

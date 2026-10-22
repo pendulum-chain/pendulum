@@ -52,7 +52,8 @@ itself:
   head. The newest such head is kept in the state file, and the chain must
   keep passing through it, also while it lies above the finalized head.
   Blocks ingested while no relay RPC answered are tied to the next head that
-  arrives by the same walk. A head that contradicts the source counts only
+  arrives by the same walk; a head more than 100 blocks below the block
+  ingested last is not used. A head that contradicts the source counts only
   when another relay RPC's head contradicts it too, or when `POLKADOT_WS`
   lists one RPC. A relay RPC whose head anchors the source at or above the
   contradicting head's height outvotes it: `RELAY RPCS DISAGREE` pages and

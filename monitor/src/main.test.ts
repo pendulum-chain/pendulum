@@ -1143,6 +1143,24 @@ test("logs that miss a sweep hold the Base cursor too", async (t) => {
 	assert.equal(persisted().baseFromBlock, "1011");
 });
 
+test("the conservation check still runs while a Base log range is held", async (t) => {
+	const { base, pendulum, api, monitor, subjects } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	release(base, 0n, 100n * PEN, 1_005n);
+	release(base, 0n, 100n * PEN, 1_007n); // a second release lifts totalReleased past TotalMigrated...
+	base.logsHead = 1_006n; // ...while the log backend drops its block
+	await monitor.poll(api);
+	assert.ok(subjects().includes("CONSERVATION VIOLATION"), JSON.stringify(subjects()));
+	assert.ok(subjects().includes("AUTO-PAUSE UNAVAILABLE"), JSON.stringify(subjects())); // the pause was asked for
+});
+
+test("the conservation check waits while a Base event's burn is not in the source view yet", async (t) => {
+	const { base, api, monitor, subjects } = await setup(t);
+	release(base, 0n, 100n * PEN); // the burn is not in the lagging source view yet
+	await monitor.poll(api);
+	assert.deepEqual([...new Set(subjects())], ["UNVERIFIED BASE EVENT"]);
+});
+
 test("a release in the first block of a range accounts for the totals", async (t) => {
 	const { base, pendulum, api, monitor, subjects, persisted } = await setup(t);
 	burn(pendulum, 0n, 100n * PEN);

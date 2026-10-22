@@ -1776,6 +1776,23 @@ async function check(api: ApiPromise): Promise<boolean> {
 		return false;
 	}
 	const { finalizedBlock, totalMigrated } = source;
+	// M2a needs only the totals, so a held log range does not stop it. A Base
+	// event whose burn the source view does not show yet would make it fire
+	// falsely, so it waits for that.
+	if (
+		!reconciliation.awaitingSource &&
+		releasedExceedsMigrated(totalReleased, totalMigrated, conversionFactor, config.acknowledgedReleaseExcess)
+	) {
+		if (await securityViolation(
+			"CONSERVATION VIOLATION",
+			`released ${totalReleased} > migrated ${totalMigrated * conversionFactor} + acknowledged excess ` +
+				`${config.acknowledgedReleaseExcess} (token units)`,
+		)) {
+			state = draft;
+			persistState(state);
+		}
+		return false;
+	}
 	if (reconciliation.awaitingSource || reconciliation.incomplete) {
 		state = draft;
 		persistState(state);
@@ -1785,17 +1802,6 @@ async function check(api: ApiPromise): Promise<boolean> {
 				: `waiting up to ${config.unmatchedEventGraceSeconds}s for Pendulum RPC to catch up with ` +
 					reconciliation.awaitingSource,
 		);
-		return false;
-	}
-	if (releasedExceedsMigrated(totalReleased, totalMigrated, conversionFactor, config.acknowledgedReleaseExcess)) {
-		if (await securityViolation(
-			"CONSERVATION VIOLATION",
-			`released ${totalReleased} > migrated ${totalMigrated * conversionFactor} + acknowledged excess ` +
-				`${config.acknowledgedReleaseExcess} (token units)`,
-		)) {
-			state = draft;
-			persistState(state);
-		}
 		return false;
 	}
 

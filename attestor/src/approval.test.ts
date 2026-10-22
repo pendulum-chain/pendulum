@@ -477,24 +477,54 @@ test("a bump catches up with a fee estimate that rose past the bump percent", as
 	assert.equal(chain.sent[1].maxPriorityFeePerGas, 1_200_000n);
 });
 
-test("bumping stops once the others have released: no raised fee, and our miss is counted", async () => {
+test("an approval the others made unneeded is still bumped until its nonce is used, so later approvals are not stuck behind it", async () => {
 	const chain = new FakeVault();
-	chain.baseFee = 100_000_000n;
-	const { attestor, alerts } = attestorOn(chain, {}, (elapsed) => {
+	chain.baseFee = 8_000_000n; // above the estimate's fee cap: stuck
+	const { attestor, alerts, logs } = attestorOn(chain, { missedApprovals: 1 }, (elapsed) => {
 		if (elapsed > AFTER_MS / 2) chain.consumed.add(EVENT.nonce);
 		chain.mine();
 	});
 	assert.equal(await approve(attestor, EVENT), true);
-	// Only the unchanged re-send of the same attempt, which the node already holds.
-	assert.equal(chain.sent.length, 2);
-	assert.equal(chain.sent[1].hash, chain.sent[0].hash);
+	assert.deepEqual(
+		chain.sent.map((tx) => [tx.nonce, tx.maxFeePerGas]),
+		[
+			[5, 7_000_000n],
+			[5, 8_400_000n],
+		],
+	);
+	assert.equal(chain.receipts.get(chain.sent[1].hash)?.status, "reverted", "mined, it merely reverts");
+	assert.ok(logs.some((line) => line.startsWith("skip (raced, resolved on-chain): nonce=7 ")));
+	assert.equal(attestor.missedApprovals, 0, "our transaction was mined");
+	assert.equal(alerts.length, 0);
+	assert.equal(attestor.submissions.size, 0);
+	assert.equal(await approve(attestor, OTHER), true);
+	assert.equal(chain.minedNonce, 7);
+	assert.ok(chain.approved.has(payloadHash(OTHER)));
+});
+
+test("a resolved migration whose nonce another transaction took counts as our miss, and nothing is sent again", async () => {
+	const chain = new FakeVault();
+	chain.baseFee = 100_000_000n;
+	const { attestor, alerts } = attestorOn(chain, {}, (elapsed) => {
+		if (elapsed === AFTER_MS / 2) {
+			// Released by the others, and the stuck transaction replaced by hand.
+			chain.consumed.add(EVENT.nonce);
+			chain.pool.delete(5);
+			chain.minedNonce = 6;
+		}
+		chain.mine();
+	});
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.deepEqual(
+		chain.sent.map((tx) => tx.nonce),
+		[5],
+	);
 	assert.equal(attestor.missedApprovals, 1);
 	assert.equal(alerts.length, 0);
 	assert.equal(attestor.submissions.size, 0);
-	assert.equal(attestor.nextNonce, 6, "the abandoned transaction keeps its nonce");
 });
 
-test("an abandoned approval the node dropped is re-sent unchanged, so later approvals are not stuck behind its nonce", async () => {
+test("an approval the node dropped after the others released is sent again at its nonce, so later approvals are not stuck behind it", async () => {
 	const chain = new FakeVault();
 	chain.baseFee = 100_000_000n;
 	let dropped = false;
@@ -510,7 +540,6 @@ test("an abandoned approval the node dropped is re-sent unchanged, so later appr
 		chain.mine();
 	});
 	assert.equal(await approve(attestor, EVENT), true);
-	assert.equal(chain.sent[1].hash, chain.sent[0].hash);
 	chain.pendingNonce = undefined;
 	assert.equal(await approve(attestor, OTHER), true);
 	assert.deepEqual(
@@ -519,6 +548,55 @@ test("an abandoned approval the node dropped is re-sent unchanged, so later appr
 	);
 	assert.equal(chain.minedNonce, 7);
 	assert.ok(chain.approved.has(payloadHash(OTHER)));
+});
+
+test("a retry resumes a transaction in flight although the migration resolved meanwhile", async () => {
+	const chain = new FakeVault();
+	chain.baseFee = 8_000_000n;
+	const receipt = chain.receipt.bind(chain);
+	let failures = 1;
+	chain.receipt = async (hash) => {
+		if (failures-- > 0) throw new HttpRequestError({ url: "http://rpc", status: 503 });
+		return receipt(hash);
+	};
+	const { attestor } = attestorOn(chain);
+	await assert.rejects(approve(attestor, EVENT), HttpRequestError);
+	chain.consumed.add(EVENT.nonce);
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.deepEqual(
+		chain.sent.map((tx) => tx.nonce),
+		[5, 5],
+	);
+	assert.equal(await approve(attestor, OTHER), true);
+	assert.equal(chain.minedNonce, 7);
+	assert.ok(chain.approved.has(payloadHash(OTHER)));
+});
+
+test("a transaction in flight when an error meets the others' release is kept, and finished before a later approval is sent", async () => {
+	const chain = new FakeVault();
+	chain.baseFee = 8_000_000n;
+	const receipt = chain.receipt.bind(chain);
+	let failures = 1;
+	chain.receipt = async (hash) => {
+		if (failures-- > 0) {
+			chain.consumed.add(EVENT.nonce);
+			throw new HttpRequestError({ url: "http://rpc", status: 503 });
+		}
+		return receipt(hash);
+	};
+	const { attestor, logs } = attestorOn(chain);
+	await assert.rejects(approve(attestor, EVENT), HttpRequestError);
+	assert.equal(attestor.submissions.size, 1);
+	assert.equal(await approve(attestor, OTHER), true);
+	assert.deepEqual(
+		chain.sent.map((tx) => approveArgs(tx)[0]),
+		[EVENT.nonce, EVENT.nonce, OTHER.nonce, OTHER.nonce],
+	);
+	assert.equal(chain.minedNonce, 7);
+	assert.ok(chain.approved.has(payloadHash(OTHER)));
+	assert.ok(logs.some((line) => line.startsWith("skip (raced, resolved on-chain): nonce=7 ")));
+	assert.equal(attestor.missedApprovals, 0);
+	assert.equal(attestor.submissions.size, 0);
 });
 
 test("bumping stops once our own approval is recorded, even without a visible receipt", async () => {
@@ -565,7 +643,9 @@ test("the fee cap stops a bump and pages once; no attempt offers more than the c
 	chain.estimateFees = { maxFeePerGas: 20_000_000n, maxPriorityFeePerGas: 1_000_000n };
 	const cap = 25_000_000n;
 	const { attestor, alerts } = attestorOn(chain, { feeBump: { afterMs: AFTER_MS, percent: 20, max: 3, maxFeePerGas: cap } }, (elapsed) => {
-		if (elapsed >= 10 * AFTER_MS) chain.consumed.add(EVENT.nonce);
+		// Released by the others before the page; fees fall ten minutes in.
+		if (elapsed >= 1.5 * AFTER_MS) chain.consumed.add(EVENT.nonce);
+		if (elapsed >= 10 * AFTER_MS) chain.baseFee = 5_000_000n;
 		chain.mine();
 	});
 	assert.equal(await approve(attestor, EVENT), true);
@@ -575,13 +655,17 @@ test("the fee cap stops a bump and pages once; no attempt offers more than the c
 		chain.sent.slice(0, 2).map((tx) => tx.maxFeePerGas),
 		[20_000_000n, 24_000_000n],
 	);
-	assert.ok(chain.sent.slice(2).every((tx) => tx.hash === chain.sent[1].hash));
+	assert.ok(chain.sent.length > 2 && chain.sent.slice(2).every((tx) => tx.hash === chain.sent[1].hash));
 	assert.ok(chain.sent.every((tx) => tx.maxFeePerGas <= cap));
 	assert.deepEqual(
 		alerts.map((a) => `${a.severity} ${a.subject}`),
 		["critical own approval not mined"],
 	);
-	assert.match(alerts[0].detail, /^the fee cap stops the next bump: transaction nonce 5,/);
+	assert.match(
+		alerts[0].detail,
+		/^the fee cap stops the next bump: transaction nonce 5, .*\(cap 0\.025 gwei\), migration already resolved; nonce=7 /,
+	);
+	assert.ok(chain.receipts.has(chain.sent[1].hash));
 });
 
 test("an attempt at the cap that the node dropped is brought back by re-sending it unchanged", async () => {
@@ -733,25 +817,16 @@ test("a nonce held by a transaction this process did not send is skipped, never 
 
 test("a second payload is never signed at the first one's nonce, even when the node reports it free", async () => {
 	const chain = new FakeVault();
-	chain.baseFee = 100_000_000n;
-	const { attestor } = attestorOn(chain, {}, (elapsed) => {
-		if (elapsed > AFTER_MS / 2) chain.consumed.add(EVENT.nonce);
-		chain.mine();
-	});
+	const { attestor } = attestorOn(chain);
 	assert.equal(await approve(attestor, EVENT), true);
+	// The backend answering the count has not seen the first one yet.
+	chain.pendingNonce = 5;
+	assert.equal(await approve(attestor, OTHER), true);
 	assert.deepEqual(
 		chain.sent.map((tx) => tx.nonce),
-		[5, 5],
+		[5, 6],
 	);
-	// The backend answering the count lost the abandoned transaction.
-	chain.pendingNonce = 5;
-	chain.onSend = () => {
-		chain.baseFee = 5_000_000n;
-	};
-	assert.equal(await approve(attestor, OTHER), true);
-	assert.equal(chain.sent.length, 3);
-	assert.equal(chain.sent[2].nonce, 6);
-	assert.deepEqual(approveArgs(chain.sent[2]), [OTHER.nonce, OTHER.recipient, OTHER.palletAmount]);
+	assert.deepEqual(approveArgs(chain.sent[1]), [OTHER.nonce, OTHER.recipient, OTHER.palletAmount]);
 	assert.ok(chain.approved.has(payloadHash(OTHER)));
 });
 

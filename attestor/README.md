@@ -113,19 +113,23 @@ WantedBy=multi-user.target
   still not mined after `FEE_BUMP_AFTER_SECONDS` is re-sent as the identical
   call at the same nonce, with both fees raised by `FEE_BUMP_PERCENT` and at
   least to the node's current estimate, at most `FEE_BUMP_MAX` times and never
-  above `MAX_FEE_PER_GAS_GWEI`. Before each re-send the daemon checks that the
-  approval is still needed and stops once the migration is released or its
-  own approval is recorded. When no bump is left, or the cap stops one, it
-  pages `own approval not mined` once (with the nonce, the account's next
-  mined nonce and the fees) and keeps waiting, since later approvals would
-  queue behind that nonce anyway. Whenever it stops bumping, it re-sends the
-  last attempt unchanged, so a node that dropped the transaction while still
-  counting its nonce gets it back instead of leaving a gap. A node refusing a send for its price, an
-  underpriced replacement or a full pool is retried at the next bump instead
-  of being fatal. Transactions in flight are kept in memory only: after a
-  restart, an approval whose transaction is still pending is sent again at the
-  next nonce, so a pending transaction stuck below the cap has to be replaced
-  by hand.
+  above `MAX_FEE_PER_GAS_GWEI`. Once the migration is released, or its own
+  approval is recorded, a transaction still pending is no longer needed, but
+  it is followed and bumped the same way until its nonce is used: every later
+  approval waits behind that nonce, and mined it merely reverts. When no bump
+  is left, or the cap stops one, it pages `own approval not mined` once (with
+  the nonce, the account's next mined nonce, the fees and whether the migration
+  is already resolved) and keeps waiting, since later approvals would queue
+  behind that nonce anyway. Whenever it stops bumping, it re-sends the last
+  attempt unchanged, so a node that dropped the transaction while still
+  counting its nonce gets it back instead of leaving a gap. An approval that an
+  RPC error interrupted keeps its transaction: the retry, or the next approval
+  before it sends anything, follows it to the end. A node refusing a send for
+  its price, an underpriced replacement or a full pool is retried at the next
+  bump instead of being fatal. Transactions in flight are kept in memory only:
+  after a restart, an approval whose transaction is still pending is sent
+  again at the next nonce, so a pending transaction stuck below the cap has to
+  be replaced by hand.
 - Checkpoints are atomically replaced, bound to the Pendulum genesis plus the
   configured Base chain and vault, and malformed files are fatal. Never delete or replace one merely to
   clear an alert; reconcile it against both chains first.

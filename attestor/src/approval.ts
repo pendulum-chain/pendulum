@@ -63,6 +63,7 @@ export interface FeeBumpPolicy {
 /** One own approval transaction: the identical call, kept at one nonce once the
  *  node has accepted it, and re-sent there with higher fees until it is mined. */
 export interface Submission {
+	event: MigrationEvent;
 	data: Hex;
 	gas: bigint;
 	/** Set by the first attempt the node accepted, and fixed from then on. */
@@ -181,7 +182,8 @@ export interface Attestor {
 	 *  landed. Lost races do not count; any mined approval of ours resets it. */
 	missedApprovals: number;
 	/** Own approvals not mined yet, by payload hash: a retry resumes the same
-	 *  transaction instead of sending a second one at another nonce. */
+	 *  transaction instead of sending a second one at another nonce, and one
+	 *  holding a nonce is finished before any other approval is sent. */
 	submissions: Map<Hex, Submission>;
 	/** The lowest nonce no transaction of this process has been accepted at.
 	 *  The node's pending count can trail it (a load-balanced endpoint, a pool
@@ -344,12 +346,13 @@ async function resendLatest(attestor: Attestor, submission: Submission, nonce: n
  *
  * An attempt still not mined after `feeBump.afterMs` is re-sent: the identical
  * call at the same nonce with both fees raised (`bumpedFees`), at most
- * `feeBump.max` times, and only while the approval is still needed. When no
- * bump is left or the cap stops one, it pages once and keeps waiting, re-sending
- * the latest attempt unchanged: later approvals would queue behind this nonce
- * anyway. Returns undefined when the approval is no longer needed (released, or
- * ours recorded) before a receipt was seen; its nonce is never given to another
- * payload.
+ * `feeBump.max` times. When no bump is left or the cap stops one, it pages once
+ * and keeps waiting, re-sending the latest attempt unchanged: later approvals
+ * would queue behind this nonce anyway. An approval no longer needed (released,
+ * or ours recorded) is followed the same way while its nonce is pending, as
+ * every later approval waits behind that nonce; mined, it merely reverts.
+ * Returns undefined when the approval is no longer needed and no attempt holds
+ * a pending nonce; its nonce is never given to another payload.
  */
 async function sendUntilMined(
 	attestor: Attestor,
@@ -363,18 +366,16 @@ async function sendUntilMined(
 		const receipt = await minedReceipt(attestor, submission.hashes, policy.afterMs);
 		if (receipt) return receipt;
 		const { nonce } = submission;
-		if (await handledAt(attestor, event)) {
-			// No longer needed, so no bump; but the nonce stays this approval's.
-			if (nonce !== undefined) await resendLatest(attestor, submission, nonce, label);
-			return undefined;
-		}
+		const needed = !(await handledAt(attestor, event));
+		if (!needed && nonce === undefined) return undefined;
 		const minedNonce = nonce === undefined ? undefined : await attestor.chain.accountNonce("latest");
 		if (nonce !== undefined && minedNonce !== undefined && minedNonce > nonce) {
 			// Our nonce is used: by an attempt mined since the poll, or by a
-			// transaction this process did not send. Then the approval needs a
-			// new transaction.
+			// transaction this process did not send. Then the approval, if still
+			// needed, needs a new transaction.
 			const late = await minedReceipt(attestor, submission.hashes, 0);
 			if (late) return late;
+			if (!needed) return undefined;
 			attestor.log(`nonce ${nonce} was used by another transaction; sending the approval again: ${label}`);
 			Object.assign(submission, { nonce: undefined, fees: undefined, hashes: [], bumps: 0, paged: false });
 			continue;
@@ -392,7 +393,8 @@ async function sendUntilMined(
 				await attestor.alert(
 					"own approval not mined",
 					`${reason}: transaction nonce ${nonce ?? "not accepted by the node"}, account's next mined nonce ${minedNonce ?? "unknown"}, ` +
-						`maxFeePerGas ${formatGwei(last.maxFeePerGas)} gwei (cap ${formatGwei(policy.maxFeePerGas)} gwei); ${label}`,
+						`maxFeePerGas ${formatGwei(last.maxFeePerGas)} gwei (cap ${formatGwei(policy.maxFeePerGas)} gwei)` +
+						`${needed ? "" : ", migration already resolved"}; ${label}`,
 					"critical",
 				);
 			}
@@ -424,7 +426,14 @@ export async function approve(attestor: Attestor, event: MigrationEvent): Promis
 	}
 
 	const key = payloadHash(event);
-	if (await handledAt(attestor, event)) {
+	// An approval an error left in flight goes first: every later one would
+	// wait behind its nonce.
+	for (const [other, inFlight] of attestor.submissions) {
+		if (other !== key && inFlight.nonce !== undefined) await approve(attestor, inFlight.event);
+	}
+	// Our own transaction in flight is followed to the end even when the
+	// migration no longer needs it (see `sendUntilMined`).
+	if (attestor.submissions.get(key)?.nonce === undefined && (await handledAt(attestor, event))) {
 		attestor.submissions.delete(key);
 		attestor.log(`skip (already released or approved): ${label}`);
 		return true;
@@ -449,7 +458,7 @@ export async function approve(attestor: Attestor, event: MigrationEvent): Promis
 				functionName: "approve",
 				args: [event.nonce, event.recipient, event.palletAmount],
 			});
-			submission = { data, gas, hashes: [], bumps: 0, paged: false };
+			submission = { event, data, gas, hashes: [], bumps: 0, paged: false };
 			attestor.submissions.set(key, submission);
 		}
 		const receipt = await sendUntilMined(attestor, event, submission, label);
@@ -463,6 +472,9 @@ export async function approve(attestor: Attestor, event: MigrationEvent): Promis
 		}
 		attestor.log(`approved: ${label} tx=${receipt.transactionHash}`);
 	} catch (error) {
+		// A transaction still in flight is never dropped here, resolved or not:
+		// the retry (or the next approval) follows it until its nonce is used.
+		if (attestor.submissions.get(key)?.nonce !== undefined) throw error;
 		// Unresolved on-chain, the failure is genuine and propagates to the
 		// fatal handler. Resolved, it is the expected race when the release
 		// (or our own retried tx) landed between our pre-check and the

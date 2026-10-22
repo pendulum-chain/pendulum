@@ -665,6 +665,83 @@ test("a slow Pendulum source does not delay the vault balance check", async (t) 
 	}
 });
 
+/** Holds every finalized-head read of `pendulum` until the returned function is called. */
+function holdSource(pendulum: Pendulum): () => void {
+	let respond = () => {};
+	pendulum.gate = new Promise((resolve) => (respond = resolve));
+	return respond;
+}
+
+test("while a poll waits on a slow source, the vault balance check runs on its own", async (t) => {
+	const { base, pendulum, api, monitor, subjects } = await setup(t, { env: { POLL_INTERVAL_MS: "20" } });
+	const respond = holdSource(pendulum);
+	const polling = monitor.poll(api); // checks the balance, then waits on the source
+	try {
+		await new Promise((resolve) => setTimeout(resolve, 40));
+		base.vaultBalance -= 1n;
+		await monitor.watchVaultBalance();
+		assert.ok(subjects().includes("VAULT BALANCE DEFICIT"), JSON.stringify(subjects()));
+	} finally {
+		respond();
+		await polling;
+	}
+});
+
+test("the vault balance check does not run on its own within a poll interval of a poll's, or between polls", async (t) => {
+	const { base, pendulum, api, monitor, subjects } = await setup(t, { env: { POLL_INTERVAL_MS: "200" } });
+	const respond = holdSource(pendulum);
+	const polling = monitor.poll(api);
+	try {
+		await new Promise((resolve) => setTimeout(resolve, 40));
+		base.vaultBalance -= 1n;
+		await monitor.watchVaultBalance(); // the poll checked the balance less than an interval ago
+	} finally {
+		respond();
+		await polling;
+	}
+	await new Promise((resolve) => setTimeout(resolve, 250));
+	await monitor.watchVaultBalance(); // no poll is running: the next one checks it
+	assert.ok(!subjects().includes("VAULT BALANCE DEFICIT"), JSON.stringify(subjects()));
+});
+
+test("a pause attempt in flight is joined, not started again", async (t) => {
+	let answerFailedPause = () => {};
+	const failedPauseAnswered = new Promise<void>((resolve) => (answerFailedPause = resolve));
+	const { base, pendulum, api, monitor, pages } = await setup(t, {
+		env: { GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY, POLL_INTERVAL_MS: "20" },
+		webhook: async ({ subject }) => {
+			if (subject === "AUTO-PAUSE FAILED") await failedPauseAnswered; // holds that attempt in flight
+			return 200;
+		},
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	const tokenAmount = 100n * PEN * CF; // a release of nonce 0 to another recipient
+	base.logs.push({ address: VAULT, eventName: "Released", args: { nonce: 0n, recipient: TOKEN, palletAmount: 100n * PEN, tokenAmount }, blockNumber: 1_015n });
+	base.totalReleased += tokenAmount;
+	base.vaultBalance -= tokenAmount;
+	base.safe = 1_020n;
+	const respond = holdSource(pendulum);
+	const polling = monitor.poll(api);
+	const failedPauses = () => pages.filter((page) => page.subject === "AUTO-PAUSE FAILED").length;
+	try {
+		await new Promise((resolve) => setTimeout(resolve, 40));
+		base.vaultBalance -= 1n;
+		const watching = monitor.watchVaultBalance(); // a deficit: the first pause attempt
+		await until(() => failedPauses() === 1, "the first failed pause page");
+		respond(); // the poll goes on to the release, a second violation
+		await until(() => pages.some((page) => page.subject === "MIGRATION TUPLE VIOLATION"), "the second violation");
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		answerFailedPause();
+		await watching;
+	} finally {
+		respond();
+		answerFailedPause();
+		await polling;
+	}
+	assert.equal(failedPauses(), 1, JSON.stringify(pages.map((page) => page.subject)));
+});
+
 test("a source whose chain leaves the blocks ingested so far pages critical and ingests nothing", async (t) => {
 	const { pendulum, api, monitor, restart, pages, subjects, persisted } = await setup(t);
 	burn(pendulum, 0n, 100n * PEN);

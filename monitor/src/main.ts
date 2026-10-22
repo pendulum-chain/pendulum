@@ -524,7 +524,15 @@ async function waitForBaseFinality(
 	}
 }
 
-async function pauseVault(): Promise<boolean> {
+/** The pause attempt in flight, which a concurrent violation joins. */
+let pausing: Promise<boolean> | undefined;
+
+function pauseVault(): Promise<boolean> {
+	pausing ??= pauseOnce().finally(() => (pausing = undefined));
+	return pausing;
+}
+
+async function pauseOnce(): Promise<boolean> {
 	if (!config.guardianPrivateKey) {
 		await alert("AUTO-PAUSE UNAVAILABLE", "no GUARDIAN_PRIVATE_KEY configured; pause manually NOW", "critical");
 		return false;
@@ -1678,6 +1686,55 @@ async function readSource(api: ApiPromise, draft: RuntimeState): Promise<SourceV
 	return { finalizedBlock, timestampMs: sourceFinalizedTsMs, totalMigrated };
 }
 
+/** When the vault balance check last started, and whether a poll is running. */
+let lastBalanceCheckMs = 0;
+let polling = false;
+
+/** The vault's totals at the confirmed Base block `blockNumber`, after the
+ *  vault balance check (M2b) on them, which pauses the vault on a deficit. */
+async function checkVaultBalance(blockNumber: bigint) {
+	lastBalanceCheckMs = Date.now();
+	const [totalReleased, totalSwept, conversionFactor, tokenAddress] = await Promise.all([
+		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalReleased", blockNumber }),
+		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalSwept", blockNumber }),
+		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "conversionFactor", blockNumber }),
+		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "token", blockNumber }),
+	]);
+	const [totalSupply, vaultBalance] = await Promise.all([
+		publicClient.readContract({ address: tokenAddress, abi: erc20Abi, functionName: "totalSupply", blockNumber }),
+		publicClient.readContract({
+			address: tokenAddress,
+			abi: erc20Abi,
+			functionName: "balanceOf",
+			args: [config.vaultAddress],
+			blockNumber,
+		}),
+	]);
+	if (vaultConservationDeficit(vaultBalance, totalReleased, totalSwept, totalSupply)) {
+		await securityViolation(
+			"VAULT BALANCE DEFICIT",
+			`balance ${vaultBalance} + released ${totalReleased} + swept ${totalSwept} < supply ${totalSupply}`,
+		);
+	}
+	return { totalReleased, totalSwept, conversionFactor, vaultBalance };
+}
+
+/** Runs the vault balance check on its own while a poll is still busy a poll
+ *  interval after its last one started (a slow Pendulum source, a long
+ *  catch-up). main() calls this every poll interval, so a busy poll delays
+ *  the check by two poll intervals at most. */
+export async function watchVaultBalance(): Promise<void> {
+	if (!polling || Date.now() - lastBalanceCheckMs < config.pollIntervalMs) return;
+	lastBalanceCheckMs = Date.now();
+	try {
+		const confirmed = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
+		if (confirmed.number === null) throw new Error(`${config.baseFinalityTag} Base block has no number`);
+		await checkVaultBalance(confirmed.number);
+	} catch (balanceError) {
+		await alert("monitor check failed", `the vault balance check failed: ${balanceError}`);
+	}
+}
+
 /** One pass of the checks; resolves to whether every one of them ran. */
 async function check(api: ApiPromise): Promise<boolean> {
 	const confirmedBase = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
@@ -1700,31 +1757,11 @@ async function check(api: ApiPromise): Promise<boolean> {
 	await checkAutoPauseReadiness();
 
 	// The vault balance check (M2b) reads Base only, so it runs before anything
-	// that waits on Pendulum or scans Base logs: a slow or failing source, or a
-	// failing log scan, can neither delay nor skip it. Its pause does not end
+	// that waits on Pendulum or scans Base logs: a failing source or log scan
+	// cannot skip it, and while the rest of a poll takes longer than a poll
+	// interval, `watchVaultBalance` runs it on its own. Its pause does not end
 	// the poll.
-	const [totalReleased, totalSwept, conversionFactor, tokenAddress] = await Promise.all([
-		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalReleased", blockNumber: baseBlock }),
-		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "totalSwept", blockNumber: baseBlock }),
-		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "conversionFactor", blockNumber: baseBlock }),
-		publicClient.readContract({ address: config.vaultAddress, abi: vaultAbi, functionName: "token", blockNumber: baseBlock }),
-	]);
-	const [totalSupply, vaultBalance] = await Promise.all([
-		publicClient.readContract({ address: tokenAddress, abi: erc20Abi, functionName: "totalSupply", blockNumber: baseBlock }),
-		publicClient.readContract({
-			address: tokenAddress,
-			abi: erc20Abi,
-			functionName: "balanceOf",
-			args: [config.vaultAddress],
-			blockNumber: baseBlock,
-		}),
-	]);
-	if (vaultConservationDeficit(vaultBalance, totalReleased, totalSwept, totalSupply)) {
-		await securityViolation(
-			"VAULT BALANCE DEFICIT",
-			`balance ${vaultBalance} + released ${totalReleased} + swept ${totalSwept} < supply ${totalSupply}`,
-		);
-	}
+	const { totalReleased, totalSwept, conversionFactor, vaultBalance } = await checkVaultBalance(baseBlock);
 
 	// The admin scan only pages and keeps its own cursor, so nothing else waits
 	// for it, and its failure skips no other check.
@@ -1924,6 +1961,7 @@ export async function start(api: ApiPromise, connect?: (url: string) => Promise<
 
 /** One poll; a failure pages and the next poll starts afresh. */
 export async function poll(api: ApiPromise): Promise<void> {
+	polling = true;
 	let complete = false;
 	try {
 		complete = await check(api);
@@ -1941,11 +1979,13 @@ export async function poll(api: ApiPromise): Promise<void> {
 	}
 	await retryUndeliveredPages();
 	if (complete) await heartbeat();
+	polling = false;
 }
 
 async function main(): Promise<void> {
 	const api = await ApiPromise.create({ provider: new WsProvider(config.pendulumWs) });
 	await start(api);
+	setInterval(() => void watchVaultBalance(), config.pollIntervalMs);
 	for (;;) {
 		await poll(api);
 		await new Promise((resolve) => setTimeout(resolve, config.pollIntervalMs));

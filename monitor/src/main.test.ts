@@ -795,7 +795,7 @@ test("a source that names another hash than the relay chain's record pages criti
 	await monitor.poll(api);
 	assert.match(
 		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
-		/relay chain records 0x0+10+65 as Pendulum block 101, the source has 0x0+65;/,
+		/relay chain records 0x0+10+65 as Pendulum block 101, the source's chain has 0x0+65;/,
 	);
 	assert.equal(persisted().lastPendulumBlock, 100);
 });
@@ -810,7 +810,7 @@ test("a source whose chain avoids the relay chain's record pages critical, whate
 	await monitor.poll(api);
 	assert.match(
 		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
-		/chain has 0x0+10+65 at Pendulum block 101, where the relay chain records 0x0+65;/,
+		/relay chain records 0x0+65 as Pendulum block 101, the source's chain has 0x0+10+65;/,
 	);
 });
 
@@ -871,9 +871,38 @@ test("a relay record past the source's finalized head must descend from that hea
 	await monitor.poll(api);
 	assert.match(
 		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
-		/chain has 0x0+65 at Pendulum block 101, where the source's finalized head is 0x0+10+65;/,
+		/records 0x0+66 as Pendulum block 102, whose chain has 0x0+65 at block 101, where the source has 0x0+10+65;/,
 	);
 	assert.equal(persisted().lastPendulumBlock, 100);
+});
+
+test("a relay record past the source's finalized head that its best chain does not hold yet only waits", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, {
+		head: () => ({ number: 102, hash: pendulumHash({}, 102) }),
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	pendulum.forkFrom = 102; // its best chain holds another block 102 for now
+	pendulum.best = 102;
+	await monitor.poll(api);
+	assert.equal(pages.length, 0, JSON.stringify(pages));
+	assert.equal(persisted().relayAnchor, undefined);
+	assert.equal(persisted().lastPendulumBlock, 101);
+});
+
+test("a relay chain that records another hash at a height it anchored pages critical", async (t) => {
+	let recorded = pendulumHash({}, 101);
+	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, {
+		head: () => ({ number: 101, hash: recorded }),
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	assert.deepEqual(persisted().relayAnchor, { number: 101, hash: pendulumHash({}, 101) });
+	recorded = pendulumHash({ forkFrom: 0 }, 101);
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		/relay chain now records 0x0+10+65 as Pendulum block 101, where it recorded 0x0+65;/,
+	);
 });
 
 test("an unreadable relay chain warns, the source is used, and it turns critical after the grace", async (t) => {

@@ -76,6 +76,8 @@ function baseChain() {
 		/** How far the confirmed head trails the wall clock. */
 		safeAgeSeconds: 2,
 		paused: false,
+		/** Where set, the vault is paused from this block on, and at the latest block. */
+		pausedFrom: undefined as bigint | undefined,
 		threshold: 3n,
 		guardian: GUARDIAN as string,
 		totalReleased: 0n,
@@ -135,7 +137,7 @@ function answer(base: Base, method: string, params: any[]): unknown {
 				totalSwept: totalAt(base, base.totalSwept, "RemainderSwept", "amount", block),
 				conversionFactor: CF,
 				token: TOKEN,
-				paused: base.paused,
+				paused: base.paused || (base.pausedFrom !== undefined && (block === undefined || block >= base.pausedFrom)),
 				threshold: base.threshold,
 				guardian: base.guardian,
 				activeApprovals: base.approvals.get(key) ?? 0n,
@@ -784,6 +786,16 @@ test("a source whose chain leaves the blocks ingested so far pages critical and 
 	assert.deepEqual(persisted().migrations.map((migration) => migration.nonce), ["0"]);
 });
 
+test("a source whose finalized head falls behind the block ingested last is read at that block", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	pendulum.finalized = 100; // a node that has not finalized block 101 yet
+	await monitor.poll(api);
+	assert.equal(pages.length, 0, JSON.stringify(pages));
+	assert.equal(persisted().lastPendulumBlock, 101);
+});
+
 test("a source header that does not hash to its block hash pages critical", async (t) => {
 	const { pendulum, api, monitor, pages } = await setup(t);
 	burn(pendulum, 0n, 100n * PEN, 102);
@@ -1130,6 +1142,21 @@ test("a kept relay record past the source's finalized head binds the source whil
 	assert.deepEqual(persisted().migrations.map((migration) => migration.nonce), ["0"]);
 });
 
+test("a kept relay record past the source's finalized head confirms the blocks below it while no newer one arrives", async (t) => {
+	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, {
+		head: () => ({ number: 103, hash: pendulumHash({}, 103) }),
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	pendulum.best = 103; // imported, not yet finalized by the source
+	await monitor.poll(api);
+	assert.equal(persisted().lastPendulumBlock, 101);
+	burn(pendulum, 1n, 100n * PEN, 102); // the source finalizes block 102; the record stays at 103
+	await monitor.poll(api);
+	assert.equal(pages.length, 0, JSON.stringify(pages));
+	assert.equal(persisted().lastPendulumBlock, 102);
+	assert.deepEqual(persisted().relayAnchor, { number: 103, hash: pendulumHash({}, 103) });
+});
+
 test("a relay record past the source's finalized head must descend from that head", async (t) => {
 	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, {
 		head: () => ({ number: 102, hash: pendulumHash({}, 102) }),
@@ -1442,6 +1469,21 @@ test("while Pendulum cannot be read, a mismatching release of a known nonce paus
 	await monitor.poll(api);
 	assert.match(pages.find((page) => page.subject === "MIGRATION TUPLE VIOLATION")?.detail ?? "", /recipient/);
 	assert.ok(pages.some((page) => page.subject === "AUTO-PAUSE UNAVAILABLE"), JSON.stringify(pages)); // the pause was asked for
+});
+
+test("a tuple violation whose pause is not confirmed is found again in the next poll", async (t) => {
+	const { base, pendulum, api, monitor, pages, persisted } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	const tokenAmount = 100n * PEN * CF; // a release of nonce 0 to another recipient
+	base.logs.push({ address: VAULT, eventName: "Released", args: { nonce: 0n, recipient: TOKEN, palletAmount: 100n * PEN, tokenAmount }, blockNumber: 1_015n });
+	base.totalReleased += tokenAmount;
+	base.vaultBalance -= tokenAmount;
+	base.safe = 1_020n;
+	await monitor.poll(api);
+	await monitor.poll(api);
+	assert.equal(pages.filter((page) => page.subject === "MIGRATION TUPLE VIOLATION").length, 2, JSON.stringify(pages));
+	assert.equal(persisted().baseFromBlock, "1011");
 });
 
 test("a release the source never shows pauses after the grace, with no approval in view", async (t) => {
@@ -1916,10 +1958,18 @@ test("without a guardian key, a vault paused by hand after a treasury violation 
 	burn(pendulum, 0n, 100n * PEN, 101, { who: TREASURY_ACCOUNT, recipient: TOKEN });
 	await monitor.poll(api);
 	assert.equal(persisted().lastPendulumBlock, 100);
-	base.paused = true; // operators pause the vault by hand
-	const before = pages.length;
-	await monitor.poll(api);
-	const subjects = pages.slice(before).map((page) => page.subject);
+	const pollSubjects = async () => {
+		const before = pages.length;
+		await monitor.poll(api);
+		return pages.slice(before).map((page) => page.subject);
+	};
+	base.pausedFrom = 1_015n; // operators pause the vault by hand, after the confirmed Base block
+	let subjects = await pollSubjects();
+	assert.ok(subjects.includes("AUTO-PAUSE PENDING FINALITY"), JSON.stringify(subjects));
+	assert.ok(!subjects.includes("AUTO-PAUSE UNAVAILABLE"), JSON.stringify(subjects));
+	assert.equal(persisted().lastPendulumBlock, 100);
+	base.safe = 1_020n; // the pause is confirmed
+	subjects = await pollSubjects();
 	assert.ok(subjects.includes("vault pause confirmed"), JSON.stringify(subjects));
 	assert.ok(!subjects.includes("AUTO-PAUSE UNAVAILABLE"), JSON.stringify(subjects));
 	assert.equal(persisted().lastPendulumBlock, 101);

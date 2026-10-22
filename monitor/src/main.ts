@@ -1043,14 +1043,15 @@ async function check(api: ApiPromise): Promise<void> {
 	);
 }
 
-async function main(): Promise<void> {
+/** Startup once the Pendulum API is connected: durable state, the multicall
+ *  probe and the state identity check. */
+export async function start(api: ApiPromise): Promise<void> {
 	state = hydrateState();
 	const multicallCode = await publicClient.getBytecode({ address: MULTICALL3_ADDRESS });
 	if (!multicallCode || multicallCode === "0x") {
 		multicallUnavailable = true;
 		await alert("multicall unavailable, using bounded individual reads", `no contract code at ${MULTICALL3_ADDRESS}`);
 	}
-	const api = await ApiPromise.create({ provider: new WsProvider(config.pendulumWs) });
 	const pendulumGenesisHash = api.genesisHash.toHex();
 	if (state.pendulumGenesisHash) {
 		assertMonitorStateIdentity(
@@ -1069,17 +1070,30 @@ async function main(): Promise<void> {
 			`polling every ${config.pollIntervalMs}ms; governance queue ` +
 			(config.timelockAddress ? `watched at ${config.timelockAddress}` : "not watched (TIMELOCK_ADDRESS unset)"),
 	);
+}
+
+/** One poll; a failure pages and the next poll starts afresh. */
+export async function poll(api: ApiPromise): Promise<void> {
+	try {
+		await check(api);
+	} catch (checkError) {
+		await alert("monitor check failed", `${checkError}`);
+	}
+}
+
+async function main(): Promise<void> {
+	const api = await ApiPromise.create({ provider: new WsProvider(config.pendulumWs) });
+	await start(api);
 	for (;;) {
-		try {
-			await check(api);
-		} catch (checkError) {
-			await alert("monitor check failed", `${checkError}`);
-		}
+		await poll(api);
 		await new Promise((resolve) => setTimeout(resolve, config.pollIntervalMs));
 	}
 }
 
-main().catch(async (error) => {
-	await alert("monitor startup failed", `${error}`);
-	process.exit(1);
-});
+// main.test.ts sets this before importing the module, to drive single polls.
+if (!(globalThis as { penMonitorUnderTest?: boolean }).penMonitorUnderTest) {
+	main().catch(async (error) => {
+		await alert("monitor startup failed", `${error}`);
+		process.exit(1);
+	});
+}

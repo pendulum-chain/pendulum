@@ -652,6 +652,18 @@ test("after a violation the Base cursor stays on events still awaiting their sou
 	assert.equal(persisted().baseFromBlock, "1011");
 });
 
+test("the conservation check fires only beyond an acknowledged loss", async (t) => {
+	const { base, api, monitor, subjects } = await setup(t, { env: { ACKNOWLEDGED_RELEASE_EXCESS: "1000" } });
+	base.totalReleased = 1_000n; // released without a burn, quantified and accepted
+	base.vaultBalance = SUPPLY - 1_000n;
+	await monitor.poll(api);
+	assert.deepEqual(subjects(), []);
+	base.totalReleased += 1n;
+	base.vaultBalance -= 1n;
+	await monitor.poll(api);
+	assert.ok(subjects().includes("CONSERVATION VIOLATION"), JSON.stringify(subjects()));
+});
+
 /** A timelock operation scheduling the vault's `pause()`, ready in 48 h. */
 function schedule(base: Base, id: Hex, blockNumber = 1_005n): void {
 	const call = { target: VAULT, value: 0n, data: "0x8456cb59", predecessor: toHex(0, { size: 32 }), delay: 172_800n };

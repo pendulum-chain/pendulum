@@ -169,6 +169,13 @@ function envNumber(name: string, fallback: number | undefined): number {
 	return value;
 }
 
+/** A non-negative integer amount from the environment, validated at startup. */
+function envAmount(name: string): bigint {
+	const raw = process.env[name] || "0";
+	if (!/^\d+$/.test(raw)) throw new Error(`invalid ${name}: ${raw}`);
+	return BigInt(raw);
+}
+
 function optionalAddress(name: string): `0x${string}` | undefined {
 	const value = process.env[name];
 	if (!value) return undefined;
@@ -229,6 +236,9 @@ const config = {
 	baseStaleAlertMs: envNumber("BASE_STALE_ALERT_SECONDS", baseFinalityTag === "finalized" ? 1800 : 600) * 1000,
 	/** Guardian balance (wei) below which the auto-pause counts as not ready. */
 	guardianMinBalanceWei: BigInt(process.env.GUARDIAN_MIN_BALANCE_WEI ?? "1000000000000000"),
+	/** Excess of released over migrated, in token units, that operators have
+	 *  quantified and accepted after a real loss (RB-3); M2a fires beyond it. */
+	acknowledgedReleaseExcess: envAmount("ACKNOWLEDGED_RELEASE_EXCESS"),
 };
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -1239,10 +1249,11 @@ async function check(api: ApiPromise): Promise<void> {
 		);
 		return;
 	}
-	if (releasedExceedsMigrated(totalReleased, totalMigrated, conversionFactor)) {
+	if (releasedExceedsMigrated(totalReleased, totalMigrated, conversionFactor, config.acknowledgedReleaseExcess)) {
 		if (await securityViolation(
 			"CONSERVATION VIOLATION",
-			`released ${totalReleased} > migrated ${totalMigrated * conversionFactor} (token units)`,
+			`released ${totalReleased} > migrated ${totalMigrated * conversionFactor} + acknowledged excess ` +
+				`${config.acknowledgedReleaseExcess} (token units)`,
 		)) {
 			state = draft;
 			persistState(state);
@@ -1336,7 +1347,8 @@ export async function start(api: ApiPromise): Promise<void> {
 		`monitor started; Pendulum after ${state.lastPendulumBlock}, Base from ${state.baseFromBlock}, ` +
 			`polling every ${config.pollIntervalMs}ms; governance queue ` +
 			(config.timelockAddress ? `watched at ${config.timelockAddress}` : "not watched (TIMELOCK_ADDRESS unset)") +
-			`; auto-pause ${!config.guardianPrivateKey ? "disabled" : readiness.length ? "NOT READY" : "ready"}`,
+			`; auto-pause ${!config.guardianPrivateKey ? "disabled" : readiness.length ? "NOT READY" : "ready"}` +
+			`; acknowledged release excess ${config.acknowledgedReleaseExcess} token units`,
 	);
 }
 

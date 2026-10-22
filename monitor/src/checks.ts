@@ -13,13 +13,18 @@
  * units. It lags `totalMigrated` only via finality delay, never the other way,
  * because a release requires attestations of an already-finalized burn — so any
  * excess is the strongest possible signal of attestor compromise.
+ *
+ * `acknowledgedExcess` is a loss operators have quantified and accepted: it
+ * stays in the cumulative totals for good, and without it the check would
+ * re-pause the vault after every recovery unpause.
  */
 export function releasedExceedsMigrated(
 	totalReleased: bigint,
 	totalMigrated: bigint,
 	conversionFactor: bigint,
+	acknowledgedExcess = 0n,
 ): boolean {
-	return totalReleased > totalMigrated * conversionFactor;
+	return totalReleased > totalMigrated * conversionFactor + acknowledgedExcess;
 }
 
 /**

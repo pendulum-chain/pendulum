@@ -36,6 +36,11 @@ test("M2a: released exceeding migrated fires", () => {
 	assert.equal(releasedExceedsMigrated(6n * CF, 5n, CF), true);
 });
 
+test("M2a: an acknowledged loss is tolerated, and nothing beyond it", () => {
+	assert.equal(releasedExceedsMigrated(6n * CF, 5n, CF, CF), false);
+	assert.equal(releasedExceedsMigrated(6n * CF + 1n, 5n, CF, CF), true);
+});
+
 test("M2b: exact conservation is not a deficit", () => {
 	// balance + released + swept == totalSupply
 	assert.equal(vaultConservationDeficit(SUPPLY - 30n, 20n, 10n, SUPPLY), false);

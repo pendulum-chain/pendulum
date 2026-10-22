@@ -118,7 +118,9 @@ WantedBy=multi-user.target
   own approval is recorded. When no bump is left, or the cap stops one, it
   pages `own approval not mined` once (with the nonce, the account's next
   mined nonce and the fees) and keeps waiting, since later approvals would
-  queue behind that nonce anyway. A node refusing a send for its price, an
+  queue behind that nonce anyway. Whenever it stops bumping, it re-sends the
+  last attempt unchanged, so a node that dropped the transaction while still
+  counting its nonce gets it back instead of leaving a gap. A node refusing a send for its price, an
   underpriced replacement or a full pool is retried at the next bump instead
   of being fatal. Transactions in flight are kept in memory only: after a
   restart, an approval whose transaction is still pending is sent again at the

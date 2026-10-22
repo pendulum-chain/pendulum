@@ -34,7 +34,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { postAlert } from "./alert.js";
-import { isLostRace, isTransientRpcError, isUnreleasable } from "./checks.js";
+import { isTransientRpcError, isUnreleasable, ownApprovalMissed } from "./checks.js";
 import { config } from "./config.js";
 import { assertCheckpointIdentity, loadCheckpoint, saveCheckpoint, type Checkpoint } from "./state.js";
 import { vaultAbi } from "./vaultAbi.js";
@@ -275,7 +275,12 @@ async function approve(event: MigrationEvent): Promise<boolean> {
 		// (or our own retried tx) landed between our pre-check and the
 		// transaction — benign.
 		if (!(await alreadyHandledSettled(event))) throw error;
-		if (mined || isLostRace(error) || (await ownApprovalRecorded(event))) {
+		const missed = await ownApprovalMissed(error, mined, () => ownApprovalRecorded(event));
+		if (missed === undefined) {
+			log(`skip (resolved on-chain; could not read whether our own approval is recorded): ${label}`, error);
+			return true;
+		}
+		if (!missed) {
 			log(`skip (raced, resolved on-chain): ${label}`);
 			return true;
 		}

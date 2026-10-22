@@ -14,6 +14,7 @@ import {
 	BlockNotFoundError,
 	ContractFunctionExecutionError,
 	ContractFunctionRevertedError,
+	ContractFunctionZeroDataError,
 	encodeErrorResult,
 	HttpRequestError,
 	InsufficientFundsError,
@@ -24,7 +25,7 @@ import {
 	TimeoutError,
 	WaitForTransactionReceiptTimeoutError,
 } from "viem";
-import { isLostRace, isTransientRpcError, isUnreleasable, ZERO_ADDRESS } from "./checks.js";
+import { isLostRace, isTransientRpcError, isUnreleasable, ownApprovalMissed, ZERO_ADDRESS } from "./checks.js";
 import { vaultAbi } from "./vaultAbi.js";
 
 const VAULT = "0x1111111111111111111111111111111111111111";
@@ -162,6 +163,29 @@ test("only a vault rejection for a released or already-approved migration is a l
 	assert.equal(isLostRace(new WaitForTransactionReceiptTimeoutError({ hash: `0x${"ab".repeat(32)}` })), false);
 	assert.equal(isLostRace(new HttpRequestError({ url: "https://rpc", status: 503 })), false);
 	assert.equal(isLostRace(new Error("approve transaction reverted: 0xabc (nonce=7)")), false);
+});
+
+test("a resolved migration counts as our miss only when our approval provably did not land", async () => {
+	const lostRace = new ContractFunctionExecutionError(
+		new ContractFunctionRevertedError({
+			abi: vaultAbi,
+			data: encodeErrorResult({ abi: vaultAbi, errorName: "NonceAlreadyConsumed", args: [7n] }),
+			functionName: "approve",
+		}),
+		{ abi: vaultAbi, functionName: "approve", args: [7n, NORMAL, AMOUNT] },
+	);
+	const sendFailed = new InsufficientFundsError();
+	const recorded = (value: boolean) => async () => value;
+	const unreadable = async (): Promise<boolean> => {
+		throw new ContractFunctionZeroDataError({ functionName: "hasApproved" });
+	};
+	assert.equal(await ownApprovalMissed(new Error("approve transaction reverted"), true, unreadable), false, "mined");
+	assert.equal(await ownApprovalMissed(lostRace, false, unreadable), false, "lost race");
+	assert.equal(await ownApprovalMissed(sendFailed, false, recorded(true)), false, "recorded anyway");
+	assert.equal(await ownApprovalMissed(sendFailed, false, recorded(false)), true, "never landed");
+	// The migration is resolved, so a failing diagnostic read must neither
+	// count a miss nor escape as an error.
+	assert.equal(await ownApprovalMissed(sendFailed, false, unreadable), undefined, "unknown");
 });
 
 test("a decode failure is never transient", () => {

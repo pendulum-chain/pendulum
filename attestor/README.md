@@ -96,6 +96,11 @@ WantedBy=multi-user.target
   `MISSED_APPROVAL_ALERT_COUNT` consecutive misses page `own approvals are not
   landing`. The rest of the fleet still releases, so this is the only signal
   that the fleet is one attestor short. Any mined approval resets the count.
+  Only failed submissions count: a migration already resolved when the daemon
+  reaches it is skipped without one, and so is a failure whose own-approval
+  check cannot be read. Under a burst, where each failed submission can take
+  minutes, the page therefore comes after that many failed submissions, which
+  may span many more migrations.
 - Checkpoints are atomically replaced, bound to the Pendulum genesis plus the
   configured Base chain and vault, and malformed files are fatal. Never delete or replace one merely to
   clear an alert; reconcile it against both chains first.

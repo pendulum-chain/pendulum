@@ -112,6 +112,26 @@ export function isLostRace(error: unknown): boolean {
 }
 
 /**
+ * Whether a failed approval of a migration that resolved on-chain meanwhile
+ * means our own approval never landed: not when our transaction was mined,
+ * merely lost the race, or our approval is recorded anyway. `undefined` when
+ * that last read fails: the migration is resolved either way, so the case is
+ * neither counted as a miss nor a reason to exit.
+ */
+export async function ownApprovalMissed(
+	error: unknown,
+	mined: boolean,
+	ownApprovalRecorded: () => Promise<boolean>,
+): Promise<boolean | undefined> {
+	if (mined || isLostRace(error)) return false;
+	try {
+		return !(await ownApprovalRecorded());
+	} catch {
+		return undefined;
+	}
+}
+
+/**
  * True when the vault will deterministically reject this tuple, no matter who
  * submits it or when. Such an event must be SKIPPED (with a critical alert),
  * never retried: because every attestor hits the identical revert at the same

@@ -127,12 +127,12 @@ contract DeployScriptsTest is Test {
             "ADMIN_SAFE", vm.toString(delegated), "ADMIN_SAFE is an EIP-7702 delegated EOA, not a Safe"
         );
 
+        // A production deploy on Base mainnet.
         vm.chainId(8453);
         _expectDeployRefused("TEST_DEPLOY", "true", "TEST_DEPLOY is refused on Base mainnet");
-        vm.chainId(31337);
-
         _setValidDeployEnv();
         (PEN newPen, MigrationVault newVault) = deployScript.run();
+        vm.chainId(31337);
         assertEq(address(newVault.token()), address(newPen));
         assertEq(newPen.totalSupply(), 150_000_000e18);
         assertEq(newPen.balanceOf(address(newVault)), 150_000_000e18);
@@ -235,12 +235,12 @@ contract DeployScriptsTest is Test {
             "TIMELOCK_CANCELLER", vm.toString(address(new SafeStub(1))), "TIMELOCK_CANCELLER Safe threshold is below 2"
         );
 
+        // A production deploy on Base mainnet.
         vm.chainId(8453);
         _expectGovernanceRefused("TEST_DEPLOY", "true", "TEST_DEPLOY is refused on Base mainnet");
-        vm.chainId(31337);
-
         _setValidGovernanceEnv();
         (TimelockController timelock, PENGovernor governor) = governanceScript.run();
+        vm.chainId(31337);
         bytes32[4] memory roles = [
             timelock.DEFAULT_ADMIN_ROLE(), timelock.PROPOSER_ROLE(), timelock.CANCELLER_ROLE(), timelock.EXECUTOR_ROLE()
         ];

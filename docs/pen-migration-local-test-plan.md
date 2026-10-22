@@ -169,7 +169,7 @@ The releaser needs only a gas-funded key and the Base endpoint — no Pendulum
 connection, and no privileges over the vault:
 
 ```bash
-BASE_RPC_URL=http://localhost:8545 VAULT_ADDRESS=0x… \
+BASE_RPC_URL=http://localhost:8545 BASE_CHAIN_ID=31337 VAULT_ADDRESS=0x… \
 RELEASER_PRIVATE_KEY=0x… START_BLOCK=0 npm start
 ```
 
@@ -178,7 +178,7 @@ that can contain a migration (plus the nonce expected there) and the vault's
 Base deployment block. Afterwards its atomic state file owns both cursors:
 
 ```bash
-PENDULUM_WS=ws://127.0.0.1:9944 BASE_RPC_URL=http://localhost:8545 \
+PENDULUM_WS=ws://127.0.0.1:9944 BASE_RPC_URL=http://localhost:8545 BASE_CHAIN_ID=31337 \
 VAULT_ADDRESS=0x… GUARDIAN_PRIVATE_KEY=0x… \
 PENDULUM_START_BLOCK=123 PENDULUM_START_NONCE=0 BASE_START_BLOCK=45 \
 STATE_FILE=./monitor-state.json npm start

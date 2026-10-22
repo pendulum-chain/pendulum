@@ -11,6 +11,7 @@
 # Usage:
 #   * Push a tag `pendulum-release-<spec>` (or `amplitude-release-<spec>`) on
 #     the commit that bumps spec_version: builds and publishes the release.
+#     The tagged commit must be on main, otherwise the run fails.
 #   * Run the workflow by hand with a chain and no tag: builds and keeps the
 #     artifacts on the run only (a dry run of the pipeline).
 name: Release Runtime
@@ -68,6 +69,20 @@ jobs:
           ref: ${{ steps.meta.outputs.ref }}
           fetch-depth: 0
 
+      - name: Check the commit to build
+        id: commit
+        shell: bash
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          SHA="$(git rev-parse HEAD)"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          # Releases are published only for commits on main; a dry run may build any ref.
+          if [ -n "$TAG" ] && ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "::error::$TAG points at $SHA, which is not on main; refusing to publish a release for it"
+            exit 1
+          fi
+
       - name: Build with srtool
         id: srtool
         uses: chevdor/srtool-actions@v0.9.2
@@ -99,7 +114,7 @@ jobs:
           {
             echo "## ${{ steps.meta.outputs.chain }} runtime — srtool build"
             echo
-            echo "Commit: \`${{ github.sha }}\`  ·  srtool image: \`paritytech/srtool:1.81.0\`  ·  BUILD_OPTS: \`$BUILD_OPTS\`  ·  reproduce with the same commit, image and BUILD_OPTS."
+            echo "Commit: \`${{ steps.commit.outputs.sha }}\`  ·  srtool image: \`paritytech/srtool:1.81.0\`  ·  BUILD_OPTS: \`$BUILD_OPTS\`  ·  reproduce with the same commit, image and BUILD_OPTS."
             echo
             echo "For \`parachainSystem.authorizeUpgrade\` use **\`blake2_256\`** below (the code hash the chain recomputes from the wasm at enactment); \`proposal_hash\` is the preimage hash of a \`system.setCode\` call and \`parachain_authorize_upgrade_hash\` is derived from the authorize call — neither is the value to authorize."
             echo
@@ -113,7 +128,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.meta.outputs.chain }}-runtime-${{ github.sha }}
+          name: ${{ steps.meta.outputs.chain }}-runtime-${{ steps.commit.outputs.sha }}
           path: |
             ${{ steps.meta.outputs.chain }}_runtime.compact.compressed.wasm
             srtool-${{ steps.meta.outputs.chain }}.json

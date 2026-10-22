@@ -68,6 +68,10 @@ jobs:
             TAG="$INPUT_TAG"
             CHAIN="$INPUT_CHAIN"
           fi
+          # A dispatched tag is free text; it goes into step outputs and log lines.
+          case "$TAG" in
+            *[!A-Za-z0-9._-]*) echo "::error::a release tag may contain only letters, digits, '.', '_' and '-'"; exit 1 ;;
+          esac
           case "$CHAIN" in
             pendulum|amplitude) ;;
             *) echo "cannot derive the chain from '$TAG'; expected <chain>-release-<spec>"; exit 1 ;;

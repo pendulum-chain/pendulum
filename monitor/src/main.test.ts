@@ -1564,6 +1564,23 @@ test("a relay RPC whose finalized relay block is stale counts as not answering, 
 	assert.equal(persisted().baseFromBlock, "1021");
 });
 
+test("a Base event whose nonce the source view passed without pauses before the grace, as fabricated", async (t) => {
+	const { base, pendulum, api, monitor, pages, subjects } = await setup(t, { env: { SOURCE_CLOCK_SKEW_MARGIN_SECONDS: "0" } });
+	burn(pendulum, 0n, 100n * PEN);
+	pendulum.headAgeMs = 1_000; // the view trails the first sighting
+	release(base, 7n, 5_000n * PEN); // no burn behind it
+	await monitor.poll(api);
+	assert.ok(subjects().includes("UNVERIFIED BASE EVENT"), JSON.stringify(subjects()));
+	assert.ok(!subjects().includes("MIGRATION TUPLE VIOLATION"), JSON.stringify(subjects()));
+	pendulum.headAgeMs = 0;
+	await new Promise((resolve) => setTimeout(resolve, 5));
+	await monitor.poll(api); // the view has passed the first sighting, still without nonce 7
+	assert.match(
+		pages.find((page) => page.subject === "MIGRATION TUPLE VIOLATION")?.detail ?? "",
+		/nonce 7 .*source view has passed the event's timestamp — fabricated/,
+	);
+});
+
 test("while Pendulum cannot be read, a Base event with an unknown nonce pauses after the grace", async (t) => {
 	const { base, pendulum, api, monitor, subjects } = await setup(t, { env: { UNMATCHED_EVENT_GRACE_SECONDS: "0" } });
 	pendulum.failure = new Error("node unreachable");

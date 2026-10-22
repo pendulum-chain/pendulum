@@ -332,6 +332,12 @@ async function checkGasBalance(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+	// The state is bound to BASE_CHAIN_ID: an endpoint serving another chain
+	// would scan its logs into this state.
+	const baseChainId = await publicClient.getChainId();
+	if (baseChainId !== config.baseChainId) {
+		throw new Error(`BASE_RPC_URL serves chain ${baseChainId}, but BASE_CHAIN_ID is ${config.baseChainId}`);
+	}
 	loadState();
 	const conversionFactor = await publicClient.readContract({
 		address: config.vaultAddress,

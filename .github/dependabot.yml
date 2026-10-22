@@ -5,6 +5,9 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: github-actions
-    directory: "/"
+    # "/" covers the workflows only; the composite action pins its own actions.
+    directories:
+      - "/"
+      - "/.github/actions/shared"
     schedule:
       interval: daily

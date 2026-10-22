@@ -52,26 +52,33 @@ jobs:
 
       - name: Check For Specific Version
         if: github.event.inputs.specific_version != ''
+        env:
+          SPECIFIC_VERSION: ${{ github.event.inputs.specific_version }}
+          PACKAGES_ALL: ${{ github.event.inputs.packages-all }}
         run: |
-          bash .github/scripts/package_version_up.sh ${{ github.event.inputs.specific_version }}
-          if ${{ github.event.inputs.packages-all }} == 'true'; then 
-            echo "Upgrading crates to ${{ github.event.inputs.specific_version }}" &> changes.txt
+          bash .github/scripts/package_version_up.sh "$SPECIFIC_VERSION"
+          if [ "$PACKAGES_ALL" == 'true' ]; then
+            echo "Upgrading crates to $SPECIFIC_VERSION" &> changes.txt
           else
-            echo "Upgrading node to ${{ github.event.inputs.specific_version }}" &> changes.txt
+            echo "Upgrading node to $SPECIFIC_VERSION" &> changes.txt
           fi
 
       - name: ${{ github.event.inputs.versioning }} Version Up for all
         if: github.event.inputs.specific_version == '' && github.event.inputs.packages-all == 'true'
         continue-on-error: false
+        env:
+          VERSIONING: ${{ github.event.inputs.versioning }}
         run: |
-          cargo set-version --bump ${{ github.event.inputs.versioning }} &> changes.txt
+          cargo set-version --bump "$VERSIONING" &> changes.txt
           cat changes.txt
 
       - name: ${{ github.event.inputs.versioning }} Version Up for node
         if: github.event.inputs.specific_version == '' && github.event.inputs.packages-all == 'false'
         continue-on-error: false
+        env:
+          VERSIONING: ${{ github.event.inputs.versioning }}
         run: |
-          cargo set-version --bump ${{ github.event.inputs.versioning }} --package pendulum-node &> changes.txt
+          cargo set-version --bump "$VERSIONING" --package pendulum-node &> changes.txt
           cat changes.txt
 
       - name: "Read file contents"
@@ -82,8 +89,10 @@ jobs:
 
       - name: Set Chosen Package
         id: set-pkg
+        env:
+          PACKAGES_ALL: ${{ github.event.inputs.packages-all }}
         run: |
-          if [ ${{ github.event.inputs.packages-all }} == 'true' ]; then
+          if [ "$PACKAGES_ALL" == 'true' ]; then
             echo "name=all" >> "$GITHUB_OUTPUT"
           else
             echo "name=node" >> "$GITHUB_OUTPUT"
@@ -97,23 +106,30 @@ jobs:
 
       - name: Create Release Branch
         id: new-branch
+        env:
+          PKG: ${{ steps.set-pkg.outputs.name }}
+          DAY: ${{ steps.date-now.outputs.day }}
+          MONTH: ${{ steps.date-now.outputs.month }}
+          YEAR: ${{ steps.date-now.outputs.year }}
+          SPECIFIC_VERSION: ${{ github.event.inputs.specific_version }}
+          VERSIONING: ${{ github.event.inputs.versioning }}
         run: |
-          name=${{ steps.set-pkg.outputs.name }}
-          now="${{ steps.date-now.outputs.day }}-${{ steps.date-now.outputs.month }}-${{ steps.date-now.outputs.year }}"
-          
-          if [ '${{ github.event.inputs.specific_version }}' != '' ]; then
-            echo "specific version: ${{ github.event.inputs.specific_version }}"
-            branch_name="release/version-up-to-${{ github.event.inputs.specific_version }}-$name-$now"
+          name="$PKG"
+          now="$DAY-$MONTH-$YEAR"
+
+          if [ "$SPECIFIC_VERSION" != '' ]; then
+            echo "specific version: $SPECIFIC_VERSION"
+            branch_name="release/version-up-to-$SPECIFIC_VERSION-$name-$now"
           else
-            vers=${{ github.event.inputs.versioning }}
-            echo "versioning: ${{ github.event.inputs.versioning }}" 
+            vers="$VERSIONING"
+            echo "versioning: $VERSIONING"
             branch_name="release/$vers-version-up-$name-$now"
           fi
-          
+
           echo "name=${branch_name}" >> "$GITHUB_OUTPUT"
-          
-          git checkout -b ${branch_name}
-          git push --set-upstream origin ${branch_name}
+
+          git checkout -b "${branch_name}"
+          git push --set-upstream origin "${branch_name}"
 
       #     todo: make this simpler.
       - name: Commit New Changes to New Branch (all)
@@ -123,8 +139,8 @@ jobs:
           BRANCH: ${{ steps.new-branch.outputs.name }}
         run: |
           gh api graphql \
-          -F githubRepository=${{ github.repository }} \
-          -F branchName=${{ env.BRANCH }} \
+          -F githubRepository="$GITHUB_REPOSITORY" \
+          -F branchName="$BRANCH" \
           -F expectedHeadOid=$(git rev-parse HEAD) \
           -F commitMessage="$(cat changes.txt)" \
           -F files[][path]="chain-extensions/common/Cargo.toml" -F files[][contents]=$(base64 -w0 chain-extensions/common/Cargo.toml) \
@@ -152,8 +168,8 @@ jobs:
           BRANCH: ${{ steps.new-branch.outputs.name }}
         run: |
           gh api graphql \
-          -F githubRepository=${{ github.repository }} \
-          -F branchName=${{ env.BRANCH }} \
+          -F githubRepository="$GITHUB_REPOSITORY" \
+          -F branchName="$BRANCH" \
           -F expectedHeadOid=$(git rev-parse HEAD) \
           -F commitMessage="$(cat changes.txt)" \
           -F files[][path]="node/Cargo.toml" -F files[][contents]=$(base64 -w0 node/Cargo.toml) \
@@ -161,12 +177,16 @@ jobs:
 
       - name: Prepare Pull Request title
         id: pr-title
+        env:
+          SPECIFIC_VERSION: ${{ github.event.inputs.specific_version }}
+          PKG: ${{ steps.set-pkg.outputs.name }}
+          VERSIONING: ${{ github.event.inputs.versioning }}
         run: |
-          if ${{ github.event.inputs.specific_version }} == ''; then
-            echo "title=release: Bump ${{ steps.set-pkg.outputs.name }} crate version/s to ${{ github.event.inputs.versioning }}" >> "$GITHUB_OUTPUT"
+          if [ "$SPECIFIC_VERSION" == '' ]; then
+            echo "title=release: Bump $PKG crate version/s to $VERSIONING" >> "$GITHUB_OUTPUT"
           else
             vers=$( cargo metadata --format-version=1 --no-deps | jq '.packages[] | select(.name == "pendulum-node") | .version' | tr -d '"' )
-            echo "title=release: Force bump ${{ steps.set-pkg.outputs.name }} version/s to $vers" >> "$GITHUB_OUTPUT"
+            echo "title=release: Force bump $PKG version/s to $vers" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create Pull Request

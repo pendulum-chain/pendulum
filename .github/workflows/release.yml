@@ -3,10 +3,11 @@
 #
 # The wasm that goes into a runtime-upgrade referendum must be reproducible:
 # anyone with the same commit, srtool image and build options must arrive at
-# the same hash. This job builds the runtime inside the srtool image pinned
-# by digest (rustc matching rust-toolchain.toml), records the srtool/subwasm
-# report, and — when a release tag is known — attaches the compressed wasm
-# and the report to the GitHub release for that tag.
+# the same hash. The build job builds the runtime inside the srtool image
+# pinned by digest (rustc matching rust-toolchain.toml) and records the
+# srtool/subwasm report; when a release tag is known, the publish job (the
+# only one with write access) attaches the compressed wasm and the report to
+# the GitHub release for that tag.
 #
 # Usage:
 #   * Push a tag `pendulum-release-<spec>` (or `amplitude-release-<spec>`) on
@@ -33,12 +34,17 @@ on:
         required: false
         default: ""
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: srtool build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    outputs:
+      chain: ${{ steps.meta.outputs.chain }}
+      tag: ${{ steps.meta.outputs.tag }}
+      sha: ${{ steps.commit.outputs.sha }}
     env:
       # srtool passes this to cargo. The runtimes keep CheckMetadataHash in
       # their signed extensions; without the embedded metadata hash every
@@ -51,13 +57,16 @@ jobs:
       - name: Resolve chain and tag
         id: meta
         shell: bash
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          INPUT_CHAIN: ${{ github.event.inputs.chain }}
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            TAG="${{ github.ref_name }}"
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            TAG="$GITHUB_REF_NAME"
             CHAIN="${TAG%%-release-*}"
           else
-            TAG="${{ github.event.inputs.tag }}"
-            CHAIN="${{ github.event.inputs.chain }}"
+            TAG="$INPUT_TAG"
+            CHAIN="$INPUT_CHAIN"
           fi
           case "$CHAIN" in
             pendulum|amplitude) ;;
@@ -70,12 +79,14 @@ jobs:
           fi
           echo "chain=$CHAIN" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "ref=${TAG:-${{ github.ref }}}" >> "$GITHUB_OUTPUT"
+          echo "ref=${TAG:-$GITHUB_REF}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v5
         with:
           ref: ${{ steps.meta.outputs.ref }}
           fetch-depth: 0
+          # The srtool container mounts the workspace; keep the token out of it.
+          persist-credentials: false
 
       - name: Check the commit to build
         id: commit
@@ -118,22 +129,27 @@ jobs:
 
       - name: Record the srtool report
         shell: bash
+        env:
+          CHAIN: ${{ steps.meta.outputs.chain }}
+          SHA: ${{ steps.commit.outputs.sha }}
+          SRTOOL_JSON: ${{ steps.srtool.outputs.json }}
+          WASM_COMPRESSED: ${{ steps.srtool.outputs.wasm_compressed }}
         run: |
-          echo '${{ steps.srtool.outputs.json }}' | jq . > srtool-${{ steps.meta.outputs.chain }}.json
+          printf '%s\n' "$SRTOOL_JSON" | jq . > "srtool-$CHAIN.json"
           {
-            echo "## ${{ steps.meta.outputs.chain }} runtime — srtool build"
+            echo "## $CHAIN runtime — srtool build"
             echo
-            echo "Commit: \`${{ steps.commit.outputs.sha }}\`  ·  srtool image: \`paritytech/srtool:$SRTOOL_IMAGE_TAG\`  ·  BUILD_OPTS: \`$BUILD_OPTS\`  ·  reproduce with the same commit, image and BUILD_OPTS."
+            echo "Commit: \`$SHA\`  ·  srtool image: \`paritytech/srtool:$SRTOOL_IMAGE_TAG\`  ·  BUILD_OPTS: \`$BUILD_OPTS\`  ·  reproduce with the same commit, image and BUILD_OPTS."
             echo
             echo "For \`parachainSystem.authorizeUpgrade\` use **\`blake2_256\`** below (the code hash the chain recomputes from the wasm at enactment); \`proposal_hash\` is the preimage hash of a \`system.setCode\` call and \`parachain_authorize_upgrade_hash\` is derived from the authorize call — neither is the value to authorize."
             echo
             echo '```json'
-            jq '.runtimes.compressed.subwasm // .' srtool-${{ steps.meta.outputs.chain }}.json
+            jq '.runtimes.compressed.subwasm // .' "srtool-$CHAIN.json"
             echo '```'
           } > release-notes.md
           cat release-notes.md >> "$GITHUB_STEP_SUMMARY"
-          cp "${{ steps.srtool.outputs.wasm_compressed }}" ./${{ steps.meta.outputs.chain }}_runtime.compact.compressed.wasm
-          sha256sum ./${{ steps.meta.outputs.chain }}_runtime.compact.compressed.wasm | tee -a release-notes.md
+          cp "$WASM_COMPRESSED" "./${CHAIN}_runtime.compact.compressed.wasm"
+          sha256sum "./${CHAIN}_runtime.compact.compressed.wasm" | tee -a release-notes.md
 
       - uses: actions/upload-artifact@v4
         with:
@@ -144,13 +160,23 @@ jobs:
             release-notes.md
           if-no-files-found: error
 
-      - name: Publish the GitHub release
-        if: steps.meta.outputs.tag != ''
-        uses: softprops/action-gh-release@v2
+  publish:
+    name: Publish the GitHub release
+    needs: build
+    if: needs.build.outputs.tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
         with:
-          tag_name: ${{ steps.meta.outputs.tag }}
-          name: ${{ steps.meta.outputs.tag }}
+          name: ${{ needs.build.outputs.chain }}-runtime-${{ needs.build.outputs.sha }}
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build.outputs.tag }}
+          name: ${{ needs.build.outputs.tag }}
           body_path: release-notes.md
           files: |
-            ${{ steps.meta.outputs.chain }}_runtime.compact.compressed.wasm
-            srtool-${{ steps.meta.outputs.chain }}.json
+            ${{ needs.build.outputs.chain }}_runtime.compact.compressed.wasm
+            srtool-${{ needs.build.outputs.chain }}.json

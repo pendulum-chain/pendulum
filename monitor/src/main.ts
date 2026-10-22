@@ -846,7 +846,9 @@ async function relayAnchor(api: ApiPromise, draft: RuntimeState, finalized: Bloc
  *  of the Pendulum head. */
 async function sourceHashes(api: ApiPromise, draft: RuntimeState, finalized: BlockRef): Promise<Map<number, string>> {
 	const anchor = await relayAnchor(api, draft, finalized);
-	const top = anchor && anchor.number > finalized.number ? anchor : finalized;
+	// A relay-chain record past the finalized head binds the source too, also
+	// the one kept from an earlier poll: the walk starts at the newest of them.
+	const top = [anchor, draft.relayAnchor].reduce<BlockRef>((high, ref) => (ref && ref.number > high.number ? ref : high), finalized);
 	const hashes = await walkHeaders(api, top, Math.min(draft.lastPendulumBlock, anchor?.number ?? Infinity));
 	const ingested = draft.lastPendulumHash ? { number: draft.lastPendulumBlock, hash: draft.lastPendulumHash } : undefined;
 	const expected: Array<[BlockRef | undefined, string]> = [

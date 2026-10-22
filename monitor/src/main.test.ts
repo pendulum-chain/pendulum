@@ -836,6 +836,30 @@ test("a relay record past the source's finalized head anchors it, and its chain 
 	);
 });
 
+test("a kept relay record past the source's finalized head binds the source while no newer one arrives", async (t) => {
+	let relayDown = false;
+	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, {
+		head: () => ({ number: 103, hash: pendulumHash({}, 103) }),
+		failing: () => relayDown,
+	});
+	burn(pendulum, 0n, 100n * PEN);
+	pendulum.best = 103; // imported, not yet finalized by the source
+	await monitor.poll(api);
+	assert.equal(pages.length, 0, JSON.stringify(pages));
+	assert.deepEqual(persisted().relayAnchor, { number: 103, hash: pendulumHash({}, 103) });
+	assert.equal(persisted().lastPendulumBlock, 101);
+	relayDown = true;
+	pendulum.forkFrom = 102; // the source finalizes another chain below the kept record...
+	burn(pendulum, 1n, 999n * PEN, 102); // ...with a burn on it
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "CRITICAL: PENDULUM SOURCE CONTRADICTED")?.detail ?? "",
+		/chain has 0x0+66 at Pendulum block 102, where the source's finalized head is 0x0+10+66;/,
+	);
+	assert.equal(persisted().lastPendulumBlock, 101);
+	assert.deepEqual(persisted().migrations.map((migration) => migration.nonce), ["0"]);
+});
+
 test("a relay record past the source's finalized head must descend from that head", async (t) => {
 	const { pendulum, api, monitor, pages, persisted } = await relaySetup(t, {
 		head: () => ({ number: 102, hash: pendulumHash({}, 102) }),

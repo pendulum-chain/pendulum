@@ -360,16 +360,19 @@ let monitorEnv: string[] = [];
 
 /** A started monitor against fresh stand-ins, which `prepare` can change
  *  before startup. `webhook` answers each page with an HTTP status; `pages`
- *  lists them in arrival order from after startup, `startup` the ones before. */
+ *  lists them in arrival order from after startup, `startup` the ones before.
+ *  `heartbeats` lists the heartbeat requests, which `heartbeat` answers. */
 async function setup(
 	t: { after(fn: () => void): void },
 	{
 		env = {},
 		webhook = () => 200,
+		heartbeat = () => 200,
 		prepare = () => {},
 	}: {
 		env?: Record<string, string>;
 		webhook?: (page: Page) => number | Promise<number>;
+		heartbeat?: () => number;
 		prepare?: (base: Base, pendulum: Pendulum) => void;
 	} = {},
 ) {
@@ -377,8 +380,14 @@ async function setup(
 	const { chain: pendulum, api } = pendulumChain();
 	prepare(base, pendulum);
 	const pages: Page[] = [];
+	const heartbeats: string[] = [];
 	const server = createServer(async (request, response) => {
 		const text = await body(request);
+		if (request.url === "/heartbeat") {
+			heartbeats.push(request.method ?? "");
+			response.writeHead(heartbeat()).end();
+			return;
+		}
 		if (request.url === "/alert") {
 			const page = readPage(JSON.parse(text));
 			pages.push(page);
@@ -411,6 +420,7 @@ async function setup(
 		PENDULUM_START_BLOCK: "101",
 		STATE_FILE: stateFile,
 		ALERT_WEBHOOK_URL: `${url}/alert`,
+		HEARTBEAT_URL: `${url}/heartbeat`,
 		...env,
 	};
 	for (const name of monitorEnv) delete process.env[name];
@@ -429,6 +439,7 @@ async function setup(
 		api,
 		pages,
 		startup,
+		heartbeats,
 		monitor,
 		/** A new monitor process on the same state file and stand-ins. */
 		restart: launch,
@@ -466,6 +477,33 @@ test("pages are Slack messages carrying severity, subject and detail in their te
 	assert.equal(severity("AUTO-PAUSE UNAVAILABLE"), "CRITICAL");
 	assert.equal(severity("BASE VIEW STALLED"), "WARNING");
 	assert.match(pages.find((page) => page.subject === "VAULT BALANCE DEFICIT")!.detail, /^balance \d+ \+ released 0 \+ swept 0 < supply/);
+});
+
+test("only a poll that runs every check requests the heartbeat", async (t) => {
+	const { base, pendulum, api, monitor, heartbeats } = await setup(t);
+	await monitor.poll(api);
+	assert.deepEqual(heartbeats, ["GET"]);
+	pendulum.failure = new Error("node unreachable");
+	await monitor.poll(api);
+	pendulum.failure = undefined;
+	const guardianUpdated = toEventSelector("GuardianUpdated(address)"); // only the admin scan asks for it
+	base.failing = (method, params) => method === "eth_getLogs" && JSON.stringify(params).includes(guardianUpdated);
+	base.safe = 1_020n; // a new range for the admin scan
+	await monitor.poll(api);
+	assert.deepEqual(heartbeats, ["GET"]);
+	base.failing = undefined;
+	await monitor.poll(api);
+	assert.deepEqual(heartbeats, ["GET", "GET"]);
+});
+
+test("a failing heartbeat never stops the monitor", async (t) => {
+	const { api, monitor, heartbeats, subjects } = await setup(t, { heartbeat: () => 500 });
+	await monitor.poll(api);
+	await monitor.poll(api);
+	assert.deepEqual(heartbeats, ["GET", "GET"]);
+	const unreachable = await setup(t, { env: { HEARTBEAT_URL: "http://127.0.0.1:1/heartbeat" } });
+	await unreachable.monitor.poll(unreachable.api);
+	assert.deepEqual([...subjects(), ...unreachable.subjects()], []);
 });
 
 test("a vault balance deficit pages and asks for the auto-pause", async (t) => {

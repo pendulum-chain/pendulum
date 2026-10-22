@@ -201,6 +201,8 @@ const config = {
 	graceSeconds: envNumber("GRACE_SECONDS", 1800),
 	unmatchedEventGraceSeconds: envNumber("UNMATCHED_EVENT_GRACE_SECONDS", 600),
 	alertWebhookUrl: process.env.ALERT_WEBHOOK_URL,
+	/** Optional: requested after every poll that ran all checks. */
+	heartbeatUrl: process.env.HEARTBEAT_URL,
 	guardianPrivateKey: process.env.GUARDIAN_PRIVATE_KEY as `0x${string}` | undefined,
 	baseChainId: envNumber("BASE_CHAIN_ID", 8453),
 	baseFinalityTag,
@@ -1200,7 +1202,8 @@ async function readSource(api: ApiPromise, draft: RuntimeState): Promise<SourceV
 	return { finalizedBlock, timestampMs: sourceFinalizedTsMs, totalMigrated };
 }
 
-async function check(api: ApiPromise): Promise<void> {
+/** One pass of the checks; resolves to whether every one of them ran. */
+async function check(api: ApiPromise): Promise<boolean> {
 	const confirmedBase = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
 	if (confirmedBase.number === null) throw new Error(`${config.baseFinalityTag} Base block has no number`);
 	const baseBlock = confirmedBase.number;
@@ -1249,9 +1252,11 @@ async function check(api: ApiPromise): Promise<void> {
 
 	// The admin scan only pages and keeps its own cursor, so nothing else waits
 	// for it, and its failure skips no other check.
+	let adminScanned = true;
 	try {
 		await watchBaseAdmin(baseBlock);
 	} catch (adminError) {
+		adminScanned = false;
 		if (Date.now() - lastAdminScanFailureAlertMs > config.unmatchedEventGraceSeconds * 1000) {
 			lastAdminScanFailureAlertMs = Date.now();
 			await alert(
@@ -1290,12 +1295,12 @@ async function check(api: ApiPromise): Promise<void> {
 			state = draft;
 			persistState(state);
 		}
-		return;
+		return false;
 	}
 	if (!source) {
 		state = draft; // reconciled against the last view read in full
 		persistState(state);
-		return;
+		return false;
 	}
 	const { finalizedBlock, totalMigrated } = source;
 	if (reconciliation.awaitingSource) {
@@ -1305,7 +1310,7 @@ async function check(api: ApiPromise): Promise<void> {
 			`waiting up to ${config.unmatchedEventGraceSeconds}s for Pendulum RPC to catch up with ` +
 				reconciliation.awaitingSource,
 		);
-		return;
+		return false;
 	}
 	if (releasedExceedsMigrated(totalReleased, totalMigrated, conversionFactor, config.acknowledgedReleaseExcess)) {
 		if (await securityViolation(
@@ -1316,7 +1321,7 @@ async function check(api: ApiPromise): Promise<void> {
 			state = draft;
 			persistState(state);
 		}
-		return;
+		return false;
 	}
 
 	const pending = [...draft.migrations.values()];
@@ -1370,6 +1375,19 @@ async function check(api: ApiPromise): Promise<void> {
 		`ok: migrated=${totalMigrated} released=${totalReleased} swept=${totalSwept} ` +
 			`pending=${state.migrations.size} vaultBalance=${vaultBalance} base=${baseBlock} pendulum=${finalizedBlock}`,
 	);
+	return adminScanned;
+}
+
+/** Tells an external dead-man's switch (Healthchecks.io style) that a poll
+ *  ran every check; it pages when these requests stop. Never fatal. */
+async function heartbeat(): Promise<void> {
+	if (!config.heartbeatUrl) return;
+	try {
+		const response = await fetch(config.heartbeatUrl, { signal: AbortSignal.timeout(10_000) });
+		if (!response.ok) console.error(`heartbeat answered ${response.status}`);
+	} catch (heartbeatError) {
+		console.error(`heartbeat failed: ${redact(`${heartbeatError}`)}`);
+	}
 }
 
 /** Startup once the Pendulum API is connected: durable state, the multicall
@@ -1413,20 +1431,23 @@ export async function start(api: ApiPromise): Promise<void> {
 
 /** One poll; a failure pages and the next poll starts afresh. */
 export async function poll(api: ApiPromise): Promise<void> {
+	let complete = false;
 	try {
-		await check(api);
+		complete = await check(api);
 	} catch (checkError) {
 		await alert("monitor check failed", `${checkError}`);
 	}
 	try {
 		await watchPendulumGovernance(api);
 	} catch (governanceError) {
+		complete = false;
 		if (Date.now() - lastGovernanceWatchFailureMs > config.graceSeconds * 1000) {
 			lastGovernanceWatchFailureMs = Date.now();
 			await alert("pendulum governance watch failed", `${governanceError}`);
 		}
 	}
 	await retryUndeliveredPages();
+	if (complete) await heartbeat();
 }
 
 async function main(): Promise<void> {

@@ -39,6 +39,7 @@ Checks every poll:
 | `ACKNOWLEDGED_RELEASE_EXCESS` | Excess of released over migrated, in token units (18 decimals), that operators quantified and accepted after a real loss; M2a fires only beyond it (default 0). Set it at the RB-3 sign-off and restart; the startup log shows it |
 | `TIMELOCK_ADDRESS` | Optional: the governance TimelockController. Set it as soon as governance is deployed; the queue is scanned from the monitor's Base cursor onwards, so operations scheduled before the monitor knew the address are not paged |
 | `ALERT_WEBHOOK_URL` | Slack incoming webhook receiving the pages (see [Pages](#pages)). A page counts as delivered only on a 2xx answer within 10s: once-only pages (governance items, admin events, scheduled operations, first sightings) are retried every poll until delivered, and failed deliveries are logged. Without it the log line is the page |
+| `HEARTBEAT_URL` | Optional: a dead-man's switch URL (Healthchecks.io style), requested with a `GET` (10s timeout) after every poll that ran all checks; a failed request is logged and never stops the monitor. Have the service page when the requests stop: the monitor is down, stuck, or cannot complete its checks (for example while the Pendulum source cannot be read) |
 | `GUARDIAN_PRIVATE_KEY` | Optional: the key of `vault.guardian()`, enabling automatic `pause()` on conservation violations; its readiness is checked at startup and every poll, and any other key pages `AUTO-PAUSE NOT READY` (the vault admin may pause too, but its key does not belong on the monitor) |
 | `GUARDIAN_MIN_BALANCE_WEI` | Guardian ETH balance below which `AUTO-PAUSE NOT READY` pages (default 10^15 wei = 0.001 ETH) |
 | `BASE_CHAIN_ID` | Default 8453; the Base RPC must serve it |
@@ -81,7 +82,8 @@ npm start
 ```
 
 Run it under a process manager and treat "monitor down" itself as a paging
-condition: an unwatched migration is the risk model failing silently. The
+condition (`HEARTBEAT_URL`): an unwatched migration is the risk model failing
+silently. The
 two-chain cursors, unresolved canonical tuples, their original finalized block
 timestamps, and alert throttles are atomically persisted. A malformed or
 Pendulum-genesis/Base-chain/vault-mismatched state file is fatal rather than

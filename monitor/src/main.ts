@@ -1147,6 +1147,7 @@ async function reconcileBaseEvents(
 	toBlock: bigint,
 	conversionFactor: bigint,
 	sourceFinalizedTsMs: number,
+	threshold: bigint,
 ): Promise<{ violation?: string; awaitingSource?: string; incomplete?: string }> {
 	const releasedInScan = new Set<bigint>();
 	let firstViolation: string | undefined;
@@ -1211,8 +1212,9 @@ async function reconcileBaseEvents(
 					? " (source view has passed the event's timestamp — fabricated)"
 					: " (source view still behind after the full grace period)";
 			}
-			// One attestor's approval cannot release: it pages. Two attestors
-			// approving tuples that disagree with the burn pause the vault.
+			// Approvals that disagree with the burn pause the vault once they come
+			// from two attestors, or from one at a threshold of two or less, where
+			// one more approval releases. One attestor's approval alone pages.
 			const { nonce, recipient, palletAmount, attestor } = actual;
 			const seen = draft.mismatchedApprovals.some((approval) =>
 				approval.nonce === nonce && approval.attestor.toLowerCase() === attestor.toLowerCase() &&
@@ -1220,9 +1222,10 @@ async function reconcileBaseEvents(
 			);
 			if (!seen) draft.mismatchedApprovals.push({ nonce, recipient, palletAmount, attestor });
 			const attestors = disagreeingAttestors(expected, nonce, draft.mismatchedApprovals);
-			if (attestors.length >= 2) {
-				firstViolation ??= `Approved at Base block ${event.blockNumber}: ${mismatch}; attestors ` +
-					`${attestors.join(", ")} approved tuples for nonce ${nonce} that disagree with the finalized Pendulum view`;
+			if (attestors.length >= (threshold > 2n ? 2 : 1)) {
+				firstViolation ??= `Approved at Base block ${event.blockNumber}: ${mismatch}; attestor` +
+					`${attestors.length > 1 ? "s" : ""} ${attestors.join(", ")} approved tuples for nonce ${nonce} that ` +
+					"disagree with the finalized Pendulum view";
 				continue;
 			}
 			void pageOnce(
@@ -1808,7 +1811,13 @@ async function check(api: ApiPromise): Promise<boolean> {
 		}
 	}
 
-	const reconciliation = await reconcileBaseEvents(draft, baseBlock, conversionFactor, source?.timestampMs ?? 0);
+	const threshold = await publicClient.readContract({
+		address: config.vaultAddress,
+		abi: vaultAbi,
+		functionName: "threshold",
+		blockNumber: baseBlock,
+	});
+	const reconciliation = await reconcileBaseEvents(draft, baseBlock, conversionFactor, source?.timestampMs ?? 0, threshold);
 	if (reconciliation.violation) {
 		if (await securityViolation("MIGRATION TUPLE VIOLATION", reconciliation.violation)) {
 			state = draft;
@@ -1852,12 +1861,6 @@ async function check(api: ApiPromise): Promise<boolean> {
 	}
 
 	const pending = [...draft.migrations.values()];
-	const threshold = await publicClient.readContract({
-		address: config.vaultAddress,
-		abi: vaultAbi,
-		functionName: "threshold",
-		blockNumber: baseBlock,
-	});
 	const approvals = await activeApprovalCounts(pending, baseBlock);
 	const now = Date.now();
 	// One page per kind and poll however long the backlog, with the detail

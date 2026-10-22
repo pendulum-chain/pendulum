@@ -1325,6 +1325,18 @@ test("one attestor approving against the burn pages critical; a second one pause
 	);
 });
 
+test("at a threshold of two, one attestor approving against the burn pauses", async (t) => {
+	const { base, pendulum, api, monitor, pages, subjects } = await setup(t, { prepare: (base) => (base.threshold = 2n) });
+	burn(pendulum, 0n, 100n * PEN);
+	approve(base, 0n, TOKEN, ATTESTORS[0], 1_005n);
+	await monitor.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "MIGRATION TUPLE VIOLATION")?.detail ?? "",
+		new RegExp(`; attestor ${ATTESTORS[0]} approved tuples for nonce 0`, "i"),
+	);
+	assert.ok(!subjects().includes("CRITICAL: MISMATCHED APPROVAL"), JSON.stringify(subjects()));
+});
+
 test("auto-pause readiness is checked at startup and each problem pages", async (t) => {
 	const { startup } = await setup(t, {
 		env: { GUARDIAN_PRIVATE_KEY: GUARDIAN_KEY },

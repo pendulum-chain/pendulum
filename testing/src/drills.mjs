@@ -257,10 +257,15 @@ async function main() {
 		// other identity fields the loader requires — a bare
 		// { lastProcessedBlock } is rejected as a legacy schema.
 		const cp4 = path.join(ROOT, "attestor/cp4.json");
-		const attestorGeneration = Number(await read(V, "attestorGeneration", [ctx.roles.attestors[3].address]));
-		writeFileSync(cp4, JSON.stringify({
-			...JSON.parse(readFileSync(cp4, "utf8")), lastProcessedBlock: held.atBlock - 1, attestorGeneration,
-		}));
+		const checkpoint = JSON.parse(readFileSync(cp4, "utf8"));
+		// Read until the re-add's bump is visible: a lagging backend still
+		// answers with the generation the checkpoint was bound to.
+		let attestorGeneration;
+		await waitFor(async () => {
+			attestorGeneration = Number(await read(V, "attestorGeneration", [ctx.roles.attestors[3].address]));
+			return attestorGeneration > checkpoint.attestorGeneration;
+		}, { timeoutMs: 120_000, intervalMs: 3000, label: "the re-added attestor's generation to be visible" });
+		writeFileSync(cp4, JSON.stringify({ ...checkpoint, lastProcessedBlock: held.atBlock - 1, attestorGeneration }));
 		start("attestor4", "attestor", attestorEnv(4));
 		await waitReleased(held, "the held migration to release after re-approval");
 		assertEq(await read(V, "activeApprovals", [heldPayload]), 3n, "final active approvals");

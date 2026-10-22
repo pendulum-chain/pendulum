@@ -3,7 +3,7 @@ name: Migration Tests
 # The PEN -> Base migration stack lives outside the Rust workspace: the
 # Foundry contracts and the three TypeScript daemons. `test-code.yml` covers
 # the pallet through `cargo test`; this job covers everything else, so a
-# green check on the PR means the suites the review log cites actually ran.
+# green check on the PR means the contract and daemon suites actually ran.
 
 on:
   pull_request:

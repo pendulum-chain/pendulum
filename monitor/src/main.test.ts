@@ -94,10 +94,11 @@ function baseChain() {
 	};
 }
 
-/** A vault total at `block`: its current value less what later events added. */
-function totalAt(base: Base, total: bigint, eventName: string, field: string, block: bigint | undefined): bigint {
+/** A vault total at `block`: its current value less what later events added
+ *  (`sign` -1 for the balance, which those events lowered). */
+function totalAt(base: Base, total: bigint, eventName: string, field: string, block: bigint | undefined, sign = 1n): bigint {
 	const later = base.logs.filter((log) => log.eventName === eventName && block !== undefined && log.blockNumber > block);
-	return later.reduce((sum, log) => sum - (log.args[field] as bigint), total);
+	return later.reduce((sum, log) => sum - sign * (log.args[field] as bigint), total);
 }
 type Base = ReturnType<typeof baseChain>;
 
@@ -135,7 +136,14 @@ function answer(base: Base, method: string, params: any[]): unknown {
 				guardian: base.guardian,
 				activeApprovals: base.approvals.get(key) ?? 0n,
 				totalSupply: SUPPLY,
-				balanceOf: base.vaultBalance,
+				balanceOf: totalAt(
+					base,
+					totalAt(base, base.vaultBalance, "Released", "tokenAmount", block, -1n),
+					"RemainderSwept",
+					"amount",
+					block,
+					-1n,
+				),
 				getTimestamp: base.readyAt.get(key) ?? 0n,
 			}[functionName];
 			const { outputs } = abi.find((item) => item.type === "function" && item.name === functionName) as AbiFunction;
@@ -906,6 +914,37 @@ test("while Pendulum cannot be read, a mismatching release of a known nonce paus
 	base.safe = 1_020n;
 	await monitor.poll(api);
 	assert.match(pages.find((page) => page.subject === "MIGRATION TUPLE VIOLATION")?.detail ?? "", /recipient/);
+	assert.ok(pages.some((page) => page.subject === "AUTO-PAUSE UNAVAILABLE"), JSON.stringify(pages)); // the pause was asked for
+});
+
+test("a release the source never shows pauses after the grace, with no approval in view", async (t) => {
+	const { base, pendulum, api, monitor, pages } = await setup(t, { env: { UNMATCHED_EVENT_GRACE_SECONDS: "0" } });
+	pendulum.failure = new Error("node unreachable");
+	const tokenAmount = 5n * PEN * CF;
+	base.logs.push({ address: VAULT, eventName: "Released", args: { nonce: 7n, recipient: RECIPIENT, palletAmount: 5n * PEN, tokenAmount }, blockNumber: 1_005n });
+	base.totalReleased += tokenAmount;
+	base.vaultBalance -= tokenAmount;
+	await monitor.poll(api);
+	await new Promise((resolve) => setTimeout(resolve, 5));
+	await monitor.poll(api); // the grace has run out
+	assert.match(pages.find((page) => page.subject === "MIGRATION TUPLE VIOLATION")?.detail ?? "", /^Released at Base block 1005: nonce 7 has no finalized/);
+});
+
+test("a second release of one nonce is a violation", async (t) => {
+	const { base, pendulum, api, monitor, pages } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	release(base, 0n, 100n * PEN, 1_004n);
+	release(base, 0n, 100n * PEN, 1_006n);
+	await monitor.poll(api);
+	assert.match(pages.find((page) => page.subject === "MIGRATION TUPLE VIOLATION")?.detail ?? "", /duplicate Released event for nonce 0/);
+});
+
+test("vault events past the confirmed Base block do not trip the balance check", async (t) => {
+	const { base, pendulum, api, monitor, pages } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	release(base, 0n, 100n * PEN, 1_015n); // after the safe block 1010
+	await monitor.poll(api);
+	assert.equal(pages.length, 0, JSON.stringify(pages));
 });
 
 test("logs that miss a release hold the Base cursor and page until a read accounts for the totals", async (t) => {

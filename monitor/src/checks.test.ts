@@ -14,6 +14,7 @@ import {
 	chunks,
 	describeCall,
 	describeTimelockOperation,
+	disagreeingAttestors,
 	isStale,
 	provablyUnsourced,
 	releaseMismatch,
@@ -121,6 +122,20 @@ test("M2 tuple matching rejects missing, wrong-recipient and wrong-amount approv
 	);
 	assert.match(approvalMismatch(expected, { ...expected, palletAmount: 99n })!, /pallet amount/);
 	assert.equal(approvalMismatch(expected, { ...expected, recipient: expected.recipient.toUpperCase() }), undefined);
+});
+
+test("approvals against the burn count once per attestor and only while they disagree", () => {
+	const burn = { nonce: 7n, recipient: "0x1111111111111111111111111111111111111111", palletAmount: 100n };
+	const [a, b] = ["0xA1a1a1a1a1A1a1a1a1a1a1A1a1a1a1a1a1a1A1a1", "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"];
+	const approvals = [
+		{ ...burn, palletAmount: 99n, attestor: a },
+		{ ...burn, palletAmount: 98n, attestor: a.toLowerCase() },
+		{ ...burn, attestor: b }, // agrees
+		{ ...burn, nonce: 8n, palletAmount: 99n, attestor: b }, // another nonce
+	];
+	assert.deepEqual(disagreeingAttestors(burn, 7n, approvals), [a.toLowerCase()]);
+	assert.deepEqual(disagreeingAttestors(undefined, 7n, approvals), [a.toLowerCase(), b]); // no burn known
+	assert.deepEqual(disagreeingAttestors({ ...burn, palletAmount: 99n }, 7n, approvals), [a.toLowerCase(), b]);
 });
 
 test("M2 release matching includes the one-and-only decimal conversion", () => {

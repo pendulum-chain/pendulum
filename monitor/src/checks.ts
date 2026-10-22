@@ -131,6 +131,24 @@ export function approvalMismatch(expected: MigrationTuple | undefined, actual: M
 	return undefined;
 }
 
+/**
+ * The distinct attestors whose recorded approvals of `nonce` disagree with its
+ * finalized burn, or with its absence. One attestor's approval can never
+ * release (the threshold is higher), so one pages; two pause the vault before
+ * a third could complete a quorum. Approvals that the source view has since
+ * confirmed no longer count.
+ */
+export function disagreeingAttestors(
+	expected: MigrationTuple | undefined,
+	nonce: bigint,
+	approvals: Array<MigrationTuple & { attestor: string }>,
+): string[] {
+	const attestors = approvals
+		.filter((approval) => approval.nonce === nonce && approvalMismatch(expected, approval))
+		.map((approval) => approval.attestor.toLowerCase());
+	return [...new Set(attestors)];
+}
+
 export function releaseMismatch(
 	expected: MigrationTuple | undefined,
 	actual: MigrationTuple & { tokenAmount: bigint },

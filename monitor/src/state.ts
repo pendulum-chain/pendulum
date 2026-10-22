@@ -34,7 +34,19 @@ export interface PersistedMonitorState {
 	/** Next Base block of the admin scan; absent in older state, which never
 	 *  persisted a Base cursor past it, and then `baseFromBlock`. */
 	baseAdminFromBlock?: string;
+	/** Approvals that disagreed with the finalized burn, until their nonce is
+	 *  released; absent in older state. */
+	mismatchedApprovals?: PersistedApproval[];
 }
+
+export interface PersistedApproval {
+	nonce: string;
+	recipient: `0x${string}`;
+	palletAmount: string;
+	attestor: `0x${string}`;
+}
+
+const isAddress = (value: unknown) => typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value);
 
 function isMissing(error: unknown): boolean {
 	return (error as NodeJS.ErrnoException)?.code === "ENOENT";
@@ -70,6 +82,12 @@ export function loadMonitorState(path: string): PersistedMonitorState | undefine
 	const badAlerts = !Array.isArray(state.livenessAlertedAt) || state.livenessAlertedAt.some(
 		(entry) => !Array.isArray(entry) || entry.length !== 2 || !isUint(entry[0]) || !Number.isSafeInteger(entry[1]),
 	);
+	const badApprovals = state.mismatchedApprovals !== undefined && (
+		!Array.isArray(state.mismatchedApprovals) || state.mismatchedApprovals.some((approval) =>
+			!isUint(approval?.nonce) || !isAddress(approval?.recipient) || !isUint(approval?.palletAmount) ||
+			!isAddress(approval?.attestor)
+		)
+	);
 	const badUnmatchedEvents = !Array.isArray(state.unmatchedBaseFirstSeenAt) || state.unmatchedBaseFirstSeenAt.some(
 		(entry) =>
 			!Array.isArray(entry) ||
@@ -92,6 +110,7 @@ export function loadMonitorState(path: string): PersistedMonitorState | undefine
 		(state.baseAdminFromBlock !== undefined && !isUint(state.baseAdminFromBlock)) ||
 		badMigration ||
 		badAlerts ||
+		badApprovals ||
 		badUnmatchedEvents
 	) {
 		throw new Error(`monitor state ${path} has an invalid or legacy schema; refusing to reset security history`);

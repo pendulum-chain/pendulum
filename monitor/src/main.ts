@@ -26,6 +26,7 @@ import {
 	chunks,
 	describeCall,
 	describeTimelockOperation,
+	disagreeingAttestors,
 	isStale,
 	provablyUnsourced,
 	releaseMismatch,
@@ -273,6 +274,9 @@ interface RuntimeState {
 	migrations: Map<bigint, MigrationRecord>;
 	livenessAlertedAt: Map<bigint, number>;
 	unmatchedBaseFirstSeenAt: Map<string, number>;
+	/** Approvals that disagreed with the finalized burn, or found none, kept
+	 *  until their nonce is released (see `disagreeingAttestors`). */
+	mismatchedApprovals: Array<MigrationTuple & { attestor: string }>;
 	/** Pendulum totalIssuance + TotalMigrated at first observation. Under every
 	 *  legitimate flow this sum can only fall (teleport-out) and later recover
 	 *  to at most its original value (teleport-in); growth means PEN was minted
@@ -295,6 +299,7 @@ function hydrateState(): RuntimeState {
 			migrations: new Map(),
 			livenessAlertedAt: new Map(),
 			unmatchedBaseFirstSeenAt: new Map(),
+			mismatchedApprovals: [],
 			issuanceAnchor: undefined,
 		};
 	}
@@ -318,6 +323,11 @@ function hydrateState(): RuntimeState {
 		])),
 		livenessAlertedAt: new Map(persisted.livenessAlertedAt.map(([nonce, at]) => [BigInt(nonce), at])),
 		unmatchedBaseFirstSeenAt: new Map(persisted.unmatchedBaseFirstSeenAt),
+		mismatchedApprovals: (persisted.mismatchedApprovals ?? []).map((approval) => ({
+			...approval,
+			nonce: BigInt(approval.nonce),
+			palletAmount: BigInt(approval.palletAmount),
+		})),
 		issuanceAnchor: persisted.issuanceAnchor === undefined ? undefined : BigInt(persisted.issuanceAnchor),
 	};
 }
@@ -334,6 +344,7 @@ function cloneState(source: RuntimeState): RuntimeState {
 		migrations: new Map(source.migrations),
 		livenessAlertedAt: new Map(source.livenessAlertedAt),
 		unmatchedBaseFirstSeenAt: new Map(source.unmatchedBaseFirstSeenAt),
+		mismatchedApprovals: [...source.mismatchedApprovals],
 		issuanceAnchor: source.issuanceAnchor,
 	};
 }
@@ -358,6 +369,12 @@ function persistState(state: RuntimeState): void {
 		})),
 		livenessAlertedAt: [...state.livenessAlertedAt].map(([nonce, at]) => [nonce.toString(), at]),
 		unmatchedBaseFirstSeenAt: [...state.unmatchedBaseFirstSeenAt],
+		mismatchedApprovals: state.mismatchedApprovals.map((approval) => ({
+			nonce: approval.nonce.toString(),
+			recipient: approval.recipient as `0x${string}`,
+			palletAmount: approval.palletAmount.toString(),
+			attestor: approval.attestor as `0x${string}`,
+		})),
 		issuanceAnchor: state.issuanceAnchor?.toString(),
 	};
 	saveMonitorState(config.stateFile, persisted);
@@ -720,9 +737,9 @@ async function reconcileBaseEvents(
 		// Preflight the complete range before deleting released migrations. If a
 		// source RPC is merely behind, the range must be replayed intact later.
 		for (const event of approvals) {
-			const actual = event.args as { nonce: bigint; recipient: `0x${string}`; palletAmount: bigint };
+			const actual = event.args as { nonce: bigint; recipient: `0x${string}`; palletAmount: bigint; attestor: string };
 			const expected = draft.migrations.get(actual.nonce);
-			const mismatch = approvalMismatch(expected, actual);
+			let mismatch = approvalMismatch(expected, actual);
 			const key = `Approved:${actual.nonce}`;
 			if (!mismatch) {
 				draft.unmatchedBaseFirstSeenAt.delete(key);
@@ -740,13 +757,31 @@ async function reconcileBaseEvents(
 				);
 				if (disposition !== "proven") awaitingSource ??= `Approved nonce ${actual.nonce} at Base block ${event.blockNumber}`;
 				if (disposition === "await") continue;
-				firstViolation ??= `Approved at Base block ${event.blockNumber}: ${mismatch} (` +
-					(disposition === "proven"
-						? "source view has passed the event's timestamp — fabricated"
-						: "source view still behind after the full grace period") + ")";
+				mismatch += disposition === "proven"
+					? " (source view has passed the event's timestamp — fabricated)"
+					: " (source view still behind after the full grace period)";
+			}
+			// One attestor's approval cannot release: it pages. Two attestors
+			// approving tuples that disagree with the burn pause the vault.
+			const { nonce, recipient, palletAmount, attestor } = actual;
+			const seen = draft.mismatchedApprovals.some((approval) =>
+				approval.nonce === nonce && approval.attestor.toLowerCase() === attestor.toLowerCase() &&
+				!approvalMismatch(approval, actual)
+			);
+			if (!seen) draft.mismatchedApprovals.push({ nonce, recipient, palletAmount, attestor });
+			const attestors = disagreeingAttestors(expected, nonce, draft.mismatchedApprovals);
+			if (attestors.length >= 2) {
+				firstViolation ??= `Approved at Base block ${event.blockNumber}: ${mismatch}; attestors ` +
+					`${attestors.join(", ")} approved tuples for nonce ${nonce} that disagree with the finalized Pendulum view`;
 				continue;
 			}
-			firstViolation ??= `Approved at Base block ${event.blockNumber}: ${mismatch}`;
+			void pageOnce(
+				`approval:${event.transactionHash}:${event.logIndex}`,
+				"CRITICAL: MISMATCHED APPROVAL",
+				`Approved at Base block ${event.blockNumber} by attestor ${attestor}: ${mismatch}; one attestor's approval ` +
+					"cannot release, so the vault is not paused — check that attestor's key and Pendulum node; a second " +
+					"attestor approving this nonce against its burn pauses the vault",
+			);
 		}
 		for (const event of releases) {
 			const actual = event.args as {
@@ -806,6 +841,7 @@ async function reconcileBaseEvents(
 			releasedInScan.add(actual.nonce);
 			draft.migrations.delete(actual.nonce);
 			draft.livenessAlertedAt.delete(actual.nonce);
+			draft.mismatchedApprovals = draft.mismatchedApprovals.filter((approval) => approval.nonce !== actual.nonce);
 		}
 		draft.baseFromBlock = end + 1n;
 	}
@@ -1270,7 +1306,7 @@ async function check(api: ApiPromise): Promise<boolean> {
 	// A Pendulum failure must not switch off the Base-side checks. Base events
 	// are then reconciled against the last view read in full, as against a
 	// lagging source but with no fabrication proof: a mismatch on a known nonce
-	// still pauses at once, an unknown nonce after the grace. The vault balance
+	// is judged at once, an unknown nonce after the grace. The vault balance
 	// check needs no source; M2a and liveness wait for it.
 	let draft = cloneState(state);
 	let source: SourceView | undefined;

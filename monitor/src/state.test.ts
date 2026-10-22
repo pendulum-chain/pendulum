@@ -70,14 +70,23 @@ test("missing unmatched-event history is rejected rather than resetting its grac
 	}
 });
 
-test("optional cursors are checked when present", () => {
+test("optional fields are checked when present", () => {
 	const directory = mkdtempSync(join(tmpdir(), "pen-monitor-state-"));
 	const path = join(directory, "state.json");
+	const approval = {
+		nonce: "2",
+		recipient: "0x3333333333333333333333333333333333333333",
+		palletAmount: "100",
+		attestor: "0x4444444444444444444444444444444444444444",
+	} as const;
 	try {
-		saveMonitorState(path, { ...state, baseAdminFromBlock: "150" });
-		assert.equal(loadMonitorState(path)?.baseAdminFromBlock, "150");
-		writeFileSync(path, JSON.stringify({ ...state, baseAdminFromBlock: "-1" }));
-		assert.throws(() => loadMonitorState(path), /invalid or legacy schema/);
+		const complete = { ...state, baseAdminFromBlock: "150", mismatchedApprovals: [approval] };
+		saveMonitorState(path, complete);
+		assert.deepEqual(loadMonitorState(path), complete);
+		for (const bad of [{ baseAdminFromBlock: "-1" }, { mismatchedApprovals: [{ ...approval, attestor: "0x44" }] }]) {
+			writeFileSync(path, JSON.stringify({ ...state, ...bad }));
+			assert.throws(() => loadMonitorState(path), /invalid or legacy schema/);
+		}
 	} finally {
 		rmSync(directory, { recursive: true, force: true });
 	}

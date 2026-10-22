@@ -448,6 +448,7 @@ async function setup(
 			baseFromBlock: string;
 			baseAdminFromBlock: string;
 			migrations: Array<{ nonce: string }>;
+			mismatchedApprovals: Array<{ nonce: string; attestor: string }>;
 		},
 	};
 }
@@ -573,16 +574,62 @@ test("while Pendulum cannot be read, a Base event with an unknown nonce pauses a
 	assert.ok(subjects().includes("MIGRATION TUPLE VIOLATION"), JSON.stringify(subjects()));
 });
 
-test("while Pendulum cannot be read, a mismatch on a known nonce pauses at once", async (t) => {
+test("while Pendulum cannot be read, a mismatching release of a known nonce pauses at once", async (t) => {
 	const { base, pendulum, api, monitor, pages } = await setup(t);
 	burn(pendulum, 0n, 100n * PEN);
 	await monitor.poll(api);
 	pendulum.failure = new Error("node unreachable");
-	const approval = { nonce: 0n, recipient: TOKEN, palletAmount: 100n * PEN, attestor: ATTESTORS[0] };
-	base.logs.push({ address: VAULT, eventName: "Approved", args: approval, blockNumber: 1_012n });
+	const tokenAmount = 100n * PEN * CF;
+	const released = { nonce: 0n, recipient: TOKEN, palletAmount: 100n * PEN, tokenAmount };
+	base.logs.push({ address: VAULT, eventName: "Released", args: released, blockNumber: 1_012n });
+	base.totalReleased += tokenAmount;
+	base.vaultBalance -= tokenAmount;
 	base.safe = 1_020n;
 	await monitor.poll(api);
 	assert.match(pages.find((page) => page.subject === "MIGRATION TUPLE VIOLATION")?.detail ?? "", /recipient/);
+});
+
+/** An approval of `nonce` for `recipient` from attestor `attestor`. */
+function approve(base: Base, nonce: bigint, recipient: string, attestor: string, blockNumber: bigint): void {
+	base.logs.push({ address: VAULT, eventName: "Approved", args: { nonce, recipient, palletAmount: 100n * PEN, attestor }, blockNumber });
+}
+
+test("the release of a nonce forgets the approvals of it that disagreed", async (t) => {
+	const { base, pendulum, api, monitor, persisted } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	approve(base, 0n, TOKEN, ATTESTORS[0], 1_004n);
+	await monitor.poll(api);
+	assert.equal(persisted().mismatchedApprovals.length, 1);
+	release(base, 0n, 100n * PEN, 1_012n);
+	base.safe = 1_020n;
+	await monitor.poll(api);
+	assert.deepEqual(persisted().mismatchedApprovals, []);
+});
+
+test("one attestor approving against the burn pages critical; a second one pauses, also polls later", async (t) => {
+	const { base, pendulum, api, monitor, restart, pages, subjects } = await setup(t);
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api);
+	approve(base, 0n, TOKEN, ATTESTORS[0], 1_012n);
+	base.safe = 1_020n;
+	await monitor.poll(api);
+	const page = pages.find((page) => page.subject === "CRITICAL: MISMATCHED APPROVAL");
+	assert.equal(page?.severity, "CRITICAL", JSON.stringify(pages));
+	assert.match(page.detail, new RegExp(`by attestor ${ATTESTORS[0]}: nonce 0 recipient ${TOKEN}`, "i"));
+	assert.ok(!subjects().includes("MIGRATION TUPLE VIOLATION"), JSON.stringify(subjects()));
+	approve(base, 0n, RECIPIENT, ATTESTORS[1], 1_022n); // agrees with the burn
+	approve(base, 0n, "0x5555555555555555555555555555555555555555", ATTESTORS[0], 1_023n); // the same attestor again
+	base.safe = 1_030n;
+	await monitor.poll(api);
+	assert.ok(!subjects().includes("MIGRATION TUPLE VIOLATION"), JSON.stringify(subjects()));
+	const restarted = await restart();
+	approve(base, 0n, TOKEN, ATTESTORS[2], 1_032n);
+	base.safe = 1_040n;
+	await restarted.poll(api);
+	assert.match(
+		pages.find((page) => page.subject === "MIGRATION TUPLE VIOLATION")?.detail ?? "",
+		new RegExp(`attestors ${ATTESTORS[0]}, ${ATTESTORS[2]} approved tuples for nonce 0`, "i"),
+	);
 });
 
 test("auto-pause readiness is checked at startup and each problem pages", async (t) => {

@@ -443,9 +443,9 @@ function pendulumChain(chain: Pendulum = pendulumState()) {
 	return { chain, api: api as unknown as ApiPromise };
 }
 
-/** A relay chain whose finalized block records `head()` as the Pendulum head;
- *  every read fails while `failing()` holds. */
-function relayChain(head: () => { number: number; hash: string }, failing = () => false): ApiPromise {
+/** A relay chain whose finalized block, `ageMs()` old, records `head()` as the
+ *  Pendulum head; every read fails while `failing()` holds. */
+function relayChain(head: () => { number: number; hash: string }, failing = () => false, ageMs = () => 0): ApiPromise {
 	const check = () => {
 		if (failing()) throw new Error("relay RPC unavailable");
 	};
@@ -453,6 +453,7 @@ function relayChain(head: () => { number: number; hash: string }, failing = () =
 		rpc: { chain: { getFinalizedHead: async () => (check(), hash(`0x${"77".repeat(32)}`)) } },
 		at: async () => ({
 			query: {
+				timestamp: { now: async () => codec(Date.now() - ageMs()) },
 				paras: {
 					heads: async (paraId: number) => {
 						check();
@@ -879,23 +880,19 @@ test("a source header that names another block number pages critical", async (t)
 const SECOND_NODE = "ws://second-node.test:9944?apikey=secret";
 
 /** A monitor whose second Pendulum node serves the source's chain, except for
- *  the values in `own`, which the test may change later; with `relayHead`,
- *  also against a relay chain recording it. */
-async function crossCheckSetup(
-	t: { after(fn: () => void): void },
-	own: Partial<Pendulum> = {},
-	relayHead?: () => { number: number; hash: string },
-) {
+ *  the values in `own`, which the test may change later; with `relays`, also
+ *  against these relay RPCs, in this order. */
+async function crossCheckSetup(t: { after(fn: () => void): void }, own: Partial<Pendulum> = {}, relays: ApiPromise[] = []) {
 	let source: Pendulum | undefined;
 	const chain = new Proxy({} as Pendulum, {
 		get: (_target, key) => (key in own ? own[key as keyof Pendulum] : source![key as keyof Pendulum]),
 	});
 	const second = pendulumChain(chain);
-	const relay = relayHead && relayChain(relayHead);
+	const urls = relays.map((_relay, index) => `wss://relay-${index + 1}.test`);
 	const monitor = await setup(t, {
-		env: { PENDULUM_WS_CROSSCHECK: SECOND_NODE, ...(relay ? { POLKADOT_WS: "wss://relay.test" } : {}) },
+		env: { PENDULUM_WS_CROSSCHECK: SECOND_NODE, ...(urls.length ? { POLKADOT_WS: urls.join(",") } : {}) },
 		prepare: (_base, pendulum) => (source = pendulum),
-		connect: async (url) => (url === SECOND_NODE ? second.api : (url === "wss://relay.test" && relay) || assert.fail(url)),
+		connect: async (url) => (url === SECOND_NODE ? second.api : relays[urls.indexOf(url)] ?? assert.fail(url)),
 	});
 	return { ...monitor, own };
 }
@@ -999,11 +996,9 @@ test("a source on another chain one block past the second node's head ingests no
 
 test("with the second node and the relay chain, a block past both their heads waits, and a fork there is caught", async (t) => {
 	let recorded = 101;
-	const { pendulum, api, monitor, pages, persisted, own } = await crossCheckSetup(
-		t,
-		{ finalized: 101, forkFrom: undefined },
-		() => ({ number: recorded, hash: pendulumHash({}, recorded) }),
-	);
+	const { pendulum, api, monitor, pages, persisted, own } = await crossCheckSetup(t, { finalized: 101, forkFrom: undefined }, [
+		relayChain(() => ({ number: recorded, hash: pendulumHash({}, recorded) })),
+	]);
 	burn(pendulum, 0n, 100n * PEN);
 	pendulum.forkFrom = 102; // the source finalizes another block 102...
 	burn(pendulum, 1n, 999n * PEN, 102); // ...with a fabricated burn
@@ -1498,6 +1493,32 @@ test("a relay contradiction no other relay RPC can confirm warns, and the source
 	assert.deepEqual(pages.map((page) => page.subject), ["RELAY ANCHOR UNAVAILABLE"]);
 	assert.match(pages[0].detail, /and no other relay RPC confirms or outvotes it \(relay RPC 2: Error: relay RPC unavailable\)/);
 	assert.equal(persisted().lastPendulumBlock, 100);
+});
+
+test("a relay RPC whose finalized relay block is stale counts as not answering, and the second node still caps the source", async (t) => {
+	let relayAgeMs = 0;
+	const { base, pendulum, api, monitor, pages, persisted, own } = await crossCheckSetup(t, { finalized: 101 }, [
+		relayChain(stuckHead, () => false, () => relayAgeMs),
+		relayChain(stuckHead, () => true),
+	]);
+	burn(pendulum, 0n, 100n * PEN);
+	await monitor.poll(api); // relay RPC 1 anchors block 101
+	assert.deepEqual(persisted().relayAnchor, { number: 101, hash: pendulumHash({}, 101) });
+	relayAgeMs = 400_000; // relay RPC 1 stops following the relay chain at that record; relay RPC 2 is down
+	burn(pendulum, 1n, 100n * PEN, 103);
+	pendulum.finalized = 104;
+	own.finalized = 103;
+	release(base, 1n, 100n * PEN, 1_015n);
+	base.safe = 1_020n;
+	await monitor.poll(api);
+	assert.deepEqual(pages.map((page) => [page.subject, page.severity]), [["RELAY ANCHOR UNAVAILABLE", "WARNING"]]);
+	assert.match(
+		pages[0].detail,
+		/^the relay chain cannot be read: relay RPC 1: its finalized relay block is 400s old; relay RPC 2: Error: relay RPC unavailable; the Pendulum source is used without the relay-chain anchor/,
+	);
+	assert.equal(persisted().lastPendulumBlock, 103);
+	assert.deepEqual(persisted().migrations.map((migration) => migration.nonce), ["0"]);
+	assert.equal(persisted().baseFromBlock, "1021");
 });
 
 test("while Pendulum cannot be read, a Base event with an unknown nonce pauses after the grace", async (t) => {

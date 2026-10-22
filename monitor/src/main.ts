@@ -864,11 +864,12 @@ async function walkHeaders(api: ApiPromise, top: BlockRef, bottom: number): Prom
 }
 
 /** The Pendulum head that the relay chain behind the RPC at `url` recorded
- *  at its finalized block. */
-function relayHead(api: ApiPromise, url: string): Promise<BlockRef> {
+ *  at its finalized block, and the age of that block. */
+function relayHead(api: ApiPromise, url: string): Promise<BlockRef & { ageMs: number }> {
 	return onNode(url, async (relay) => {
-		const relayFinalized = await relay.rpc.chain.getFinalizedHead();
-		const head = (await (await relay.at(relayFinalized)).query.paras.heads(config.pendulumParaId)) as unknown as {
+		const relayAt = await relay.at(await relay.rpc.chain.getFinalizedHead());
+		const timestamp = await relayAt.query.timestamp.now();
+		const head = (await relayAt.query.paras.heads(config.pendulumParaId)) as unknown as {
 			isSome: boolean;
 			unwrap(): { toU8a(bare: boolean): Uint8Array };
 		};
@@ -878,7 +879,11 @@ function relayHead(api: ApiPromise, url: string): Promise<BlockRef> {
 			number: { toNumber(): number };
 			hash: { toHex(): string };
 		};
-		return { number: header.number.toNumber(), hash: header.hash.toHex() };
+		return {
+			number: header.number.toNumber(),
+			hash: header.hash.toHex(),
+			ageMs: Date.now() - Number(timestamp.toString().replaceAll(",", "")),
+		};
 	});
 }
 
@@ -936,18 +941,19 @@ async function relayVerdict(
 
 /** Anchors the source to the relay chain's record of the Pendulum head, kept
  *  as `draft.relayAnchor`, from the first relay RPC in POLKADOT_WS whose
- *  record anchors it; while a record does not, the next RPC is asked. A
- *  record that contradicts the source counts only when another relay RPC's
- *  record contradicts it too, or when POLKADOT_WS lists one RPC. A record that
- *  anchors the source at or above the contradicting record's height outvotes
- *  it; any other answer leaves it unconfirmed. Resolves to the height up to
- *  which the relay chain confirms the source's chain `hashes`, walked down
- *  from `top` to `bottom`: the newest anchored head, or no higher than
- *  `bottom` before the first; undefined while no relay RPC answers. Pages
- *  while no new head is anchored and the source's blocks wait for one, a
- *  contradiction stays unconfirmed or no relay RPC answers: a warning,
- *  critical once none was anchored for RELAY_ANCHOR_GRACE_SECONDS; and when
- *  relay RPCs disagree. All throttled. */
+ *  record anchors it; while a record does not, the next RPC is asked. A relay
+ *  RPC whose finalized relay block is older than SOURCE_STALE_ALERT_SECONDS
+ *  counts as not answering. A record that contradicts the source counts only
+ *  when another relay RPC's record contradicts it too, or when POLKADOT_WS
+ *  lists one RPC. A record that anchors the source at or above the
+ *  contradicting record's height outvotes it; any other answer leaves it
+ *  unconfirmed. Resolves to the height up to which the relay chain confirms
+ *  the source's chain `hashes`, walked down from `top` to `bottom`: the newest
+ *  anchored head, or no higher than `bottom` before the first; undefined while
+ *  no relay RPC answers. Pages while no new head is anchored and the source's
+ *  blocks wait for one, a contradiction stays unconfirmed or no relay RPC
+ *  answers: a warning, critical once none was anchored for
+ *  RELAY_ANCHOR_GRACE_SECONDS; and when relay RPCs disagree. All throttled. */
 async function anchorToRelay(
 	api: ApiPromise,
 	draft: RuntimeState,
@@ -960,11 +966,15 @@ async function anchorToRelay(
 	let answered = false;
 	let contradiction: { rpc: number; height: number; error: SourceIntegrityError } | undefined;
 	for (const [index, url] of config.polkadotWs.entries()) {
-		let head: BlockRef;
+		let head: BlockRef & { ageMs: number };
 		try {
 			head = await relayHead(api, url);
 		} catch (relayError) {
 			answers.push(`relay RPC ${index + 1}: ${relayError}`);
+			continue;
+		}
+		if (head.ageMs > config.sourceStaleAlertMs) {
+			answers.push(`relay RPC ${index + 1}: its finalized relay block is ${Math.round(head.ageMs / 1000)}s old`);
 			continue;
 		}
 		answered = true;
@@ -984,7 +994,7 @@ async function anchorToRelay(
 			answers.push(`relay RPC ${index + 1}: ${verdict}`);
 			continue;
 		}
-		draft.relayAnchor = head;
+		draft.relayAnchor = { number: head.number, hash: head.hash };
 		lastRelayAnchorMs = Date.now();
 		if (contradiction && Date.now() - lastRelayDisagreementAlertMs > config.graceSeconds * 1000) {
 			lastRelayDisagreementAlertMs = Date.now();

@@ -1802,8 +1802,8 @@ async function checkVaultBalance(blockNumber: bigint) {
 
 /** Runs the vault balance check on its own while a poll is still busy a poll
  *  interval after its last one started (a slow Pendulum source, a long
- *  catch-up). main() calls this every poll interval, so a busy poll delays
- *  the check by two poll intervals at most. */
+ *  catch-up). main() calls this every poll interval, so two checks are about
+ *  three poll intervals apart at most. */
 export async function watchVaultBalance(): Promise<void> {
 	if (!polling || Date.now() - lastBalanceCheckMs < config.pollIntervalMs) return;
 	lastBalanceCheckMs = Date.now();

@@ -132,10 +132,8 @@ export function approvalMismatch(expected: MigrationTuple | undefined, actual: M
 
 /**
  * The distinct attestors whose recorded approvals of `nonce` disagree with its
- * finalized burn, or with its absence. One attestor's approval can never
- * release (the threshold is higher), so one pages; two pause the vault before
- * a third could complete a quorum. Approvals that the source view has since
- * confirmed no longer count.
+ * finalized burn, or with its absence. Approvals that the source view has
+ * since confirmed no longer count.
  */
 export function disagreeingAttestors(
 	expected: MigrationTuple | undefined,

@@ -751,6 +751,7 @@ async function crossCheckSource(finalized: BlockRef): Promise<void> {
  *  from the node, recomputing each hash here, so that the result is one
  *  chain the node cannot fake: block hashes by height, `bottom` included. */
 async function walkHeaders(api: ApiPromise, top: BlockRef, bottom: number): Promise<Map<number, string>> {
+	// ponytail: one pass, held in memory and started over after a failed read; make it resumable if catch-ups grow to weeks.
 	const hashes = new Map([[top.number, top.hash]]);
 	let hash = top.hash;
 	for (let height = top.number; height > bottom; height--) {

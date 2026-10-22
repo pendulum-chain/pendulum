@@ -97,8 +97,8 @@ to `ALERT_WEBHOOK_URL`. The text is `[CRITICAL] pen-monitor: SUBJECT` or
 control characters `&`, `<` and `>` are escaped, so no detail can mention
 anyone or hide a link, and a detail longer than 3,000 characters is cut short
 (the monitor's log line keeps the full text). `CRITICAL` marks the violations
-that pause the vault, `AUTO-PAUSE FAILED`, `AUTO-PAUSE UNAVAILABLE` and every subject that
-starts with `CRITICAL`; everything else is a `WARNING`.
+that pause the vault, `AUTO-PAUSE FAILED`, `AUTO-PAUSE UNAVAILABLE` and every
+subject that starts with `CRITICAL`; everything else is a `WARNING`.
 
 | Subjects | Meaning |
 |---|---|
@@ -126,9 +126,8 @@ npm start
 
 Run it under a process manager and treat "monitor down" itself as a paging
 condition (`HEARTBEAT_URL`): an unwatched migration is the risk model failing
-silently. The
-two-chain cursors, unresolved canonical tuples, their original finalized block
-timestamps, and alert throttles are atomically persisted. A malformed or
+silently. The two-chain cursors, unresolved canonical tuples, their original
+finalized block timestamps, and alert throttles are atomically persisted. A malformed or
 Pendulum-genesis/Base-chain/vault-mismatched state file is fatal rather than
 silently resetting the security history.
 
@@ -144,7 +143,10 @@ pause; treat that page as "restore the node now". The Base-side checks keep
 running while the source cannot be read, and an unreadable source counts as
 a stalled one: once a Base event it cannot verify appears, the monitor pages
 `UNVERIFIED BASE EVENT` and pauses when the grace runs out, so treat
-`PENDULUM SOURCE UNREADABLE` the same way.
+`PENDULUM SOURCE UNREADABLE` the same way. The Base node must answer
+`eth_call` at the block before each scanned range and at its last block (the
+log completeness check); after a monitor outage those are old blocks, so a
+node that keeps only recent state stops the scan until it is an archive node.
 
 An automatic pause is reported as successful only after the transaction is
 canonical inside the configured Base confirmation boundary and `paused()` is

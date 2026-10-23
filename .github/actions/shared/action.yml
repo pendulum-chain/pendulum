@@ -1,4 +1,5 @@
 name: 'Shared action'
+description: 'Frees runner disk space, installs protobuf and caches the cargo registry'
 runs:
   using: "composite"
   steps:
@@ -26,7 +27,7 @@ runs:
 
     # Free GitHub Actions Environment Disk Space
     - name: Maximize Build Space
-      uses: jlumbroso/free-disk-space@main
+      uses: jlumbroso/free-disk-space@36e9a5af4eddb91fc11aec4c6f6f79b3cc0cb523 # main
       with:
         tool-cache: false
         large-packages: false
@@ -45,7 +46,7 @@ runs:
 
     # Steps taken from https://github.com/actions/cache/blob/master/examples.md#rust---cargo
     - name: Cache cargo registry
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: |
           ~/.cargo/registry

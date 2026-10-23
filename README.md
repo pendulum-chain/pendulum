@@ -98,7 +98,7 @@ An example for Amplitude will look like this:
 ```
 
 You can find the
-kusama.json [here](https://github.com/paritytech/polkadot/blob/master/node/service/chain-specs/kusama.json).
+kusama.json [here](https://github.com/paritytech/polkadot-sdk/blob/master/polkadot/node/service/chain-specs/kusama.json).
 
 For local testing, you can replace `--name` with predefined keys like `--alice` or `--bob`. You also need to specify
 the `--bootnode`. Here's an example:

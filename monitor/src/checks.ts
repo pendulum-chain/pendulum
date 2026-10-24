@@ -2,8 +2,7 @@
  * Pure conservation/liveness predicates for the invariant monitor.
  *
  * These are isolated from the chain-client plumbing in `main.ts` so they can be
- * unit-tested exhaustively (see checks.test.ts). Every subtlety that has bitten
- * a review round lives here.
+ * unit-tested exhaustively (see checks.test.ts).
  */
 
 /**
@@ -13,13 +12,18 @@
  * units. It lags `totalMigrated` only via finality delay, never the other way,
  * because a release requires attestations of an already-finalized burn — so any
  * excess is the strongest possible signal of attestor compromise.
+ *
+ * `acknowledgedExcess` is a loss operators have quantified and accepted: it
+ * stays in the cumulative totals for good, and without it the check would
+ * re-pause the vault after every recovery unpause.
  */
 export function releasedExceedsMigrated(
 	totalReleased: bigint,
 	totalMigrated: bigint,
 	conversionFactor: bigint,
+	acknowledgedExcess = 0n,
 ): boolean {
-	return totalReleased > totalMigrated * conversionFactor;
+	return totalReleased > totalMigrated * conversionFactor + acknowledgedExcess;
 }
 
 /**
@@ -90,7 +94,7 @@ export function shouldAwaitSource(
  * timestamp: OP-stack L2 block timestamps trail real time by the length of any
  * sequencer outage while it catches up, and an artificially old event
  * timestamp would let a merely-lagging source "prove" a legitimate event
- * fabricated (review round 9). A lagging source never satisfies this predicate
+ * fabricated. A lagging source never satisfies this predicate
  * (its head timestamp trails the observation), and a future-dated source view
  * (a collator clock ahead of real time) proves nothing either and is excluded,
  * so neither can turn node lag into a false pause.
@@ -126,6 +130,22 @@ export function approvalMismatch(expected: MigrationTuple | undefined, actual: M
 	return undefined;
 }
 
+/**
+ * The distinct attestors whose recorded approvals of `nonce` disagree with its
+ * finalized burn, or with its absence. Approvals that the source view has
+ * since confirmed no longer count.
+ */
+export function disagreeingAttestors(
+	expected: MigrationTuple | undefined,
+	nonce: bigint,
+	approvals: Array<MigrationTuple & { attestor: string }>,
+): string[] {
+	const attestors = approvals
+		.filter((approval) => approval.nonce === nonce && approvalMismatch(expected, approval))
+		.map((approval) => approval.attestor.toLowerCase());
+	return [...new Set(attestors)];
+}
+
 export function releaseMismatch(
 	expected: MigrationTuple | undefined,
 	actual: MigrationTuple & { tokenAmount: bigint },
@@ -155,4 +175,143 @@ export function chunks<T>(items: T[], size: number): T[][] {
 	const result: T[][] = [];
 	for (let start = 0; start < items.length; start += size) result.push(items.slice(start, start + size));
 	return result;
+}
+
+/** One call of a governance Timelock operation (one `CallScheduled` event). */
+export interface ScheduledCall {
+	index: bigint;
+	target: string;
+	value: bigint;
+	data: string;
+}
+
+/**
+ * The page for one operation the governance Timelock scheduled. Every such
+ * operation pages: once its delay has passed, anyone may execute it, so the
+ * canceller has exactly the delay to review and veto it.
+ *
+ * `readyAtSeconds` is the Timelock's `getTimestamp(id)`, whose sentinels are
+ * 0 (unknown or cancelled) and 1 (executed). `labels` maps lowercased
+ * addresses and `functions` maps selectors to readable names. Never throws,
+ * whatever the event carries: one operation must not hide the next.
+ */
+export function describeTimelockOperation(
+	id: string,
+	calls: ScheduledCall[],
+	readyAtSeconds: bigint,
+	nowMs: number,
+	labels: Record<string, string>,
+	functions: Record<string, string>,
+): string {
+	const callText = [...calls]
+		.sort((a, b) => (a.index < b.index ? -1 : a.index > b.index ? 1 : 0))
+		.map((call) => {
+			const target = labels[String(call.target).toLowerCase()] ?? call.target;
+			const selector = String(call.data).slice(0, 10).toLowerCase();
+			const name = functions[selector] ?? `unknown function ${selector}`;
+			return `#${call.index} ${target}.${name}${call.value ? ` value=${call.value}` : ""} data=${call.data}`;
+		})
+		.join("; ");
+	let status: string;
+	if (readyAtSeconds === 0n) status = "no longer pending (cancelled)";
+	else if (readyAtSeconds === 1n) status = "already executed";
+	else {
+		const readyMs = Number(readyAtSeconds) * 1000;
+		const leftMinutes = Math.floor((readyMs - nowMs) / 60_000);
+		// A Date holds at most 8.64e15 ms; a later time is shown in seconds.
+		const readyText = readyMs <= 8.64e15 ? new Date(readyMs).toISOString() : `timestamp ${readyAtSeconds}`;
+		status =
+			`executable by anyone from ${readyText}` +
+			(leftMinutes > 0 ? ` (in ${Math.floor(leftMinutes / 60)}h ${leftMinutes % 60}m)` : " (ready now)") +
+			"; if it is not intended, the canceller must cancel it before then";
+	}
+	return `operation ${id}: ${callText} — ${status}`;
+}
+
+export type Severity = "critical" | "warning";
+
+/** Longest page detail sent; the monitor's log line keeps the full text. */
+const MAX_PAGE_DETAIL = 3_000;
+
+/**
+ * A page as the `text` of a Slack incoming-webhook message: severity, subject
+ * and detail, with Slack's control characters `&`, `<` and `>` escaped, so
+ * that no detail can mention anyone or hide a link.
+ */
+export function slackText(service: string, severity: Severity, subject: string, detail: string): string {
+	const body = detail.length > MAX_PAGE_DETAIL
+		? `${detail.slice(0, MAX_PAGE_DETAIL)}… (cut short; the monitor log has the full text)`
+		: detail;
+	const escapes: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
+	return `[${severity.toUpperCase()}] ${service}: ${subject}\n${body}`.replace(/[&<>]/g, (char) => escapes[char]);
+}
+
+/** A decoded Pendulum call: `section.method` plus any calls nested in its arguments. */
+export interface CallNode {
+	name: string;
+	calls: CallNode[];
+}
+
+/** The duck type of a polkadot.js `Call`, enough to walk nested calls. */
+interface CallLike {
+	section: string;
+	method: string;
+	args: unknown[];
+}
+
+function isCallLike(value: unknown): value is CallLike {
+	const call = value as CallLike | null;
+	return typeof call?.section === "string" && typeof call.method === "string" && Array.isArray(call.args);
+}
+
+/** Bounds on a walked call tree. A governance call is untrusted data;
+ *  legitimate ones stay far below both, and a bigger tree is unreadable. */
+const MAX_CALL_NODES = 256;
+const MAX_CALL_DEPTH = 16;
+
+/** Walks a decoded call, descending into arguments that are calls or lists of
+ *  calls (batch, dispatch_as, ...). Throws past the node or depth bound. */
+export function toCallNode(call: CallLike): CallNode {
+	let nodes = 0;
+	const walk = (node: CallLike, depth: number): CallNode => {
+		if (++nodes > MAX_CALL_NODES) throw new Error(`call tree has more than ${MAX_CALL_NODES} calls`);
+		if (depth > MAX_CALL_DEPTH) throw new Error(`call tree is nested more than ${MAX_CALL_DEPTH} levels deep`);
+		const calls: CallNode[] = [];
+		for (const arg of node.args) {
+			if (isCallLike(arg)) calls.push(walk(arg, depth + 1));
+			else if (Array.isArray(arg)) for (const item of arg) if (isCallLike(item)) calls.push(walk(item, depth + 1));
+		}
+		return { name: `${node.section}.${node.method}`, calls };
+	};
+	return walk(call, 1);
+}
+
+/** Calls that mint, move or unlock balances outside normal transfers, or change
+ *  the runtime or the migration pallet. Minted PEN that is burned through the
+ *  migration drains the fixed-supply vault on Base, and only Pendulum governance
+ *  can stop such a call before it is enacted. */
+const RISKY_CALLS = new Set([
+	"balances.forceSetBalance", "balances.setBalance", "balances.setBalanceDeprecated", "balances.forceTransfer",
+	"balances.forceUnreserve", "balances.forceAdjustTotalIssuance", "tokens.setBalance", "tokens.forceTransfer",
+	"currencies.updateBalance", "vesting.forceVestedTransfer", "vestingManager.removeVestingSchedule",
+	"system.setCode", "system.setCodeWithoutChecks", "system.setStorage", "system.killStorage", "system.killPrefix",
+	"system.authorizeUpgrade", "system.authorizeUpgradeWithoutChecks", "parachainSystem.authorizeUpgrade",
+	"parachainSystem.enactAuthorizedUpgrade",
+]);
+const RISKY_SECTIONS = new Set(["sudo", "tokenMigration"]);
+
+/** The risky calls anywhere in a call tree, deduplicated. */
+export function riskyCalls(call: CallNode): string[] {
+	const found = new Set<string>();
+	const walk = (node: CallNode) => {
+		if (RISKY_CALLS.has(node.name) || RISKY_SECTIONS.has(node.name.split(".")[0])) found.add(node.name);
+		node.calls.forEach(walk);
+	};
+	walk(call);
+	return [...found];
+}
+
+/** Compact one-line form: `utility.batch(tokens.setBalance, tokens.setBalance)`. */
+export function describeCall(call: CallNode): string {
+	return call.calls.length ? `${call.name}(${call.calls.map(describeCall).join(", ")})` : call.name;
 }

@@ -69,3 +69,37 @@ test("missing unmatched-event history is rejected rather than resetting its grac
 		rmSync(directory, { recursive: true, force: true });
 	}
 });
+
+test("optional fields are checked when present", () => {
+	const directory = mkdtempSync(join(tmpdir(), "pen-monitor-state-"));
+	const path = join(directory, "state.json");
+	const approval = {
+		nonce: "2",
+		recipient: "0x3333333333333333333333333333333333333333",
+		palletAmount: "100",
+		attestor: "0x4444444444444444444444444444444444444444",
+	} as const;
+	try {
+		const complete = {
+			...state,
+			baseAdminFromBlock: "150",
+			mismatchedApprovals: [approval],
+			lastPendulumHash: `0x${"55".repeat(32)}` as const,
+			relayAnchor: { number: 100, hash: `0x${"66".repeat(32)}` as const },
+		};
+		saveMonitorState(path, complete);
+		assert.deepEqual(loadMonitorState(path), complete);
+		for (const bad of [
+			{ baseAdminFromBlock: "-1" },
+			{ mismatchedApprovals: [{ ...approval, attestor: "0x44" }] },
+			{ lastPendulumHash: "0x55" },
+			{ relayAnchor: { number: "100", hash: `0x${"66".repeat(32)}` } },
+			{ relayAnchor: { number: 100, hash: "0x66" } },
+		]) {
+			writeFileSync(path, JSON.stringify({ ...state, ...bad }));
+			assert.throws(() => loadMonitorState(path), /invalid or legacy schema/);
+		}
+	} finally {
+		rmSync(directory, { recursive: true, force: true });
+	}
+});

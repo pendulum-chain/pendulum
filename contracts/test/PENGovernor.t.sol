@@ -24,6 +24,7 @@ contract PENGovernorTest is Test {
 
     address internal alice = makeAddr("alice");
     address internal guardian = makeAddr("guardian");
+    address internal canceller = makeAddr("canceller");
 
     function setUp() public {
         // Token held by alice directly so she has voting power without going
@@ -40,8 +41,9 @@ contract PENGovernorTest is Test {
         timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
         timelock.grantRole(timelock.CANCELLER_ROLE(), address(governor));
         // The human veto during the timelock delay (DeployGovernance's
-        // optional TIMELOCK_CANCELLER): the guardian Safe.
-        timelock.grantRole(timelock.CANCELLER_ROLE(), guardian);
+        // required TIMELOCK_CANCELLER): a dedicated canceller Safe, separate
+        // from the guardian.
+        timelock.grantRole(timelock.CANCELLER_ROLE(), canceller);
         timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0));
         timelock.renounceRole(timelock.DEFAULT_ADMIN_ROLE(), address(this));
 
@@ -121,7 +123,7 @@ contract PENGovernorTest is Test {
         // GovernorTimelockControl salts the operation with the governor address.
         bytes32 salt = bytes20(address(governor)) ^ descriptionHash;
         bytes32 operationId = timelock.hashOperationBatch(targets, values, calldatas, 0, salt);
-        vm.prank(guardian);
+        vm.prank(canceller);
         timelock.cancel(operationId);
 
         assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Canceled));

@@ -19,8 +19,8 @@ const CONTRACTS = path.join(ROOT, "contracts");
 
 export function rehearsalParams(env) {
 	const dailyCapPen = BigInt(env.REHEARSAL_DAILY_CAP_PEN ?? "28800");
-	// Equal to the daily cap: the vault rejects perReleaseCap > dailyCap since
-	// round 9 (that band could never release).
+	// Equal to the daily cap: the vault rejects perReleaseCap > dailyCap (that
+	// band could never release).
 	const perReleaseCapPen = BigInt(env.REHEARSAL_PER_RELEASE_CAP_PEN ?? "28800");
 	return {
 		maxIssuance: 150_000_000n * PEN_18,
@@ -37,6 +37,8 @@ export function deployToSepolia({ env, roles, log }) {
 	const sweepTs = Math.floor(Date.now() / 1000) + params.sweepOffsetSeconds;
 	const scriptEnv = {
 		...process.env,
+		// The admin is a throwaway key, not a Safe.
+		TEST_DEPLOY: "true",
 		PRIVATE_KEY: env.DEPLOYER_PRIVATE_KEY,
 		ADMIN_SAFE: roles.admin.address,
 		GUARDIAN_SAFE: roles.guardian.address,
@@ -90,18 +92,24 @@ export function governanceDrillParams(env) {
 	};
 }
 
-/** Runs the real DeployGovernance.s.sol — its first execution anywhere. */
-export function deployGovernanceToSepolia({ env, pen, log }) {
+/** Runs the real DeployGovernance.s.sol — its first execution anywhere.
+ *  TEST_DEPLOY admits the drill-scale delay and voting, the zero quorum
+ *  fraction and floor and the guardian EOA as canceller, which the script
+ *  refuses for a production deploy. */
+export function deployGovernanceToSepolia({ env, pen, vault, canceller, log }) {
 	const params = governanceDrillParams(env);
 	const scriptEnv = {
 		...process.env,
+		TEST_DEPLOY: "true",
 		PEN_TOKEN: pen,
+		VAULT_ADDRESS: vault,
 		TIMELOCK_DELAY: String(params.timelockDelay),
 		VOTING_DELAY: String(params.votingDelay),
 		VOTING_PERIOD: String(params.votingPeriod),
 		PROPOSAL_THRESHOLD: params.proposalThreshold.toString(),
 		QUORUM_FRACTION: String(params.quorumFraction),
 		QUORUM_FLOOR: params.quorumFloor.toString(),
+		TIMELOCK_CANCELLER: canceller,
 	};
 	log(`deploying governance (timelock ${params.timelockDelay}s, voting ${params.votingDelay}s+${params.votingPeriod}s, quorum ${params.quorumFraction}% of circulating, floor ${params.quorumFloor / PEN_18} PEN) ...`);
 	execFileSync(

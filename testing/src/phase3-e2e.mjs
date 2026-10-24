@@ -156,7 +156,7 @@ section("Cap deferral and the releaser");
 await check("a cap-deferred release is drained by the releaser, unattended", async () => {
 	// Squeeze the daily budget so the next migration cannot release immediately.
 	// Both caps equal one minimum-sized migration: the vault rejects
-	// perReleaseCap > dailyCap (round 9), and a MIN migration still fits the
+	// perReleaseCap > dailyCap, and a MIN migration still fits the
 	// per-release cap exactly while the second one must wait for the refill.
 	const tiny = MIN * CF; // one minimum-sized migration's worth
 	await send(admin, { ...V, functionName: "setCaps", args: [tiny, tiny] });

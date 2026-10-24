@@ -142,6 +142,8 @@ async function main() {
 	const monitorStartNonce = (await api.query.tokenMigration.nextNonce()).toString();
 	const attestorEnv = (i) => ({
 		...baseEnv, PENDULUM_WS: pendulumWs,
+		// The Zombienet chain has its own genesis, not Pendulum's.
+		PENDULUM_GENESIS_HASH: api.genesisHash.toHex(),
 		ATTESTOR_PRIVATE_KEY: env[`ATTESTOR_${i}_PRIVATE_KEY`],
 		CHECKPOINT_FILE: `./cp${i}.json`, START_BLOCK: pendulumHead,
 	});
@@ -250,10 +252,20 @@ async function main() {
 		// rewound to before the affected migrations, so it re-scans and re-signs.
 		await stopAndWait("attestor4");
 		// Rewinding is the one sanctioned checkpoint edit (RB-6 step 3): lower
-		// lastProcessedBlock and keep the identity fields the loader requires —
-		// a bare { lastProcessedBlock } is rejected as a legacy schema.
+		// lastProcessedBlock, record the generation the re-add bumped to (the
+		// daemon refuses a checkpoint from an earlier generation) and keep the
+		// other identity fields the loader requires — a bare
+		// { lastProcessedBlock } is rejected as a legacy schema.
 		const cp4 = path.join(ROOT, "attestor/cp4.json");
-		writeFileSync(cp4, JSON.stringify({ ...JSON.parse(readFileSync(cp4, "utf8")), lastProcessedBlock: held.atBlock - 1 }));
+		const checkpoint = JSON.parse(readFileSync(cp4, "utf8"));
+		// Read until the re-add's bump is visible: a lagging backend still
+		// answers with the generation the checkpoint was bound to.
+		let attestorGeneration;
+		await waitFor(async () => {
+			attestorGeneration = Number(await read(V, "attestorGeneration", [ctx.roles.attestors[3].address]));
+			return attestorGeneration > checkpoint.attestorGeneration;
+		}, { timeoutMs: 120_000, intervalMs: 3000, label: "the re-added attestor's generation to be visible" });
+		writeFileSync(cp4, JSON.stringify({ ...checkpoint, lastProcessedBlock: held.atBlock - 1, attestorGeneration }));
 		start("attestor4", "attestor", attestorEnv(4));
 		await waitReleased(held, "the held migration to release after re-approval");
 		assertEq(await read(V, "activeApprovals", [heldPayload]), 3n, "final active approvals");

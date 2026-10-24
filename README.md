@@ -61,12 +61,10 @@ To run the collator, execute:
 ./target/release/pendulum-node
 --collator \
 --allow-private-ipv4 \
---unsafe-ws-external \
---rpc-cors all \
---rpc-external \
---rpc-methods Unsafe \
+--unsafe-rpc-external \
+--rpc-methods Safe \
 --name <ASSIGN_A_NAME> \
---ws-port <P_WS_PORT> --port <P_PORT> --rpc-port <P_RPC_PORT> \
+--port <P_PORT> --rpc-port <P_RPC_PORT> \
 --chain <P_SPEC_RAW.json> \
 -- \
 --port <R_PORT>\
@@ -78,9 +76,8 @@ where:
 | Parachain | Relay Chain | Description |
 |-------------------|-------------------|------------------------------------------|
 | `ASSIGN_A_NAME` | | assigning a name to the chain |
-| `P_WS_PORT` | | listening port for WebSocket connections |
 | `P_PORT` | `R_PORT` | port for peer-to-peer communication |
-| `P_RPC_PORT` | | port for remote procedure calls |
+| `P_RPC_PORT` | | port for RPC (HTTP and WebSocket) |
 | `P_SPEC_RAW.json` | `R_SPEC_RAW.json` | raw json file of the chain spec |
 
 An example for Amplitude will look like this:
@@ -89,12 +86,10 @@ An example for Amplitude will look like this:
 ./target/release/pendulum-node
 --collator \
 --allow-private-ipv4 \
---unsafe-ws-external \
---rpc-cors all \
---rpc-external \
---rpc-methods Unsafe \
+--unsafe-rpc-external \
+--rpc-methods Safe \
 --name amplitude-collator-1 \
---ws-port 9945 --port 30335 --rpc-port 9935 \
+--port 30335 --rpc-port 9935 \
 --chain res/amplitude-spec-raw.json \
 -- \
 --port 30334 \
@@ -103,7 +98,7 @@ An example for Amplitude will look like this:
 ```
 
 You can find the
-kusama.json [here](https://github.com/paritytech/polkadot/blob/master/node/service/chain-specs/kusama.json).
+kusama.json [here](https://github.com/paritytech/polkadot-sdk/blob/master/polkadot/node/service/chain-specs/kusama.json).
 
 For local testing, you can replace `--name` with predefined keys like `--alice` or `--bob`. You also need to specify
 the `--bootnode`. Here's an example:
@@ -117,13 +112,13 @@ the `--bootnode`. Here's an example:
 --chain local-parachain-raw.json \
 --base-path /tmp/parachain/alice \
 --port 40333 \
---ws-port 8844 \
+--rpc-port 8844 \
 --enable-offchain-indexing TRUE \
 -- \
 --chain rococo-custom-2-raw.json \
 --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/<ALICE_NODE_ID> \
 --port 30343 \
---ws-port 9977
+--rpc-port 9977
 ```
 
 where `ALICE_NODE_ID` is the peer id of Alice.

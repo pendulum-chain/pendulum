@@ -22,8 +22,10 @@
 
 import { createPublicClient, createWalletClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { blockRanges, chunks, classifyReleaseFailure, contractErrorName, toPalletAmount } from "./checks.js";
+import { alertText, postAlert, throttledHeartbeat, type Severity } from "./alert.js";
+import { blockRanges, chunks, toPalletAmount } from "./checks.js";
 import { config } from "./config.js";
+import { drainPending, type PendingRelease, type Releaser } from "./release.js";
 import {
 	assertStateIdentity,
 	loadState as readPersistedState,
@@ -31,12 +33,6 @@ import {
 	type PersistedState,
 } from "./state.js";
 import { vaultAbi } from "./vaultAbi.js";
-
-interface PendingRelease {
-	nonce: bigint;
-	recipient: `0x${string}`;
-	palletAmount: bigint;
-}
 
 /** Canonical Multicall3, deployed at the same address on Base and every major
  *  chain. viem refuses to batch unless the chain definition declares it, even
@@ -59,14 +55,8 @@ const account = privateKeyToAccount(config.releaserPrivateKey);
 const publicClient = createPublicClient({ chain: baseChain, transport: http(config.baseRpcUrl) });
 const walletClient = createWalletClient({ account, chain: baseChain, transport: http(config.baseRpcUrl) });
 
-/** nonce -> pending release. Keyed by nonce: the vault consumes a nonce once. */
 const pending = new Map<bigint, PendingRelease>();
 let fromBlock = config.startBlock;
-
-/** nonce -> when its "blocked" state was last alerted. A blocked release needs
- *  a timelocked governance action (>= 48h) to clear, so re-paging it every
- *  poll would emit thousands of identical alerts and train on-call to ignore
- *  them; re-alert at a bounded interval instead. */
 const blockedAlertedAt = new Map<bigint, number>();
 
 function log(message: string): void {
@@ -79,24 +69,18 @@ function redact(text: string): string {
 	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
 }
 
-/** A release transaction that was mined and reverted. The receipt carries no
- *  revert data, so the reason is unknowable here; the next cycle's simulation
- *  classifies it properly (and pruneConsumed drops it if a peer won). */
-class MinedRevert extends Error {}
-
-async function alert(subject: string, detail: string): Promise<void> {
+async function alert(subject: string, detail: string, severity: Severity = "warning"): Promise<void> {
 	console.error(`${new Date().toISOString()} ALERT: ${subject} — ${detail}`);
 	if (!config.alertWebhookUrl) return;
-	try {
-		await fetch(config.alertWebhookUrl, {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ service: "pen-releaser", releaser: account.address, subject, detail: redact(detail) }),
-			signal: AbortSignal.timeout(10_000),
-		});
-	} catch (webhookError) {
-		console.error("alert webhook failed", webhookError);
-	}
+	const redacted = redact(detail);
+	await postAlert(config.alertWebhookUrl, {
+		text: alertText(severity, `pen-releaser ${account.address}`, subject, redacted),
+		severity,
+		service: "pen-releaser",
+		releaser: account.address,
+		subject,
+		detail: redacted,
+	});
 }
 
 function loadState(): void {
@@ -219,109 +203,18 @@ async function pruneConsumed(blockNumber: bigint): Promise<void> {
 	});
 }
 
-/** Try to push each pending release through; classify what comes back. */
-async function drainPending(conversionFactor: bigint, dailyCap: bigint): Promise<void> {
-	for (const p of [...pending.values()]) {
-		const label = `nonce=${p.nonce} recipient=${p.recipient} amount=${p.palletAmount}`;
-		try {
-			// Simulate first so a still-capped release costs no gas.
-			const { request } = await publicClient.simulateContract({
-				account,
-				address: config.vaultAddress,
-				abi: vaultAbi,
-				functionName: "release",
-				args: [p.nonce, p.recipient, p.palletAmount],
-			});
-			// Pad the gas limit: a release writes an ERC20Votes checkpoint for the
-			// vault's vote sink, and whether that is an overwrite or a new entry
-			// depends on the block timestamp the transaction lands in — a state
-			// the estimate cannot know. An exact estimate can run out of gas in
-			// that write (seen in phase 3); doubling it is cheap insurance.
-			const gasLimit = (await publicClient.estimateContractGas({
-				account,
-				address: config.vaultAddress,
-				abi: vaultAbi,
-				functionName: "release",
-				args: [p.nonce, p.recipient, p.palletAmount],
-			})) * 2n;
-			const txHash = await walletClient.writeContract({ ...request, gas: gasLimit });
-			const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-			if (receipt.status !== "success") {
-				throw new MinedRevert(`release reverted on-chain: ${txHash}`);
-			}
-			// Deliberately NOT deleted here: the entry leaves the durable pending
-			// set only when `pruneConsumed` sees the nonce consumed at the
-			// finality boundary. Until then a re-attempt is a cheap simulation
-			// that classifies as PendingFinality and stays quiet — and if the
-			// release were reorged away, the entry is still ours to retry.
-			log(`released (awaiting ${config.baseFinalityTag}): ${label} tx=${txHash}`);
-		} catch (error) {
-			if (error instanceof MinedRevert) {
-				// Usually a benign race (a peer released, or the daily allowance
-				// was consumed between simulation and inclusion). Stay quiet: the
-				// next cycle prunes it if consumed and re-simulates otherwise,
-				// which yields a decodable, classifiable reason.
-				log(`release reverted on-chain, re-evaluating next cycle: ${label}`);
-				continue;
-			}
-			const reason = error instanceof Error ? error.message : String(error);
-			// A peer may have consumed the nonce after our simulation. Settle
-			// that race from state before relying on decoded custom errors.
-			const confirmed = await publicClient.getBlock({ blockTag: config.baseFinalityTag });
-			if (confirmed.number === null) throw new Error(`${config.baseFinalityTag} Base block has no number`);
-			const consumedConfirmed = await publicClient.readContract({
-				address: config.vaultAddress,
-				abi: vaultAbi,
-				functionName: "nonceConsumed",
-				args: [p.nonce],
-				blockNumber: confirmed.number,
-			});
-			const consumedLatest = consumedConfirmed ? true : await publicClient.readContract({
-				address: config.vaultAddress,
-				abi: vaultAbi,
-				functionName: "nonceConsumed",
-				args: [p.nonce],
-			});
-			const decoded = contractErrorName(error);
-			// Only a consumption read at the finality boundary may drop the entry.
-			// A NonceAlreadyConsumed decoded from a LATEST-state simulation on a
-			// node ahead of the ones we read is the same pending-finality case.
-			const errorName = consumedConfirmed
-				? "NonceAlreadyConsumed"
-				: consumedLatest || decoded === "NonceAlreadyConsumed"
-					? "PendingFinality"
-					: decoded === "ExceedsDailyCap" && p.palletAmount * conversionFactor > dailyCap
-						? "ExceedsDailyCapPermanently"
-						: decoded;
-			switch (classifyReleaseFailure(errorName)) {
-				case "done":
-					pending.delete(p.nonce);
-					blockedAlertedAt.delete(p.nonce);
-					log(`skip (already consumed): ${label}`);
-					break;
-				case "retry":
-					// Expected while the daily bucket refills — stay quiet.
-					break;
-				case "blocked": {
-					// Clearing this needs a timelocked governance action, so the
-					// condition persists for days; page at a bounded interval.
-					const lastAlerted = blockedAlertedAt.get(p.nonce) ?? 0;
-					if (Date.now() - lastAlerted >= config.blockedAlertIntervalMs) {
-						blockedAlertedAt.set(p.nonce, Date.now());
-						await alert(
-							"release blocked and needs operator action",
-							`${label} — ${errorName}; it cannot self-heal`,
-						);
-					}
-					break;
-				}
-				case "unexpected":
-					await alert("unexpected release failure", `${label} — ${reason}`);
-					break;
-			}
-		}
-	}
-}
+const releaser: Releaser = {
+	publicClient,
+	walletClient,
+	account,
+	vaultAddress: config.vaultAddress,
+	baseFinalityTag: config.baseFinalityTag,
+	blockedAlertIntervalMs: config.blockedAlertIntervalMs,
+	pending,
+	blockedAlertedAt,
+	alert,
+	log,
+};
 
 async function checkGasBalance(): Promise<void> {
 	const balance = await publicClient.getBalance({ address: account.address });
@@ -331,6 +224,12 @@ async function checkGasBalance(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+	// The state is bound to BASE_CHAIN_ID: an endpoint serving another chain
+	// would scan its logs into this state.
+	const baseChainId = await publicClient.getChainId();
+	if (baseChainId !== config.baseChainId) {
+		throw new Error(`BASE_RPC_URL serves chain ${baseChainId}, but BASE_CHAIN_ID is ${config.baseChainId}`);
+	}
 	loadState();
 	const conversionFactor = await publicClient.readContract({
 		address: config.vaultAddress,
@@ -347,6 +246,7 @@ async function main(): Promise<void> {
 	}
 	log(`releaser ${account.address} started; scanning from block ${fromBlock}, ${pending.size} pending`);
 	await checkGasBalance();
+	const heartbeat = throttledHeartbeat(config.heartbeatUrl);
 
 	for (;;) {
 		try {
@@ -360,9 +260,10 @@ async function main(): Promise<void> {
 				functionName: "dailyCap",
 				blockNumber: confirmed.number,
 			});
-			await drainPending(conversionFactor, dailyCap);
+			await drainPending(releaser, conversionFactor, dailyCap);
 			saveState();
 			log(`ok: ${pending.size} pending, scanned ${config.baseFinalityTag} through block ${fromBlock - 1n}`);
+			void heartbeat();
 		} catch (cycleError) {
 			await alert("releaser cycle failed", `${cycleError}`);
 		}
@@ -376,6 +277,6 @@ setInterval(
 );
 
 main().catch(async (error) => {
-	await alert("releaser startup failed", `${error}`);
+	await alert("releaser startup failed", `${error}`, "critical");
 	process.exit(1);
 });

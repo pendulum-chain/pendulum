@@ -14,7 +14,7 @@ backlog sits pending until an operator clears it by hand, nonce by nonce.
 
 ## Why a separate process
 
-- The attestor's approve path is the most review-scarred code in the stack;
+- The attestor's approve path is the most delicate code in the stack;
   adding a second responsibility to it re-opens that risk.
 - The monitor must stay a cheap, read-only, independent watchdog.
 - **This key holds no privilege.** `release()` is permissionless and can only
@@ -37,8 +37,9 @@ consumed nonce and drops it.
 | `POLL_INTERVAL_MS` | Default 60s |
 | `MAX_BLOCK_RANGE` | Max blocks per `eth_getLogs` (default 10,000) |
 | `MIN_GAS_BALANCE_WEI` | Low-gas alert threshold |
-| `ALERT_WEBHOOK_URL` | Optional JSON alert webhook |
-| `BASE_CHAIN_ID` | Default 8453 |
+| `ALERT_WEBHOOK_URL` | Optional JSON alert webhook in Slack incoming-webhook form: `text` holds `[CRITICAL]` or `[WARNING]`, the releaser and the subject, then the detail; `severity`, `subject` and `detail` are also sent as fields. A non-2xx answer, a timeout (10 s) or a connection error is logged as a failed delivery |
+| `HEARTBEAT_URL` | Optional http(s) URL requested (GET) after a cycle that completed without error, at most once a minute; point it at a dead-man's switch that pages when the requests stop. Startup refuses any other value. A failed request is logged (error name and code only, never the URL), never fatal |
+| `BASE_CHAIN_ID` | Default 8453; startup refuses a `BASE_RPC_URL` that serves another chain (`eth_chainId`) |
 | `BASE_FINALITY_TAG` | `safe` (default) or `finalized`; the scan cursor stays inside this boundary and a pending entry is dropped only once its nonce is consumed there |
 | `BLOCKED_ALERT_INTERVAL_MS` | Re-page interval for governance-blocked releases (default 6h — the condition needs a ≥48h timelocked action, so per-poll paging would bury the signal) |
 | `READ_BATCH_SIZE` | Bound on Multicall calldata and individual fallback concurrency (default 100) |
@@ -71,7 +72,9 @@ Until then re-attempts are gas-free simulations classified as pending finality.
 
 State (safe/finalized scan checkpoint + pending set) is atomically persisted
 and bound to the configured chain and vault, so a restart resumes without
-trusting unsafe logs or losing pending work. Malformed state is fatal. Multicall
+trusting unsafe logs or losing pending work. Malformed state is fatal, and so is
+an endpoint that does not serve `BASE_CHAIN_ID`, checked before the state is
+read on every start. Multicall
 is disabled permanently only when an on-chain code check proves it absent; a
 temporary provider error falls back in bounded batches for that cycle.
 

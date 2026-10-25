@@ -1,5 +1,7 @@
 /** Minimal MigrationVault ABI: only what the attestor needs. */
 export const vaultAbi = [
+	{ type: "error", name: "NonceAlreadyConsumed", inputs: [{ name: "nonce", type: "uint64" }] },
+	{ type: "error", name: "AlreadyApproved", inputs: [{ name: "attestor", type: "address" }] },
 	{
 		type: "function",
 		name: "approve",
@@ -34,5 +36,12 @@ export const vaultAbi = [
 		stateMutability: "view",
 		inputs: [{ name: "attestor", type: "address" }],
 		outputs: [{ type: "bool" }],
+	},
+	{
+		type: "function",
+		name: "attestorGeneration",
+		stateMutability: "view",
+		inputs: [{ name: "attestor", type: "address" }],
+		outputs: [{ type: "uint64" }],
 	},
 ] as const;

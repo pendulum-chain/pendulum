@@ -160,7 +160,7 @@ The script starts the four attestors, the monitor and the releaser itself,
 each with its own key and checkpoint file. To run them by hand instead:
 
 ```bash
-PENDULUM_WS=ws://127.0.0.1:9944 BASE_RPC_URL=http://localhost:8545 \
+PENDULUM_WS=ws://127.0.0.1:8000 BASE_RPC_URL=http://localhost:8545 BASE_CHAIN_ID=31337 \
 VAULT_ADDRESS=0x… ATTESTOR_PRIVATE_KEY=0x… CHECKPOINT_FILE=./cp1.json \
 npm start   # repeat for attestors 2–4 with distinct keys/checkpoints
 ```
@@ -169,7 +169,7 @@ The releaser needs only a gas-funded key and the Base endpoint — no Pendulum
 connection, and no privileges over the vault:
 
 ```bash
-BASE_RPC_URL=http://localhost:8545 VAULT_ADDRESS=0x… \
+BASE_RPC_URL=http://localhost:8545 BASE_CHAIN_ID=31337 VAULT_ADDRESS=0x… \
 RELEASER_PRIVATE_KEY=0x… START_BLOCK=0 npm start
 ```
 
@@ -178,7 +178,7 @@ that can contain a migration (plus the nonce expected there) and the vault's
 Base deployment block. Afterwards its atomic state file owns both cursors:
 
 ```bash
-PENDULUM_WS=ws://127.0.0.1:9944 BASE_RPC_URL=http://localhost:8545 \
+PENDULUM_WS=ws://127.0.0.1:8000 BASE_RPC_URL=http://localhost:8545 BASE_CHAIN_ID=31337 \
 VAULT_ADDRESS=0x… GUARDIAN_PRIVATE_KEY=0x… \
 PENDULUM_START_BLOCK=123 PENDULUM_START_NONCE=0 BASE_START_BLOCK=45 \
 STATE_FILE=./monitor-state.json npm start
@@ -430,5 +430,5 @@ UPGRADE_WASM=/path/to/spec+1.wasm node testing/src/drill-rb5-upgrade.mjs
 | RB-3 invariant breach | Deficit + auto-pause: phase 3 on Anvil (a deficit **cannot be created** on Sepolia — nothing but the vault can move its tokens, which is the security property). Surplus tolerance: `drills.mjs` |
 | RB-4 pause/unpause | `drills.mjs`: pallet then vault, resumed in reverse, pipeline recovers |
 | RB-5 runtime upgrade | `drill-rb5-upgrade.mjs` on Chopsticks: fork pre-upgrade mainnet (no pallet), enact the real spec-26 upgrade by writing `:code`, confirm frame-system records it, and require every attestor's checkpoint to advance past the upgrade block — their decode path ran on post-upgrade blocks, and a decode failure exits by design — including across a full node restart. A post-upgrade `migrate` cannot be *submitted* through Chopsticks (it serves pre-fork metadata even across `--resume`, so the real runtime rejects the extrinsic as `badProof`); decoding real events under the post-upgrade runtime is what phases 2–3 do wholesale, and the shape-change half is the attestor's unit-tested 4-field assertion |
-| RB-6 attestor rotation | `drills.mjs`: re-add bumps the generation so the old vote stays dead; the documented recovery (rewind checkpoint, restart, re-approve) completes the quorum; a 5th attestor adds and removes cleanly |
+| RB-6 attestor rotation | `drills.mjs`: re-add bumps the generation so the old vote stays dead; the documented recovery (rewind the checkpoint and record the current generation, restart, re-approve) completes the quorum; a 5th attestor adds and removes cleanly |
 | RB-7 window close | `drills.mjs`: pallet paused, `pendingApprovedAmount` drained, conservation reconciled exactly, sweep executed, monitor quiet. Deploys with a ~90s sweep floor since Sepolia time cannot be warped; the threshold is never reduced, so the 7-day settling gate stays unarmed |

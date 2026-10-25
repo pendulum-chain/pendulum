@@ -14,12 +14,13 @@ runs:
         sudo rm -rf /usr/local/share/boost
         sudo rm -rf /opt/hostedtoolcache
         sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-        sudo apt-get remove -y 'php.*' --fix-missing
-        sudo apt-get remove -y '^mongodb-.*' --fix-missing
-        sudo apt-get remove -y '^mysql-.*' --fix-missing
-        sudo apt-get remove -y azure-cli google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri --fix-missing
-        sudo apt-get remove -y google-cloud-sdk --fix-missing
-        sudo apt-get remove -y google-cloud-cli --fix-missing
+        # Runner images differ in what they ship; remove only what is installed.
+        for pattern in 'php.*' '^mongodb-.*' '^mysql-.*'; do
+          sudo apt-get remove -y "$pattern" --fix-missing || echo "nothing matches $pattern"
+        done
+        for pkg in azure-cli google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri google-cloud-sdk google-cloud-cli; do
+          if dpkg -s "$pkg" >/dev/null 2>&1; then sudo apt-get remove -y "$pkg" --fix-missing; fi
+        done
         sudo apt-get autoremove -y
         sudo apt-get clean          
         df -h

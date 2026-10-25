@@ -25,6 +25,8 @@ export function deployStack({ earliestSweepOffsetSeconds = 365 * 24 * 3600 } = {
 	const [deployer, attA, attB, attC, attD, guardian, admin] = accounts;
 	const env = {
 		...process.env,
+		// The roles are plain Anvil accounts, not Safes.
+		TEST_DEPLOY: "true",
 		PRIVATE_KEY: keys[0],
 		ADMIN_SAFE: admin.address,
 		GUARDIAN_SAFE: guardian.address,

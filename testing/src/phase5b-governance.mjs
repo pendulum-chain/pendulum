@@ -123,7 +123,9 @@ async function main() {
 
 	// --- governance deployment ----------------------------------------------
 	section("Governance deployment (first execution of DeployGovernance.s.sol)");
-	const { timelock, governor, params } = deployGovernanceToSepolia({ env, pen, log });
+	// The drill reuses the guardian key as canceller; production uses a
+	// dedicated canceller Safe, separate from the guardian.
+	const { timelock, governor, params } = deployGovernanceToSepolia({ env, pen, vault, canceller: ctx.roles.guardian.address, log });
 	log(`timelock ${timelock}\n  governor ${governor}`);
 	const G = { address: governor, abi: governorAbi };
 	const T = { address: timelock, abi: timelockAbi };
@@ -138,6 +140,7 @@ async function main() {
 		await eventually(async () => {
 			assertEq(await read(T, "hasRole", [proposerRole, governor]), true, "governor is proposer");
 			assertEq(await read(T, "hasRole", [cancellerRole, governor]), true, "governor is canceller");
+			assertEq(await read(T, "hasRole", [cancellerRole, ctx.roles.guardian.address]), true, "guardian is canceller");
 			assertEq(await read(T, "hasRole", [executorRole, "0x0000000000000000000000000000000000000000"]), true, "execution open to anyone");
 			assertEq(await read(T, "hasRole", [adminRole, ctx.roles.deployer.address]), false, "deployer admin renounced");
 			assertEq(await read(T, "hasRole", [adminRole, timelock]), true, "timelock self-administered");
@@ -302,7 +305,7 @@ async function main() {
 		commit: execSync("git rev-parse HEAD", { cwd: ROOT, encoding: "utf8" }).trim(),
 		contracts: { vault, pen, timelock, governor },
 		voter: voter.address,
-		params: { ...params, proposalThreshold: params.proposalThreshold.toString() },
+		params: { ...params, proposalThreshold: params.proposalThreshold.toString(), quorumFloor: params.quorumFloor.toString() },
 		proposals: {
 			handover: handoverProposal?.toString(),
 			capsRaise: capsProposal?.toString(),

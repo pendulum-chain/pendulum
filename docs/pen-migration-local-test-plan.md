@@ -57,7 +57,8 @@ script works with realistic parameters.
 anvil --port 8545 --slots-in-an-epoch 0          # terminal 1
 cd contracts
 cp .env.example .env       # fill in: 4 attestor addrs, Safes, caps, MAX_ISSUANCE, EARLIEST_SWEEP_TS
-forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --broadcast
+# TEST_DEPLOY admits plain Anvil accounts as the Safes, as phase1-base.mjs does
+TEST_DEPLOY=true forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --broadcast
 ```
 
 Automated by `testing/src/phase1-base.mjs` (`node testing/src/phase1-base.mjs`),

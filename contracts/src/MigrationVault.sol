@@ -434,7 +434,7 @@ contract MigrationVault {
         // A decrease can retroactively qualify a sub-threshold payload without
         // routing through approve() (which maintains pendingApprovedAmount);
         // gate sweeps for a settling period so it can be detected and released
-        // first (round-4 finding).
+        // first.
         if (threshold_ < threshold) thresholdReducedAt = block.timestamp;
         threshold = threshold_;
         emit ThresholdUpdated(threshold_);

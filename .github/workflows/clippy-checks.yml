@@ -6,30 +6,28 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   clippy-checks:
-    runs-on: ubuntu-latest
+    # The bundled RocksDB (librocksdb-sys 0.11) does not build with the GCC of newer images.
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Free up Space and Installation
         uses: ./.github/actions/shared
 
       - name: Clippy -- Main
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          # `manual_inspect` (clippy 1.81) fires inside the `#[pallet::pallet]` expansion of our
-          # polkadot-sdk fork; the `deny(warnings)` pallets cannot allow it from the outside.
-          args: --release --all-features -- -W clippy::all -A clippy::style -A clippy::manual_inspect -A forgetting_copy_types -A forgetting_references
+        # `manual_inspect` (clippy 1.81) fires inside the `#[pallet::pallet]` expansion of our
+        # polkadot-sdk fork; the `deny(warnings)` pallets cannot allow it from the outside.
+        run: cargo clippy --release --all-features -- -W clippy::all -A clippy::style -A clippy::manual_inspect -A forgetting_copy_types -A forgetting_references
 
       - name: Clippy -- All Targets (except integration)
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          # We are a bit more forgiving when it comes to the code in tests and only check for correctness
-          args: --release --workspace --all-features --all-targets --exclude runtime-integration-tests -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
+        # We are a bit more forgiving when it comes to the code in tests and only check for correctness
+        run: cargo clippy --release --workspace --all-features --all-targets --exclude runtime-integration-tests -- -A clippy::all -W clippy::correctness -A forgetting_copy_types -A forgetting_references
 
 # Disabled until we move to crates.io and fix runtime-integration-tests.
 #      - name: Clippy -- Integration

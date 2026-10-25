@@ -37,7 +37,8 @@ team, and the safeguards below limit what a compromise can do.
   never unpause; unpausing requires the vault admin.
 - **Admin changes.** Admin transfers are two-step. After the governance
   handover every admin action passes a 48-hour timelock, during which a
-  designated canceller can veto a queued operation.
+  designated canceller can veto a queued operation. The monitor pages every
+  operation the timelock schedules.
 - **Sweep floor.** The unmigrated remainder cannot be moved before
   2027-03-01 00:00 UTC (immutable), and only through a governance decision.
 - **Separation of duties.** The guardian and the monitor are operated by

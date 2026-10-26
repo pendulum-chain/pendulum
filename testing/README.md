@@ -74,7 +74,7 @@ run says so on start-up and reports the monitor-only checks as skipped. The
 phase 5 rehearsal and phase 6 drills honour the same variable.
 
 ```bash
-anvil --port 8545
+anvil --port 8545 --slots-in-an-epoch 0   # finalized blocks right away; the releaser reads at Base's finalized tag
 npx @acala-network/chopsticks@latest --config testing/chopsticks-e2e.yml \
   --wasm-override target/release/wbuild/pendulum-runtime/pendulum_runtime.compact.compressed.wasm
 # build the services once: (cd attestor && npm run build), same for releaser/

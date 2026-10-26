@@ -63,17 +63,24 @@ warp afterwards, never the reverse.
 
 ## Phase 3 — the whole pipeline together
 
-Runs four attestors, the monitor and the releaser against Chopsticks and Anvil,
-and asserts that a burn on the Substrate side arrives on Base with no manual
-step, that the fleet tolerates outages, and that a cap-deferred release drains
-itself.
+Runs four attestors and the releaser against Chopsticks and Anvil, and asserts
+that a burn on the Substrate side arrives on Base with no manual step, that the
+fleet tolerates outages, and that a cap-deferred release drains itself.
+
+The monitor is maintained separately. Set `MONITOR_DIR` to a built monitor
+checkout (absolute, or relative to the current directory) to include it: the
+harness then starts it and runs the monitor checks. Without `MONITOR_DIR` the
+run says so on start-up and reports the monitor-only checks as skipped. The
+phase 5 rehearsal and phase 6 drills honour the same variable.
 
 ```bash
 anvil --port 8545
 npx @acala-network/chopsticks@latest --config testing/chopsticks-e2e.yml \
   --wasm-override target/release/wbuild/pendulum-runtime/pendulum_runtime.compact.compressed.wasm
-# build the services once: (cd attestor && npm run build), same for monitor/ and releaser/
+# build the services once: (cd attestor && npm run build), same for releaser/
 node testing/src/phase3-e2e.mjs
+# or, with the monitor (built with `npm run build` in its checkout):
+MONITOR_DIR=/path/to/monitor node testing/src/phase3-e2e.mjs
 ```
 
 Chopsticks stands in for Pendulum rather than Zombienet: it reports finalized

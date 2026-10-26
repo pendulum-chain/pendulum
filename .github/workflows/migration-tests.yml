@@ -1,7 +1,7 @@
 name: Migration Tests
 
 # The PEN -> Base migration stack lives outside the Rust workspace: the
-# Foundry contracts and the three TypeScript daemons. `test-code.yml` covers
+# Foundry contracts and the TypeScript daemons. `test-code.yml` covers
 # the pallet through `cargo test`; this job covers everything else, so a
 # green check on the PR means the contract and daemon suites actually ran.
 
@@ -10,7 +10,6 @@ on:
     paths:
       - "contracts/**"
       - "attestor/**"
-      - "monitor/**"
       - "releaser/**"
       - ".github/workflows/migration-tests.yml"
   push:
@@ -48,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [attestor, monitor, releaser]
+        package: [attestor, releaser]
     defaults:
       run:
         working-directory: ${{ matrix.package }}

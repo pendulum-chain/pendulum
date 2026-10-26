@@ -32,8 +32,12 @@ cargo build --release -p pendulum-runtime
 # Contracts + services
 cd contracts && forge build
 cd ../attestor && npm install && npm run build
-cd ../monitor && npm install && npm run build
+cd ../releaser && npm install && npm run build
 ```
+
+The monitor is maintained separately. To include it in the end-to-end phases,
+build it in its own checkout (`npm install && npm run build`) and set
+`MONITOR_DIR` to that checkout when running the harness.
 
 Confirm the baseline is green before starting:
 
@@ -41,7 +45,7 @@ Confirm the baseline is green before starting:
 cargo test -p token-migration --features runtime-benchmarks
 cd contracts && forge test
 cd ../attestor && npm test
-cd ../monitor && npm test
+cd ../releaser && npm test
 ```
 
 **Pass:** all suites green.
@@ -157,8 +161,9 @@ keeps a long run alive when the upstream public RPC drops the connection.
 
 Genuine relay-chain finality is covered separately in phase 4.
 
-The script starts the four attestors, the monitor and the releaser itself,
-each with its own key and checkpoint file. To run them by hand instead:
+The script starts the four attestors and the releaser itself, plus the
+monitor when `MONITOR_DIR` points at a built monitor checkout, each with its
+own key and checkpoint file. To run them by hand instead:
 
 ```bash
 PENDULUM_WS=ws://127.0.0.1:8000 BASE_RPC_URL=http://localhost:8545 BASE_CHAIN_ID=31337 \
@@ -176,7 +181,8 @@ RELEASER_PRIVATE_KEY=0x… START_BLOCK=0 npm start
 
 The monitor's first-run boundaries are mandatory: use the first Pendulum block
 that can contain a migration (plus the nonce expected there) and the vault's
-Base deployment block. Afterwards its atomic state file owns both cursors:
+Base deployment block. Afterwards its atomic state file owns both cursors.
+From the monitor checkout:
 
 ```bash
 PENDULUM_WS=ws://127.0.0.1:8000 BASE_RPC_URL=http://localhost:8545 BASE_CHAIN_ID=31337 \
@@ -213,7 +219,8 @@ Checks:
    `VITE_MIGRATION_VAULT_ADDRESS` set to the Anvil vault; migrate through the
    UI and watch the status card go 0/3 → 3/3 → released.
 
-**Pass criterion:** 9/9 from the script. The final two checks impersonate the vault on
+**Pass criterion:** 9/9 from the script with `MONITOR_DIR` set (without it,
+6/6 with the three monitor checks reported as skipped). The final two checks impersonate the vault on
 Anvil to inject a real deficit and confirm the guardian pause through Base
 finality/state verification, then submit a fabricated one-attestor approval to
 prove the monitor rejects a tuple mismatch before it can reach quorum.
@@ -320,7 +327,8 @@ It brings up Zombienet, waits for genuine parachain finality, unpauses the
 pallet **through the technical-committee origin** (this chain has no sudo, so
 unlike phase 2 there is no storage poke — the rehearsal drives the same origin
 that will unpause mainnet), deploys the contracts to Base Sepolia with the real
-`Deploy.s.sol`, starts four attestors plus the monitor and releaser, and runs
+`Deploy.s.sol`, starts four attestors plus the releaser (and the monitor when
+`MONITOR_DIR` is set), and runs
 the scenarios. Every run writes `testing/.rehearsal/<timestamp>/` containing a
 manifest (addresses, ports, block heights, commit) and each daemon's log, so a
 failed run stays diagnosable after teardown.

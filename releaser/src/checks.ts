@@ -2,8 +2,7 @@
  * Pure predicates for the releaser.
  *
  * Isolated from the chain-client plumbing in `main.ts` so they can be unit
- * tested exhaustively (see checks.test.ts), mirroring `attestor/src/checks.ts`
- * and `monitor/src/checks.ts`.
+ * tested exhaustively (see checks.test.ts), mirroring `attestor/src/checks.ts`.
  */
 
 import { BaseError, ContractFunctionRevertedError } from "viem";

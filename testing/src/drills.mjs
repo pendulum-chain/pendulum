@@ -29,8 +29,8 @@ import { Keyring } from "@polkadot/keyring";
 import { cryptoWaitReady } from "@polkadot/util-crypto";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { erc20Abi, vaultAbi } from "./abi.mjs";
-import { alive, clearState, logs, start, stopAll, stopAndWait, waitFor } from "./daemons.mjs";
-import { assert, assertEq, check, section, summarise } from "./harness.mjs";
+import { alive, clearState, logs, MONITOR_DIR, start, startMonitor, stopAll, stopAndWait, waitFor } from "./daemons.mjs";
+import { assert, assertEq, check, section, skip, summarise } from "./harness.mjs";
 import {
 	assertTestnet, buildContext, CONVERSION_FACTOR, loadEnv, PEN_12, ROOT, send, TESTING,
 } from "./rehearsal-env.mjs";
@@ -38,6 +38,7 @@ import { deployToSepolia } from "./rehearsal-deploy.mjs";
 import { discoverCollator, generateSpec, killMatching, sleep, spawnNetwork, teardown, waitForFinality } from "./zombienet.mjs";
 
 const flags = new Set(process.argv.slice(2));
+const DAEMONS = ["attestor1", "attestor2", "attestor3", "attestor4", ...(MONITOR_DIR ? ["monitor"] : []), "releaser"];
 const ATTACH = flags.has("--attach");
 const KEEP = flags.has("--keep");
 
@@ -131,7 +132,7 @@ async function main() {
 	section("Attestor fleet");
 	killMatching(["dist/main.js"]);
 	clearState(["attestor/cp1.json", "attestor/cp2.json", "attestor/cp3.json", "attestor/cp4.json",
-		"monitor/monitor-state.json", "releaser/releaser-state.json"]);
+		"releaser/releaser-state.json"]);
 	const pendulumWs = api._options?.provider?.endpoint ?? process.env.PENDULUM_WS;
 	const baseEnv = {
 		BASE_RPC_URL: env.BASE_SEPOLIA_RPC_URL, VAULT_ADDRESS: vault,
@@ -151,7 +152,7 @@ async function main() {
 		start(`attestor${i}`, "attestor", attestorEnv(i));
 		await sleep(3000);
 	}
-	start("monitor", "monitor", {
+	startMonitor({
 		...baseEnv,
 		PENDULUM_WS: pendulumWs,
 		GRACE_SECONDS: "300",
@@ -159,7 +160,6 @@ async function main() {
 		PENDULUM_START_BLOCK: (BigInt(pendulumHead) + 1n).toString(),
 		PENDULUM_START_NONCE: monitorStartNonce,
 		BASE_START_BLOCK: baseHead,
-		STATE_FILE: "./monitor-state.json",
 	});
 	start("releaser", "releaser", { ...baseEnv, RELEASER_PRIVATE_KEY: env.RELEASER_PRIVATE_KEY, START_BLOCK: baseHead });
 	log(`fleet up (Pendulum from #${pendulumHead}, Base from #${baseHead})`);
@@ -284,12 +284,17 @@ async function main() {
 	});
 
 	section("RB-3 — the monitor tolerates a surplus (deficit is covered on Anvil)");
-	await check("PEN sent into the vault raises no alarm and kills nothing", async () => {
+	const SURPLUS = 10n * 10n ** 18n; // RB-7's reconcile counts it, with or without the monitor
+	if (!MONITOR_DIR) {
+		await check("PEN sent into the vault lands as a surplus", () =>
+			send(ctx, ctx.roles.admin, { ...P, functionName: "transfer", args: [vault, SURPLUS] }));
+		skip("PEN sent into the vault raises no alarm and kills nothing", "MONITOR_DIR not set");
+	} else await check("PEN sent into the vault raises no alarm and kills nothing", async () => {
 		// A deficit cannot be created on Sepolia — nothing but the vault itself
 		// can move its tokens, which is the security property. Phase 3 covers
 		// the deficit alarm via Anvil impersonation. Here: the benign inverse.
 		const monitorLogBefore = logs("monitor").length;
-		await send(ctx, ctx.roles.admin, { ...P, functionName: "transfer", args: [vault, 10n * 10n ** 18n] });
+		await send(ctx, ctx.roles.admin, { ...P, functionName: "transfer", args: [vault, SURPLUS] });
 		await sleep(40_000); // > two monitor poll cycles
 		assert(alive("monitor"), `monitor died on a surplus:\n${logs("monitor")}`);
 		const fresh = logs("monitor").slice(monitorLogBefore);
@@ -326,11 +331,10 @@ async function main() {
 			read(V, "totalSwept", []), read(P, "totalSupply", []),
 		]);
 		// The RB-3 surplus sits in the vault's balance, ON TOP of conservation.
-		const surplus = 10n * 10n ** 18n;
-		assertEq(balance + rel + swept, supply + surplus, "balance + released + swept vs supply (+known surplus)");
+		assertEq(balance + rel + swept, supply + SURPLUS, "balance + released + swept vs supply (+known surplus)");
 	});
 
-	await check("the sweep executes and the monitor does not false-alarm", async () => {
+	await check(MONITOR_DIR ? "the sweep executes and the monitor does not false-alarm" : "the sweep executes", async () => {
 		assert(Math.floor(Date.now() / 1000) >= sweepTs, "sweep floor not yet passed — raise DRILL_SWEEP_OFFSET");
 		assertEq(await read(V, "thresholdReducedAt", []), 0n, "thresholdReducedAt (settling gate must not be armed)");
 		const monitorLogBefore = logs("monitor").length;
@@ -339,6 +343,7 @@ async function main() {
 		await send(ctx, ctx.roles.admin, { ...V, functionName: "sweepRemainder", args: [recipient, sweepAmount] });
 		await eventually(async () => assertEq(await read(V, "totalSwept", []), sweptBefore + sweepAmount, "totalSwept"),
 			"the sweep to settle");
+		if (!MONITOR_DIR) return;
 		await sleep(40_000);
 		assert(alive("monitor"), `monitor died after the sweep:\n${logs("monitor")}`);
 		const fresh = logs("monitor").slice(monitorLogBefore);
@@ -346,7 +351,7 @@ async function main() {
 	});
 
 	await check("every daemon survived every drill", () => {
-		for (const name of ["attestor1", "attestor2", "attestor3", "attestor4", "monitor", "releaser"]) {
+		for (const name of DAEMONS) {
 			assert(alive(name), `${name} is dead:\n${logs(name)}`);
 		}
 	});
@@ -358,10 +363,10 @@ async function main() {
 		startedAt: started.toISOString(),
 		commit: execSync("git rev-parse HEAD", { cwd: ROOT, encoding: "utf8" }).trim(),
 		vault, pen, sweepTimestamp: sweepTs,
-		covered: ["RB-1", "RB-3 (surplus half)", "RB-4", "RB-6", "RB-7"],
+		covered: ["RB-1", ...(MONITOR_DIR ? ["RB-3 (surplus half)"] : []), "RB-4", "RB-6", "RB-7"],
 		coveredElsewhere: { "RB-2": "phase 5 rehearsal", "RB-3 deficit": "phase 3 (Anvil impersonation)", "RB-5": "drill-rb5-upgrade.mjs on Chopsticks" },
 	}, null, 2));
-	for (const name of ["attestor1", "attestor2", "attestor3", "attestor4", "monitor", "releaser"]) {
+	for (const name of DAEMONS) {
 		writeFileSync(path.join(runDir, `${name}.log`), logs(name));
 	}
 	if (network) writeFileSync(path.join(runDir, "zombienet.log"), network.out.join("\n"));

@@ -18,7 +18,7 @@ const LOG_DIR = path.join(ROOT, "testing", ".logs");
 
 export function start(name, dir, env) {
 	const proc = spawn("node", ["dist/main.js"], {
-		cwd: path.join(ROOT, dir),
+		cwd: path.resolve(ROOT, dir),
 		env: { ...process.env, ...env },
 		stdio: ["ignore", "pipe", "pipe"],
 	});
@@ -72,7 +72,23 @@ export function stopAll() {
 
 /** Remove a service's persisted state so a run starts clean. */
 export function clearState(files) {
-	for (const f of files) { try { rmSync(path.join(ROOT, f)); } catch {} }
+	for (const f of files) { try { rmSync(path.resolve(ROOT, f)); } catch {} }
+}
+
+/** The monitor is maintained separately. Set MONITOR_DIR to a built monitor
+ *  checkout (absolute, or relative to the current directory) to include it in
+ *  a run; unset, runs go ahead without it and skip the monitor checks. */
+export const MONITOR_DIR = process.env.MONITOR_DIR ? path.resolve(process.env.MONITOR_DIR) : undefined;
+
+/** Start the monitor from MONITOR_DIR with a clean state file, or say once
+ *  that this run is without it. */
+export function startMonitor(env) {
+	if (!MONITOR_DIR) {
+		console.log("  MONITOR_DIR not set: running without the monitor, monitor checks are skipped");
+		return;
+	}
+	clearState([path.join(MONITOR_DIR, "monitor-state.json")]);
+	start("monitor", MONITOR_DIR, { ...env, STATE_FILE: "./monitor-state.json" });
 }
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

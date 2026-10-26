@@ -29,7 +29,7 @@ import { encodeAbiParameters, keccak256 } from "viem";
 import { Keyring } from "@polkadot/keyring";
 import { cryptoWaitReady } from "@polkadot/util-crypto";
 import { erc20Abi, vaultAbi } from "./abi.mjs";
-import { alive, clearState, logs, start, stopAll, stopAndWait, waitFor } from "./daemons.mjs";
+import { alive, clearState, logs, MONITOR_DIR, start, startMonitor, stopAll, stopAndWait, waitFor } from "./daemons.mjs";
 import { assert, assertEq, check, section, summarise } from "./harness.mjs";
 import {
 	assertTestnet, buildContext, CONVERSION_FACTOR, loadEnv, PEN_12, PEN_18, ROOT, send, TESTING,
@@ -131,8 +131,12 @@ async function preflight(ctx) {
 	section("Preflight");
 
 	await check("services are built", () => {
-		for (const svc of ["attestor", "monitor", "releaser"]) {
+		for (const svc of ["attestor", "releaser"]) {
 			assert(existsSync(path.join(ROOT, svc, "dist/main.js")), `${svc}/dist/main.js missing — run \`npm run build\` in ${svc}/`);
+		}
+		if (MONITOR_DIR) {
+			assert(existsSync(path.join(MONITOR_DIR, "dist/main.js")),
+				`${MONITOR_DIR}/dist/main.js missing — run \`npm run build\` there, or unset MONITOR_DIR`);
 		}
 	});
 
@@ -292,7 +296,7 @@ async function main() {
 	section("Attestor fleet");
 	killMatching(["dist/main.js"]);
 	clearState(["attestor/cp1.json", "attestor/cp2.json", "attestor/cp3.json", "attestor/cp4.json",
-		"monitor/monitor-state.json", "releaser/releaser-state.json"]);
+		"releaser/releaser-state.json"]);
 	const pendulumWs = api._options?.provider?.endpoint ?? process.env.PENDULUM_WS;
 	const baseEnv = {
 		BASE_RPC_URL: env.BASE_SEPOLIA_RPC_URL,
@@ -318,7 +322,7 @@ async function main() {
 		});
 		await sleep(3000);
 	}
-	start("monitor", "monitor", {
+	startMonitor({
 		...baseEnv,
 		PENDULUM_WS: pendulumWs,
 		GRACE_SECONDS: "300",
@@ -326,7 +330,6 @@ async function main() {
 		PENDULUM_START_BLOCK: (BigInt(pendulumHead) + 1n).toString(),
 		PENDULUM_START_NONCE: monitorStartNonce,
 		BASE_START_BLOCK: baseHead,
-		STATE_FILE: "./monitor-state.json",
 	});
 	start("releaser", "releaser", { ...baseEnv, RELEASER_PRIVATE_KEY: env.RELEASER_PRIVATE_KEY, START_BLOCK: baseHead });
 	log(`fleet started (Pendulum from #${pendulumHead}, Base from #${baseHead})`);
@@ -415,13 +418,13 @@ async function main() {
 		assert(await read(V, "totalReleased", []) >= releasedBefore, "totalReleased went backwards");
 	});
 
-	await check("the monitor holds its conservation invariant", async () => {
+	await check(MONITOR_DIR ? "the monitor holds its conservation invariant" : "conservation holds", async () => {
 		const [balance, released, swept, supply] = await Promise.all([
 			read(P, "balanceOf", [vault]), read(V, "totalReleased", []),
 			read(V, "totalSwept", []), read(P, "totalSupply", []),
 		]);
 		assertEq(balance + released + swept, supply, "balance + released + swept == totalSupply");
-		assert(alive("monitor"), `monitor exited:\n${logs("monitor")}`);
+		if (MONITOR_DIR) assert(alive("monitor"), `monitor exited:\n${logs("monitor")}`);
 	});
 
 	await check("the guardian can pause but cannot unpause; the admin can", async () => {
@@ -485,7 +488,7 @@ async function main() {
 		},
 	};
 	writeFileSync(path.join(runDir, "manifest.json"), JSON.stringify(manifest, null, 2));
-	for (const name of ["attestor1", "attestor2", "attestor3", "attestor4", "monitor", "releaser"]) {
+	for (const name of ["attestor1", "attestor2", "attestor3", "attestor4", ...(MONITOR_DIR ? ["monitor"] : []), "releaser"]) {
 		writeFileSync(path.join(runDir, `${name}.log`), logs(name));
 	}
 	if (network) writeFileSync(path.join(runDir, "zombienet.log"), network.out.join("\n"));

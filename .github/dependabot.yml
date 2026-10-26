@@ -1,13 +1,12 @@
 version: 2
 updates:
-  - package-ecosystem: "cargo"
-    directory: "/"
-    schedule:
-      interval: "daily"
   - package-ecosystem: github-actions
     # "/" covers the workflows only; the composite action pins its own actions.
     directories:
       - "/"
       - "/.github/actions/shared"
     schedule:
-      interval: daily
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]

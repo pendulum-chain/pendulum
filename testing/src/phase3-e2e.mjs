@@ -14,17 +14,20 @@
  * remains a manual Zombienet exercise; see the README.
  *
  * Prerequisites: Chopsticks on :8000 (fresh), Anvil on :8545, and the services
- * built (`npm run build` in attestor/, monitor/ and releaser/).
+ * built (`npm run build` in attestor/ and releaser/). The monitor runs, and its
+ * checks are made, only when MONITOR_DIR points at a built monitor checkout.
  */
 
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { Keyring } from "@polkadot/keyring";
 import { cryptoWaitReady } from "@polkadot/util-crypto";
-import { assert, assertEq, check, section, summarise } from "./harness.mjs";
+import { assert, assertEq, check, section, skip, summarise } from "./harness.mjs";
 import { accounts, attestors, keys, pub, releaser as releaserAcct, RPC, send, sendImpersonated } from "./anvil.mjs";
 import { erc20Abi, vaultAbi } from "./abi.mjs";
 import { deployStack, PARAMS } from "./deploy.mjs";
-import { alive, clearState, killStrays, logs, start, stopAll, stopAndWait, waitFor } from "./daemons.mjs";
+import {
+	alive, clearState, killStrays, logs, MONITOR_DIR, start, startMonitor, stopAll, stopAndWait, waitFor,
+} from "./daemons.mjs";
 
 const CHOPSTICKS = process.env.CHOPSTICKS_WS ?? "ws://127.0.0.1:8000";
 const CF = PARAMS.CONVERSION_FACTOR;
@@ -70,7 +73,7 @@ async function migrate(amount, baseAddress) {
 // --- start the fleet -------------------------------------------------------
 killStrays();
 clearState(["attestor/cp1.json", "attestor/cp2.json", "attestor/cp3.json", "attestor/cp4.json",
-	"monitor/monitor-state.json", "releaser/releaser-state.json"]);
+	"releaser/releaser-state.json"]);
 const baseEnv = { BASE_RPC_URL: RPC, VAULT_ADDRESS: vault, BASE_CHAIN_ID: "31337", POLL_INTERVAL_MS: "2000" };
 const startBlock = String(await pub.getBlockNumber());
 // Where the attestors begin scanning Pendulum. Must be the current head: a
@@ -87,7 +90,7 @@ for (let i = 0; i < 4; i++) {
 		ATTESTOR_PRIVATE_KEY: keys[i + 1], CHECKPOINT_FILE: `./cp${i + 1}.json`, START_BLOCK: pendulumHead,
 	});
 }
-start("monitor", "monitor", {
+startMonitor({
 	...baseEnv,
 	PENDULUM_WS: CHOPSTICKS,
 	GRACE_SECONDS: "30",
@@ -96,7 +99,6 @@ start("monitor", "monitor", {
 	PENDULUM_START_BLOCK: monitorPendulumStart,
 	PENDULUM_START_NONCE: monitorStartNonce,
 	BASE_START_BLOCK: startBlock,
-	STATE_FILE: "./monitor-state.json",
 });
 start("releaser", "releaser", { ...baseEnv, RELEASER_PRIVATE_KEY: keys[7], START_BLOCK: startBlock });
 
@@ -114,7 +116,8 @@ await check("a burn on Pendulum arrives on Base with no manual step", async () =
 	} catch (e) {
 		// A silent pipeline is the hardest thing to debug from the outside, so
 		// surface what each daemon actually saw.
-		throw new Error(`${e.message}\n--- attestor1 ---\n${logs("attestor1")}\n--- monitor ---\n${logs("monitor")}`);
+		const monitorLog = MONITOR_DIR ? `\n--- monitor ---\n${logs("monitor")}` : "";
+		throw new Error(`${e.message}\n--- attestor1 ---\n${logs("attestor1")}${monitorLog}`);
 	}
 	assertEq(await balanceOf(recipient), before + amount * CF, "released amount");
 });
@@ -191,7 +194,10 @@ await check("a cap-deferred release is drained by the releaser, unattended", asy
 
 section("Invariants");
 
-await check("the monitor reports healthy and stays running", async () => {
+// Checks that only the monitor can satisfy: skipped, not passed, without it.
+const monitorCheck = MONITOR_DIR ? check : (name) => skip(name, "MONITOR_DIR not set");
+
+await monitorCheck("the monitor reports healthy and stays running", async () => {
 	assert(alive("monitor"), `monitor exited:\n${logs("monitor")}`);
 	await waitFor(() => logs("monitor").includes("ok:"), { timeoutMs: 60_000, label: "a monitor ok line" });
 	const bad = logs("monitor").match(/ALERT: (CONSERVATION VIOLATION|VAULT BALANCE MISMATCH)/);
@@ -205,7 +211,7 @@ await check("conservation holds across the whole run", async () => {
 	assertEq(bal + released + swept, supply, "conservation identity");
 });
 
-await check("a real vault deficit alerts and reaches a confirmed automatic pause", async () => {
+await monitorCheck("a real vault deficit alerts and reaches a confirmed automatic pause", async () => {
 	const deficit = 1n * 10n ** 18n;
 	const before = logs("monitor").length;
 	await sendImpersonated(vault, { ...P, functionName: "transfer", args: [admin.address, deficit] });
@@ -239,7 +245,7 @@ await check("a real vault deficit alerts and reaches a confirmed automatic pause
 	assertEq(await read(V, "paused"), false, "vault remains unpaused after healthy checks");
 });
 
-await check("a mismatched Base approval is caught before it can reach quorum", async () => {
+await monitorCheck("a mismatched Base approval is caught before it can reach quorum", async () => {
 	const before = logs("monitor").length;
 	await send(attestors[0], {
 		...V,

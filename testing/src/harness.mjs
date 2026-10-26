@@ -20,13 +20,27 @@ export async function check(name, fn) {
 	}
 }
 
+/** Record a check that this run cannot perform, so the summary shows it as
+ *  skipped rather than passed. */
+export function skip(name, reason) {
+	results.push({ name, skipped: true, reason });
+	console.log(`  SKIP  ${name}`);
+	console.log(`        ${reason}`);
+}
+
 export function section(title) {
 	console.log(`\n${title}`);
 }
 
 export function summarise() {
-	const failed = results.filter((r) => !r.ok);
-	console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
+	const failed = results.filter((r) => !r.ok && !r.skipped);
+	const skipped = results.filter((r) => r.skipped);
+	const run = results.length - skipped.length;
+	console.log(`\n${run - failed.length}/${run} checks passed${skipped.length ? `, ${skipped.length} skipped` : ""}`);
+	if (skipped.length > 0) {
+		console.log("\nSkipped:");
+		for (const s of skipped) console.log(`  - ${s.name}: ${s.reason}`);
+	}
 	if (failed.length > 0) {
 		console.log("\nFailed:");
 		for (const f of failed) console.log(`  - ${f.name}: ${f.reason}`);

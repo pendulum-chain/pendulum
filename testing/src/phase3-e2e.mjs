@@ -245,20 +245,26 @@ await monitorCheck("a real vault deficit alerts and reaches a confirmed automati
 	assertEq(await read(V, "paused"), false, "vault remains unpaused after healthy checks");
 });
 
-await monitorCheck("a mismatched Base approval is caught before it can reach quorum", async () => {
+await monitorCheck("fabricated approvals are reported and pause the vault before they can reach quorum", async () => {
+	// One attestor's approval cannot release on its own, so the monitor reports
+	// it; a second attestor approving the same tuple pauses the vault before a
+	// third approval could release it.
+	const fabricated = { ...V, functionName: "approve", args: [9_999_999n, admin.address, MIN] };
 	const before = logs("monitor").length;
-	await send(attestors[0], {
-		...V,
-		functionName: "approve",
-		args: [9_999_999n, admin.address, MIN],
+	await send(attestors[0], fabricated);
+	await waitFor(() => logs("monitor").slice(before).includes("MISMATCHED APPROVAL"), {
+		timeoutMs: 30_000,
+		label: "the monitor to report a fabricated approval",
 	});
+	assertEq(await read(V, "paused"), false, "one fabricated approval leaves the vault running");
+	await send(attestors[1], fabricated);
 	await waitFor(() => logs("monitor").slice(before).includes("MIGRATION TUPLE VIOLATION"), {
 		timeoutMs: 30_000,
-		label: "the monitor to reject a fabricated approval tuple",
+		label: "the monitor to reject the second fabricated approval",
 	});
 	await waitFor(async () => (await read(V, "paused")) === true, {
 		timeoutMs: 30_000,
-		label: "the mismatched approval to trigger an automatic pause",
+		label: "the second fabricated approval to trigger an automatic pause",
 	});
 });
 

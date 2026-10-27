@@ -1119,6 +1119,76 @@ test("the new transaction after another took the nonce starts from the current e
 	assert.ok(chain.approved.has(payloadHash(EVENT)));
 });
 
+test("an own approval reorged out of Base leaves no empty nonce the next approval waits behind", async () => {
+	const chain = new FakeVault();
+	const { attestor, alerts, logs } = attestorOn(chain);
+	assert.equal(await approve(attestor, EVENT), true);
+	// The block holding it is reorged away, and the transaction is not re-injected.
+	chain.minedNonce = 5;
+	chain.approved.delete(payloadHash(EVENT));
+	chain.receipts.clear();
+	assert.equal(await approve(attestor, OTHER), true);
+	assert.deepEqual(
+		chain.sent.map((tx) => [approveArgs(tx)[0], tx.nonce]),
+		[
+			[EVENT.nonce, 5],
+			[OTHER.nonce, 6],
+			[OTHER.nonce, 5],
+		],
+	);
+	assert.ok(chain.approved.has(payloadHash(OTHER)));
+	assert.equal(chain.receipts.get(chain.sent[1].hash)?.status, "reverted", "the attempt left behind merely reverts");
+	assert.ok(logs.some((line) => line.startsWith("nonce 5 below 6 holds no transaction; sending the approval again there: nonce=8 ")));
+	assert.equal(alerts.length, 0);
+});
+
+test("a nonce skipped for a transaction this process did not send is filled once that transaction leaves the pool", async () => {
+	const chain = new FakeVault();
+	chain.pool.set(5, { hash: `0x${"ee".repeat(32)}`, nonce: 5, value: 0n, maxFeePerGas: 50_000_000n, maxPriorityFeePerGas: 2_000_000n });
+	chain.pendingNonce = 5; // the backend answering the count has not seen it
+	chain.onSend = () => {
+		if (chain.sent.length === 2) {
+			// Evicted before it was mined.
+			chain.pool.delete(5);
+			chain.pendingNonce = undefined;
+		}
+	};
+	const { attestor } = attestorOn(chain);
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.deepEqual(
+		chain.sent.map((tx) => tx.nonce),
+		[5, 6, 5],
+	);
+	assert.ok(chain.receipts.has(chain.sent[2].hash));
+	assert.ok(chain.approved.has(payloadHash(EVENT)));
+});
+
+test("an approval no longer needed behind an empty nonce is not sent again, and the next approval fills that nonce", async () => {
+	const chain = new FakeVault();
+	chain.pool.set(5, { hash: `0x${"ee".repeat(32)}`, nonce: 5, value: 0n, maxFeePerGas: 50_000_000n, maxPriorityFeePerGas: 2_000_000n });
+	chain.pendingNonce = 5;
+	chain.onSend = () => {
+		if (chain.sent.length === 2) {
+			chain.pool.delete(5);
+			chain.pendingNonce = undefined;
+			chain.consumed.add(EVENT.nonce); // released by the others meanwhile
+		}
+	};
+	const { attestor } = attestorOn(chain);
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.equal(attestor.missedApprovals, 1);
+	assert.equal(await approve(attestor, OTHER), true);
+	assert.deepEqual(
+		chain.sent.map((tx) => [approveArgs(tx)[0], tx.nonce]),
+		[
+			[EVENT.nonce, 5],
+			[EVENT.nonce, 6],
+			[OTHER.nonce, 5],
+		],
+	);
+	assert.ok(chain.approved.has(payloadHash(OTHER)));
+});
+
 test("unreleasable events are not tracked for durability; every other event is", async () => {
 	const chain = new FakeVault();
 	const { attestor } = attestorOn(chain);

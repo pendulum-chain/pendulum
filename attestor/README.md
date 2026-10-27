@@ -129,7 +129,11 @@ WantedBy=multi-user.target
   counting `FEE_BUMP_AFTER_SECONDS` from its last send. A
   first attempt whose nonce is taken (mined already, or held by a transaction
   this process did not send) moves on to the next nonce at once, at most five
-  in a row, without spending a bump. A node refusing a send for its price, an
+  in a row, without spending a bump. An approval that cannot be mined because
+  the node holds nothing at a nonce below it (a transaction of ours dropped by
+  a reorg, or a skipped one that left the pool) is sent again at that first
+  empty nonce, or the next approval is, so nothing waits on a nonce no
+  transaction will fill. A node refusing a send for its price, an
   underpriced replacement or a full pool is retried at the next bump instead
   of being fatal. Transactions in flight are kept in memory only: after a
   restart, an approval whose transaction is still pending is sent again at the

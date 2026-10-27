@@ -197,7 +197,9 @@ export interface Attestor {
 	/** The lowest nonce no transaction of this process has been accepted at (or
 	 *  sent at without an answer). The node's pending count can trail it (a
 	 *  load-balanced endpoint, a pool that dropped the transaction), and a nonce
-	 *  one payload was sent at is never signed for another. */
+	 *  one payload was sent at is never signed for another, unless an empty
+	 *  nonce below kept that attempt from ever being mined and the payload was
+	 *  sent again there (see `sendUntilMined`). */
 	nextNonce: number;
 }
 
@@ -399,6 +401,18 @@ async function sendUntilMined(
 			if (late) return late;
 			if (!needed) return undefined;
 			attestor.log(`nonce ${nonce} was used by another transaction; sending the approval again: ${label}`);
+			Object.assign(submission, { nonce: undefined, fees: undefined, hashes: [], bumps: 0, paged: false });
+			continue;
+		}
+		if (nonce !== undefined && minedNonce !== undefined && minedNonce < nonce && (await attestor.chain.accountNonce("pending")) <= minedNonce) {
+			// The node holds nothing below our nonce, so ours can never be mined:
+			// a transaction of ours there was dropped (its block reorged away), or
+			// one this process skipped left the pool. Fill that nonce instead of
+			// waiting on it, for this approval or else the next one; the attempt
+			// left behind merely reverts should it ever be mined.
+			attestor.nextNonce = minedNonce;
+			if (!needed) return undefined;
+			attestor.log(`nonce ${minedNonce} below ${nonce} holds no transaction; sending the approval again there: ${label}`);
 			Object.assign(submission, { nonce: undefined, fees: undefined, hashes: [], bumps: 0, paged: false });
 			continue;
 		}

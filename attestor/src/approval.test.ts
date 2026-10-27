@@ -663,6 +663,35 @@ test("after the last bump it pages once and keeps waiting until the approval is 
 	assert.equal(attestor.missedApprovals, 0);
 });
 
+test("an approval that stays stuck after its page pages again, at growing intervals", async () => {
+	const chain = new FakeVault();
+	chain.baseFee = 100_000_000n;
+	const pages: { at: number; detail: string }[] = [];
+	const { attestor } = attestorOn(
+		chain,
+		{
+			alert: async (subject, detail) => {
+				assert.equal(subject, "own approval not mined");
+				pages.push({ at: attestor.now(), detail: `${detail}` });
+			},
+		},
+		(elapsed) => {
+			// Fees fall again two hours in.
+			if (elapsed >= 120 * 60_000) chain.baseFee = 5_000_000n;
+			chain.mine();
+		},
+	);
+	assert.equal(await approve(attestor, EVENT), true);
+	// First paged 4 min after the send, then 10, 20 and 40 min apart.
+	assert.deepEqual(
+		pages.slice(1).map((page, i) => (page.at - pages[i].at) / 60_000),
+		[10, 20, 40],
+	);
+	assert.match(pages[0].detail, /^3 fee bump\(s\) used up: transaction nonce 5, /);
+	assert.match(pages[1].detail, /^still not mined \(page 2\), 3 fee bump\(s\) used up: transaction nonce 5, /);
+	assert.ok(chain.approved.has(payloadHash(EVENT)));
+});
+
 test("the fee cap stops a bump and pages once; no attempt offers more than the cap", async () => {
 	const chain = new FakeVault();
 	chain.baseFee = 100_000_000n;

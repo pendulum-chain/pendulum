@@ -117,10 +117,12 @@ WantedBy=multi-user.target
   approval is recorded, a transaction still pending is no longer needed, but
   it is followed and bumped the same way until its nonce is used: every later
   approval waits behind that nonce, and mined it merely reverts. When no bump
-  is left, or the cap stops one, it pages `own approval not mined` once (with
-  the nonce, the account's next mined nonce, the fees and whether the migration
-  is already resolved) and keeps waiting, since later approvals would queue
-  behind that nonce anyway. Whenever it stops bumping, it re-sends the last
+  is left, or the cap stops one, it pages `own approval not mined` (with the
+  nonce, the account's next mined nonce, the fees and whether the migration is
+  already resolved) and keeps waiting, since later approvals would queue
+  behind that nonce anyway. While it stays stuck, the page repeats 10, 20 and
+  40 minutes later and so on, at most every 4 hours, marked `still not mined
+  (page N)`. Whenever it stops bumping, it re-sends the last
   attempt unchanged, so a node that dropped the transaction while still
   counting its nonce gets it back instead of leaving a gap. An approval that an
   RPC error interrupted keeps its transaction, also one whose send got no

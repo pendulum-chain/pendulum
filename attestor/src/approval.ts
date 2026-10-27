@@ -42,6 +42,12 @@ export const MIN_REPLACEMENT_PERCENT = 10;
 /** How often a sent approval's receipt is polled: about one Base block. */
 const RECEIPT_POLL_MS = 2000;
 
+/** An own approval still stuck after its page pages again this much later,
+ *  then at twice the previous interval up to `REPAGE_MAX_MS`: a single page
+ *  whose delivery failed must not leave a stuck attestor silent. */
+const REPAGE_FIRST_MS = 10 * 60_000;
+const REPAGE_MAX_MS = 4 * 3600_000;
+
 /** How many nonces in a row a first attempt tries at once when each is taken:
  *  enough for a backend whose pending count trails by a few blocks, and a
  *  bound for one that refuses every nonce. */
@@ -82,8 +88,9 @@ export interface Submission {
 	 *  resumes the bump interval from there instead of starting it anew. */
 	sentAtMs?: number;
 	bumps: number;
-	/** The page that it is not being mined went out. */
-	paged: boolean;
+	/** How often the page that it is not being mined went out, and when last. */
+	pages: number;
+	pagedAtMs?: number;
 }
 
 /** A block processed against the latest Base state whose releasable events are
@@ -369,9 +376,9 @@ async function resendLatest(attestor: Attestor, submission: Submission, nonce: n
  * An attempt still not mined `feeBump.afterMs` after it was sent, also across
  * a retry after an error, is re-sent: the identical call at the same nonce with
  * both fees raised (`bumpedFees`), at most `feeBump.max` times. When no bump is
- * left or the cap stops one, it pages once
- * and keeps waiting, re-sending the latest attempt unchanged: later approvals
- * would queue behind this nonce anyway. An approval no longer needed (released,
+ * left or the cap stops one, it pages (again at growing intervals while it
+ * stays stuck) and keeps waiting, re-sending the latest attempt unchanged:
+ * later approvals would queue behind this nonce anyway. An approval no longer needed (released,
  * or ours recorded) is followed the same way while its nonce is pending, as
  * every later approval waits behind that nonce; mined, it merely reverts.
  * Returns undefined when the approval is no longer needed and no attempt holds
@@ -401,7 +408,7 @@ async function sendUntilMined(
 			if (late) return late;
 			if (!needed) return undefined;
 			attestor.log(`nonce ${nonce} was used by another transaction; sending the approval again: ${label}`);
-			Object.assign(submission, { nonce: undefined, fees: undefined, hashes: [], bumps: 0, paged: false });
+			Object.assign(submission, { nonce: undefined, fees: undefined, hashes: [], bumps: 0, pages: 0 });
 			continue;
 		}
 		if (nonce !== undefined && minedNonce !== undefined && minedNonce < nonce && (await attestor.chain.accountNonce("pending")) <= minedNonce) {
@@ -413,22 +420,25 @@ async function sendUntilMined(
 			attestor.nextNonce = minedNonce;
 			if (!needed) return undefined;
 			attestor.log(`nonce ${minedNonce} below ${nonce} holds no transaction; sending the approval again there: ${label}`);
-			Object.assign(submission, { nonce: undefined, fees: undefined, hashes: [], bumps: 0, paged: false });
+			Object.assign(submission, { nonce: undefined, fees: undefined, hashes: [], bumps: 0, pages: 0 });
 			continue;
 		}
 		const last = submission.fees as Fees;
 		const fees =
-			submission.paged || submission.bumps >= policy.max
+			submission.pages > 0 || submission.bumps >= policy.max
 				? undefined
 				: bumpedFees(last, await attestor.chain.fees(), policy);
 		if (fees === undefined) {
-			if (!submission.paged) {
-				submission.paged = true;
+			const repageMs = Math.min(REPAGE_MAX_MS, REPAGE_FIRST_MS * 2 ** (submission.pages - 1));
+			if (submission.pages === 0 || attestor.now() - (submission.pagedAtMs as number) >= repageMs) {
+				submission.pages += 1;
+				submission.pagedAtMs = attestor.now();
 				const reason =
 					submission.bumps >= policy.max ? `${submission.bumps} fee bump(s) used up` : "the fee cap stops the next bump";
 				await attestor.alert(
 					"own approval not mined",
-					`${reason}: transaction nonce ${nonce ?? "not accepted by the node"}, account's next mined nonce ${minedNonce ?? "unknown"}, ` +
+					`${submission.pages > 1 ? `still not mined (page ${submission.pages}), ` : ""}` +
+						`${reason}: transaction nonce ${nonce ?? "not accepted by the node"}, account's next mined nonce ${minedNonce ?? "unknown"}, ` +
 						`maxFeePerGas ${formatGwei(last.maxFeePerGas)} gwei (cap ${formatGwei(policy.maxFeePerGas)} gwei)` +
 						`${needed ? "" : ", migration already resolved"}; ${label}`,
 					"critical",
@@ -494,7 +504,7 @@ export async function approve(attestor: Attestor, event: MigrationEvent): Promis
 				functionName: "approve",
 				args: [event.nonce, event.recipient, event.palletAmount],
 			});
-			submission = { event, data, gas, hashes: [], bumps: 0, paged: false };
+			submission = { event, data, gas, hashes: [], bumps: 0, pages: 0 };
 			attestor.submissions.set(key, submission);
 		}
 		const receipt = await sendUntilMined(attestor, event, submission, label);

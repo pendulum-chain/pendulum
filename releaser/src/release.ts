@@ -25,13 +25,24 @@ export interface Releaser {
 	blockedAlertIntervalMs: number;
 	/** nonce -> pending release. Keyed by nonce: the vault consumes a nonce once. */
 	pending: Map<bigint, PendingRelease>;
-	/** nonce -> when its "blocked" state was last alerted. A blocked release needs
-	 *  a timelocked governance action (>= 48h) to clear, so re-paging it every
-	 *  poll would emit thousands of identical alerts and train on-call to ignore
-	 *  them; re-alert at a bounded interval instead. */
-	blockedAlertedAt: Map<bigint, number>;
+	/** nonce -> the last page about it, and when it went out. A blocked release
+	 *  needs a timelocked governance action (>= 48h) to clear, and an unexpected
+	 *  failure repeats every poll as well, so re-paging either every poll would
+	 *  emit thousands of identical alerts and train on-call to ignore them; the
+	 *  same page re-alerts at a bounded interval instead. */
+	alertedAt: Map<bigint, { subject: string; at: number }>;
 	alert(subject: string, detail: string, severity?: Severity): Promise<void>;
 	log(message: string): void;
+	now(): number;
+}
+
+/** Page `subject` about the release of `nonce`, unless the same page about it
+ *  went out less than `blockedAlertIntervalMs` ago. */
+async function pageThrottled(releaser: Releaser, nonce: bigint, subject: string, detail: string): Promise<void> {
+	const last = releaser.alertedAt.get(nonce);
+	if (last?.subject === subject && releaser.now() - last.at < releaser.blockedAlertIntervalMs) return;
+	releaser.alertedAt.set(nonce, { subject, at: releaser.now() });
+	await releaser.alert(subject, detail, "critical");
 }
 
 /** A release transaction that was mined and reverted. The receipt carries no
@@ -41,8 +52,7 @@ class MinedRevert extends Error {}
 
 /** Try to push each pending release through; classify what comes back. */
 export async function drainPending(releaser: Releaser, conversionFactor: bigint, dailyCap: bigint): Promise<void> {
-	const { publicClient, walletClient, account, vaultAddress, baseFinalityTag, pending, blockedAlertedAt, alert, log } =
-		releaser;
+	const { publicClient, walletClient, account, vaultAddress, baseFinalityTag, pending, alertedAt, log } = releaser;
 	for (const p of [...pending.values()]) {
 		const label = `nonce=${p.nonce} recipient=${p.recipient} amount=${p.palletAmount}`;
 		try {
@@ -118,28 +128,24 @@ export async function drainPending(releaser: Releaser, conversionFactor: bigint,
 			switch (classifyReleaseFailure(errorName)) {
 				case "done":
 					pending.delete(p.nonce);
-					blockedAlertedAt.delete(p.nonce);
+					alertedAt.delete(p.nonce);
 					log(`skip (already consumed): ${label}`);
 					break;
 				case "retry":
 					// Expected while the daily bucket refills — stay quiet.
 					break;
-				case "blocked": {
+				case "blocked":
 					// Clearing this needs a timelocked governance action, so the
 					// condition persists for days; page at a bounded interval.
-					const lastAlerted = blockedAlertedAt.get(p.nonce) ?? 0;
-					if (Date.now() - lastAlerted >= releaser.blockedAlertIntervalMs) {
-						blockedAlertedAt.set(p.nonce, Date.now());
-						await alert(
-							"release blocked and needs operator action",
-							`${label} — ${errorName}; it cannot self-heal`,
-							"critical",
-						);
-					}
+					await pageThrottled(
+						releaser,
+						p.nonce,
+						"release blocked and needs operator action",
+						`${label} — ${errorName}; it cannot self-heal`,
+					);
 					break;
-				}
 				case "unexpected":
-					await alert("unexpected release failure", `${label} — ${reason}`, "critical");
+					await pageThrottled(releaser, p.nonce, "unexpected release failure", `${label} — ${reason}`);
 					break;
 			}
 		}

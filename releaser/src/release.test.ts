@@ -25,6 +25,7 @@ function releaserWith(answers: Record<string, Answer>, entries: PendingRelease[]
 	const logs: string[] = [];
 	const writes: unknown[] = [];
 	const methods: Record<string, Answer> = { getBlock: () => ({ number: 100n }), readContract: () => false, ...answers };
+	let clock = 1_000_000;
 	const releaser: Releaser = {
 		publicClient: Object.fromEntries(
 			Object.entries(methods).map(([name, answer]) => [name, async (args: Record<string, unknown> = {}) => answer(args)]),
@@ -40,13 +41,14 @@ function releaserWith(answers: Record<string, Answer>, entries: PendingRelease[]
 		baseFinalityTag: "safe",
 		blockedAlertIntervalMs: 6 * 3600_000,
 		pending: new Map(entries.map((entry) => [entry.nonce, entry])),
-		blockedAlertedAt: new Map(),
+		alertedAt: new Map(),
 		alert: async (subject, detail, severity = "warning") => {
 			alerts.push(`${severity} ${subject}: ${detail}`);
 		},
 		log: (message) => logs.push(message),
+		now: () => clock,
 	};
-	return { releaser, alerts, logs, writes };
+	return { releaser, alerts, logs, writes, advance: (ms: number) => (clock += ms) };
 }
 
 /** What simulation raises for a vault revert. */
@@ -138,7 +140,7 @@ test("a consumption seen only at the latest state keeps the entry until the fina
 });
 
 test("a blocked release pages once per interval, not once per cycle", async () => {
-	const { releaser, alerts } = releaserWith(
+	const { releaser, alerts, advance } = releaserWith(
 		{
 			simulateContract: () => {
 				throw vaultRevert({ errorName: "ExceedsPerReleaseCap", args: [ENTRY.palletAmount * CONVERSION_FACTOR, 1n] });
@@ -151,9 +153,32 @@ test("a blocked release pages once per interval, not once per cycle", async () =
 	assert.deepEqual(alerts, [
 		`critical release blocked and needs operator action: nonce=7 recipient=${RECIPIENT} amount=${ENTRY.palletAmount} — ExceedsPerReleaseCap; it cannot self-heal`,
 	]);
-	// The interval has passed.
-	releaser.blockedAlertedAt.set(7n, Date.now() - releaser.blockedAlertIntervalMs);
+	advance(releaser.blockedAlertIntervalMs);
 	await drainPending(releaser, CONVERSION_FACTOR, DAILY_CAP);
 	assert.equal(alerts.length, 2);
+	assert.equal(releaser.pending.size, 1);
+});
+
+test("an unexpected release failure pages once per interval, and again at once when the failure changes", async () => {
+	let failure: Error = new Error("execution reverted: TokenNotSet");
+	const { releaser, alerts, advance } = releaserWith(
+		{
+			simulateContract: () => {
+				throw failure;
+			},
+		},
+		[ENTRY],
+	);
+	for (let cycle = 0; cycle < 5; cycle++) await drainPending(releaser, CONVERSION_FACTOR, DAILY_CAP);
+	assert.deepEqual(alerts, [
+		`critical unexpected release failure: nonce=7 recipient=${RECIPIENT} amount=${ENTRY.palletAmount} — execution reverted: TokenNotSet`,
+	]);
+	advance(releaser.blockedAlertIntervalMs);
+	await drainPending(releaser, CONVERSION_FACTOR, DAILY_CAP);
+	assert.equal(alerts.length, 2);
+	failure = vaultRevert({ errorName: "ExceedsPerReleaseCap", args: [ENTRY.palletAmount * CONVERSION_FACTOR, 1n] });
+	await drainPending(releaser, CONVERSION_FACTOR, DAILY_CAP);
+	assert.equal(alerts.length, 3);
+	assert.match(alerts[2], /^critical release blocked and needs operator action: nonce=7 /);
 	assert.equal(releaser.pending.size, 1);
 });

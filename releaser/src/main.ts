@@ -57,7 +57,7 @@ const walletClient = createWalletClient({ account, chain: baseChain, transport: 
 
 const pending = new Map<bigint, PendingRelease>();
 let fromBlock = config.startBlock;
-const blockedAlertedAt = new Map<bigint, number>();
+const alertedAt: Releaser["alertedAt"] = new Map();
 
 function log(message: string): void {
 	console.log(`${new Date().toISOString()} ${message}`);
@@ -202,7 +202,7 @@ async function pruneConsumed(blockNumber: bigint): Promise<void> {
 	entries.forEach((entry, i) => {
 		if (consumed[i]) {
 			pending.delete(entry.nonce);
-			blockedAlertedAt.delete(entry.nonce);
+			alertedAt.delete(entry.nonce);
 		}
 	});
 }
@@ -215,9 +215,10 @@ const releaser: Releaser = {
 	baseFinalityTag: config.baseFinalityTag,
 	blockedAlertIntervalMs: config.blockedAlertIntervalMs,
 	pending,
-	blockedAlertedAt,
+	alertedAt,
 	alert,
 	log,
+	now: Date.now,
 };
 
 async function checkGasBalance(): Promise<void> {

@@ -15,7 +15,10 @@ import { ROOT, TESTING } from "./rehearsal-env.mjs";
 
 export const CHAIN_BINARIES = [
 	"zombienet-macos",
-	"target/testnet/polkadot",
+	// Zombienet starts the relay validators as `polkadot` from PATH (see
+	// zombienet.toml), so match their command line wherever the binary lives.
+	// Their PVF workers exit with them.
+	"polkadot --chain",
 	"target/release/pendulum-node",
 ];
 

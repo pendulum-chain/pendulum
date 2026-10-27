@@ -310,6 +310,9 @@ async function main() {
 		// the starts so they do not align into bursts. In production each
 		// attestor has its own node and this pressure does not arise.
 		POLL_INTERVAL_MS: "12000",
+		// Base Sepolia's public RPC serves eth_getLogs for at most 200 blocks.
+		MAX_BLOCK_RANGE: process.env.MAX_BLOCK_RANGE ?? "200",
+		BASE_MAX_BLOCK_RANGE: process.env.BASE_MAX_BLOCK_RANGE ?? "200",
 	};
 	const pendulumHead = (await api.query.system.number()).toString();
 	const baseHead = String(await ctx.pub.getBlockNumber());

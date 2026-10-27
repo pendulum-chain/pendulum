@@ -139,6 +139,9 @@ async function main() {
 	const baseEnv = {
 		BASE_RPC_URL: env.BASE_SEPOLIA_RPC_URL, VAULT_ADDRESS: vault,
 		BASE_CHAIN_ID: "84532", POLL_INTERVAL_MS: "12000",
+		// Base Sepolia's public RPC serves eth_getLogs for at most 200 blocks.
+		MAX_BLOCK_RANGE: process.env.MAX_BLOCK_RANGE ?? "200",
+		BASE_MAX_BLOCK_RANGE: process.env.BASE_MAX_BLOCK_RANGE ?? "200",
 	};
 	const pendulumHead = (await api.query.system.number()).toString();
 	const baseHead = String(await ctx.pub.getBlockNumber());

@@ -29,7 +29,8 @@ import {requireMultisigSafe} from "./SafeCheck.sol";
 ///                         MAX_INITIAL_DAILY_CAP
 ///   EARLIEST_SWEEP_TS     unix timestamp in SECONDS before which no remainder
 ///                         sweep (D5); at least MIN_SWEEP_FLOOR_AHEAD after
-///                         the deploy block and at most MAX_SWEEP_FLOOR_AHEAD
+///                         the deploy block and at most MAX_SWEEP_FLOOR_AHEAD,
+///                         not before DECIDED_SWEEP_FLOOR
 ///   TEST_DEPLOY           optional, testnet drills and local runs only: allows
 ///                         an ADMIN_SAFE that is not a Safe, an
 ///                         EARLIEST_SWEEP_TS any time in the future, and caps,
@@ -49,6 +50,9 @@ contract Deploy is Script {
     uint256 internal constant MAX_SWEEP_FLOOR_AHEAD = 2 * 365 days;
     // A sweep floor closer than this is a drill value, not a migration window.
     uint256 internal constant MIN_SWEEP_FLOOR_AHEAD = 30 days;
+    // The decided floor, 2027-03-01 00:00 UTC. A later one is allowed; an
+    // earlier one is a superseded or mistyped date.
+    uint256 internal constant DECIDED_SWEEP_FLOOR = 1803859200;
     // The caps can be changed later, but until then they bound what a release
     // quorum can move before a pause. The smallest migration the pallet
     // accepts is 100 PEN: a lower per-release cap would hold back every
@@ -78,6 +82,10 @@ contract Deploy is Script {
         require(
             earliestSweepTs >= block.timestamp + MIN_SWEEP_FLOOR_AHEAD || testDeploy,
             "EARLIEST_SWEEP_TS is less than 30 days after the deploy block"
+        );
+        require(
+            earliestSweepTs >= DECIDED_SWEEP_FLOOR || testDeploy,
+            "EARLIEST_SWEEP_TS is before the decided 2027-03-01 00:00 UTC"
         );
 
         address[] memory attestors = new address[](4);

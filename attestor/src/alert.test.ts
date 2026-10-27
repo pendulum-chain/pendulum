@@ -42,22 +42,48 @@ test("a webhook error status, a timeout or a dead relay is a failed delivery, an
 	for (const status of [500, 429, 404]) {
 		const { url, server } = await webhook(status);
 		try {
-			assert.equal(await postAlert(url, { subject: "s" }), false, `HTTP ${status}`);
+			assert.equal(await postAlert(url, { subject: "s" }, 10_000, []), false, `HTTP ${status}`);
 		} finally {
 			server.close();
 		}
 	}
 	const hanging = await webhook(null);
 	try {
-		assert.equal(await postAlert(hanging.url, { subject: "s" }, 200), false, "timeout");
+		assert.equal(await postAlert(hanging.url, { subject: "s" }, 200, []), false, "timeout");
 	} finally {
 		hanging.server.closeAllConnections();
 		hanging.server.close();
 	}
 	const closed = await webhook(200);
 	closed.server.close();
-	assert.equal(await postAlert(closed.url, { subject: "s" }), false, "connection refused");
+	assert.equal(await postAlert(closed.url, { subject: "s" }, 10_000, []), false, "connection refused");
 	assert.equal(logged.mock.callCount(), 5);
+});
+
+test("a failed delivery is tried again after each wait, a request the relay refused is not", async (t) => {
+	t.mock.method(console, "error", () => {});
+	let answers: number[] = [];
+	let posts = 0;
+	const server = createServer((request, response) => {
+		request.resume();
+		request.on("end", () => response.writeHead(answers[posts++]).end());
+	});
+	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+	const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+	try {
+		for (const [statuses, delivered] of [
+			[[503, 429, 200], true],
+			[[500, 502, 504], false],
+			[[404], false],
+		] as const) {
+			answers = [...statuses];
+			posts = 0;
+			assert.equal(await postAlert(url, { subject: "s" }, 10_000, [10, 10]), delivered, `${statuses}`);
+			assert.equal(posts, statuses.length, `${statuses}`);
+		}
+	} finally {
+		server.close();
+	}
 });
 
 test("a heartbeat requests its URL, and a failing endpoint is logged without the URL, never thrown", async (t) => {

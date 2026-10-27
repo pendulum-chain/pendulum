@@ -16,7 +16,8 @@ export interface Checkpoint {
 	pendulumGenesisHash: `0x${string}`;
 	/** The signer, and its vault attestor generation, whose approvals this
 	 *  progress stands for. Optional only so that checkpoints written before
-	 *  they were recorded still load; the daemon binds those on startup. */
+	 *  they were recorded still load (neither field); the daemon binds those on
+	 *  startup. */
 	attestorAddress?: `0x${string}`;
 	attestorGeneration?: number;
 	lastProcessedBlock: number;
@@ -136,6 +137,18 @@ export function assertCheckpointIdentity(
 	// Progress made by another key, or by this key before it was removed and
 	// re-added, says nothing about the approvals that count now: resuming from
 	// it would silently skip every unreleased migration before it.
+	// Both fields are always written together, so a checkpoint with only one of
+	// them was edited and is not one from before they existed.
+	if ((checkpoint.attestorAddress === undefined) !== (checkpoint.attestorGeneration === undefined)) {
+		const [present, missing] =
+			checkpoint.attestorAddress === undefined
+				? ["attestorGeneration", "attestorAddress"]
+				: ["attestorAddress", "attestorGeneration"];
+		throw new Error(
+			`checkpoint has ${present} but no ${missing}; the two are always written together, so the file was edited: ` +
+				"restore the removed field and follow the error that gives (runbook RB-6), never remove either one",
+		);
+	}
 	if (
 		checkpoint.attestorAddress !== undefined &&
 		checkpoint.attestorAddress.toLowerCase() !== expected.attestorAddress.toLowerCase()

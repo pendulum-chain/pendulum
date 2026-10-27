@@ -35,14 +35,14 @@ point.
 | Variable | Meaning |
 |---|---|
 | `PENDULUM_WS` | WebSocket of your own Pendulum node, e.g. `ws://127.0.0.1:9944` |
-| `PENDULUM_GENESIS_HASH` | Genesis hash that node must serve (default Pendulum's, `0x5d3c2986…462c86`); set it only for a local test chain |
+| `PENDULUM_GENESIS_HASH` | Genesis hash that node must serve (default Pendulum's, `0x5d3c2986…462c86`); set it only for a local test chain. With `BASE_CHAIN_ID` 8453 (Base mainnet) any other value is refused at startup |
 | `BASE_RPC_URL` | Base JSON-RPC endpoint |
 | `VAULT_ADDRESS` | MigrationVault address on Base |
 | `ATTESTOR_PRIVATE_KEY` | This attestor's signing key (0x-prefixed) |
 | `CHECKPOINT_FILE` | Path persisting the last processed block (default `./checkpoint.json`) |
 | `START_BLOCK` | First Pendulum block to scan on the very first run |
 | `MIN_GAS_BALANCE_WEI` | Low-gas alert threshold (default 0.01 ETH) |
-| `ALERT_WEBHOOK_URL` | Optional webhook receiving JSON alerts in Slack incoming-webhook form: `text` holds `[CRITICAL]` or `[WARNING]`, the attestor and the subject, then the detail; `severity`, `subject` and `detail` are also sent as fields. A non-2xx answer, a timeout (10 s) or a connection error is logged as a failed delivery |
+| `ALERT_WEBHOOK_URL` | Optional webhook receiving JSON alerts in Slack incoming-webhook form: `text` holds `[CRITICAL]` or `[WARNING]`, the attestor and the subject, then the detail; `severity`, `subject` and `detail` are also sent as fields. A non-2xx answer, a timeout (10 s) or a connection error is logged as a failed delivery and tried again after 2 s and after 10 s more; a 4xx other than 408 and 429 is not retried, as repeating the request cannot change it |
 | `HEARTBEAT_URL` | Optional http(s) URL requested (GET) after a finalized head processed without error, at most once a minute; point it at a dead-man's switch that pages when the requests stop. Startup refuses any other value. A failed request is logged (error name and code only, never the URL), never fatal |
 | `BASE_CHAIN_ID` | Default 8453 (Base mainnet) |
 | `BASE_FINALITY_TAG` | Base confirmation boundary the checkpoint waits for: `safe` (default) or `finalized` |
@@ -117,10 +117,12 @@ WantedBy=multi-user.target
   approval is recorded, a transaction still pending is no longer needed, but
   it is followed and bumped the same way until its nonce is used: every later
   approval waits behind that nonce, and mined it merely reverts. When no bump
-  is left, or the cap stops one, it pages `own approval not mined` once (with
-  the nonce, the account's next mined nonce, the fees and whether the migration
-  is already resolved) and keeps waiting, since later approvals would queue
-  behind that nonce anyway. Whenever it stops bumping, it re-sends the last
+  is left, or the cap stops one, it pages `own approval not mined` (with the
+  nonce, the account's next mined nonce, the fees and whether the migration is
+  already resolved) and keeps waiting, since later approvals would queue
+  behind that nonce anyway. While it stays stuck, the page repeats 10, 20 and
+  40 minutes later and so on, at most every 4 hours, marked `still not mined
+  (page N)`. Whenever it stops bumping, it re-sends the last
   attempt unchanged, so a node that dropped the transaction while still
   counting its nonce gets it back instead of leaving a gap. An approval that an
   RPC error interrupted keeps its transaction, also one whose send got no
@@ -129,7 +131,11 @@ WantedBy=multi-user.target
   counting `FEE_BUMP_AFTER_SECONDS` from its last send. A
   first attempt whose nonce is taken (mined already, or held by a transaction
   this process did not send) moves on to the next nonce at once, at most five
-  in a row, without spending a bump. A node refusing a send for its price, an
+  in a row, without spending a bump. An approval that cannot be mined because
+  the node holds nothing at a nonce below it (a transaction of ours dropped by
+  a reorg, or a skipped one that left the pool) is sent again at that first
+  empty nonce, or the next approval is, so nothing waits on a nonce no
+  transaction will fill. A node refusing a send for its price, an
   underpriced replacement or a full pool is retried at the next bump instead
   of being fatal. Transactions in flight are kept in memory only: after a
   restart, an approval whose transaction is still pending is sent again at the
@@ -146,13 +152,18 @@ WantedBy=multi-user.target
   with no checkpoint and `START_BLOCK` before the oldest unreleased migration;
   a re-added key lowers `lastProcessedBlock` to such a block and sets
   `attestorGeneration` to the current value, keeping every other field.
-  Checkpoints written before these fields existed are bound to the first key
-  that starts on them.
+  Checkpoints written before these fields existed (neither field present) are
+  bound to the first key that starts on them; a checkpoint with only one of
+  the two was edited and is refused.
 - The daemon verifies at startup that its address is in the vault's attestor
   set, that `BASE_RPC_URL` serves `BASE_CHAIN_ID` (`eth_chainId`, which the
   checkpoint's Base chain must match too) and that `PENDULUM_WS` serves
   `PENDULUM_GENESIS_HASH`, and refuses to run otherwise. These checks run on
-  every start, the first one without a checkpoint included.
+  every start, the first one without a checkpoint included. While running, it
+  re-reads its attestor membership and generation on every finalized head and
+  exits with `fatal error, exiting` when either changed (a key removed, or
+  removed and re-added): the next start then refuses the checkpoint until it
+  is rewound as described above.
 - After a Pendulum **runtime upgrade**, verify event decoding against the new
   metadata on a staging node before letting the fleet advance past the
   upgrade block.

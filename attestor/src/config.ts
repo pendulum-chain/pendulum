@@ -38,12 +38,19 @@ function finalityTag(): "safe" | "finalized" {
 
 const baseFinalityTag = finalityTag();
 
+const baseChainId = envNumber("BASE_CHAIN_ID", 8453);
+
 /** Pendulum's genesis block hash. */
 const PENDULUM_GENESIS_HASH = "0x5d3c298622d5634ed019bf61ea4b71655030015bde9beb0d6a24743714462c86";
 
 function genesisHash(): `0x${string}` {
 	const value = process.env.PENDULUM_GENESIS_HASH || PENDULUM_GENESIS_HASH;
 	if (!/^0x[0-9a-fA-F]{64}$/.test(value)) throw new Error(`invalid PENDULUM_GENESIS_HASH ${value}`);
+	// Another genesis is for rehearsals against a test chain; the mainnet vault
+	// only ever pays for burns on Pendulum itself.
+	if (baseChainId === 8453 && value.toLowerCase() !== PENDULUM_GENESIS_HASH) {
+		throw new Error(`PENDULUM_GENESIS_HASH ${value} is not Pendulum's, which BASE_CHAIN_ID 8453 (Base mainnet) requires`);
+	}
 	return value as `0x${string}`;
 }
 
@@ -54,7 +61,7 @@ export const config = {
 	 *  daemon outage longer than the pruning horizon wedges the catch-up. */
 	pendulumWs: required("PENDULUM_WS"),
 	/** The genesis that node must serve; startup refuses any other chain. A
-	 *  local test chain sets its own. */
+	 *  local test chain sets its own, never on Base mainnet. */
 	pendulumGenesisHash: genesisHash(),
 	/** Base JSON-RPC endpoint. */
 	baseRpcUrl: required("BASE_RPC_URL"),
@@ -77,7 +84,7 @@ export const config = {
 	 *  requests stop. */
 	heartbeatUrl: parseHeartbeatUrl(process.env.HEARTBEAT_URL),
 	/** Base chain id: 8453 mainnet. */
-	baseChainId: envNumber("BASE_CHAIN_ID", 8453),
+	baseChainId,
 	/** Confirmation boundary required before the checkpoint may pass a block. */
 	baseFinalityTag,
 	/** How long a block's approvals may stay outside the finality boundary

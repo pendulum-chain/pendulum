@@ -94,19 +94,61 @@ export function toPalletAmount(tokenAmount: bigint, conversionFactor: bigint): b
 	return tokenAmount / conversionFactor;
 }
 
-/**
- * Split [fromBlock, toBlock] into chunks no larger than `maxRange` blocks.
- *
- * Public Base RPCs cap `eth_getLogs` ranges; a releaser restarting after a long
- * outage would otherwise request a span the provider rejects and make no
- * progress at all. Returns [] when there is nothing new to scan.
- */
-export function blockRanges(fromBlock: bigint, toBlock: bigint, maxRange: bigint): Array<[bigint, bigint]> {
-	if (maxRange <= 0n) throw new Error(`invalid maxRange ${maxRange}`);
-	const ranges: Array<[bigint, bigint]> = [];
-	for (let start = fromBlock; start <= toBlock; start += maxRange) {
-		const end = start + maxRange - 1n;
-		ranges.push([start, end > toBlock ? toBlock : end]);
+/** How endpoints word a refused `eth_getLogs` span: Base's public endpoints
+ *  (`block range greater than 200 max`), geth and reth (`exceed(s) maximum
+ *  block range`), and hosted providers (`limited to a 10,000 range`, `ranges
+ *  over 10000 blocks`, `query returned more than 10000 results`, `Log response
+ *  size exceeded`). */
+const RANGE_TOO_LARGE = /\branges?\b|more than [\d,]+ results|response size/i;
+
+/** True when an endpoint refused an `eth_getLogs` call for the size of its
+ *  block range (or of its answer), which a smaller range avoids. */
+export function isRangeTooLarge(error: unknown): boolean {
+	let depth = 0;
+	for (let cause: unknown = error; cause && depth < 10; cause = (cause as { cause?: unknown }).cause, depth++) {
+		for (const key of ["details", "shortMessage", "message"] as const) {
+			const text = (cause as Record<string, unknown>)[key];
+			if (typeof text === "string" && RANGE_TOO_LARGE.test(text)) return true;
+		}
 	}
-	return ranges;
+	return false;
+}
+
+/** Full-size reads in a row after which a reduced span is tried at twice its
+ *  size again. */
+const GROW_AFTER_READS = 10;
+
+/**
+ * Read [fromBlock, toBlock] in order, in consecutive ranges of at most
+ * `span.size` blocks. Public Base RPCs cap `eth_getLogs` ranges, some far below
+ * any sensible default (Base Sepolia's at 200 blocks), so a range the endpoint
+ * refuses as too large is read again at half the size, down to one block. After
+ * `GROW_AFTER_READS` full-size reads in a row succeed, the size doubles again,
+ * never above `span.max`. `span` persists across calls; any other failure, or
+ * a refused single block, propagates.
+ */
+export async function readInRanges(
+	fromBlock: bigint,
+	toBlock: bigint,
+	span: { size: bigint; max: bigint; streak: number },
+	read: (start: bigint, end: bigint) => Promise<void>,
+): Promise<void> {
+	if (span.size <= 0n) throw new Error(`invalid block range size ${span.size}`);
+	for (let start = fromBlock; start <= toBlock; ) {
+		const end = start + span.size - 1n < toBlock ? start + span.size - 1n : toBlock;
+		try {
+			await read(start, end);
+		} catch (error) {
+			if (span.size === 1n || !isRangeTooLarge(error)) throw error;
+			span.size /= 2n;
+			span.streak = 0;
+			continue;
+		}
+		// Only a read of the full size shows that the size is accepted.
+		if (end - start + 1n === span.size && ++span.streak >= GROW_AFTER_READS) {
+			span.size = span.size * 2n < span.max ? span.size * 2n : span.max;
+			span.streak = 0;
+		}
+		start = end + 1n;
+	}
 }

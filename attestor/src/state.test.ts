@@ -84,6 +84,30 @@ test("a checkpoint from before the signer was recorded still loads", () => {
 	}
 });
 
+test("a checkpoint with only one of the signer fields is refused, not taken for one from before they existed", () => {
+	const directory = mkdtempSync(join(tmpdir(), "pen-attestor-state-"));
+	const path = join(directory, "checkpoint.json");
+	try {
+		const { attestorAddress, attestorGeneration, ...legacy } = checkpoint;
+		writeFileSync(path, JSON.stringify({ ...legacy, attestorAddress }));
+		assert.throws(
+			() => assertCheckpointIdentity(loadCheckpoint(path)!, { ...checkpoint, attestorGeneration: 2 }),
+			/has attestorAddress but no attestorGeneration; .*\(runbook RB-6\)/,
+		);
+		writeFileSync(path, JSON.stringify({ ...legacy, attestorGeneration }));
+		assert.throws(
+			() =>
+				assertCheckpointIdentity(loadCheckpoint(path)!, {
+					...checkpoint,
+					attestorAddress: "0x5555555555555555555555555555555555555555",
+				}),
+			/has attestorGeneration but no attestorAddress/,
+		);
+	} finally {
+		rmSync(directory, { recursive: true, force: true });
+	}
+});
+
 test("the Base endpoint must serve the configured chain and the Pendulum node the pinned genesis", () => {
 	assert.doesNotThrow(() => assertBaseChain(8453, 8453));
 	assert.throws(() => assertBaseChain(84532, 8453), /BASE_RPC_URL serves chain 84532, but BASE_CHAIN_ID is 8453/);

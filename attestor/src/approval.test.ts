@@ -28,6 +28,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import {
 	advanceCheckpoint,
 	approve,
+	assertSignerUnchanged,
 	bumpedFees,
 	cappedFees,
 	GAS_LIMIT_MULTIPLIER,
@@ -39,7 +40,7 @@ import {
 	type UnconfirmedBlock,
 	type VaultChain,
 } from "./approval.js";
-import type { MigrationEvent } from "./checks.js";
+import { isTransientRpcError, type MigrationEvent } from "./checks.js";
 import { vaultAbi } from "./vaultAbi.js";
 
 const VAULT = "0x1111111111111111111111111111111111111111";
@@ -177,6 +178,14 @@ class FakeVault implements VaultChain {
 	async boundaryBlock() {
 		return this.boundary;
 	}
+	member = true;
+	generation = 1;
+	async isAttestor() {
+		return this.member;
+	}
+	async attestorGeneration() {
+		return this.generation;
+	}
 	/** Mine every pooled transaction that is next in line and pays the base fee.
 	 *  An approval records ours unless the migration is already resolved. */
 	mine() {
@@ -296,6 +305,14 @@ test("the viem chain reads the boundary at the finality tag and everything else 
 	const [simulated] = pick("simulateContract");
 	assert.deepEqual([simulated.account, simulated.functionName, simulated.args], [account, "approve", [EVENT.nonce, EVENT.recipient, EVENT.palletAmount]]);
 	assert.deepEqual(pick("getTransactionCount"), [{ address: account.address, blockTag: "pending" }]);
+	answers.readContract = (args) => (args.functionName === "attestorGeneration" ? 2n : true);
+	assert.equal(await chain.isAttestor(), true);
+	assert.equal(await chain.attestorGeneration(), 2);
+	const [, , member, generation] = pick("readContract");
+	assert.deepEqual(
+		[member.functionName, member.args, generation.functionName, generation.args, generation.address],
+		["isAttestor", [account.address], "attestorGeneration", [account.address], VAULT],
+	);
 
 	answers.getBlock = () => ({ number: null });
 	await assert.rejects(chain.boundaryBlock(), /finalized Base block has no number/);
@@ -661,6 +678,35 @@ test("after the last bump it pages once and keeps waiting until the approval is 
 	);
 	assert.ok(chain.approved.has(payloadHash(EVENT)));
 	assert.equal(attestor.missedApprovals, 0);
+});
+
+test("an approval that stays stuck after its page pages again, at growing intervals", async () => {
+	const chain = new FakeVault();
+	chain.baseFee = 100_000_000n;
+	const pages: { at: number; detail: string }[] = [];
+	const { attestor } = attestorOn(
+		chain,
+		{
+			alert: async (subject, detail) => {
+				assert.equal(subject, "own approval not mined");
+				pages.push({ at: attestor.now(), detail: `${detail}` });
+			},
+		},
+		(elapsed) => {
+			// Fees fall again two hours in.
+			if (elapsed >= 120 * 60_000) chain.baseFee = 5_000_000n;
+			chain.mine();
+		},
+	);
+	assert.equal(await approve(attestor, EVENT), true);
+	// First paged 4 min after the send, then 10, 20 and 40 min apart.
+	assert.deepEqual(
+		pages.slice(1).map((page, i) => (page.at - pages[i].at) / 60_000),
+		[10, 20, 40],
+	);
+	assert.match(pages[0].detail, /^3 fee bump\(s\) used up: transaction nonce 5, /);
+	assert.match(pages[1].detail, /^still not mined \(page 2\), 3 fee bump\(s\) used up: transaction nonce 5, /);
+	assert.ok(chain.approved.has(payloadHash(EVENT)));
 });
 
 test("the fee cap stops a bump and pages once; no attempt offers more than the cap", async () => {
@@ -1117,6 +1163,92 @@ test("the new transaction after another took the nonce starts from the current e
 	assert.deepEqual([...new Set(atNewNonce)], [7_000_000n, 8_400_000n]);
 	assert.equal(alerts.length, 2, "each transaction pages once");
 	assert.ok(chain.approved.has(payloadHash(EVENT)));
+});
+
+test("an own approval reorged out of Base leaves no empty nonce the next approval waits behind", async () => {
+	const chain = new FakeVault();
+	const { attestor, alerts, logs } = attestorOn(chain);
+	assert.equal(await approve(attestor, EVENT), true);
+	// The block holding it is reorged away, and the transaction is not re-injected.
+	chain.minedNonce = 5;
+	chain.approved.delete(payloadHash(EVENT));
+	chain.receipts.clear();
+	assert.equal(await approve(attestor, OTHER), true);
+	assert.deepEqual(
+		chain.sent.map((tx) => [approveArgs(tx)[0], tx.nonce]),
+		[
+			[EVENT.nonce, 5],
+			[OTHER.nonce, 6],
+			[OTHER.nonce, 5],
+		],
+	);
+	assert.ok(chain.approved.has(payloadHash(OTHER)));
+	assert.equal(chain.receipts.get(chain.sent[1].hash)?.status, "reverted", "the attempt left behind merely reverts");
+	assert.ok(logs.some((line) => line.startsWith("nonce 5 below 6 holds no transaction; sending the approval again there: nonce=8 ")));
+	assert.equal(alerts.length, 0);
+});
+
+test("a nonce skipped for a transaction this process did not send is filled once that transaction leaves the pool", async () => {
+	const chain = new FakeVault();
+	chain.pool.set(5, { hash: `0x${"ee".repeat(32)}`, nonce: 5, value: 0n, maxFeePerGas: 50_000_000n, maxPriorityFeePerGas: 2_000_000n });
+	chain.pendingNonce = 5; // the backend answering the count has not seen it
+	chain.onSend = () => {
+		if (chain.sent.length === 2) {
+			// Evicted before it was mined.
+			chain.pool.delete(5);
+			chain.pendingNonce = undefined;
+		}
+	};
+	const { attestor } = attestorOn(chain);
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.deepEqual(
+		chain.sent.map((tx) => tx.nonce),
+		[5, 6, 5],
+	);
+	assert.ok(chain.receipts.has(chain.sent[2].hash));
+	assert.ok(chain.approved.has(payloadHash(EVENT)));
+});
+
+test("an approval no longer needed behind an empty nonce is not sent again, and the next approval fills that nonce", async () => {
+	const chain = new FakeVault();
+	chain.pool.set(5, { hash: `0x${"ee".repeat(32)}`, nonce: 5, value: 0n, maxFeePerGas: 50_000_000n, maxPriorityFeePerGas: 2_000_000n });
+	chain.pendingNonce = 5;
+	chain.onSend = () => {
+		if (chain.sent.length === 2) {
+			chain.pool.delete(5);
+			chain.pendingNonce = undefined;
+			chain.consumed.add(EVENT.nonce); // released by the others meanwhile
+		}
+	};
+	const { attestor } = attestorOn(chain);
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.equal(attestor.missedApprovals, 1);
+	assert.equal(await approve(attestor, OTHER), true);
+	assert.deepEqual(
+		chain.sent.map((tx) => [approveArgs(tx)[0], tx.nonce]),
+		[
+			[EVENT.nonce, 5],
+			[EVENT.nonce, 6],
+			[OTHER.nonce, 5],
+		],
+	);
+	assert.ok(chain.approved.has(payloadHash(OTHER)));
+});
+
+test("a signer removed, or removed and re-added, while running stops the daemon instead of going on", async () => {
+	const chain = new FakeVault();
+	const { attestor } = attestorOn(chain);
+	await assertSignerUnchanged(attestor, 1);
+	// Removed and re-added between two heads: its generation-1 approvals no longer count.
+	chain.generation = 2;
+	await assert.rejects(assertSignerUnchanged(attestor, 1), (error: Error) => {
+		assert.match(error.message, /went from attestor generation 1 to 2 while running, .*\(runbook RB-6\)/);
+		assert.equal(isTransientRpcError(error), false, "fatal, not retried on the next head");
+		return true;
+	});
+	chain.generation = 1;
+	chain.member = false;
+	await assert.rejects(assertSignerUnchanged(attestor, 1), /is no longer an attestor of 0x1111/);
 });
 
 test("unreleasable events are not tracked for durability; every other event is", async () => {

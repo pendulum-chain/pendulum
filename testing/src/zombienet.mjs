@@ -15,7 +15,10 @@ import { ROOT, TESTING } from "./rehearsal-env.mjs";
 
 export const CHAIN_BINARIES = [
 	"zombienet-macos",
-	"target/testnet/polkadot",
+	// Zombienet starts the relay validators as `polkadot` from PATH (see
+	// zombienet.toml), so match their command line wherever the binary lives.
+	// Their PVF workers exit with them.
+	"polkadot --chain",
 	"target/release/pendulum-node",
 ];
 
@@ -144,4 +147,15 @@ export async function waitForFinality(api, { timeoutMs = 300_000, log } = {}) {
 		await sleep(5000);
 	}
 	throw new Error("parachain never finalised a block — the relay is not including candidates");
+}
+
+/** Where the monitor starts on the local chain: the block after the finalized
+ *  head, with the migration nonce at that head. The monitor reads finalized
+ *  blocks only, so a start past them (the best block runs a few blocks ahead
+ *  here) has no verified hash until finality catches up, and it pages. */
+export async function monitorStart(api) {
+	const hash = await api.rpc.chain.getFinalizedHead();
+	const header = await api.rpc.chain.getHeader(hash);
+	const nonce = await (await api.at(hash)).query.tokenMigration.nextNonce();
+	return { PENDULUM_START_BLOCK: String(header.number.toNumber() + 1), PENDULUM_START_NONCE: nonce.toString() };
 }

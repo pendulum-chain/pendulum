@@ -13,15 +13,12 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { BASE_SEPOLIA_CHAIN_ID, PEN_18, ROOT } from "./rehearsal-env.mjs";
+import { BASE_SEPOLIA_CHAIN_ID, PEN_18, rehearsalCapsPen, ROOT } from "./rehearsal-env.mjs";
 
 const CONTRACTS = path.join(ROOT, "contracts");
 
 export function rehearsalParams(env) {
-	const dailyCapPen = BigInt(env.REHEARSAL_DAILY_CAP_PEN ?? "28800");
-	// Equal to the daily cap: the vault rejects perReleaseCap > dailyCap (that
-	// band could never release).
-	const perReleaseCapPen = BigInt(env.REHEARSAL_PER_RELEASE_CAP_PEN ?? "28800");
+	const { daily: dailyCapPen, perRelease: perReleaseCapPen } = rehearsalCapsPen(env);
 	return {
 		maxIssuance: 150_000_000n * PEN_18,
 		dailyCap: dailyCapPen * PEN_18,

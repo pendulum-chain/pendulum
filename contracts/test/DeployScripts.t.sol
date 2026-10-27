@@ -86,8 +86,8 @@ contract DeployScriptsTest is Test {
         vm.setEnv("ATTESTOR_3", vm.toString(makeAddr("attestor3")));
         vm.setEnv("ATTESTOR_4", vm.toString(makeAddr("attestor4")));
         vm.setEnv("MAX_ISSUANCE", "150000000000000000000000000");
-        vm.setEnv("PER_RELEASE_CAP", "1000000000000000000000000");
-        vm.setEnv("DAILY_CAP", "1000000000000000000000000");
+        vm.setEnv("PER_RELEASE_CAP", "500000000000000000000000"); // 500,000 PEN
+        vm.setEnv("DAILY_CAP", "1000000000000000000000000"); // 1,000,000 PEN
         vm.setEnv("EARLIEST_SWEEP_TS", vm.toString(SWEEP_FLOOR));
     }
 
@@ -139,9 +139,27 @@ contract DeployScriptsTest is Test {
         // A production deploy on Base mainnet.
         vm.chainId(8453);
         _expectDeployRefused("TEST_DEPLOY", "true", "TEST_DEPLOY is refused on Base mainnet");
+        string memory capTooLow = "PER_RELEASE_CAP is below 100 PEN (18-decimal units expected)";
+        _expectDeployRefused("PER_RELEASE_CAP", "0", capTooLow);
+        _expectDeployRefused("PER_RELEASE_CAP", "500000", capTooLow); // whole PEN
+        _expectDeployRefused("PER_RELEASE_CAP", "99999999999999999999", capTooLow);
+        string memory capsInverted = "PER_RELEASE_CAP is above DAILY_CAP";
+        _expectDeployRefused("DAILY_CAP", "0", capsInverted);
+        _expectDeployRefused("PER_RELEASE_CAP", "1000000000000000000000001", capsInverted);
+        string memory dailyTooHigh = "DAILY_CAP is above 3M PEN, 2% of the supply";
+        _expectDeployRefused("DAILY_CAP", "3000000000000000000000001", dailyTooHigh);
+        _expectDeployRefused("DAILY_CAP", vm.toString(SUPPLY), dailyTooHigh);
+        _expectDeployRefused("GUARDIAN_SAFE", vm.toString(address(this)), "GUARDIAN_SAFE must not be the deployer");
+        _expectDeployRefused(
+            "GUARDIAN_SAFE", vm.toString(makeAddr("attestor3")), "GUARDIAN_SAFE must not be an attestor"
+        );
+        _expectDeployRefused("ATTESTOR_2", vm.toString(address(this)), "an attestor must not be the deployer");
+        _expectDeployRefused("ATTESTOR_4", vm.toString(makeAddr("attestor1")), "ATTESTOR_1..4 must be distinct");
         _setValidDeployEnv();
         (PEN newPen, MigrationVault newVault) = deployScript.run();
         vm.chainId(31337);
+        assertEq(newVault.perReleaseCap(), 500_000e18);
+        assertEq(newVault.dailyCap(), 1_000_000e18);
         assertEq(address(newVault.token()), address(newPen));
         assertEq(newPen.totalSupply(), 150_000_000e18);
         assertEq(newPen.balanceOf(address(newVault)), 150_000_000e18);

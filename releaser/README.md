@@ -34,7 +34,7 @@ consumed nonce and drops it.
 | `RELEASER_PRIVATE_KEY` | Gas-only signing key (no privileges) |
 | `START_BLOCK` | Vault deployment block — where log scanning begins on a first run |
 | `STATE_FILE` | Scan checkpoint + pending set (default `./releaser-state.json`) |
-| `POLL_INTERVAL_MS` | Default 60s |
+| `POLL_INTERVAL_MS` | Default 60s; at least 1000 |
 | `MAX_BLOCK_RANGE` | Max blocks per `eth_getLogs` (default 10,000; a whole number of at least 1). A range the endpoint refuses as too large is read again at half the size, down to one block, and the size doubles again after 10 full-size reads in a row, never above this value; the current size is in each cycle's `ok:` log line. Set it to the endpoint's cap to avoid the refused reads (Base Sepolia's public endpoint allows 200) |
 | `MIN_GAS_BALANCE_WEI` | Low-gas alert threshold |
 | `ALERT_WEBHOOK_URL` | Optional JSON alert webhook in Slack incoming-webhook form: `text` holds `[CRITICAL]` or `[WARNING]`, the releaser and the subject, then the detail; `severity`, `subject` and `detail` are also sent as fields. A non-2xx answer, a timeout (10 s) or a connection error is logged as a failed delivery and tried again after 2 s and after 10 s more; a 4xx other than 408 and 429 is not retried, as repeating the request cannot change it |
@@ -42,7 +42,7 @@ consumed nonce and drops it.
 | `BASE_CHAIN_ID` | Default 8453; startup refuses a `BASE_RPC_URL` that serves another chain (`eth_chainId`) |
 | `BASE_FINALITY_TAG` | `safe` (default) or `finalized`; the scan cursor stays inside this boundary and a pending entry is dropped only once its nonce is consumed there |
 | `BLOCKED_ALERT_INTERVAL_MS` | Re-page interval for the same page about one release: governance-blocked, or failing unexpectedly (default 6h — a blocked release needs a ≥48h timelocked action, so per-poll paging would bury the signal). A different page about it goes out at once |
-| `READ_BATCH_SIZE` | Bound on Multicall calldata and individual fallback concurrency (default 100) |
+| `READ_BATCH_SIZE` | Bound on Multicall calldata and individual fallback concurrency (default 100; a whole number of at least 1) |
 | `FEE_BUMP_AFTER_SECONDS` | Re-send a release transaction that is still not mined after this long (default 60) |
 | `FEE_BUMP_PERCENT` | Raise both fees by at least this many percent per re-send (default 20; a whole number of at least 10, the minimum a node accepts for a replacement) |
 | `FEE_BUMP_MAX` | Re-sends per transaction before the `release transaction not mined` page (default 3) |

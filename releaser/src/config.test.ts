@@ -50,6 +50,20 @@ test("fee bumping defaults to 60 s, 20 %, 3 bumps and a 1 gwei cap, and refuses 
 	}
 });
 
+test("a zero poll interval or read batch size is refused instead of looping or failing every cycle", () => {
+	assert.equal(loadConfig({}, "[config.pollIntervalMs, config.readBatchSize].join(' ')").stdout, "60000 100");
+	for (const [name, value] of [
+		["POLL_INTERVAL_MS", "0"],
+		["POLL_INTERVAL_MS", "999"],
+		["READ_BATCH_SIZE", "0"],
+		["READ_BATCH_SIZE", "2.5"],
+	]) {
+		const { status, stderr } = loadConfig({ [name]: value });
+		assert.notEqual(status, 0, `${name}=${value}`);
+		assert.match(stderr, new RegExp(`invalid ${name}`), `${name}=${value}`);
+	}
+});
+
 test("MAX_BLOCK_RANGE must be a whole number of at least 1", () => {
 	assert.equal(loadConfig({}, "String(config.maxBlockRange)").stdout, "10000");
 	assert.equal(loadConfig({ MAX_BLOCK_RANGE: "200" }, "String(config.maxBlockRange)").stdout, "200");

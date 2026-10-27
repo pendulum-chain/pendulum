@@ -49,7 +49,7 @@ export const config = {
 	/** Base block to begin scanning `ReleasePending` from on a first run —
 	 *  set to the vault's deployment block. */
 	startBlock: BigInt(process.env.START_BLOCK ?? "0"),
-	pollIntervalMs: envNumber("POLL_INTERVAL_MS", 60_000),
+	pollIntervalMs: envNumber("POLL_INTERVAL_MS", 60_000, 1000),
 	/** Max blocks per `eth_getLogs` call. Public RPCs cap this, often lower:
 	 *  a range the endpoint refuses is read again in smaller ones. */
 	maxBlockRange: BigInt(envNumber("MAX_BLOCK_RANGE", 10_000, 1, true)),
@@ -70,7 +70,7 @@ export const config = {
 	 * timelock, so per-poll paging would only bury the signal. */
 	blockedAlertIntervalMs: envNumber("BLOCKED_ALERT_INTERVAL_MS", 6 * 60 * 60 * 1000),
 	/** Bound both Multicall calldata and individual fallback concurrency. */
-	readBatchSize: envNumber("READ_BATCH_SIZE", 100),
+	readBatchSize: envNumber("READ_BATCH_SIZE", 100, 1, true),
 	/** A release transaction still not mined after `afterMs` is re-sent at the
 	 *  same nonce with both fees raised by `percent` (at least the 10 % a
 	 *  replacement needs, and at least to the current estimate), at most `max`

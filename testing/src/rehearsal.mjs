@@ -35,7 +35,9 @@ import {
 	assertTestnet, buildContext, CONVERSION_FACTOR, loadEnv, PEN_12, PEN_18, ROOT, send, TESTING,
 } from "./rehearsal-env.mjs";
 import { deployToSepolia, rehearsalParams } from "./rehearsal-deploy.mjs";
-import { discoverCollator, killMatching, generateSpec, sleep, spawnNetwork, teardown, waitForFinality } from "./zombienet.mjs";
+import {
+	discoverCollator, killMatching, generateSpec, monitorStart, sleep, spawnNetwork, teardown, waitForFinality,
+} from "./zombienet.mjs";
 
 const flags = new Set(process.argv.slice(2));
 const FUND = flags.has("--fund");
@@ -311,7 +313,7 @@ async function main() {
 	};
 	const pendulumHead = (await api.query.system.number()).toString();
 	const baseHead = String(await ctx.pub.getBlockNumber());
-	const monitorStartNonce = (await api.query.tokenMigration.nextNonce()).toString();
+	const monitorFrom = await monitorStart(api);
 	// The Zombienet chain has its own genesis, not Pendulum's.
 	const pendulumGenesisHash = api.genesisHash.toHex();
 	for (let i = 0; i < 4; i++) {
@@ -327,8 +329,7 @@ async function main() {
 		PENDULUM_WS: pendulumWs,
 		GRACE_SECONDS: "300",
 		GUARDIAN_PRIVATE_KEY: env.GUARDIAN_PRIVATE_KEY,
-		PENDULUM_START_BLOCK: (BigInt(pendulumHead) + 1n).toString(),
-		PENDULUM_START_NONCE: monitorStartNonce,
+		...monitorFrom,
 		BASE_START_BLOCK: baseHead,
 	});
 	start("releaser", "releaser", { ...baseEnv, RELEASER_PRIVATE_KEY: env.RELEASER_PRIVATE_KEY, START_BLOCK: baseHead });

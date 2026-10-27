@@ -148,3 +148,14 @@ export async function waitForFinality(api, { timeoutMs = 300_000, log } = {}) {
 	}
 	throw new Error("parachain never finalised a block — the relay is not including candidates");
 }
+
+/** Where the monitor starts on the local chain: the block after the finalized
+ *  head, with the migration nonce at that head. The monitor reads finalized
+ *  blocks only, so a start past them (the best block runs a few blocks ahead
+ *  here) has no verified hash until finality catches up, and it pages. */
+export async function monitorStart(api) {
+	const hash = await api.rpc.chain.getFinalizedHead();
+	const header = await api.rpc.chain.getHeader(hash);
+	const nonce = await (await api.at(hash)).query.tokenMigration.nextNonce();
+	return { PENDULUM_START_BLOCK: String(header.number.toNumber() + 1), PENDULUM_START_NONCE: nonce.toString() };
+}

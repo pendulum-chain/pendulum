@@ -123,6 +123,10 @@ export interface VaultChain {
 	receipt(hash: Hash): Promise<TransactionReceipt | undefined>;
 	/** The newest block inside the Base finality boundary. */
 	boundaryBlock(): Promise<bigint>;
+	/** Whether the signer is in the vault's attestor set, and its attestor
+	 *  generation there (bumped by every `addAttestor`). */
+	isAttestor(): Promise<boolean>;
+	attestorGeneration(): Promise<number>;
 }
 
 /** `VaultChain` on a viem client, reading and sending as `account`. */
@@ -177,6 +181,17 @@ export function viemVaultChain(
 			if (confirmed.number === null) throw new Error(`${finalityTag} Base block has no number`);
 			return confirmed.number;
 		},
+		isAttestor: () =>
+			client.readContract({ address: vaultAddress, abi: vaultAbi, functionName: "isAttestor", args: [account.address] }),
+		attestorGeneration: async () =>
+			Number(
+				await client.readContract({
+					address: vaultAddress,
+					abi: vaultAbi,
+					functionName: "attestorGeneration",
+					args: [account.address],
+				}),
+			),
 	};
 }
 
@@ -558,6 +573,25 @@ export async function approve(attestor: Attestor, event: MigrationEvent): Promis
 		}
 	}
 	return true;
+}
+
+/** Refuse to go on once the signer's standing in the vault changed since
+ *  startup, when it was at `generation`: its key removed, or removed and
+ *  re-added, while the daemon ran. Its approvals from before no longer count,
+ *  so progress made under them has to be rewound first, which the checkpoint
+ *  check at the next start asks for. */
+export async function assertSignerUnchanged(attestor: Attestor, generation: number): Promise<void> {
+	const signer = attestor.account.address;
+	if (!(await attestor.chain.isAttestor())) {
+		throw new Error(`${signer} is no longer an attestor of ${attestor.vaultAddress}; stopping`);
+	}
+	const current = await attestor.chain.attestorGeneration();
+	if (current !== generation) {
+		throw new Error(
+			`${signer} went from attestor generation ${generation} to ${current} while running, so its earlier approvals ` +
+				"no longer count; stopping: rewind the checkpoint as the next start asks (runbook RB-6)",
+		);
+	}
 }
 
 /** Approve every event of one finalized Pendulum block and queue the block for

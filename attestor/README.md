@@ -159,7 +159,11 @@ WantedBy=multi-user.target
   set, that `BASE_RPC_URL` serves `BASE_CHAIN_ID` (`eth_chainId`, which the
   checkpoint's Base chain must match too) and that `PENDULUM_WS` serves
   `PENDULUM_GENESIS_HASH`, and refuses to run otherwise. These checks run on
-  every start, the first one without a checkpoint included.
+  every start, the first one without a checkpoint included. While running, it
+  re-reads its attestor membership and generation on every finalized head and
+  exits with `fatal error, exiting` when either changed (a key removed, or
+  removed and re-added): the next start then refuses the checkpoint until it
+  is rewound as described above.
 - After a Pendulum **runtime upgrade**, verify event decoding against the new
   metadata on a staging node before letting the fleet advance past the
   upgrade block.

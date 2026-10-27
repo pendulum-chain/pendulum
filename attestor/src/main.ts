@@ -25,7 +25,14 @@ import { ApiPromise, WsProvider } from "@polkadot/api";
 import { createPublicClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { alertText, postAlert, throttledHeartbeat, type Severity } from "./alert.js";
-import { advanceCheckpoint, processBlock, viemVaultChain, type Attestor, type UnconfirmedBlock } from "./approval.js";
+import {
+	advanceCheckpoint,
+	assertSignerUnchanged,
+	processBlock,
+	viemVaultChain,
+	type Attestor,
+	type UnconfirmedBlock,
+} from "./approval.js";
 import { decodeMigrationEvent, isTransientRpcError, type MigrationEvent } from "./checks.js";
 import { config } from "./config.js";
 import {
@@ -36,7 +43,6 @@ import {
 	saveCheckpoint,
 	type Checkpoint,
 } from "./state.js";
-import { vaultAbi } from "./vaultAbi.js";
 
 /** Repeated transient failures (a sustained RPC outage) page at most this
  *  often; every occurrence is still logged. */
@@ -121,23 +127,10 @@ async function checkGasBalance(): Promise<void> {
 async function main(): Promise<void> {
 	const baseChainId = await publicClient.getChainId();
 	assertBaseChain(baseChainId, config.baseChainId);
-	const isAttestor = await publicClient.readContract({
-		address: config.vaultAddress,
-		abi: vaultAbi,
-		functionName: "isAttestor",
-		args: [account.address],
-	});
-	if (!isAttestor) {
+	if (!(await attestor.chain.isAttestor())) {
 		throw new Error(`${account.address} is not an attestor of ${config.vaultAddress}`);
 	}
-	const attestorGeneration = Number(
-		await publicClient.readContract({
-			address: config.vaultAddress,
-			abi: vaultAbi,
-			functionName: "attestorGeneration",
-			args: [account.address],
-		}),
-	);
+	const attestorGeneration = await attestor.chain.attestorGeneration();
 	await checkGasBalance();
 
 	const api = await ApiPromise.create({ provider: new WsProvider(config.pendulumWs) });
@@ -180,6 +173,9 @@ async function main(): Promise<void> {
 		const finalized = head.number.toNumber();
 		// Serialize: a slow Base transaction must not let block processing overlap.
 		processing = processing.then(async () => {
+			// Two reads per head: a key removed or re-added while running must
+			// not go on making progress that its new generation does not back.
+			await assertSignerUnchanged(attestor, attestorGeneration);
 			for (let block = processedThrough + 1; block <= finalized; block++) {
 				await processBlock(attestor, block, await migrationEventsInBlock(api, block), unconfirmed);
 				processedThrough = block;

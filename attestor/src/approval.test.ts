@@ -28,6 +28,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import {
 	advanceCheckpoint,
 	approve,
+	assertSignerUnchanged,
 	bumpedFees,
 	cappedFees,
 	GAS_LIMIT_MULTIPLIER,
@@ -39,7 +40,7 @@ import {
 	type UnconfirmedBlock,
 	type VaultChain,
 } from "./approval.js";
-import type { MigrationEvent } from "./checks.js";
+import { isTransientRpcError, type MigrationEvent } from "./checks.js";
 import { vaultAbi } from "./vaultAbi.js";
 
 const VAULT = "0x1111111111111111111111111111111111111111";
@@ -177,6 +178,14 @@ class FakeVault implements VaultChain {
 	async boundaryBlock() {
 		return this.boundary;
 	}
+	member = true;
+	generation = 1;
+	async isAttestor() {
+		return this.member;
+	}
+	async attestorGeneration() {
+		return this.generation;
+	}
 	/** Mine every pooled transaction that is next in line and pays the base fee.
 	 *  An approval records ours unless the migration is already resolved. */
 	mine() {
@@ -296,6 +305,14 @@ test("the viem chain reads the boundary at the finality tag and everything else 
 	const [simulated] = pick("simulateContract");
 	assert.deepEqual([simulated.account, simulated.functionName, simulated.args], [account, "approve", [EVENT.nonce, EVENT.recipient, EVENT.palletAmount]]);
 	assert.deepEqual(pick("getTransactionCount"), [{ address: account.address, blockTag: "pending" }]);
+	answers.readContract = (args) => (args.functionName === "attestorGeneration" ? 2n : true);
+	assert.equal(await chain.isAttestor(), true);
+	assert.equal(await chain.attestorGeneration(), 2);
+	const [, , member, generation] = pick("readContract");
+	assert.deepEqual(
+		[member.functionName, member.args, generation.functionName, generation.args, generation.address],
+		["isAttestor", [account.address], "attestorGeneration", [account.address], VAULT],
+	);
 
 	answers.getBlock = () => ({ number: null });
 	await assert.rejects(chain.boundaryBlock(), /finalized Base block has no number/);
@@ -1216,6 +1233,22 @@ test("an approval no longer needed behind an empty nonce is not sent again, and 
 		],
 	);
 	assert.ok(chain.approved.has(payloadHash(OTHER)));
+});
+
+test("a signer removed, or removed and re-added, while running stops the daemon instead of going on", async () => {
+	const chain = new FakeVault();
+	const { attestor } = attestorOn(chain);
+	await assertSignerUnchanged(attestor, 1);
+	// Removed and re-added between two heads: its generation-1 approvals no longer count.
+	chain.generation = 2;
+	await assert.rejects(assertSignerUnchanged(attestor, 1), (error: Error) => {
+		assert.match(error.message, /went from attestor generation 1 to 2 while running, .*\(runbook RB-6\)/);
+		assert.equal(isTransientRpcError(error), false, "fatal, not retried on the next head");
+		return true;
+	});
+	chain.generation = 1;
+	chain.member = false;
+	await assert.rejects(assertSignerUnchanged(attestor, 1), /is no longer an attestor of 0x1111/);
 });
 
 test("unreleasable events are not tracked for durability; every other event is", async () => {

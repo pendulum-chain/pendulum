@@ -35,7 +35,7 @@ consumed nonce and drops it.
 | `START_BLOCK` | Vault deployment block — where log scanning begins on a first run |
 | `STATE_FILE` | Scan checkpoint + pending set (default `./releaser-state.json`) |
 | `POLL_INTERVAL_MS` | Default 60s |
-| `MAX_BLOCK_RANGE` | Max blocks per `eth_getLogs` (default 10,000) |
+| `MAX_BLOCK_RANGE` | Max blocks per `eth_getLogs` (default 10,000; a whole number of at least 1). A range the endpoint refuses as too large is read again at half the size, down to one block, and the size doubles again after 10 full-size reads in a row, never above this value; the current size is in each cycle's `ok:` log line. Set it to the endpoint's cap to avoid the refused reads (Base Sepolia's public endpoint allows 200) |
 | `MIN_GAS_BALANCE_WEI` | Low-gas alert threshold |
 | `ALERT_WEBHOOK_URL` | Optional JSON alert webhook in Slack incoming-webhook form: `text` holds `[CRITICAL]` or `[WARNING]`, the releaser and the subject, then the detail; `severity`, `subject` and `detail` are also sent as fields. A non-2xx answer, a timeout (10 s) or a connection error is logged as a failed delivery and tried again after 2 s and after 10 s more; a 4xx other than 408 and 429 is not retried, as repeating the request cannot change it |
 | `HEARTBEAT_URL` | Optional http(s) URL requested (GET) after a cycle that completed without error, at most once a minute; point it at a dead-man's switch that pages when the requests stop. Startup refuses any other value. A failed request is logged (error name and code only, never the URL), never fatal |

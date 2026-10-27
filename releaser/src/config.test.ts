@@ -27,3 +27,13 @@ test("HEARTBEAT_URL must be an http(s) URL, and a bad one is refused without ech
 	assert.match(stderr, /invalid HEARTBEAT_URL/);
 	assert.doesNotMatch(stderr, /secret-token/);
 });
+
+test("MAX_BLOCK_RANGE must be a whole number of at least 1", () => {
+	assert.equal(loadConfig({}, "String(config.maxBlockRange)").stdout, "10000");
+	assert.equal(loadConfig({ MAX_BLOCK_RANGE: "200" }, "String(config.maxBlockRange)").stdout, "200");
+	for (const value of ["0", "-1", "2.5", "lots"]) {
+		const { status, stderr } = loadConfig({ MAX_BLOCK_RANGE: value });
+		assert.notEqual(status, 0, value);
+		assert.match(stderr, /invalid MAX_BLOCK_RANGE/, value);
+	}
+});

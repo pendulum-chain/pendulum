@@ -10,11 +10,13 @@ function required(name: string): string {
 
 /** A numeric environment value, validated at startup: a typo must fail loudly
  *  here, not surface later as NaN-driven behavior. */
-function envNumber(name: string, fallback: number): number {
+function envNumber(name: string, fallback: number, min = 0, integer = false): number {
 	const raw = process.env[name];
 	if (raw === undefined || raw === "") return fallback;
 	const value = Number(raw);
-	if (!Number.isFinite(value) || value < 0) throw new Error(`invalid ${name}: ${raw}`);
+	if (!Number.isFinite(value) || value < min || (integer && !Number.isInteger(value))) {
+		throw new Error(`invalid ${name}: ${raw}`);
+	}
 	return value;
 }
 
@@ -39,8 +41,9 @@ export const config = {
 	 *  set to the vault's deployment block. */
 	startBlock: BigInt(process.env.START_BLOCK ?? "0"),
 	pollIntervalMs: envNumber("POLL_INTERVAL_MS", 60_000),
-	/** Max blocks per `eth_getLogs` call; public RPCs cap this. */
-	maxBlockRange: BigInt(process.env.MAX_BLOCK_RANGE ?? "10000"),
+	/** Max blocks per `eth_getLogs` call. Public RPCs cap this, often lower:
+	 *  a range the endpoint refuses is read again in smaller ones. */
+	maxBlockRange: BigInt(envNumber("MAX_BLOCK_RANGE", 10_000, 1, true)),
 	/** Alert when the gas wallet drops below this balance (wei). */
 	minGasBalanceWei: BigInt(process.env.MIN_GAS_BALANCE_WEI ?? "5000000000000000"),
 	alertWebhookUrl: process.env.ALERT_WEBHOOK_URL,

@@ -42,8 +42,7 @@ forge build
 forge test
 ```
 
-## Open parameters (fixed at deployment, see PRD §4.2)
+## Deployment parameters (fixed at deployment, see PRD §4.2)
 
-- `maxIssuance` — exact figure pending decision D3
-- decimals/`conversionFactor` — 18/1e6 pending decision D2
-- attestor addresses, caps, `earliestSweepTimestamp` — decisions D4/D5
+Every value is documented in `.env.example`; the deploy scripts check each one
+before broadcasting and refuse values outside their decided ranges.

@@ -86,8 +86,8 @@ contract DeployScriptsTest is Test {
         vm.setEnv("ATTESTOR_3", vm.toString(makeAddr("attestor3")));
         vm.setEnv("ATTESTOR_4", vm.toString(makeAddr("attestor4")));
         vm.setEnv("MAX_ISSUANCE", "150000000000000000000000000");
-        vm.setEnv("PER_RELEASE_CAP", "1000000000000000000000000");
-        vm.setEnv("DAILY_CAP", "1000000000000000000000000");
+        vm.setEnv("PER_RELEASE_CAP", "500000000000000000000000"); // 500,000 PEN
+        vm.setEnv("DAILY_CAP", "1000000000000000000000000"); // 1,000,000 PEN
         vm.setEnv("EARLIEST_SWEEP_TS", vm.toString(SWEEP_FLOOR));
     }
 
@@ -139,9 +139,31 @@ contract DeployScriptsTest is Test {
         // A production deploy on Base mainnet.
         vm.chainId(8453);
         _expectDeployRefused("TEST_DEPLOY", "true", "TEST_DEPLOY is refused on Base mainnet");
+        string memory capTooLow = "PER_RELEASE_CAP is below 100 PEN (18-decimal units expected)";
+        _expectDeployRefused("PER_RELEASE_CAP", "0", capTooLow);
+        _expectDeployRefused("PER_RELEASE_CAP", "500000", capTooLow); // whole PEN
+        _expectDeployRefused("PER_RELEASE_CAP", "99999999999999999999", capTooLow);
+        string memory capsInverted = "PER_RELEASE_CAP is above DAILY_CAP";
+        _expectDeployRefused("DAILY_CAP", "0", capsInverted);
+        _expectDeployRefused("PER_RELEASE_CAP", "1000000000000000000000001", capsInverted);
+        string memory dailyTooHigh = "DAILY_CAP is above 3M PEN, 2% of the supply";
+        _expectDeployRefused("DAILY_CAP", "3000000000000000000000001", dailyTooHigh);
+        _expectDeployRefused("DAILY_CAP", vm.toString(SUPPLY), dailyTooHigh);
+        _expectDeployRefused("GUARDIAN_SAFE", vm.toString(address(this)), "GUARDIAN_SAFE must not be the deployer");
+        _expectDeployRefused(
+            "GUARDIAN_SAFE", vm.toString(makeAddr("attestor3")), "GUARDIAN_SAFE must not be an attestor"
+        );
+        _expectDeployRefused("ATTESTOR_2", vm.toString(address(this)), "an attestor must not be the deployer");
+        _expectDeployRefused("ATTESTOR_4", vm.toString(makeAddr("attestor1")), "ATTESTOR_1..4 must be distinct");
+        // The superseded 2026-12-01 floor, 48 days after this deploy.
+        _expectDeployRefused(
+            "EARLIEST_SWEEP_TS", "1796083200", "EARLIEST_SWEEP_TS is before the decided 2027-03-01 00:00 UTC"
+        );
         _setValidDeployEnv();
         (PEN newPen, MigrationVault newVault) = deployScript.run();
         vm.chainId(31337);
+        assertEq(newVault.perReleaseCap(), 500_000e18);
+        assertEq(newVault.dailyCap(), 1_000_000e18);
         assertEq(address(newVault.token()), address(newPen));
         assertEq(newPen.totalSupply(), 150_000_000e18);
         assertEq(newPen.balanceOf(address(newVault)), 150_000_000e18);
@@ -167,9 +189,9 @@ contract DeployScriptsTest is Test {
         vm.setEnv("TIMELOCK_DELAY", "172800");
         vm.setEnv("VOTING_DELAY", "86400");
         vm.setEnv("VOTING_PERIOD", "432000");
-        vm.setEnv("PROPOSAL_THRESHOLD", "1000000000000000000000"); // 1,000 PEN
+        vm.setEnv("PROPOSAL_THRESHOLD", "50000000000000000000000"); // 50,000 PEN
         vm.setEnv("QUORUM_FRACTION", "2");
-        vm.setEnv("QUORUM_FLOOR", "100000000000000000000000"); // 100,000 PEN
+        vm.setEnv("QUORUM_FLOOR", "250000000000000000000000"); // 250,000 PEN
         vm.setEnv("TIMELOCK_CANCELLER", vm.toString(canceller));
     }
 
@@ -247,6 +269,15 @@ contract DeployScriptsTest is Test {
         // A production deploy on Base mainnet.
         vm.chainId(8453);
         _expectGovernanceRefused("TEST_DEPLOY", "true", "TEST_DEPLOY is refused on Base mainnet");
+        // Zeros slips in the permanent floor and in the threshold.
+        string memory floorRange = "QUORUM_FLOOR must be 100,000 to 1,000,000 PEN";
+        _expectGovernanceRefused("QUORUM_FLOOR", "250000000000000000000", floorRange); // 250 PEN
+        _expectGovernanceRefused("QUORUM_FLOOR", "99999999999999999999999", floorRange);
+        _expectGovernanceRefused("QUORUM_FLOOR", "5000000000000000000000000", floorRange); // 5M PEN
+        _expectGovernanceRefused("QUORUM_FLOOR", "100000000000000000000000000", floorRange); // 100M PEN
+        string memory thresholdRange = "PROPOSAL_THRESHOLD must be 10,000 to 1,000,000 PEN";
+        _expectGovernanceRefused("PROPOSAL_THRESHOLD", "50000000000000000000", thresholdRange); // 50 PEN
+        _expectGovernanceRefused("PROPOSAL_THRESHOLD", "5000000000000000000000000", thresholdRange); // 5M PEN
         _setValidGovernanceEnv();
         (TimelockController timelock, PENGovernor governor) = governanceScript.run();
         vm.chainId(31337);
@@ -265,9 +296,9 @@ contract DeployScriptsTest is Test {
         assertEq(address(governor.token()), address(pen));
         assertEq(governor.votingDelay(), 1 days);
         assertEq(governor.votingPeriod(), 5 days);
-        assertEq(governor.proposalThreshold(), 1_000e18);
+        assertEq(governor.proposalThreshold(), 50_000e18);
         assertEq(governor.quorumNumerator(), 2);
-        assertEq(governor.quorumFloor(), 100_000e18);
+        assertEq(governor.quorumFloor(), 250_000e18);
 
         // Testnet drills: short delays and voting, no quorum fraction or floor
         // and the guardian key, not a Safe, as canceller.

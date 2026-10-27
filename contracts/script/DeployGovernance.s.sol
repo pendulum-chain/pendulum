@@ -31,12 +31,14 @@ import {requireMultisigSafe} from "./SafeCheck.sol";
 ///   VOTING_PERIOD         seconds of voting, 1 day to 30 days
 ///   PROPOSAL_THRESHOLD    18-decimal token units needed to propose, 1 PEN
 ///                         (1e18) to total supply; a whole-PEN figure such as
-///                         50000 is refused
+///                         50000 is refused. 10,000 to 1,000,000 PEN outside
+///                         TEST_DEPLOY
 ///   QUORUM_FRACTION       percent of CIRCULATING supply (total minus the
 ///                         vault's unmigrated balance parked at the vote
 ///                         sink, see PRD G1), 1 to 100
 ///   QUORUM_FLOOR          absolute quorum lower bound, 18-decimal token
-///                         units, 1 PEN (1e18) to total supply; PERMANENT.
+///                         units, 1 PEN (1e18) to total supply, 100,000 to
+///                         1,000,000 PEN outside TEST_DEPLOY; PERMANENT.
 ///                         Keeps early proposals from being trivially cheap
 ///                         while circulating supply is still small
 ///   TIMELOCK_CANCELLER    required: a dedicated canceller Safe, separate
@@ -55,8 +57,9 @@ import {requireMultisigSafe} from "./SafeCheck.sol";
 ///   TEST_DEPLOY           optional, testnet drills only: allows a shorter
 ///                         TIMELOCK_DELAY, VOTING_DELAY and VOTING_PERIOD, a
 ///                         TIMELOCK_CANCELLER that is not a Safe or is the
-///                         guardian, QUORUM_FRACTION=0 and QUORUM_FLOOR=0.
-///                         Refused on Base mainnet.
+///                         guardian, QUORUM_FRACTION=0, QUORUM_FLOOR=0 and a
+///                         PROPOSAL_THRESHOLD or QUORUM_FLOOR outside the
+///                         ranges above. Refused on Base mainnet.
 contract DeployGovernance is Script {
     uint256 internal constant BASE_MAINNET = 8453;
     uint256 internal constant MIN_TIMELOCK_DELAY = 2 days;
@@ -67,6 +70,13 @@ contract DeployGovernance is Script {
     // Longer periods are a units slip (milliseconds land ~1000x further), and
     // a governor whose votes never end could not vote to shorten them.
     uint256 internal constant MAX_PERIOD = 30 days;
+    // The quorum floor is permanent, and a proposal threshold no holder
+    // reaches could only be lowered by a proposal nobody can make. Values
+    // outside these ranges are a zeros slip, not a sizing decision.
+    uint256 internal constant MIN_QUORUM_FLOOR = 100_000e18;
+    uint256 internal constant MAX_QUORUM_FLOOR = 1_000_000e18;
+    uint256 internal constant MIN_PROPOSAL_THRESHOLD = 10_000e18;
+    uint256 internal constant MAX_PROPOSAL_THRESHOLD = 1_000_000e18;
 
     function run() external returns (TimelockController timelock, PENGovernor governor) {
         bool testDeploy = vm.envOr("TEST_DEPLOY", false);
@@ -94,6 +104,10 @@ contract DeployGovernance is Script {
             proposalThreshold >= 1e18 && proposalThreshold <= supply,
             "PROPOSAL_THRESHOLD must be 18-decimal units, 1 PEN to total supply"
         );
+        require(
+            (proposalThreshold >= MIN_PROPOSAL_THRESHOLD && proposalThreshold <= MAX_PROPOSAL_THRESHOLD) || testDeploy,
+            "PROPOSAL_THRESHOLD must be 10,000 to 1,000,000 PEN"
+        );
         // Zero leaves quorum at the permanent floor however much PEN
         // circulates.
         uint256 quorumFraction = vm.envUint("QUORUM_FRACTION");
@@ -102,6 +116,10 @@ contract DeployGovernance is Script {
         require(
             (quorumFloor >= 1e18 || (testDeploy && quorumFloor == 0)) && quorumFloor <= supply,
             "QUORUM_FLOOR must be 18-decimal units, 1 PEN to total supply"
+        );
+        require(
+            (quorumFloor >= MIN_QUORUM_FLOOR && quorumFloor <= MAX_QUORUM_FLOOR) || testDeploy,
+            "QUORUM_FLOOR must be 100,000 to 1,000,000 PEN"
         );
 
         address canceller = vm.envOr("TIMELOCK_CANCELLER", address(0));

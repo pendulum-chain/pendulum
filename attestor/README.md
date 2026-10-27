@@ -150,8 +150,9 @@ WantedBy=multi-user.target
   with no checkpoint and `START_BLOCK` before the oldest unreleased migration;
   a re-added key lowers `lastProcessedBlock` to such a block and sets
   `attestorGeneration` to the current value, keeping every other field.
-  Checkpoints written before these fields existed are bound to the first key
-  that starts on them.
+  Checkpoints written before these fields existed (neither field present) are
+  bound to the first key that starts on them; a checkpoint with only one of
+  the two was edited and is refused.
 - The daemon verifies at startup that its address is in the vault's attestor
   set, that `BASE_RPC_URL` serves `BASE_CHAIN_ID` (`eth_chainId`, which the
   checkpoint's Base chain must match too) and that `PENDULUM_WS` serves

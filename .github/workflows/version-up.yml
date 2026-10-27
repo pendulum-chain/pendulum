@@ -34,21 +34,25 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      # Install cargo-edit if specific version is NOT provided. Pinned and
+      # locked so every run builds the same dependency tree, and installed
+      # before the checkout so its build runs with no repository on disk.
+      - name: install cargo-edit
+        if: github.event.inputs.specific_version == ''
+        run: |
+          cargo install cargo-edit --locked --version 0.13.13
+
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
+          # The token goes only to the steps that write to the repository.
+          persist-credentials: false
 
       - name: Setup User
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-
-      # Install cargo-edit if specific version is NOT provided
-      - name: install cargo-edit
-        if: github.event.inputs.specific_version == ''
-        run: |
-          cargo install cargo-edit
 
       - name: Check For Specific Version
         if: github.event.inputs.specific_version != ''
@@ -107,6 +111,7 @@ jobs:
       - name: Create Release Branch
         id: new-branch
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PKG: ${{ steps.set-pkg.outputs.name }}
           DAY: ${{ steps.date-now.outputs.day }}
           MONTH: ${{ steps.date-now.outputs.month }}
@@ -129,7 +134,7 @@ jobs:
           echo "name=${branch_name}" >> "$GITHUB_OUTPUT"
 
           git checkout -b "${branch_name}"
-          git push --set-upstream origin "${branch_name}"
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/heads/${branch_name}" -f sha="$(git rev-parse HEAD)" --silent
 
       #     todo: make this simpler.
       - name: Commit New Changes to New Branch (all)

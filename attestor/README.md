@@ -35,7 +35,7 @@ point.
 | Variable | Meaning |
 |---|---|
 | `PENDULUM_WS` | WebSocket of your own Pendulum node, e.g. `ws://127.0.0.1:9944` |
-| `PENDULUM_GENESIS_HASH` | Genesis hash that node must serve (default Pendulum's, `0x5d3c2986…462c86`); set it only for a local test chain |
+| `PENDULUM_GENESIS_HASH` | Genesis hash that node must serve (default Pendulum's, `0x5d3c2986…462c86`); set it only for a local test chain. With `BASE_CHAIN_ID` 8453 (Base mainnet) any other value is refused at startup |
 | `BASE_RPC_URL` | Base JSON-RPC endpoint |
 | `VAULT_ADDRESS` | MigrationVault address on Base |
 | `ATTESTOR_PRIVATE_KEY` | This attestor's signing key (0x-prefixed) |

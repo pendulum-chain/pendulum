@@ -36,12 +36,23 @@ test("the expected Pendulum genesis defaults to Pendulum's and must be a block h
 		"0x5d3c298622d5634ed019bf61ea4b71655030015bde9beb0d6a24743714462c86",
 	);
 	const local = `0x${"ab".repeat(32)}`;
-	assert.equal(loadConfig({ PENDULUM_GENESIS_HASH: local }, "config.pendulumGenesisHash").stdout, local);
+	assert.equal(loadConfig({ BASE_CHAIN_ID: "84532", PENDULUM_GENESIS_HASH: local }, "config.pendulumGenesisHash").stdout, local);
 	for (const value of ["0x1234", "pendulum", `${"ab".repeat(32)}`]) {
-		const { status, stderr } = loadConfig({ PENDULUM_GENESIS_HASH: value });
+		const { status, stderr } = loadConfig({ BASE_CHAIN_ID: "84532", PENDULUM_GENESIS_HASH: value });
 		assert.notEqual(status, 0, value);
 		assert.match(stderr, /invalid PENDULUM_GENESIS_HASH/, value);
 	}
+});
+
+test("on Base mainnet the expected genesis can only be Pendulum's", () => {
+	const local = `0x${"ab".repeat(32)}`;
+	for (const chain of [{}, { BASE_CHAIN_ID: "8453" }] as Record<string, string>[]) {
+		const { status, stderr } = loadConfig({ ...chain, PENDULUM_GENESIS_HASH: local });
+		assert.notEqual(status, 0);
+		assert.match(stderr, /PENDULUM_GENESIS_HASH 0xabab.* is not Pendulum's, which BASE_CHAIN_ID 8453 \(Base mainnet\) requires/);
+	}
+	const pendulum = "0x5D3C298622D5634ED019BF61EA4B71655030015BDE9BEB0D6A24743714462C86";
+	assert.equal(loadConfig({ PENDULUM_GENESIS_HASH: pendulum }, "config.pendulumGenesisHash").stdout, pendulum);
 });
 
 test("HEARTBEAT_URL must be an http(s) URL, and a bad one is refused without echoing it", () => {

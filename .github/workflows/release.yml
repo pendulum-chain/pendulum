@@ -81,9 +81,14 @@ jobs:
             echo "::error::$TAG is not a $CHAIN release tag; expected $CHAIN-release-<spec>"
             exit 1
           fi
-          echo "chain=$CHAIN" >> "$GITHUB_OUTPUT"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "ref=${TAG:-$GITHUB_REF}" >> "$GITHUB_OUTPUT"
+          # Fully qualified: checkout prefers a branch over a tag of the same name.
+          REF="$GITHUB_REF"
+          if [ -n "$TAG" ]; then REF="refs/tags/$TAG"; fi
+          {
+            echo "chain=$CHAIN"
+            echo "tag=$TAG"
+            echo "ref=$REF"
+          } >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -100,8 +105,13 @@ jobs:
         run: |
           SHA="$(git rev-parse HEAD)"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          if [ -n "$TAG" ] && [ "$SHA" != "$(git rev-parse "refs/tags/$TAG^{commit}")" ]; then
+            echo "::error::checked out $SHA, which is not the commit $TAG points at"
+            exit 1
+          fi
           # Releases are published only for commits on main; a dry run may build any ref.
-          if [ -n "$TAG" ] && ! git merge-base --is-ancestor "$SHA" origin/main; then
+          # Fully qualified, so a tag named origin/main cannot stand in for the branch.
+          if [ -n "$TAG" ] && ! git merge-base --is-ancestor "$SHA" refs/remotes/origin/main; then
             echo "::error::$TAG points at $SHA, which is not on main; refusing to publish a release for it"
             exit 1
           fi

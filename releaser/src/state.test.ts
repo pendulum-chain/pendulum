@@ -23,7 +23,10 @@ test("releaser state is atomically persisted and identity-bound", () => {
 		assert.deepEqual(loaded, state);
 		assert.doesNotThrow(() => assertStateIdentity(loaded!, state));
 		assert.throws(() => assertStateIdentity(loaded!, { ...state, baseChainId: 1 }), /does not match/);
-	} finally {
+		assert.throws(
+			() => assertStateIdentity(loaded!, { ...state, vaultAddress: "0x3333333333333333333333333333333333333333" }),
+			/state vault 0x1111111111111111111111111111111111111111 does not match configured vault 0x3333/,
+		);	} finally {
 		rmSync(directory, { recursive: true, force: true });
 	}
 });

@@ -28,6 +28,28 @@ test("HEARTBEAT_URL must be an http(s) URL, and a bad one is refused without ech
 	assert.doesNotMatch(stderr, /secret-token/);
 });
 
+test("fee bumping defaults to 60 s, 20 %, 3 bumps and a 1 gwei cap, and refuses invalid settings", () => {
+	const print = "[config.feeBump.afterMs, config.feeBump.percent, config.feeBump.max, config.feeBump.maxFeePerGas].join(' ')";
+	assert.equal(loadConfig({}, print).stdout, "60000 20 3 1000000000");
+	assert.equal(
+		loadConfig({ FEE_BUMP_AFTER_SECONDS: "30", FEE_BUMP_PERCENT: "10", FEE_BUMP_MAX: "0", MAX_FEE_PER_GAS_GWEI: "0.25" }, print)
+			.stdout,
+		"30000 10 0 250000000",
+	);
+	for (const [name, value] of [
+		["FEE_BUMP_PERCENT", "9"],
+		["FEE_BUMP_PERCENT", "12.5"],
+		["FEE_BUMP_MAX", "-1"],
+		["FEE_BUMP_AFTER_SECONDS", "0"],
+		["MAX_FEE_PER_GAS_GWEI", "0"],
+		["MAX_FEE_PER_GAS_GWEI", "1e9"],
+	]) {
+		const { status, stderr } = loadConfig({ [name]: value });
+		assert.notEqual(status, 0, `${name}=${value}`);
+		assert.match(stderr, new RegExp(`invalid ${name}`), `${name}=${value}`);
+	}
+});
+
 test("MAX_BLOCK_RANGE must be a whole number of at least 1", () => {
 	assert.equal(loadConfig({}, "String(config.maxBlockRange)").stdout, "10000");
 	assert.equal(loadConfig({ MAX_BLOCK_RANGE: "200" }, "String(config.maxBlockRange)").stdout, "200");

@@ -216,6 +216,7 @@ const releaser: Releaser = {
 	blockedAlertIntervalMs: config.blockedAlertIntervalMs,
 	pending,
 	alertedAt,
+	feeBump: config.feeBump,
 	alert,
 	log,
 	now: Date.now,

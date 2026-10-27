@@ -43,6 +43,10 @@ consumed nonce and drops it.
 | `BASE_FINALITY_TAG` | `safe` (default) or `finalized`; the scan cursor stays inside this boundary and a pending entry is dropped only once its nonce is consumed there |
 | `BLOCKED_ALERT_INTERVAL_MS` | Re-page interval for the same page about one release: governance-blocked, or failing unexpectedly (default 6h — a blocked release needs a ≥48h timelocked action, so per-poll paging would bury the signal). A different page about it goes out at once |
 | `READ_BATCH_SIZE` | Bound on Multicall calldata and individual fallback concurrency (default 100) |
+| `FEE_BUMP_AFTER_SECONDS` | Re-send a release transaction that is still not mined after this long (default 60) |
+| `FEE_BUMP_PERCENT` | Raise both fees by at least this many percent per re-send (default 20; a whole number of at least 10, the minimum a node accepts for a replacement) |
+| `FEE_BUMP_MAX` | Re-sends per transaction before the `release transaction not mined` page (default 3) |
+| `MAX_FEE_PER_GAS_GWEI` | No release transaction ever offers a higher `maxFeePerGas` (default 1) |
 
 ## Run
 
@@ -69,6 +73,20 @@ A successful `release()` does **not** drop the entry immediately: it leaves the
 durable pending set only once the nonce reads as consumed at the
 `safe`/`finalized` boundary, so a reorged-away release is still ours to retry.
 Until then re-attempts are gas-free simulations classified as pending finality.
+
+Each release is signed at the account's pending nonce with the node's fee
+estimate, capped at `MAX_FEE_PER_GAS_GWEI`. One not mined within
+`FEE_BUMP_AFTER_SECONDS` is followed from cycle to cycle instead of being
+signed again, and no other release is sent meanwhile, since it would only
+queue behind that nonce. Every `FEE_BUMP_AFTER_SECONDS` it is re-sent as the
+identical call at the same nonce with both fees raised by `FEE_BUMP_PERCENT`,
+and at least to the current estimate, at most `FEE_BUMP_MAX` times. When no
+bump is left, or the cap stops one, it pages `release transaction not mined`
+(with the nonce, the account's next mined nonce and the fees; throttled to
+`BLOCKED_ALERT_INTERVAL_MS`) and keeps waiting. Once another transaction uses
+its nonce, or the node holds nothing at a nonce below it, the release is
+simulated and sent again. The transaction in flight is kept in memory only:
+after a restart, a pending one stuck below the cap has to be replaced by hand.
 
 State (safe/finalized scan checkpoint + pending set) is atomically persisted
 and bound to the configured chain and vault, so a restart resumes without

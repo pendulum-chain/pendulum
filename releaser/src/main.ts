@@ -23,7 +23,7 @@
 import { createPublicClient, createWalletClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { alertText, postAlert, throttledHeartbeat, type Severity } from "./alert.js";
-import { blockRanges, chunks, toPalletAmount } from "./checks.js";
+import { chunks, readInRanges, toPalletAmount } from "./checks.js";
 import { config } from "./config.js";
 import { drainPending, type PendingRelease, type Releaser } from "./release.js";
 import {
@@ -57,7 +57,7 @@ const walletClient = createWalletClient({ account, chain: baseChain, transport: 
 
 const pending = new Map<bigint, PendingRelease>();
 let fromBlock = config.startBlock;
-const blockedAlertedAt = new Map<bigint, number>();
+const alertedAt: Releaser["alertedAt"] = new Map();
 
 function log(message: string): void {
 	console.log(`${new Date().toISOString()} ${message}`);
@@ -69,11 +69,13 @@ function redact(text: string): string {
 	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
 }
 
-async function alert(subject: string, detail: string, severity: Severity = "warning"): Promise<void> {
+/** Log the alert and post it to the webhook; resolves to whether it was
+ *  delivered. Without a webhook the log line is the delivery. */
+async function alert(subject: string, detail: string, severity: Severity = "warning"): Promise<boolean> {
 	console.error(`${new Date().toISOString()} ALERT: ${subject} — ${detail}`);
-	if (!config.alertWebhookUrl) return;
+	if (!config.alertWebhookUrl) return true;
 	const redacted = redact(detail);
-	await postAlert(config.alertWebhookUrl, {
+	return postAlert(config.alertWebhookUrl, {
 		text: alertText(severity, `pen-releaser ${account.address}`, subject, redacted),
 		severity,
 		service: "pen-releaser",
@@ -112,9 +114,13 @@ function saveState(): void {
 	writePersistedState(config.stateFile, state);
 }
 
+/** The `eth_getLogs` span, MAX_BLOCK_RANGE at most: it shrinks while the
+ *  endpoint refuses ranges as too large (see `readInRanges`). */
+const logSpan = { size: config.maxBlockRange, max: config.maxBlockRange, streak: 0 };
+
 /** Scan for newly deferred releases and add them to the pending set. */
 async function ingestNewPending(toBlock: bigint, conversionFactor: bigint): Promise<void> {
-	for (const [start, end] of blockRanges(fromBlock, toBlock, config.maxBlockRange)) {
+	await readInRanges(fromBlock, toBlock, logSpan, async (start, end) => {
 		// Probe the range's end block first. Against a load-balanced endpoint,
 		// `eth_getLogs` can be served by a node that has not reached `end` yet
 		// and some providers then silently truncate rather than error — which
@@ -140,7 +146,7 @@ async function ingestNewPending(toBlock: bigint, conversionFactor: bigint): Prom
 			log(`deferred release observed: nonce=${nonce} recipient=${recipient}`);
 		}
 		fromBlock = end + 1n;
-	}
+	});
 }
 
 /** Read `nonceConsumed` for many nonces, batched where possible.
@@ -198,7 +204,7 @@ async function pruneConsumed(blockNumber: bigint): Promise<void> {
 	entries.forEach((entry, i) => {
 		if (consumed[i]) {
 			pending.delete(entry.nonce);
-			blockedAlertedAt.delete(entry.nonce);
+			alertedAt.delete(entry.nonce);
 		}
 	});
 }
@@ -211,9 +217,11 @@ const releaser: Releaser = {
 	baseFinalityTag: config.baseFinalityTag,
 	blockedAlertIntervalMs: config.blockedAlertIntervalMs,
 	pending,
-	blockedAlertedAt,
+	alertedAt,
+	feeBump: config.feeBump,
 	alert,
 	log,
+	now: Date.now,
 };
 
 async function checkGasBalance(): Promise<void> {
@@ -262,7 +270,10 @@ async function main(): Promise<void> {
 			});
 			await drainPending(releaser, conversionFactor, dailyCap);
 			saveState();
-			log(`ok: ${pending.size} pending, scanned ${config.baseFinalityTag} through block ${fromBlock - 1n}`);
+			log(
+				`ok: ${pending.size} pending, scanned ${config.baseFinalityTag} through block ${fromBlock - 1n} ` +
+					`(eth_getLogs span ${logSpan.size})`,
+			);
 			void heartbeat();
 		} catch (cycleError) {
 			await alert("releaser cycle failed", `${cycleError}`);

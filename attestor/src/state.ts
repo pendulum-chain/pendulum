@@ -15,8 +15,8 @@ export interface Checkpoint {
 	vaultAddress: `0x${string}`;
 	pendulumGenesisHash: `0x${string}`;
 	/** The signer, and its vault attestor generation, whose approvals this
-	 *  progress stands for. Optional only so that checkpoints written before
-	 *  they were recorded still load; the daemon binds those on startup. */
+	 *  progress stands for. Optional only so that a file without them loads
+	 *  and `assertCheckpointIdentity` refuses it with the way out. */
 	attestorAddress?: `0x${string}`;
 	attestorGeneration?: number;
 	lastProcessedBlock: number;
@@ -136,17 +136,34 @@ export function assertCheckpointIdentity(
 	// Progress made by another key, or by this key before it was removed and
 	// re-added, says nothing about the approvals that count now: resuming from
 	// it would silently skip every unreleased migration before it.
-	if (
-		checkpoint.attestorAddress !== undefined &&
-		checkpoint.attestorAddress.toLowerCase() !== expected.attestorAddress.toLowerCase()
-	) {
+	// Both fields are always written together, so a checkpoint without them,
+	// or with only one of them, was edited or not written by this daemon.
+	if (checkpoint.attestorAddress === undefined && checkpoint.attestorGeneration === undefined) {
+		throw new Error(
+			"checkpoint has neither attestorAddress nor attestorGeneration, so nothing shows whose approvals its " +
+				"progress stands for: restore both if they were removed and follow the error that gives, or else " +
+				"backfill as a new key does (runbook RB-6): move the checkpoint file aside and start with no checkpoint " +
+				"and START_BLOCK before the oldest unreleased migration",
+		);
+	}
+	if (checkpoint.attestorAddress === undefined || checkpoint.attestorGeneration === undefined) {
+		const [present, missing] =
+			checkpoint.attestorAddress === undefined
+				? ["attestorGeneration", "attestorAddress"]
+				: ["attestorAddress", "attestorGeneration"];
+		throw new Error(
+			`checkpoint has ${present} but no ${missing}; the two are always written together, so the file was edited: ` +
+				"restore the removed field and follow the error that gives (runbook RB-6), never remove either one",
+		);
+	}
+	if (checkpoint.attestorAddress.toLowerCase() !== expected.attestorAddress.toLowerCase()) {
 		throw new Error(
 			`checkpoint belongs to attestor ${checkpoint.attestorAddress}, but this daemon signs as ${expected.attestorAddress}; ` +
 				"a new key must backfill (runbook RB-6): move the checkpoint file aside and start with no checkpoint " +
 				"and START_BLOCK before the oldest unreleased migration",
 		);
 	}
-	if (checkpoint.attestorGeneration !== undefined && checkpoint.attestorGeneration !== expected.attestorGeneration) {
+	if (checkpoint.attestorGeneration !== expected.attestorGeneration) {
 		throw new Error(
 			`checkpoint was written under attestor generation ${checkpoint.attestorGeneration}, but ` +
 				`${expected.attestorAddress} is now at generation ${expected.attestorGeneration}, so its earlier approvals ` +

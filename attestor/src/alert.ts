@@ -66,24 +66,42 @@ export function throttledHeartbeat(
 	};
 }
 
+/** A failed alert delivery is tried again after each of these waits: a relay
+ *  that is briefly down or rate-limiting must not swallow a page. */
+const ALERT_RETRY_DELAYS_MS = [2_000, 10_000];
+
 /**
  * POST one alert to the webhook and report whether it was delivered. `fetch`
  * resolves on any HTTP answer, so a non-2xx status is checked explicitly: a
  * relay answering 4xx/5xx, a timeout and a connection failure are all logged
- * and count as not delivered.
+ * and count as not delivered. Each is tried again after the next of
+ * `retryDelaysMs`, except a 4xx other than 408 and 429: the relay refused the
+ * request itself (a wrong URL, a rejected payload), which repeating it cannot
+ * change.
  */
-export async function postAlert(url: string, body: unknown, timeoutMs = 10_000): Promise<boolean> {
-	try {
-		const response = await fetch(url, {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify(body),
-			signal: AbortSignal.timeout(timeoutMs),
-		});
-		if (response.ok) return true;
-		console.error(`alert webhook failed: HTTP ${response.status}`);
-	} catch (webhookError) {
-		console.error("alert webhook failed", webhookError);
+export async function postAlert(
+	url: string,
+	body: unknown,
+	timeoutMs = 10_000,
+	retryDelaysMs = ALERT_RETRY_DELAYS_MS,
+): Promise<boolean> {
+	for (let attempt = 0; ; attempt++) {
+		let status: number | undefined;
+		try {
+			const response = await fetch(url, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(body),
+				signal: AbortSignal.timeout(timeoutMs),
+			});
+			if (response.ok) return true;
+			status = response.status;
+			console.error(`alert webhook failed: HTTP ${response.status}`);
+		} catch (webhookError) {
+			console.error("alert webhook failed", webhookError);
+		}
+		const refused = status !== undefined && status < 500 && status !== 408 && status !== 429;
+		if (refused || attempt === retryDelaysMs.length) return false;
+		await new Promise((resolve) => setTimeout(resolve, retryDelaysMs[attempt]));
 	}
-	return false;
 }

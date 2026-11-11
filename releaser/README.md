@@ -83,10 +83,12 @@ identical call at the same nonce with both fees raised by `FEE_BUMP_PERCENT`,
 and at least to the current estimate, at most `FEE_BUMP_MAX` times. When no
 bump is left, or the cap stops one, it pages `release transaction not mined`
 (with the nonce, the account's next mined nonce and the fees; throttled to
-`BLOCKED_ALERT_INTERVAL_MS`) and keeps waiting. Once another transaction uses
-its nonce, or the node holds nothing at a nonce below it, the release is
-simulated and sent again. The transaction in flight is kept in memory only:
-after a restart, a pending one stuck below the cap has to be replaced by hand.
+`BLOCKED_ALERT_INTERVAL_MS`) and keeps waiting, sending the last attempt
+again unchanged every cycle, so a pool that dropped it gets it back. Once
+another transaction uses its nonce, or the node holds nothing at a nonce
+below it, the release is simulated and sent again. The transaction in flight
+is kept in memory only: after a restart, a pending one stuck below the cap
+has to be replaced by hand.
 
 State (safe/finalized scan checkpoint + pending set) is atomically persisted
 and bound to the configured chain and vault, so a restart resumes without

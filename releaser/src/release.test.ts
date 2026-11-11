@@ -4,12 +4,16 @@ import {
 	ContractFunctionExecutionError,
 	ContractFunctionRevertedError,
 	encodeErrorResult,
+	getContractError,
+	InvalidInputRpcError,
+	RpcRequestError,
 	TransactionReceiptNotFoundError,
 	WaitForTransactionReceiptTimeoutError,
 	type Hash,
 	type PublicClient,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { getTransactionError } from "viem/utils";
 import { drainPending, type InFlightRelease, type PendingRelease, type Releaser } from "./release.js";
 import { vaultAbi } from "./vaultAbi.js";
 
@@ -27,7 +31,8 @@ const txHash = (index: number): Hash => `0x${(index + 1).toString(16).padStart(6
 /** A releaser whose public client answers each call with `answers`. Unless
  *  overridden: the finality boundary is at block 100, every nonce unconsumed,
  *  a release simulates fine, the account's nonce is 4, and a sent release is
- *  mined at once. */
+ *  mined at once. A `writeContract` answer is the node's to each send, given
+ *  the call and its hash: it may throw a refusal. */
 function releaserWith(answers: Record<string, Answer>, entries: PendingRelease[]) {
 	const alerts: string[] = [];
 	const logs: string[] = [];
@@ -50,7 +55,9 @@ function releaserWith(answers: Record<string, Answer>, entries: PendingRelease[]
 		walletClient: {
 			writeContract: async (call: Write) => {
 				writes.push(call);
-				return txHash(writes.length - 1);
+				const hash = txHash(writes.length - 1);
+				await methods.writeContract?.({ ...call, hash });
+				return hash;
 			},
 		} as unknown as Releaser["walletClient"],
 		feeBump: { afterMs: 60_000, percent: 20, max: 3, maxFeePerGas: 1_000_000_000n },
@@ -83,6 +90,15 @@ function vaultRevert(
 }
 
 const dailyCapRevert = () => vaultRevert({ errorName: "ExceedsDailyCap", args: [DAILY_CAP + 1n, 0n] });
+
+/** What writeContract raises when the node refuses the transaction. */
+const sendRefusal = (message: string) =>
+	getContractError(
+		getTransactionError(new InvalidInputRpcError(new RpcRequestError({ body: {}, error: { code: -32000, message }, url: "http://rpc" })), {
+			account: null,
+		}),
+		{ abi: vaultAbi, functionName: "release", args: [] },
+	);
 
 const ENTRY = { nonce: 7n, recipient: RECIPIENT, palletAmount: 5_000n * 10n ** 12n } as const;
 
@@ -129,9 +145,9 @@ const notMined: Record<string, Answer> = {
 	},
 };
 
-test("a release not mined in time is followed at its nonce: nothing is sent behind it, it is bumped, then paged", async () => {
+test("a release not mined in time is followed at its nonce: nothing is sent behind it, it is bumped, then paged and sent again unchanged", async () => {
 	let minedHash: Hash | undefined;
-	const { releaser, alerts, writes, advance } = releaserWith(
+	const { releaser, alerts, logs, writes, advance } = releaserWith(
 		{
 			...notMined,
 			simulateContract: ({ args }) => {
@@ -145,6 +161,11 @@ test("a release not mined in time is followed at its nonce: nothing is sent behi
 				if (hash !== minedHash) throw new TransactionReceiptNotFoundError({ hash: hash as Hash });
 				return { status: "success", transactionHash: hash };
 			},
+			// The node still holds the last bump, then has the second one mined.
+			writeContract: () => {
+				if (writes.length === 5) throw sendRefusal("already known");
+				if (writes.length === 6) throw sendRefusal("nonce too low");
+			},
 		},
 		[ENTRY, { ...ENTRY, nonce: 8n }],
 	);
@@ -157,7 +178,8 @@ test("a release not mined in time is followed at its nonce: nothing is sent behi
 		advance(60_000);
 		await drain();
 	}
-	// The identical call at the same nonce, both fees raised, three times.
+	// The identical call at the same nonce, both fees raised, three times; then
+	// the last one again, unchanged, every cycle.
 	assert.deepEqual(
 		writes.map((w) => [w.args[0], w.nonce, w.gas, w.maxFeePerGas, w.maxPriorityFeePerGas]),
 		[
@@ -165,19 +187,23 @@ test("a release not mined in time is followed at its nonce: nothing is sent behi
 			[7n, 4, 100_000n, 8_400_000n, 1_200_000n],
 			[7n, 4, 100_000n, 10_080_000n, 1_440_000n],
 			[7n, 4, 100_000n, 12_096_000n, 1_728_000n],
+			[7n, 4, 100_000n, 12_096_000n, 1_728_000n],
+			[7n, 4, 100_000n, 12_096_000n, 1_728_000n],
 		],
 	);
-	// Then one page, not repeated within the interval.
+	// One page, not repeated within the interval; the node's answers to the
+	// sends again are no failure.
 	assert.deepEqual(alerts, [
 		`critical release transaction not mined: 3 fee bump(s) used up: transaction nonce 4, account's next mined nonce 4, ` +
 			`maxFeePerGas 0.012096 gwei (cap 1 gwei); nonce=7 recipient=${RECIPIENT} amount=${ENTRY.palletAmount}`,
 	]);
+	assert.ok(!logs.some((line) => line.startsWith("re-sending ")));
 	// The second bump is mined: its entry waits for the boundary, and the next release goes out.
 	minedHash = txHash(2);
 	await drain();
 	assert.deepEqual(
 		writes.map((w) => w.args[0]),
-		[7n, 7n, 7n, 7n, 8n],
+		[7n, 7n, 7n, 7n, 7n, 7n, 8n],
 	);
 	assert.equal(releaser.inFlight?.entry.nonce, 8n);
 	assert.equal(releaser.pending.size, 2);
@@ -214,16 +240,71 @@ test("the fee cap stops a release's bump and pages; no attempt offers more than 
 		await drainPending(releaser, CONVERSION_FACTOR, DAILY_CAP);
 		advance(60_000);
 	}
-	// 7 → 8.4 is capped at 8; 8 → 8 is no replacement a pool takes.
+	// 7 → 8.4 is capped at 8; 8 → 8 is no replacement a pool takes, so the
+	// capped attempt is sent again unchanged.
 	assert.deepEqual(
 		writes.map((w) => [w.maxFeePerGas, w.maxPriorityFeePerGas]),
 		[
 			[7_000_000n, 1_000_000n],
 			[8_000_000n, 1_200_000n],
+			[8_000_000n, 1_200_000n],
 		],
 	);
 	assert.equal(alerts.length, 1);
 	assert.match(alerts[0], /^critical release transaction not mined: the fee cap stops the next bump: transaction nonce 4, .*\(cap 0\.008 gwei\); nonce=7 /);
+});
+
+test("a release the pool dropped after its last bump is sent again unchanged, so the releases behind it go out", async () => {
+	const mined = new Set<Hash>();
+	const receipt = (hash: Hash, missing: Error) => {
+		if (!mined.has(hash)) throw missing;
+		return { status: "success", transactionHash: hash };
+	};
+	let feesFell = false;
+	const { releaser, alerts, logs, writes, advance } = releaserWith(
+		{
+			simulateContract: ({ args }) => {
+				if (mined.size > 0 && (args as bigint[])[0] === ENTRY.nonce) {
+					throw vaultRevert({ errorName: "NonceAlreadyConsumed", args: [ENTRY.nonce] });
+				}
+				return {};
+			},
+			// Dropped from the pool: the node counts nothing pending at its nonce.
+			getTransactionCount: () => 4 + mined.size,
+			getTransactionReceipt: ({ hash }) => receipt(hash as Hash, new TransactionReceiptNotFoundError({ hash: hash as Hash })),
+			waitForTransactionReceipt: ({ hash }) =>
+				receipt(hash as Hash, new WaitForTransactionReceiptTimeoutError({ hash: hash as Hash })),
+			// Nothing is mined until fees fall; then whatever is sent is.
+			writeContract: ({ hash }) => {
+				if (feesFell) mined.add(hash as Hash);
+			},
+		},
+		[ENTRY, { ...ENTRY, nonce: 8n }],
+	);
+	for (let minute = 0; minute < 7; minute++) {
+		feesFell = minute >= 5;
+		await drainPending(releaser, CONVERSION_FACTOR, DAILY_CAP);
+		advance(60_000);
+	}
+	assert.deepEqual(
+		writes.map((w) => [w.args[0], w.nonce, w.maxFeePerGas]),
+		[
+			[7n, 4, 7_000_000n],
+			[7n, 4, 8_400_000n],
+			[7n, 4, 10_080_000n],
+			[7n, 4, 12_096_000n],
+			[7n, 4, 12_096_000n],
+			[7n, 4, 12_096_000n],
+			[8n, 5, 7_000_000n],
+		],
+	);
+	assert.ok(logs.some((line) => line.startsWith("released (awaiting safe): nonce=7 ") && line.endsWith(`tx=${txHash(5)}`)));
+	assert.ok(logs.some((line) => line.startsWith("released (awaiting safe): nonce=8 ")));
+	assert.deepEqual(
+		alerts.map((a) => a.split(":")[0]),
+		["critical release transaction not mined"],
+	);
+	assert.equal(releaser.inFlight, undefined);
 });
 
 test("a daily-cap revert pages as blocked when the token amount is above the daily cap itself, and waits quietly otherwise", async () => {

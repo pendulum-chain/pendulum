@@ -9,6 +9,7 @@
 import {
 	BaseError,
 	formatGwei,
+	NonceTooLowError,
 	TransactionReceiptNotFoundError,
 	type Account,
 	type Chain,
@@ -159,7 +160,9 @@ function logMined(releaser: Releaser, receipt: TransactionReceipt, label: string
  * re-sent `feeBump.afterMs` after the last send: the identical call at the
  * same nonce with both fees raised (`bumpedFees`), at most `feeBump.max`
  * times. When no bump is left or the cap stops one, it pages (throttled like
- * every page about a release) and keeps waiting.
+ * every page about a release) and keeps waiting, sending the latest attempt
+ * again unchanged each cycle: that is no bump, but it brings back a
+ * transaction the pool dropped, which nothing else would ever send again.
  */
 async function followInFlight(releaser: Releaser, tx: InFlightRelease): Promise<boolean> {
 	const { publicClient, walletClient, account, feeBump, log } = releaser;
@@ -198,6 +201,21 @@ async function followInFlight(releaser: Releaser, tx: InFlightRelease): Promise<
 			`${reason}: transaction nonce ${tx.nonce}, account's next mined nonce ${mined}, ` +
 				`maxFeePerGas ${formatGwei(tx.fees.maxFeePerGas)} gwei (cap ${formatGwei(feeBump.maxFeePerGas)} gwei); ${label}`,
 		);
+		try {
+			const hash = await walletClient.writeContract({ ...tx.call, nonce: tx.nonce, ...tx.fees });
+			// New only when the last bump was refused: that is the attempt sent again.
+			if (!tx.hashes.includes(hash)) tx.hashes.push(hash);
+		} catch (error) {
+			// A node that still holds it answers that it knows it, and one that
+			// saw its nonce used that the nonce is too low; viem raises both as
+			// NonceTooLowError, and neither is a failure.
+			if (!(error instanceof BaseError && error.walk((cause) => cause instanceof NonceTooLowError))) {
+				log(
+					`re-sending the latest attempt at nonce ${tx.nonce} failed: ${label} — ` +
+						`${error instanceof BaseError ? error.shortMessage : error}`,
+				);
+			}
+		}
 		return false;
 	}
 	tx.bumps += 1;

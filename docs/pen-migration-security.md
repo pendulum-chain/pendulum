@@ -69,18 +69,24 @@ team, and the safeguards below limit what a compromise can do.
 - Repeated internal adversarial review of the full stack; all critical and
   high findings were fixed and regression-tested.
 
-## Verifying the runtime (Pendulum spec 26)
+## Verifying the runtime (Pendulum spec 27)
 
-The runtime that added the pallet was built reproducibly with srtool and
-published as the GitHub release `pendulum-release-26`.
+Pendulum runs spec 27 since block 7,988,833 (2026-11-11). Spec 26 added the
+pallet. Spec 27 is the same runtime rebuilt with the `metadata-hash` feature,
+so that wallets which sign with the metadata hash, such as Ledger, are
+accepted. Both were built reproducibly with srtool and published as GitHub
+releases.
 
-| | |
-|---|---|
-| Asset | `pendulum_runtime.compact.compressed.wasm` (2,177,219 bytes) |
-| sha256 | `370ac425e69125ac3d23971a1d2eba7966b15c7026621dd6a778c099432eb66d` |
-| blake2_256 (code hash) | `0x6a19a408826fb4d2ab04886c864714dda188df2a1bfa11f27b1b2d0c0192e896` |
-| Source commit | `14eb720945e1c37e4b8f3f107157c86e00e8b2be` |
+| | Spec 27 (live) | Spec 26 |
+|---|---|---|
+| Release | `pendulum-release-27` | `pendulum-release-26` |
+| Asset | `pendulum_runtime.compact.compressed.wasm` (2,180,551 bytes) | `pendulum_runtime.compact.compressed.wasm` (2,177,219 bytes) |
+| sha256 | `9ab7a17bc5f952fb4f5c57b15a7958df17470439be1f4f7753ef2182a5d071b7` | `370ac425e69125ac3d23971a1d2eba7966b15c7026621dd6a778c099432eb66d` |
+| blake2_256 (code hash) | `0xcb20aa40a10673d1ed368617ceecbdb0bdbf399c435ebbfcb3392d2fb69d5e1a` | `0x6a19a408826fb4d2ab04886c864714dda188df2a1bfa11f27b1b2d0c0192e896` |
+| Source commit | `7cb3d731f7788cd50a99661505bd37af13e86949` | `14eb720945e1c37e4b8f3f107157c86e00e8b2be` |
+| srtool build options | `--features metadata-hash` | none |
 
 The code hash is the value the on-chain upgrade authorization checked. To
 verify, download the asset from the release and compare its blake2_256 with
-the hash above.
+the hash above. The live chain's code hash is `blake2_256` of the `:code`
+storage item, which must equal the spec 27 hash.

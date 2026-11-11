@@ -31,8 +31,8 @@ team, and the safeguards below limit what a compromise can do.
 ## Safeguards
 
 - **Release caps.** A per-release cap and a rolling daily cap limit how much
-  can leave the vault (1,000,000 PEN each for the soft launch, raised by
-  governance later).
+  can leave the vault (500,000 PEN per release and 1,000,000 PEN per day for
+  the soft launch, raised by governance later).
 - **Pause.** A guardian can pause releases in a single transaction but can
   never unpause; unpausing requires the vault admin.
 - **Admin changes.** Admin transfers are two-step. After the governance

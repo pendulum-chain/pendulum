@@ -135,8 +135,11 @@ WantedBy=multi-user.target
   the node holds nothing at a nonce below it (a transaction of ours dropped by
   a reorg, or a skipped one that left the pool) is sent again at that first
   empty nonce, or the next approval is, so nothing waits on a nonce no
-  transaction will fill. A node refusing a send for its price, an
-  underpriced replacement or a full pool is retried at the next bump instead
+  transaction will fill. It moves there, keeping its bumps and pages, only
+  once the node takes it there: a count from a lagging backend can show a
+  nonce empty that a transaction does hold, and a refused approval stays at
+  its nonce, bumped and paged as before. A node refusing a send for its
+  price, an underpriced replacement or a full pool is retried at the next bump instead
   of being fatal. Transactions in flight are kept in memory only: after a
   restart, an approval whose transaction is still pending is sent again at the
   next nonce, so a pending transaction stuck below the cap has to be replaced

@@ -1184,7 +1184,8 @@ test("an own approval reorged out of Base leaves no empty nonce the next approva
 	);
 	assert.ok(chain.approved.has(payloadHash(OTHER)));
 	assert.equal(chain.receipts.get(chain.sent[1].hash)?.status, "reverted", "the attempt left behind merely reverts");
-	assert.ok(logs.some((line) => line.startsWith("nonce 5 below 6 holds no transaction; sending the approval again there: nonce=8 ")));
+	assert.ok(logs.some((line) => line.startsWith("nonce 5 below 6 holds no transaction; sent the approval again there: nonce=8 ")));
+	assert.ok(logs.some((line) => line.startsWith("approved: nonce=8 ") && line.endsWith(`tx=${chain.sent[2].hash}`)));
 	assert.equal(alerts.length, 0);
 });
 
@@ -1233,6 +1234,54 @@ test("an approval no longer needed behind an empty nonce is not sent again, and 
 		],
 	);
 	assert.ok(chain.approved.has(payloadHash(OTHER)));
+});
+
+test("a nonce below that the pending count shows empty but a stuck transaction holds leaves the approval to be bumped and paged", async () => {
+	const chain = new FakeVault();
+	// A transaction from before a restart, stuck below the base fee with a higher tip than the estimate.
+	const stuck: Sent = { hash: `0x${"ee".repeat(32)}`, nonce: 5, value: 0n, maxFeePerGas: 50_000_000n, maxPriorityFeePerGas: 2_000_000n };
+	chain.pool.set(5, stuck);
+	chain.baseFee = 100_000_000n;
+	chain.pendingNonce = 5; // the backend answering the count does not hold it
+	const { attestor, alerts, logs } = attestorOn(chain, {}, (elapsed) => {
+		if (elapsed >= 6 * 3600_000) chain.baseFee = 5_000_000n; // fees fall after 6 h
+		chain.mine();
+	});
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.ok(chain.sent.every((tx) => tx.nonce === 5 || tx.nonce === 6));
+	assert.ok(!logs.some((line) => line.includes("holds no transaction")), "never moved down to nonce 5");
+	assert.equal(logs.filter((line) => /^fee bump \d at nonce 6: /.test(line)).length, 3);
+	assert.ok(alerts.length > 1 && alerts.every((a) => a.subject === "own approval not mined"));
+	assert.match(alerts[0].detail, /^3 fee bump\(s\) used up: transaction nonce 6, account's next mined nonce 5, /);
+	assert.ok(chain.receipts.has(stuck.hash), "the stuck transaction kept its nonce");
+	assert.ok(chain.approved.has(payloadHash(EVENT)));
+});
+
+test("a latest count that lags behind keeps the approval at its nonce and its earlier attempts tracked", async () => {
+	const chain = new FakeVault();
+	chain.baseFee = 9_000_000n; // above the first attempt and the first bump
+	// No room in the pool for a second bump.
+	chain.refuse = (_, tx) => (tx.maxFeePerGas > 8_400_000n ? "txpool is full" : undefined);
+	let lagging = false;
+	const accountNonce = chain.accountNonce.bind(chain);
+	// A backend a block behind: nonce 4 not yet mined there, and nothing of ours held.
+	chain.accountNonce = async (blockTag) => (lagging ? 4 : accountNonce(blockTag));
+	const { attestor, logs } = attestorOn(chain, {}, (elapsed) => {
+		lagging = elapsed > 1.5 * AFTER_MS && elapsed <= 2 * AFTER_MS;
+		if (elapsed > 2 * AFTER_MS) chain.baseFee = 5_000_000n;
+		chain.mine();
+	});
+	assert.equal(await approve(attestor, EVENT), true);
+	assert.deepEqual(
+		chain.sent.map((tx) => [tx.nonce, tx.maxFeePerGas]),
+		[
+			[5, 7_000_000n],
+			[5, 8_400_000n],
+			[4, 8_400_000n],
+			[5, 10_080_000n],
+		],
+	);
+	assert.ok(logs.some((line) => line.startsWith("approved: nonce=7 ") && line.endsWith(`tx=${chain.sent[1].hash}`)));
 });
 
 test("a signer removed, or removed and re-added, while running stops the daemon instead of going on", async () => {

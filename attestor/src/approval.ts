@@ -82,7 +82,8 @@ export interface Submission {
 	nonce?: number;
 	/** The latest attempt's fees. */
 	fees?: Fees;
-	/** Every attempt at `nonce`; any of them may be the one that is mined. */
+	/** Every attempt at `nonce`, and those left above it when the approval
+	 *  moved down to an empty nonce; any of them may be the one that is mined. */
 	hashes: Hash[];
 	/** When the latest attempt was sent: a follow-up an error interrupted
 	 *  resumes the bump interval from there instead of starting it anew. */
@@ -300,11 +301,13 @@ export function bumpedFees(last: Fees, estimate: Fees, policy: FeeBumpPolicy): F
 	return replaces ? fees : undefined;
 }
 
-/** Poll the receipts of `hashes` until one is mined or `timeoutMs` has passed. */
+/** Poll the receipts of `hashes` until one is mined or `timeoutMs` has passed.
+ *  Newest first: an attempt moved down to an empty nonce is mined before the
+ *  ones it left above, which then merely revert. */
 async function minedReceipt(attestor: Attestor, hashes: Hash[], timeoutMs: number): Promise<TransactionReceipt | undefined> {
 	const deadline = attestor.now() + timeoutMs;
 	for (;;) {
-		for (const hash of hashes) {
+		for (const hash of [...hashes].reverse()) {
 			const receipt = await attestor.chain.receipt(hash);
 			if (receipt) return receipt;
 		}
@@ -432,11 +435,23 @@ async function sendUntilMined(
 			// one this process skipped left the pool. Fill that nonce instead of
 			// waiting on it, for this approval or else the next one; the attempt
 			// left behind merely reverts should it ever be mined.
-			attestor.nextNonce = minedNonce;
-			if (!needed) return undefined;
-			attestor.log(`nonce ${minedNonce} below ${nonce} holds no transaction; sending the approval again there: ${label}`);
-			Object.assign(submission, { nonce: undefined, fees: undefined, hashes: [], bumps: 0, pages: 0 });
-			continue;
+			if (!needed) {
+				attestor.nextNonce = minedNonce;
+				return undefined;
+			}
+			// Counts from a backend that lags can hide a transaction that does
+			// hold that nonce, so the latest attempt moves down only once the node
+			// takes it there, with its bumps and pages; refused, it stays where it
+			// is and is bumped and paged as before.
+			const { hash, error } = await sendAttempt(attestor, submission, minedNonce, submission.fees as Fees);
+			if (error === undefined) {
+				attestor.log(`nonce ${minedNonce} below ${nonce} holds no transaction; sent the approval again there: ${label} tx=${hash}`);
+				submission.nonce = minedNonce;
+				submission.hashes.push(hash);
+				attestor.nextNonce = minedNonce + 1;
+				continue;
+			}
+			attestor.log(`approval not accepted at nonce ${minedNonce}, so it stays at nonce ${nonce}: ${label}`, error);
 		}
 		const last = submission.fees as Fees;
 		const fees =

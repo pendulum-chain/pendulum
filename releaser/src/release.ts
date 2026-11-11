@@ -20,7 +20,7 @@ import {
 	type WalletClient,
 } from "viem";
 import type { Severity } from "./alert.js";
-import { classifyReleaseFailure, contractErrorName } from "./checks.js";
+import { classifyReleaseFailure, contractErrorName, failureReason } from "./checks.js";
 import { vaultAbi } from "./vaultAbi.js";
 
 /** op-geth replaces a pending transaction only when the new one raises both
@@ -82,12 +82,13 @@ export interface Releaser {
 	blockedAlertIntervalMs: number;
 	/** nonce -> pending release. Keyed by nonce: the vault consumes a nonce once. */
 	pending: Map<bigint, PendingRelease>;
-	/** nonce -> the last page about it, and when it went out. A blocked release
-	 *  needs a timelocked governance action (>= 48h) to clear, and an unexpected
-	 *  failure repeats every poll as well, so re-paging either every poll would
-	 *  emit thousands of identical alerts and train on-call to ignore them; the
-	 *  same page re-alerts at a bounded interval instead. */
-	alertedAt: Map<bigint, { subject: string; at: number }>;
+	/** nonce -> each page about it, by subject and reason, and when it last went
+	 *  out. A blocked release needs a timelocked governance action (>= 48h) to
+	 *  clear, and an unexpected failure repeats every poll as well, so re-paging
+	 *  either every poll would emit thousands of identical alerts and train
+	 *  on-call to ignore them; the same page re-alerts at a bounded interval
+	 *  instead. */
+	alertedAt: Map<bigint, Map<string, number>>;
 	feeBump: FeeBumpPolicy;
 	/** The release transaction not seen mined yet, if any. Kept in memory
 	 *  only. */
@@ -97,12 +98,22 @@ export interface Releaser {
 	now(): number;
 }
 
-/** Page `subject` about the release of `nonce`, unless the same page about it
- *  went out less than `blockedAlertIntervalMs` ago. */
-async function pageThrottled(releaser: Releaser, nonce: bigint, subject: string, detail: string): Promise<void> {
-	const last = releaser.alertedAt.get(nonce);
-	if (last?.subject === subject && releaser.now() - last.at < releaser.blockedAlertIntervalMs) return;
-	releaser.alertedAt.set(nonce, { subject, at: releaser.now() });
+/** Page `subject` about the release of `nonce`, unless the same page about it,
+ *  for the same `reason`, went out less than `blockedAlertIntervalMs` ago. Each
+ *  reason keeps its own interval, so one that comes and goes, such as a
+ *  transient RPC error, neither mutes another nor makes it page again. */
+async function pageThrottled(
+	releaser: Releaser,
+	nonce: bigint,
+	subject: string,
+	reason: string,
+	detail: string,
+): Promise<void> {
+	const pages = releaser.alertedAt.get(nonce) ?? new Map<string, number>();
+	const key = `${subject}: ${reason}`;
+	const last = pages.get(key);
+	if (last !== undefined && releaser.now() - last < releaser.blockedAlertIntervalMs) return;
+	releaser.alertedAt.set(nonce, pages.set(key, releaser.now()));
 	await releaser.alert(subject, detail, "critical");
 }
 
@@ -198,6 +209,7 @@ async function followInFlight(releaser: Releaser, tx: InFlightRelease): Promise<
 			releaser,
 			tx.entry.nonce,
 			"release transaction not mined",
+			reason,
 			`${reason}: transaction nonce ${tx.nonce}, account's next mined nonce ${mined}, ` +
 				`maxFeePerGas ${formatGwei(tx.fees.maxFeePerGas)} gwei (cap ${formatGwei(feeBump.maxFeePerGas)} gwei); ${label}`,
 		);
@@ -321,11 +333,18 @@ export async function drainPending(releaser: Releaser, conversionFactor: bigint,
 						releaser,
 						p.nonce,
 						"release blocked and needs operator action",
+						`${errorName}`,
 						`${label} — ${errorName}; it cannot self-heal`,
 					);
 					break;
 				case "unexpected":
-					await pageThrottled(releaser, p.nonce, "unexpected release failure", `${label} — ${reason}`);
+					await pageThrottled(
+						releaser,
+						p.nonce,
+						"unexpected release failure",
+						failureReason(error),
+						`${label} — ${reason}`,
+					);
 					break;
 			}
 		}

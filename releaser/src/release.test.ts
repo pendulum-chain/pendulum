@@ -5,6 +5,7 @@ import {
 	ContractFunctionRevertedError,
 	encodeErrorResult,
 	getContractError,
+	HttpRequestError,
 	InvalidInputRpcError,
 	RpcRequestError,
 	TransactionReceiptNotFoundError,
@@ -90,6 +91,18 @@ function vaultRevert(
 }
 
 const dailyCapRevert = () => vaultRevert({ errorName: "ExceedsDailyCap", args: [DAILY_CAP + 1n, 0n] });
+
+/** What simulation raises for a revert with a reason string. */
+const revertedWith = (reason: string) =>
+	new ContractFunctionRevertedError({
+		abi: vaultAbi,
+		data: encodeErrorResult({
+			abi: [{ type: "error", name: "Error", inputs: [{ name: "message", type: "string" }] }],
+			errorName: "Error",
+			args: [reason],
+		}),
+		functionName: "release",
+	});
 
 /** What writeContract raises when the node refuses the transaction. */
 const sendRefusal = (message: string) =>
@@ -381,8 +394,8 @@ test("a blocked release pages once per interval, not once per cycle", async () =
 	assert.equal(releaser.pending.size, 1);
 });
 
-test("an unexpected release failure pages once per interval, and again at once when the failure changes", async () => {
-	let failure: Error = new Error("execution reverted: TokenNotSet");
+test("an unexpected release failure pages once per interval for each reason, and again at once when the failure changes", async () => {
+	let failure: Error = revertedWith("TokenNotSet");
 	const { releaser, alerts, advance } = releaserWith(
 		{
 			simulateContract: () => {
@@ -391,16 +404,31 @@ test("an unexpected release failure pages once per interval, and again at once w
 		},
 		[ENTRY],
 	);
-	for (let cycle = 0; cycle < 5; cycle++) await drainPending(releaser, CONVERSION_FACTOR, DAILY_CAP);
-	assert.deepEqual(alerts, [
-		`critical unexpected release failure: nonce=7 recipient=${RECIPIENT} amount=${ENTRY.palletAmount} — execution reverted: TokenNotSet`,
-	]);
+	const drain = () => drainPending(releaser, CONVERSION_FACTOR, DAILY_CAP);
+	for (let cycle = 0; cycle < 5; cycle++) await drain();
+	assert.equal(alerts.length, 1);
+	assert.match(alerts[0], /^critical unexpected release failure: nonce=7 .*reason:\nTokenNotSet\n/);
 	advance(releaser.blockedAlertIntervalMs);
-	await drainPending(releaser, CONVERSION_FACTOR, DAILY_CAP);
+	await drain();
 	assert.equal(alerts.length, 2);
-	failure = vaultRevert({ errorName: "ExceedsPerReleaseCap", args: [ENTRY.palletAmount * CONVERSION_FACTOR, 1n] });
-	await drainPending(releaser, CONVERSION_FACTOR, DAILY_CAP);
+	// Another revert pages at once.
+	failure = revertedWith("Pausable: paused");
+	await drain();
 	assert.equal(alerts.length, 3);
-	assert.match(alerts[2], /^critical release blocked and needs operator action: nonce=7 /);
+	// So does an RPC error, once, whatever endpoint and request its text names.
+	// Each reason keeps its own interval: the RPC error neither mutes the revert
+	// nor makes it page again.
+	for (const id of [1, 2]) {
+		failure = new HttpRequestError({ url: `http://rpc-${id}`, status: 503, details: `request ${id}` });
+		await drain();
+	}
+	failure = revertedWith("Pausable: paused");
+	await drain();
+	assert.equal(alerts.length, 4);
+	assert.match(alerts[3], /^critical unexpected release failure: nonce=7 .* — HTTP request failed\./);
+	failure = vaultRevert({ errorName: "ExceedsPerReleaseCap", args: [ENTRY.palletAmount * CONVERSION_FACTOR, 1n] });
+	await drain();
+	assert.equal(alerts.length, 5);
+	assert.match(alerts[4], /^critical release blocked and needs operator action: nonce=7 /);
 	assert.equal(releaser.pending.size, 1);
 });

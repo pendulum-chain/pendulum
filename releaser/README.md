@@ -41,7 +41,7 @@ consumed nonce and drops it.
 | `HEARTBEAT_URL` | Optional http(s) URL requested (GET) after a cycle that completed without error, at most once a minute; point it at a dead-man's switch that pages when the requests stop. Startup refuses any other value. A failed request is logged (error name and code only, never the URL), never fatal |
 | `BASE_CHAIN_ID` | Default 8453; startup refuses a `BASE_RPC_URL` that serves another chain (`eth_chainId`) |
 | `BASE_FINALITY_TAG` | `safe` (default) or `finalized`; the scan cursor stays inside this boundary and a pending entry is dropped only once its nonce is consumed there |
-| `BLOCKED_ALERT_INTERVAL_MS` | Re-page interval for the same page about one release: governance-blocked, or failing unexpectedly (default 6h — a blocked release needs a ≥48h timelocked action, so per-poll paging would bury the signal). A different page about it goes out at once |
+| `BLOCKED_ALERT_INTERVAL_MS` | Re-page interval for the same page about one release, for the same reason: governance-blocked, or failing unexpectedly (default 6h — a blocked release needs a ≥48h timelocked action, so per-poll paging would bury the signal). A different page about it, or the same page for another reason, goes out at once; each reason keeps its own interval |
 | `READ_BATCH_SIZE` | Bound on Multicall calldata and individual fallback concurrency (default 100; a whole number of at least 1) |
 | `FEE_BUMP_AFTER_SECONDS` | Re-send a release transaction that is still not mined after this long (default 60) |
 | `FEE_BUMP_PERCENT` | Raise both fees by at least this many percent per re-send (default 20; a whole number of at least 10, the minimum a node accepts for a replacement) |
@@ -67,7 +67,7 @@ Failures are classified rather than treated alike:
 | `ExceedsDailyCap`, `EnforcedPause`, `NotEnoughApprovals` | **Retry quietly** — expected temporary conditions |
 | `NonceAlreadyConsumed` (at the finality boundary) | **Done** — drop it |
 | `ExceedsPerReleaseCap`, `InsufficientVaultBalance` | **Alert, throttled** to `BLOCKED_ALERT_INTERVAL_MS` — cannot self-heal without governance or operator action |
-| anything else | **Alert** `unexpected release failure`, **throttled** to `BLOCKED_ALERT_INTERVAL_MS` per release |
+| anything else | **Alert** `unexpected release failure`, **throttled** to `BLOCKED_ALERT_INTERVAL_MS` per release and reason: the revert, or the kind of error, never its text (which names requests and endpoints), so a transient RPC error neither mutes a revert nor makes it page again |
 
 A successful `release()` does **not** drop the entry immediately: it leaves the
 durable pending set only once the nonce reads as consumed at the

@@ -67,6 +67,21 @@ export function classifyReleaseFailure(errorName: string | undefined): ReleaseOu
 	return "unexpected";
 }
 
+/** What a failed release is about, without the volatile parts of its text
+ *  (request ids, URLs, block numbers): the vault's revert (the reason it gave,
+ *  its error name, or the selector of an error the ABI lacks), or else the
+ *  names of the errors it was raised through. */
+export function failureReason(error: unknown): string {
+	const names: string[] = [];
+	for (let cause: unknown = error, depth = 0; cause instanceof Error && depth < 10; cause = cause.cause, depth++) {
+		if (cause instanceof ContractFunctionRevertedError) {
+			return `reverted: ${cause.reason ?? cause.data?.errorName ?? cause.signature ?? "no reason"}`;
+		}
+		names.push(cause.name);
+	}
+	return names.join(" < ") || String(error);
+}
+
 /** Divide work into bounded batches. Both Multicall calldata and individual
  * fallback concurrency use the same explicit limit. */
 export function chunks<T>(items: T[], size: number): T[][] {

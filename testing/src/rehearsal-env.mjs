@@ -73,7 +73,25 @@ export function loadEnv() {
 			throw new Error(`${key} is not a 32-byte hex private key`);
 		}
 	}
+	rehearsalCapsPen(env); // refuses inverted caps before anything is spawned or deployed
 	return env;
+}
+
+/** The rehearsal caps in whole PEN, sized for wall clock (see
+ *  .env.rehearsal.example). The per-release cap defaults to the daily cap. */
+export function rehearsalCapsPen(env) {
+	const daily = BigInt(env.REHEARSAL_DAILY_CAP_PEN ?? "28800");
+	const perRelease = BigInt(env.REHEARSAL_PER_RELEASE_CAP_PEN ?? daily);
+	// The vault rejects perReleaseCap > dailyCap (CapsInverted): a release in
+	// between could never fit the daily allowance.
+	if (perRelease > daily) {
+		throw new Error(
+			`REHEARSAL_PER_RELEASE_CAP_PEN (${perRelease}) is above REHEARSAL_DAILY_CAP_PEN (${daily}), ` +
+				"which the vault rejects (CapsInverted). Set it to at most the daily cap, or leave it unset " +
+				"to use the daily cap (28800 PEN each by default).",
+		);
+	}
+	return { daily, perRelease };
 }
 
 export function buildContext(env) {

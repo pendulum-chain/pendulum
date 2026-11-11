@@ -69,11 +69,13 @@ function redact(text: string): string {
 	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
 }
 
-async function alert(subject: string, detail: string, severity: Severity = "warning"): Promise<void> {
+/** Log the alert and post it to the webhook; resolves to whether it was
+ *  delivered. Without a webhook the log line is the delivery. */
+async function alert(subject: string, detail: string, severity: Severity = "warning"): Promise<boolean> {
 	console.error(`${new Date().toISOString()} ALERT: ${subject} — ${detail}`);
-	if (!config.alertWebhookUrl) return;
+	if (!config.alertWebhookUrl) return true;
 	const redacted = redact(detail);
-	await postAlert(config.alertWebhookUrl, {
+	return postAlert(config.alertWebhookUrl, {
 		text: alertText(severity, `pen-releaser ${account.address}`, subject, redacted),
 		severity,
 		service: "pen-releaser",

@@ -70,6 +70,7 @@ function releaserWith(answers: Record<string, Answer>, entries: PendingRelease[]
 		alertedAt: new Map(),
 		alert: async (subject, detail, severity = "warning") => {
 			alerts.push(`${severity} ${subject}: ${detail}`);
+			return true;
 		},
 		log: (message) => logs.push(message),
 		now: () => clock,
@@ -392,6 +393,33 @@ test("a blocked release pages once per interval, not once per cycle", async () =
 	await drainPending(releaser, CONVERSION_FACTOR, DAILY_CAP);
 	assert.equal(alerts.length, 2);
 	assert.equal(releaser.pending.size, 1);
+});
+
+test("a page whose delivery failed goes out again ten minutes later, neither every cycle nor an interval later", async () => {
+	const { releaser, advance } = releaserWith(
+		{
+			simulateContract: () => {
+				throw vaultRevert({ errorName: "ExceedsPerReleaseCap", args: [ENTRY.palletAmount * CONVERSION_FACTOR, 1n] });
+			},
+		},
+		[ENTRY],
+	);
+	// The webhook is down for the first page only.
+	const start = releaser.now();
+	const pages: { minute: number; delivered: boolean }[] = [];
+	releaser.alert = async () => {
+		const delivered = pages.length > 0;
+		pages.push({ minute: (releaser.now() - start) / 60_000, delivered });
+		return delivered;
+	};
+	for (let minute = 0; minute < 15; minute++) {
+		await drainPending(releaser, CONVERSION_FACTOR, DAILY_CAP);
+		advance(60_000);
+	}
+	assert.deepEqual(pages, [
+		{ minute: 0, delivered: false },
+		{ minute: 10, delivered: true },
+	]);
 });
 
 test("an unexpected release failure pages once per interval for each reason, and again at once when the failure changes", async () => {

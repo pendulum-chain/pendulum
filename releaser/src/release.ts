@@ -82,26 +82,34 @@ export interface Releaser {
 	blockedAlertIntervalMs: number;
 	/** nonce -> pending release. Keyed by nonce: the vault consumes a nonce once. */
 	pending: Map<bigint, PendingRelease>;
-	/** nonce -> each page about it, by subject and reason, and when it last went
-	 *  out. A blocked release needs a timelocked governance action (>= 48h) to
-	 *  clear, and an unexpected failure repeats every poll as well, so re-paging
-	 *  either every poll would emit thousands of identical alerts and train
-	 *  on-call to ignore them; the same page re-alerts at a bounded interval
-	 *  instead. */
-	alertedAt: Map<bigint, Map<string, number>>;
+	/** nonce -> each page about it, by subject and reason: when it last went
+	 *  out, and whether it was delivered. A blocked release needs a timelocked
+	 *  governance action (>= 48h) to clear, and an unexpected failure repeats
+	 *  every poll as well, so re-paging either every poll would emit thousands
+	 *  of identical alerts and train on-call to ignore them; the same page
+	 *  re-alerts at a bounded interval instead. */
+	alertedAt: Map<bigint, Map<string, { at: number; delivered: boolean }>>;
 	feeBump: FeeBumpPolicy;
 	/** The release transaction not seen mined yet, if any. Kept in memory
 	 *  only. */
 	inFlight?: InFlightRelease;
-	alert(subject: string, detail: string, severity?: Severity): Promise<void>;
+	/** Resolves to whether the alert was delivered. */
+	alert(subject: string, detail: string, severity?: Severity): Promise<boolean>;
 	log(message: string): void;
 	now(): number;
 }
 
+/** A page whose delivery failed goes out again after this long, or after
+ *  `blockedAlertIntervalMs` when that is shorter. Not on the next cycle: the
+ *  cycle waits on every delivery attempt, up to about 42 s with its retries,
+ *  so a webhook that is down would hold back the releases that can go. */
+const UNDELIVERED_REPAGE_MS = 10 * 60_000;
+
 /** Page `subject` about the release of `nonce`, unless the same page about it,
- *  for the same `reason`, went out less than `blockedAlertIntervalMs` ago. Each
- *  reason keeps its own interval, so one that comes and goes, such as a
- *  transient RPC error, neither mutes another nor makes it page again. */
+ *  for the same `reason`, went out less than `blockedAlertIntervalMs` ago, or
+ *  less than `UNDELIVERED_REPAGE_MS` ago if its delivery failed. Each reason
+ *  keeps its own interval, so one that comes and goes, such as a transient RPC
+ *  error, neither mutes another nor makes it page again. */
 async function pageThrottled(
 	releaser: Releaser,
 	nonce: bigint,
@@ -109,12 +117,17 @@ async function pageThrottled(
 	reason: string,
 	detail: string,
 ): Promise<void> {
-	const pages = releaser.alertedAt.get(nonce) ?? new Map<string, number>();
+	const pages = releaser.alertedAt.get(nonce) ?? new Map<string, { at: number; delivered: boolean }>();
 	const key = `${subject}: ${reason}`;
 	const last = pages.get(key);
-	if (last !== undefined && releaser.now() - last < releaser.blockedAlertIntervalMs) return;
-	releaser.alertedAt.set(nonce, pages.set(key, releaser.now()));
-	await releaser.alert(subject, detail, "critical");
+	if (last !== undefined) {
+		const interval = last.delivered
+			? releaser.blockedAlertIntervalMs
+			: Math.min(UNDELIVERED_REPAGE_MS, releaser.blockedAlertIntervalMs);
+		if (releaser.now() - last.at < interval) return;
+	}
+	const delivered = await releaser.alert(subject, detail, "critical");
+	releaser.alertedAt.set(nonce, pages.set(key, { at: releaser.now(), delivered }));
 }
 
 const min = (a: bigint, b: bigint) => (a < b ? a : b);

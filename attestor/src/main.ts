@@ -152,10 +152,6 @@ async function main(): Promise<void> {
 		attestorAddress: account.address,
 		attestorGeneration,
 	});
-	// A checkpoint written before the signer was recorded is bound to it from
-	// the next save on.
-	checkpoint.attestorAddress ??= account.address;
-	checkpoint.attestorGeneration ??= attestorGeneration;
 	log(`attestor ${account.address} (generation ${attestorGeneration}) starting after block ${checkpoint.lastProcessedBlock}`);
 
 	/** Blocks processed at the latest Base state, oldest first, that the

@@ -66,15 +66,16 @@ test("a checkpoint made by another key or an earlier generation of this key is r
 	);
 });
 
-test("a checkpoint from before the signer was recorded still loads", () => {
+test("a checkpoint without the signer fields is refused, not bound to the key that starts on it", () => {
 	const directory = mkdtempSync(join(tmpdir(), "pen-attestor-state-"));
 	const path = join(directory, "checkpoint.json");
 	try {
-		const { attestorAddress, attestorGeneration, ...legacy } = checkpoint;
-		writeFileSync(path, JSON.stringify(legacy));
-		const loaded = loadCheckpoint(path);
-		assert.deepEqual(loaded, legacy);
-		assert.doesNotThrow(() => assertCheckpointIdentity(loaded!, { ...legacy, attestorAddress, attestorGeneration }));
+		const { attestorAddress, attestorGeneration, ...unbound } = checkpoint;
+		writeFileSync(path, JSON.stringify(unbound));
+		assert.throws(
+			() => assertCheckpointIdentity(loadCheckpoint(path)!, { ...unbound, attestorAddress, attestorGeneration }),
+			/has neither attestorAddress nor attestorGeneration, .*\(runbook RB-6\): .*start with no checkpoint/,
+		);
 		writeFileSync(path, JSON.stringify({ ...checkpoint, attestorGeneration: 0 }));
 		assert.throws(() => loadCheckpoint(path), /invalid or legacy schema/);
 		writeFileSync(path, JSON.stringify({ ...checkpoint, attestorAddress: [checkpoint.attestorAddress] }));
@@ -84,17 +85,17 @@ test("a checkpoint from before the signer was recorded still loads", () => {
 	}
 });
 
-test("a checkpoint with only one of the signer fields is refused, not taken for one from before they existed", () => {
+test("a checkpoint with only one of the signer fields is refused as edited", () => {
 	const directory = mkdtempSync(join(tmpdir(), "pen-attestor-state-"));
 	const path = join(directory, "checkpoint.json");
 	try {
-		const { attestorAddress, attestorGeneration, ...legacy } = checkpoint;
-		writeFileSync(path, JSON.stringify({ ...legacy, attestorAddress }));
+		const { attestorAddress, attestorGeneration, ...unbound } = checkpoint;
+		writeFileSync(path, JSON.stringify({ ...unbound, attestorAddress }));
 		assert.throws(
 			() => assertCheckpointIdentity(loadCheckpoint(path)!, { ...checkpoint, attestorGeneration: 2 }),
 			/has attestorAddress but no attestorGeneration; .*\(runbook RB-6\)/,
 		);
-		writeFileSync(path, JSON.stringify({ ...legacy, attestorGeneration }));
+		writeFileSync(path, JSON.stringify({ ...unbound, attestorGeneration }));
 		assert.throws(
 			() =>
 				assertCheckpointIdentity(loadCheckpoint(path)!, {

@@ -36,6 +36,10 @@ import { vaultAbi } from "./vaultAbi.js";
 
 redactConsole();
 
+/** Repeated cycle failures (a sustained RPC outage) page at most this often;
+ *  every failure is still logged. */
+const CYCLE_ALERT_INTERVAL_MS = 10 * 60_000;
+
 /** Canonical Multicall3, deployed at the same address on Base and every major
  *  chain. viem refuses to batch unless the chain definition declares it, even
  *  when the contract is present on-chain, so it has to be named here. */
@@ -251,6 +255,7 @@ async function main(): Promise<void> {
 	log(`releaser ${account.address} started; scanning from block ${fromBlock}, ${pending.size} pending`);
 	await checkGasBalance();
 	const heartbeat = throttledHeartbeat(config.heartbeatUrl);
+	let lastCycleAlertMs = 0;
 
 	for (;;) {
 		try {
@@ -272,7 +277,12 @@ async function main(): Promise<void> {
 			);
 			void heartbeat();
 		} catch (cycleError) {
-			await alert("releaser cycle failed", `${cycleError}`);
+			if (Date.now() - lastCycleAlertMs >= CYCLE_ALERT_INTERVAL_MS) {
+				lastCycleAlertMs = Date.now();
+				await alert("releaser cycle failed", `${cycleError}`);
+			} else {
+				log(`releaser cycle failed: ${cycleError}`);
+			}
 		}
 		await new Promise((resolve) => setTimeout(resolve, config.pollIntervalMs));
 	}

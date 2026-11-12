@@ -55,7 +55,8 @@ point.
 | `MAX_FEE_PER_GAS_GWEI` | No approval ever offers a higher `maxFeePerGas` (default 1, about 200 times Base's usual base fee; one approval uses at most about 300k gas) |
 
 Log lines and alerts show `<url>` in place of every http(s) and ws(s) URL:
-endpoint URLs often carry an access key.
+endpoint URLs often carry an access key. Startup refuses an endpoint setting
+without the right scheme, and does not echo it.
 
 ## Run
 

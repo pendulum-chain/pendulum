@@ -20,6 +20,16 @@ function loadConfig(extra: Record<string, string>, print = "''"): { status: numb
 	return { status: result.status, stdout: result.stdout.trim(), stderr: result.stderr };
 }
 
+test("an endpoint URL needs the right scheme, and a bad one is refused without echoing it", () => {
+	assert.equal(loadConfig({ ALERT_WEBHOOK_URL: "https://hooks.example/secret-key" }, "config.alertWebhookUrl").stdout, "https://hooks.example/secret-key");
+	for (const [name, value] of Object.entries({ BASE_RPC_URL: "wss://base.example/secret-key", ALERT_WEBHOOK_URL: "hooks.example/secret-key" })) {
+		const { status, stderr } = loadConfig({ [name]: value });
+		assert.notEqual(status, 0, name);
+		assert.match(stderr, new RegExp(`invalid ${name}`), name);
+		assert.doesNotMatch(stderr, /secret-key/, name);
+	}
+});
+
 test("HEARTBEAT_URL must be an http(s) URL, and a bad one is refused without echoing it", () => {
 	assert.equal(loadConfig({ HEARTBEAT_URL: "https://hc-ping.com/secret-token" }, "config.heartbeatUrl").stdout, "https://hc-ping.com/secret-token");
 	const { status, stderr } = loadConfig({ HEARTBEAT_URL: "hc-ping.com/secret-token" });

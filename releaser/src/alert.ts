@@ -37,18 +37,25 @@ export function alertText(severity: Severity, source: string, subject: string, d
  *  refuse more than a few requests a minute. */
 const HEARTBEAT_INTERVAL_MS = 60_000;
 
-/** HEARTBEAT_URL, checked once at startup: unset, or an http(s) URL. The value
- *  is never echoed, as it usually holds a token. */
-export function parseHeartbeatUrl(value: string | undefined): string | undefined {
-	if (!value) return undefined;
+/** The URL setting `name`, checked once at startup: an http(s) URL, or a ws(s)
+ *  one when `scheme` says so. The value is never echoed, as it usually holds a
+ *  token. */
+export function checkUrl(name: string, value: string, scheme: "http" | "ws" = "http"): string {
 	let protocol: string | undefined;
 	try {
 		protocol = new URL(value).protocol;
 	} catch {
 		// Not a URL at all: refused below.
 	}
-	if (protocol !== "http:" && protocol !== "https:") throw new Error("invalid HEARTBEAT_URL: expected an http(s) URL");
+	if (protocol !== `${scheme}:` && protocol !== `${scheme}s:`) {
+		throw new Error(`invalid ${name}: expected ${scheme === "ws" ? "a ws(s)" : "an http(s)"} URL`);
+	}
 	return value;
+}
+
+/** HEARTBEAT_URL, checked once at startup: unset, or an http(s) URL. */
+export function parseHeartbeatUrl(value: string | undefined): string | undefined {
+	return value ? checkUrl("HEARTBEAT_URL", value) : undefined;
 }
 
 /**

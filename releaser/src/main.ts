@@ -35,6 +35,12 @@ import {
 import { vaultAbi } from "./vaultAbi.js";
 
 redactConsole();
+// Node prints an uncaught error or unhandled rejection itself, past the
+// console: print it redacted instead, then exit as Node would.
+process.on("uncaughtException", (error) => {
+	console.error(`${new Date().toISOString()} fatal error`, error);
+	process.exit(1);
+});
 
 /** Repeated cycle failures (a sustained RPC outage) page at most this often;
  *  every failure is still logged. */

@@ -45,6 +45,12 @@ import {
 } from "./state.js";
 
 redactConsole();
+// Node prints an uncaught error or unhandled rejection itself, past the
+// console: print it redacted instead, then exit as Node would.
+process.on("uncaughtException", (error) => {
+	console.error(`${new Date().toISOString()} fatal error`, error);
+	process.exit(1);
+});
 
 /** Repeated transient failures (a sustained RPC outage) page at most this
  *  often; every occurrence is still logged. */

@@ -173,7 +173,9 @@ test("console output shows <url> in place of each endpoint, also inside a logged
 	console.log("scanning %s", "https://base.example/v2/secret-key");
 	console.error("cycle failed", new Error("HTTP request failed.\n\nURL: https://base.example/v2/secret-key"));
 	console.warn("API-WS: disconnected from wss://pendulum.example/ws?apikey=secret-key: 1006");
+	console.info("API-WS: disconnected from ws://127.0.0.1:9944/secret-key: 1006");
+	console.debug("posting to http://hooks.example/secret-key");
 	const lines = mocks.flatMap((mock) => mock.mock.calls.map((call) => `${call.arguments[0]}`));
-	assert.equal(lines.length, 3);
+	assert.equal(lines.length, 5);
 	for (const line of lines) assert.ok(line.includes("<url>") && !line.includes("secret-key"), line);
 });

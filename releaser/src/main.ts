@@ -22,7 +22,7 @@
 
 import { createPublicClient, createWalletClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { alertText, postAlert, throttledHeartbeat, type Severity } from "./alert.js";
+import { alertText, postAlert, redact, redactConsole, throttledHeartbeat, type Severity } from "./alert.js";
 import { chunks, readInRanges, toPalletAmount } from "./checks.js";
 import { config } from "./config.js";
 import { drainPending, type PendingRelease, type Releaser } from "./release.js";
@@ -33,6 +33,8 @@ import {
 	type PersistedState,
 } from "./state.js";
 import { vaultAbi } from "./vaultAbi.js";
+
+redactConsole();
 
 /** Canonical Multicall3, deployed at the same address on Base and every major
  *  chain. viem refuses to batch unless the chain definition declares it, even
@@ -61,12 +63,6 @@ const alertedAt: Releaser["alertedAt"] = new Map();
 
 function log(message: string): void {
 	console.log(`${new Date().toISOString()} ${message}`);
-}
-
-/** Strip URLs before anything leaves the process: RPC endpoints commonly embed
- *  API keys, and viem error texts quote the endpoint verbatim. */
-function redact(text: string): string {
-	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
 }
 
 /** Log the alert and post it to the webhook; resolves to whether it was

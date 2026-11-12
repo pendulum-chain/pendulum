@@ -48,6 +48,9 @@ consumed nonce and drops it.
 | `FEE_BUMP_MAX` | Re-sends per transaction before the `release transaction not mined` page (default 3) |
 | `MAX_FEE_PER_GAS_GWEI` | No release transaction ever offers a higher `maxFeePerGas` (default 1) |
 
+Log lines and alerts show `<url>` in place of every http(s) and ws(s) URL:
+endpoint URLs often carry an access key.
+
 ## Run
 
 ```sh

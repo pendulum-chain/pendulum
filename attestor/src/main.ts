@@ -24,7 +24,7 @@
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { createPublicClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { alertText, postAlert, throttledHeartbeat, type Severity } from "./alert.js";
+import { alertText, postAlert, redact, redactConsole, throttledHeartbeat, type Severity } from "./alert.js";
 import {
 	advanceCheckpoint,
 	assertSignerUnchanged,
@@ -44,6 +44,8 @@ import {
 	type Checkpoint,
 } from "./state.js";
 
+redactConsole();
+
 /** Repeated transient failures (a sustained RPC outage) page at most this
  *  often; every occurrence is still logged. */
 const TRANSIENT_ALERT_INTERVAL_MS = 60_000;
@@ -60,12 +62,6 @@ const publicClient = createPublicClient({ chain: baseChain, transport: http(conf
 
 function log(message: string, extra?: unknown): void {
 	console.log(`${new Date().toISOString()} ${message}`, extra ?? "");
-}
-
-/** Strip URLs before anything leaves the process: RPC endpoints commonly embed
- *  API keys, and viem error texts quote the endpoint verbatim. */
-function redact(text: string): string {
-	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
 }
 
 async function alert(subject: string, detail: unknown, severity: Severity = "warning"): Promise<void> {

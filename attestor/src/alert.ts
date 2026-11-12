@@ -1,4 +1,22 @@
+import { format } from "node:util";
+
 export type Severity = "critical" | "warning";
+
+/** Strip URLs before anything leaves the process: endpoints commonly embed API
+ *  keys, and error texts quote them verbatim (viem's the RPC URL, polkadot.js
+ *  the WebSocket one). */
+export function redact(text: string): string {
+	return text.replace(/(?:https?|wss?):\/\/[^\s"')]+/gi, "<url>");
+}
+
+/** Pass all console output through `redact`, called once at startup: errors
+ *  are logged whole, and libraries log on their own. */
+export function redactConsole(): void {
+	for (const method of ["debug", "info", "log", "warn", "error"] as const) {
+		const write = console[method].bind(console);
+		console[method] = (...args: unknown[]) => write(redact(format(...args)));
+	}
+}
 
 /** Longer details are cut, well inside what Slack shows of one message. */
 const MAX_TEXT = 3000;

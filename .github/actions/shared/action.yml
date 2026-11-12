@@ -33,17 +33,11 @@ runs:
         tool-cache: false
         large-packages: false
 
-    # Steps taken from https://github.com/actions/runner-images/issues/7192#issuecomment-1446766800
-    - name: Disable Phase Updates
-      shell: bash
-      run: |
-        echo 'APT::Get::Always-Include-Phased-Updates "false";' | sudo tee /etc/apt/apt.conf.d/99-phased-updates
-
-    - name: Update, Upgrade, and Install Protobuf
-      shell: bash
-      run: |
-          sudo apt-get update && sudo apt-get upgrade -y
-          sudo apt-get install -y protobuf-compiler libprotobuf-dev
+    # From GitHub releases, so CI does not depend on the Ubuntu package mirror.
+    - name: Install Protoc
+      uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
+      with:
+        repo-token: ${{ github.token }}
 
     # Steps taken from https://github.com/actions/cache/blob/master/examples.md#rust---cargo
     - name: Cache cargo registry

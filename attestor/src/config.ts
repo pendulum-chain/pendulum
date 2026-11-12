@@ -108,7 +108,7 @@ export const config = {
 	 *  nonce with both fees raised by `percent` (at least the 10 % a replacement
 	 *  needs, and at least to the current estimate), at most `max` times and
 	 *  never above `maxFeePerGas`; then it pages once. Base mines a block every
-	 *  2 s and an approval priced at the estimate lands in the next one or two,
+	 *  200 ms and an approval priced at the estimate lands in the next one or two,
 	 *  so 60 s means stuck, not slow. Since each bump also catches up with the
 	 *  estimate, one normally suffices; when three do not, the price is not the
 	 *  problem and the page (about 4 min after the first send) goes to a person.

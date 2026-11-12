@@ -42,9 +42,9 @@ process.on("uncaughtException", (error) => {
 	process.exit(1);
 });
 
-/** Repeated cycle failures (a sustained RPC outage) page at most this often;
- *  every failure is still logged. */
-const CYCLE_ALERT_INTERVAL_MS = 10 * 60_000;
+/** A failure that is retried, at startup or in a cycle (a sustained RPC
+ *  outage, say), pages at most this often; every failure is still logged. */
+const RETRY_ALERT_INTERVAL_MS = 10 * 60_000;
 
 /** Canonical Multicall3, deployed at the same address on Base and every major
  *  chain. viem refuses to batch unless the chain definition declares it, even
@@ -89,6 +89,33 @@ async function alert(subject: string, detail: string, severity: Severity = "warn
 		subject,
 		detail: redacted,
 	});
+}
+
+let lastRetryAlertMs = 0;
+
+/** Page a failure that will be retried, or only log it if such a page went out
+ *  less than RETRY_ALERT_INTERVAL_MS ago. */
+async function alertRetried(subject: string, error: unknown): Promise<void> {
+	if (Date.now() - lastRetryAlertMs >= RETRY_ALERT_INTERVAL_MS) {
+		lastRetryAlertMs = Date.now();
+		await alert(subject, `${error}`);
+	} else {
+		log(`${subject}: ${error}`);
+	}
+}
+
+/** A Base read at startup, tried again every POLL_INTERVAL_MS until it answers:
+ *  a restart during an RPC outage waits for the endpoint, as a running releaser
+ *  does, instead of exiting and paging again on every restart. */
+async function startupRead<T>(read: () => Promise<T>): Promise<T> {
+	for (;;) {
+		try {
+			return await read();
+		} catch (error) {
+			await alertRetried("releaser startup read failed, retrying", error);
+			await new Promise((resolve) => setTimeout(resolve, config.pollIntervalMs));
+		}
+	}
 }
 
 function loadState(): void {
@@ -239,17 +266,19 @@ async function checkGasBalance(): Promise<void> {
 async function main(): Promise<void> {
 	// The state is bound to BASE_CHAIN_ID: an endpoint serving another chain
 	// would scan its logs into this state.
-	const baseChainId = await publicClient.getChainId();
+	const baseChainId = await startupRead(() => publicClient.getChainId());
 	if (baseChainId !== config.baseChainId) {
 		throw new Error(`BASE_RPC_URL serves chain ${baseChainId}, but BASE_CHAIN_ID is ${config.baseChainId}`);
 	}
 	loadState();
-	const conversionFactor = await publicClient.readContract({
-		address: config.vaultAddress,
-		abi: vaultAbi,
-		functionName: "conversionFactor",
-	});
-	const multicallCode = await publicClient.getBytecode({ address: MULTICALL3 });
+	const conversionFactor = await startupRead(() =>
+		publicClient.readContract({
+			address: config.vaultAddress,
+			abi: vaultAbi,
+			functionName: "conversionFactor",
+		}),
+	);
+	const multicallCode = await startupRead(() => publicClient.getBytecode({ address: MULTICALL3 }));
 	if (!multicallCode || multicallCode === "0x") {
 		multicallUnavailable = true;
 		await alert(
@@ -258,9 +287,8 @@ async function main(): Promise<void> {
 		);
 	}
 	log(`releaser ${account.address} started; scanning from block ${fromBlock}, ${pending.size} pending`);
-	await checkGasBalance();
+	await startupRead(checkGasBalance);
 	const heartbeat = throttledHeartbeat(config.heartbeatUrl);
-	let lastCycleAlertMs = 0;
 
 	for (;;) {
 		try {
@@ -282,12 +310,7 @@ async function main(): Promise<void> {
 			);
 			void heartbeat();
 		} catch (cycleError) {
-			if (Date.now() - lastCycleAlertMs >= CYCLE_ALERT_INTERVAL_MS) {
-				lastCycleAlertMs = Date.now();
-				await alert("releaser cycle failed", `${cycleError}`);
-			} else {
-				log(`releaser cycle failed: ${cycleError}`);
-			}
+			await alertRetried("releaser cycle failed", cycleError);
 		}
 		await new Promise((resolve) => setTimeout(resolve, config.pollIntervalMs));
 	}

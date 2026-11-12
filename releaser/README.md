@@ -64,7 +64,10 @@ Each cycle it scans new `ReleasePending` logs, drops nonces the vault has
 already consumed, then simulates and submits `release()` for the rest.
 Simulating first means a still-capped release costs no gas. A cycle that
 fails, on an RPC error for instance, is logged and runs again after
-`POLL_INTERVAL_MS`; it pages `releaser cycle failed` at most every 10 minutes.
+`POLL_INTERVAL_MS`, and so does a failed Base read at startup: a restart during
+an outage waits for the endpoint instead of exiting. These failures page
+(`releaser cycle failed`, `releaser startup read failed, retrying`) at most
+once every 10 minutes.
 
 Failures are classified rather than treated alike:
 

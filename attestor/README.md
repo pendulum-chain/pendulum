@@ -165,7 +165,10 @@ WantedBy=multi-user.target
   set, that `BASE_RPC_URL` serves `BASE_CHAIN_ID` (`eth_chainId`, which the
   checkpoint's Base chain must match too) and that `PENDULUM_WS` serves
   `PENDULUM_GENESIS_HASH`, and refuses to run otherwise. These checks run on
-  every start, the first one without a checkpoint included. While running, it
+  every start, the first one without a checkpoint included. A Base read they
+  need that fails, as during an RPC outage, is tried again every 5 s and pages
+  `Base read failed at startup, retrying` at most once a minute, so a restart
+  during an outage waits for the endpoint instead of exiting. While running, it
   re-reads its attestor membership and generation on every finalized head and
   exits with `fatal error, exiting` when either changed (a key removed, or
   removed and re-added): the next start then refuses the checkpoint until it

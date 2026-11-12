@@ -80,6 +80,8 @@ test("a failing cycle pages once, then is only logged, and no output shows the e
 			POLL_INTERVAL_MS: "1000",
 		},
 	});
+	// A regression must fail the test, not leave the releaser running.
+	const kill = setTimeout(() => child.kill(), 20_000);
 	try {
 		let stdout = "";
 		let stderr = "";
@@ -104,6 +106,7 @@ test("a failing cycle pages once, then is only logged, and no output shows the e
 		assert.match(stderr, /URL: <url>/);
 		assert.ok(!output.includes("secret-key"), output);
 	} finally {
+		clearTimeout(kill);
 		child.kill();
 		server.closeAllConnections();
 		server.close();

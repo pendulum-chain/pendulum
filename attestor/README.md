@@ -49,7 +49,7 @@ point.
 | `BASE_FINALITY_TIMEOUT_MS` | How long a block's approvals may stay outside that boundary before an alert + idempotent re-submission (default 15 min for `safe`, 45 min for `finalized`) |
 | `HEAD_STALL_ALERT_MS` | Page when no finalized Pendulum head has arrived for this long (default 5 min): the daemon is push-driven, so a node that stops finalizing would otherwise idle undetected |
 | `MISSED_APPROVAL_ALERT_COUNT` | Page after this many consecutive migrations resolved on-chain without this attestor's own approval landing, and again every as many more (default 3, a whole number of at least 1) |
-| `FEE_BUMP_AFTER_SECONDS` | Re-send an own approval that is still not mined after this long (default 60: Base mines a block every 2 s, so this means stuck, not slow) |
+| `FEE_BUMP_AFTER_SECONDS` | Re-send an own approval that is still not mined after this long (default 60: Base mines a block every 200 ms, so this means stuck, not slow) |
 | `FEE_BUMP_PERCENT` | Raise both fees by at least this many percent per re-send (default 20; a whole number of at least 10, the minimum a node accepts for a replacement) |
 | `FEE_BUMP_MAX` | Re-sends per approval before the `own approval not mined` page (default 3) |
 | `MAX_FEE_PER_GAS_GWEI` | No approval ever offers a higher `maxFeePerGas` (default 1, about 200 times Base's usual base fee; one approval uses at most about 300k gas) |

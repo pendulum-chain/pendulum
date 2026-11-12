@@ -189,10 +189,9 @@ async function readConsumed(nonces: bigint[], blockNumber: bigint): Promise<bool
 				flags.push(...(results as boolean[]));
 				continue;
 			} catch (error) {
-				await alert(
-					"multicall batch failed, using bounded per-nonce reads for this batch",
-					`${error}`,
-				);
+				// Not paged: the per-nonce reads below cover it, and if they fail
+				// too, the cycle fails and pages.
+				log(`multicall batch failed, using bounded per-nonce reads for this batch: ${error}`);
 			}
 		}
 		flags.push(...(await Promise.all(batch.map(single))));

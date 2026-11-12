@@ -102,7 +102,8 @@ trusting unsafe logs or losing pending work. Malformed state is fatal, and so is
 an endpoint that does not serve `BASE_CHAIN_ID`, checked before the state is
 read on every start. Multicall
 is disabled permanently only when an on-chain code check proves it absent; a
-temporary provider error falls back in bounded batches for that cycle.
+temporary provider error falls back in bounded batches for that cycle and is
+logged, not paged.
 
 **Known limitation:** the pending set is driven by `ReleasePending`, which the
 vault emits when a threshold is crossed inside `approve()`. A payload made

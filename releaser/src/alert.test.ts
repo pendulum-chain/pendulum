@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import { inspect } from "node:util";
-import { alertText, parseHeartbeatUrl, pingHeartbeat, postAlert, throttledHeartbeat } from "./alert.js";
+import { alertText, parseHeartbeatUrl, pingHeartbeat, postAlert, redactConsole, throttledHeartbeat } from "./alert.js";
 
 /** A local webhook answering every POST with `status`, or never when null. */
 async function webhook(status: number | null): Promise<{ url: string; server: Server }> {
@@ -165,4 +165,17 @@ test("heartbeats go out at most once a minute, however often they are due", asyn
 	}
 	assert.deepEqual(seen, ["/ping", "/ping"]);
 	assert.equal(throttledHeartbeat(undefined)(), undefined, "nothing without a URL");
+});
+
+test("console output shows <url> in place of each endpoint, also inside a logged error", (t) => {
+	const mocks = (["debug", "info", "log", "warn", "error"] as const).map((method) => t.mock.method(console, method, () => {}));
+	redactConsole();
+	console.log("scanning %s", "https://base.example/v2/secret-key");
+	console.error("cycle failed", new Error("HTTP request failed.\n\nURL: https://base.example/v2/secret-key"));
+	console.warn("API-WS: disconnected from wss://pendulum.example/ws?apikey=secret-key: 1006");
+	console.info("API-WS: disconnected from ws://127.0.0.1:9944/secret-key: 1006");
+	console.debug("posting to http://hooks.example/secret-key");
+	const lines = mocks.flatMap((mock) => mock.mock.calls.map((call) => `${call.arguments[0]}`));
+	assert.equal(lines.length, 5);
+	for (const line of lines) assert.ok(line.includes("<url>") && !line.includes("secret-key"), line);
 });

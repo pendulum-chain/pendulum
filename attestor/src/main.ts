@@ -24,7 +24,7 @@
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { createPublicClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { alertText, postAlert, throttledHeartbeat, type Severity } from "./alert.js";
+import { alertText, postAlert, redact, redactConsole, throttledHeartbeat, type Severity } from "./alert.js";
 import {
 	advanceCheckpoint,
 	assertSignerUnchanged,
@@ -44,9 +44,20 @@ import {
 	type Checkpoint,
 } from "./state.js";
 
-/** Repeated transient failures (a sustained RPC outage) page at most this
- *  often; every occurrence is still logged. */
+redactConsole();
+// Node prints an uncaught error or unhandled rejection itself, past the
+// console: print it redacted instead, then exit as Node would.
+process.on("uncaughtException", (error) => {
+	console.error(`${new Date().toISOString()} fatal error`, error);
+	process.exit(1);
+});
+
+/** Repeated failures that are retried (a sustained RPC outage, at startup or
+ *  on a finalized head) page at most this often; every occurrence is still
+ *  logged. */
 const TRANSIENT_ALERT_INTERVAL_MS = 60_000;
+/** A Base read at startup that fails is tried again after this long. */
+const STARTUP_RETRY_MS = 5_000;
 
 const baseChain = defineChain({
 	id: config.baseChainId,
@@ -62,12 +73,6 @@ function log(message: string, extra?: unknown): void {
 	console.log(`${new Date().toISOString()} ${message}`, extra ?? "");
 }
 
-/** Strip URLs before anything leaves the process: RPC endpoints commonly embed
- *  API keys, and viem error texts quote the endpoint verbatim. */
-function redact(text: string): string {
-	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
-}
-
 async function alert(subject: string, detail: unknown, severity: Severity = "warning"): Promise<void> {
 	console.error(`${new Date().toISOString()} ALERT: ${subject}`, detail);
 	if (!config.alertWebhookUrl) return;
@@ -80,6 +85,34 @@ async function alert(subject: string, detail: unknown, severity: Severity = "war
 		subject,
 		detail: redacted,
 	});
+}
+
+let lastRetryAlertMs = 0;
+
+/** Page a failure that will be retried, or only log it if such a page went out
+ *  less than TRANSIENT_ALERT_INTERVAL_MS ago. */
+async function alertRetried(subject: string, error: unknown): Promise<void> {
+	if (Date.now() - lastRetryAlertMs >= TRANSIENT_ALERT_INTERVAL_MS) {
+		lastRetryAlertMs = Date.now();
+		await alert(subject, error);
+	} else {
+		log(subject, error);
+	}
+}
+
+/** A Base read at startup, tried again every STARTUP_RETRY_MS until it answers:
+ *  a restart during an RPC outage waits for the endpoint, paging as a running
+ *  attestor does, instead of exiting and paging again on every restart.
+ *  Nothing is processed before these reads, so no event can be skipped. */
+async function startupRead<T>(read: () => Promise<T>): Promise<T> {
+	for (;;) {
+		try {
+			return await read();
+		} catch (error) {
+			await alertRetried("Base read failed at startup, retrying", error);
+			await new Promise((resolve) => setTimeout(resolve, STARTUP_RETRY_MS));
+		}
+	}
 }
 
 /** Extract MigrationInitiated events from one finalized Pendulum block. */
@@ -125,13 +158,13 @@ async function checkGasBalance(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-	const baseChainId = await publicClient.getChainId();
+	const baseChainId = await startupRead(() => publicClient.getChainId());
 	assertBaseChain(baseChainId, config.baseChainId);
-	if (!(await attestor.chain.isAttestor())) {
+	if (!(await startupRead(() => attestor.chain.isAttestor()))) {
 		throw new Error(`${account.address} is not an attestor of ${config.vaultAddress}`);
 	}
-	const attestorGeneration = await attestor.chain.attestorGeneration();
-	await checkGasBalance();
+	const attestorGeneration = await startupRead(() => attestor.chain.attestorGeneration());
+	await startupRead(checkGasBalance);
 
 	const api = await ApiPromise.create({ provider: new WsProvider(config.pendulumWs) });
 	const pendulumGenesisHash = api.genesisHash.toHex();
@@ -158,7 +191,6 @@ async function main(): Promise<void> {
 	 *  checkpoint has not yet passed. Bounded by the Base finality lag. */
 	const unconfirmed: UnconfirmedBlock[] = [];
 	let processedThrough = checkpoint.lastProcessedBlock;
-	let lastTransientAlertMs = 0;
 	const heartbeat = throttledHeartbeat(config.heartbeatUrl);
 
 	let lastHeadAt = Date.now();
@@ -183,12 +215,7 @@ async function main(): Promise<void> {
 				// Not a statement about any event — resume from the in-memory
 				// position on the next finalized head. Sustained outages page
 				// at a bounded rate instead of once per head.
-				if (Date.now() - lastTransientAlertMs >= TRANSIENT_ALERT_INTERVAL_MS) {
-					lastTransientAlertMs = Date.now();
-					await alert("transient RPC failure, retrying on the next finalized head", error);
-				} else {
-					log("transient RPC failure, retrying on the next finalized head", error);
-				}
+				await alertRetried("transient RPC failure, retrying on the next finalized head", error);
 				return;
 			}
 			// PRD A5: never skip an event silently. Alert and exit; the process

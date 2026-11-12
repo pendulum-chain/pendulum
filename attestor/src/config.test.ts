@@ -55,6 +55,16 @@ test("on Base mainnet the expected genesis can only be Pendulum's", () => {
 	assert.equal(loadConfig({ PENDULUM_GENESIS_HASH: pendulum }, "config.pendulumGenesisHash").stdout, pendulum);
 });
 
+test("an endpoint URL needs the right scheme, and a bad one is refused without echoing it", () => {
+	assert.equal(loadConfig({ ALERT_WEBHOOK_URL: "https://hooks.example/secret-key" }, "config.alertWebhookUrl").stdout, "https://hooks.example/secret-key");
+	for (const [name, value] of Object.entries({ PENDULUM_WS: "https://node.example/secret-key", BASE_RPC_URL: "base.example/secret-key", ALERT_WEBHOOK_URL: "hooks.example/secret-key" })) {
+		const { status, stderr } = loadConfig({ [name]: value });
+		assert.notEqual(status, 0, name);
+		assert.match(stderr, new RegExp(`invalid ${name}`), name);
+		assert.doesNotMatch(stderr, /secret-key/, name);
+	}
+});
+
 test("HEARTBEAT_URL must be an http(s) URL, and a bad one is refused without echoing it", () => {
 	assert.equal(loadConfig({ HEARTBEAT_URL: "https://hc-ping.com/secret-token" }, "config.heartbeatUrl").stdout, "https://hc-ping.com/secret-token");
 	const { status, stderr } = loadConfig({ HEARTBEAT_URL: "hc-ping.com/secret-token" });

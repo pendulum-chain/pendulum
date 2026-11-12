@@ -1,5 +1,5 @@
 import { parseGwei } from "viem";
-import { parseHeartbeatUrl } from "./alert.js";
+import { checkUrl, parseHeartbeatUrl } from "./alert.js";
 import { MIN_REPLACEMENT_PERCENT } from "./approval.js";
 
 function required(name: string): string {
@@ -59,12 +59,12 @@ export const config = {
 	 *  Never point this at a public RPC: the attestor would inherit its honesty.
 	 *  The node must retain historical state (`--state-pruning archive`), or any
 	 *  daemon outage longer than the pruning horizon wedges the catch-up. */
-	pendulumWs: required("PENDULUM_WS"),
+	pendulumWs: checkUrl("PENDULUM_WS", required("PENDULUM_WS"), "ws"),
 	/** The genesis that node must serve; startup refuses any other chain. A
 	 *  local test chain sets its own, never on Base mainnet. */
 	pendulumGenesisHash: genesisHash(),
 	/** Base JSON-RPC endpoint. */
-	baseRpcUrl: required("BASE_RPC_URL"),
+	baseRpcUrl: checkUrl("BASE_RPC_URL", required("BASE_RPC_URL")),
 	/** MigrationVault contract address on Base. */
 	vaultAddress: required("VAULT_ADDRESS") as `0x${string}`,
 	/** This attestor's transaction-signing key (0x-prefixed, 32 bytes).
@@ -78,7 +78,7 @@ export const config = {
 	/** Alert when the gas wallet drops below this balance (wei). */
 	minGasBalanceWei: BigInt(process.env.MIN_GAS_BALANCE_WEI ?? "10000000000000000"), // 0.01 ETH
 	/** Optional webhook that receives JSON alerts (low gas, fatal errors). */
-	alertWebhookUrl: process.env.ALERT_WEBHOOK_URL,
+	alertWebhookUrl: process.env.ALERT_WEBHOOK_URL ? checkUrl("ALERT_WEBHOOK_URL", process.env.ALERT_WEBHOOK_URL) : undefined,
 	/** Optional http(s) URL requested after a finalized head processed without
 	 *  error, at most once a minute: a dead-man's switch pages when the
 	 *  requests stop. */
@@ -108,7 +108,7 @@ export const config = {
 	 *  nonce with both fees raised by `percent` (at least the 10 % a replacement
 	 *  needs, and at least to the current estimate), at most `max` times and
 	 *  never above `maxFeePerGas`; then it pages once. Base mines a block every
-	 *  2 s and an approval priced at the estimate lands in the next one or two,
+	 *  200 ms and an approval priced at the estimate lands in the next one or two,
 	 *  so 60 s means stuck, not slow. Since each bump also catches up with the
 	 *  estimate, one normally suffices; when three do not, the price is not the
 	 *  problem and the page (about 4 min after the first send) goes to a person.

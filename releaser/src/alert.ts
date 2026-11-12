@@ -1,4 +1,22 @@
+import { format } from "node:util";
+
 export type Severity = "critical" | "warning";
+
+/** Strip URLs before anything leaves the process: endpoints commonly embed API
+ *  keys, and error texts quote them verbatim (viem's the RPC URL, polkadot.js
+ *  the WebSocket one). */
+export function redact(text: string): string {
+	return text.replace(/(?:https?|wss?):\/\/[^\s"')]+/gi, "<url>");
+}
+
+/** Pass all console output through `redact`, called once at startup: errors
+ *  are logged whole, and libraries log on their own. */
+export function redactConsole(): void {
+	for (const method of ["debug", "info", "log", "warn", "error"] as const) {
+		const write = console[method].bind(console);
+		console[method] = (...args: unknown[]) => write(redact(format(...args)));
+	}
+}
 
 /** Longer details are cut, well inside what Slack shows of one message. */
 const MAX_TEXT = 3000;
@@ -19,18 +37,25 @@ export function alertText(severity: Severity, source: string, subject: string, d
  *  refuse more than a few requests a minute. */
 const HEARTBEAT_INTERVAL_MS = 60_000;
 
-/** HEARTBEAT_URL, checked once at startup: unset, or an http(s) URL. The value
- *  is never echoed, as it usually holds a token. */
-export function parseHeartbeatUrl(value: string | undefined): string | undefined {
-	if (!value) return undefined;
+/** The URL setting `name`, checked once at startup: an http(s) URL, or a ws(s)
+ *  one when `scheme` says so. The value is never echoed, as it usually holds a
+ *  token. */
+export function checkUrl(name: string, value: string, scheme: "http" | "ws" = "http"): string {
 	let protocol: string | undefined;
 	try {
 		protocol = new URL(value).protocol;
 	} catch {
 		// Not a URL at all: refused below.
 	}
-	if (protocol !== "http:" && protocol !== "https:") throw new Error("invalid HEARTBEAT_URL: expected an http(s) URL");
+	if (protocol !== `${scheme}:` && protocol !== `${scheme}s:`) {
+		throw new Error(`invalid ${name}: expected ${scheme === "ws" ? "a ws(s)" : "an http(s)"} URL`);
+	}
 	return value;
+}
+
+/** HEARTBEAT_URL, checked once at startup: unset, or an http(s) URL. */
+export function parseHeartbeatUrl(value: string | undefined): string | undefined {
+	return value ? checkUrl("HEARTBEAT_URL", value) : undefined;
 }
 
 /**

@@ -22,7 +22,7 @@
 
 import { createPublicClient, createWalletClient, defineChain, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { alertText, postAlert, throttledHeartbeat, type Severity } from "./alert.js";
+import { alertText, postAlert, redact, redactConsole, throttledHeartbeat, type Severity } from "./alert.js";
 import { chunks, readInRanges, toPalletAmount } from "./checks.js";
 import { config } from "./config.js";
 import { drainPending, type PendingRelease, type Releaser } from "./release.js";
@@ -33,6 +33,18 @@ import {
 	type PersistedState,
 } from "./state.js";
 import { vaultAbi } from "./vaultAbi.js";
+
+redactConsole();
+// Node prints an uncaught error or unhandled rejection itself, past the
+// console: print it redacted instead, then exit as Node would.
+process.on("uncaughtException", (error) => {
+	console.error(`${new Date().toISOString()} fatal error`, error);
+	process.exit(1);
+});
+
+/** A failure that is retried, at startup or in a cycle (a sustained RPC
+ *  outage, say), pages at most this often; every failure is still logged. */
+const RETRY_ALERT_INTERVAL_MS = 10 * 60_000;
 
 /** Canonical Multicall3, deployed at the same address on Base and every major
  *  chain. viem refuses to batch unless the chain definition declares it, even
@@ -63,12 +75,6 @@ function log(message: string): void {
 	console.log(`${new Date().toISOString()} ${message}`);
 }
 
-/** Strip URLs before anything leaves the process: RPC endpoints commonly embed
- *  API keys, and viem error texts quote the endpoint verbatim. */
-function redact(text: string): string {
-	return text.replace(/https?:\/\/[^\s"')]+/gi, "<url>");
-}
-
 /** Log the alert and post it to the webhook; resolves to whether it was
  *  delivered. Without a webhook the log line is the delivery. */
 async function alert(subject: string, detail: string, severity: Severity = "warning"): Promise<boolean> {
@@ -83,6 +89,33 @@ async function alert(subject: string, detail: string, severity: Severity = "warn
 		subject,
 		detail: redacted,
 	});
+}
+
+let lastRetryAlertMs = 0;
+
+/** Page a failure that will be retried, or only log it if such a page went out
+ *  less than RETRY_ALERT_INTERVAL_MS ago. */
+async function alertRetried(subject: string, error: unknown): Promise<void> {
+	if (Date.now() - lastRetryAlertMs >= RETRY_ALERT_INTERVAL_MS) {
+		lastRetryAlertMs = Date.now();
+		await alert(subject, `${error}`);
+	} else {
+		log(`${subject}: ${error}`);
+	}
+}
+
+/** A Base read at startup, tried again every POLL_INTERVAL_MS until it answers:
+ *  a restart during an RPC outage waits for the endpoint, as a running releaser
+ *  does, instead of exiting and paging again on every restart. */
+async function startupRead<T>(read: () => Promise<T>): Promise<T> {
+	for (;;) {
+		try {
+			return await read();
+		} catch (error) {
+			await alertRetried("releaser startup read failed, retrying", error);
+			await new Promise((resolve) => setTimeout(resolve, config.pollIntervalMs));
+		}
+	}
 }
 
 function loadState(): void {
@@ -183,10 +216,9 @@ async function readConsumed(nonces: bigint[], blockNumber: bigint): Promise<bool
 				flags.push(...(results as boolean[]));
 				continue;
 			} catch (error) {
-				await alert(
-					"multicall batch failed, using bounded per-nonce reads for this batch",
-					`${error}`,
-				);
+				// Not paged: the per-nonce reads below cover it, and if they fail
+				// too, the cycle fails and pages.
+				log(`multicall batch failed, using bounded per-nonce reads for this batch: ${error}`);
 			}
 		}
 		flags.push(...(await Promise.all(batch.map(single))));
@@ -234,17 +266,19 @@ async function checkGasBalance(): Promise<void> {
 async function main(): Promise<void> {
 	// The state is bound to BASE_CHAIN_ID: an endpoint serving another chain
 	// would scan its logs into this state.
-	const baseChainId = await publicClient.getChainId();
+	const baseChainId = await startupRead(() => publicClient.getChainId());
 	if (baseChainId !== config.baseChainId) {
 		throw new Error(`BASE_RPC_URL serves chain ${baseChainId}, but BASE_CHAIN_ID is ${config.baseChainId}`);
 	}
 	loadState();
-	const conversionFactor = await publicClient.readContract({
-		address: config.vaultAddress,
-		abi: vaultAbi,
-		functionName: "conversionFactor",
-	});
-	const multicallCode = await publicClient.getBytecode({ address: MULTICALL3 });
+	const conversionFactor = await startupRead(() =>
+		publicClient.readContract({
+			address: config.vaultAddress,
+			abi: vaultAbi,
+			functionName: "conversionFactor",
+		}),
+	);
+	const multicallCode = await startupRead(() => publicClient.getBytecode({ address: MULTICALL3 }));
 	if (!multicallCode || multicallCode === "0x") {
 		multicallUnavailable = true;
 		await alert(
@@ -253,7 +287,7 @@ async function main(): Promise<void> {
 		);
 	}
 	log(`releaser ${account.address} started; scanning from block ${fromBlock}, ${pending.size} pending`);
-	await checkGasBalance();
+	await startupRead(checkGasBalance);
 	const heartbeat = throttledHeartbeat(config.heartbeatUrl);
 
 	for (;;) {
@@ -276,7 +310,7 @@ async function main(): Promise<void> {
 			);
 			void heartbeat();
 		} catch (cycleError) {
-			await alert("releaser cycle failed", `${cycleError}`);
+			await alertRetried("releaser cycle failed", cycleError);
 		}
 		await new Promise((resolve) => setTimeout(resolve, config.pollIntervalMs));
 	}

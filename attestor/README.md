@@ -49,10 +49,14 @@ point.
 | `BASE_FINALITY_TIMEOUT_MS` | How long a block's approvals may stay outside that boundary before an alert + idempotent re-submission (default 15 min for `safe`, 45 min for `finalized`) |
 | `HEAD_STALL_ALERT_MS` | Page when no finalized Pendulum head has arrived for this long (default 5 min): the daemon is push-driven, so a node that stops finalizing would otherwise idle undetected |
 | `MISSED_APPROVAL_ALERT_COUNT` | Page after this many consecutive migrations resolved on-chain without this attestor's own approval landing, and again every as many more (default 3, a whole number of at least 1) |
-| `FEE_BUMP_AFTER_SECONDS` | Re-send an own approval that is still not mined after this long (default 60: Base mines a block every 2 s, so this means stuck, not slow) |
+| `FEE_BUMP_AFTER_SECONDS` | Re-send an own approval that is still not mined after this long (default 60: Base mines a block every 200 ms, so this means stuck, not slow) |
 | `FEE_BUMP_PERCENT` | Raise both fees by at least this many percent per re-send (default 20; a whole number of at least 10, the minimum a node accepts for a replacement) |
 | `FEE_BUMP_MAX` | Re-sends per approval before the `own approval not mined` page (default 3) |
 | `MAX_FEE_PER_GAS_GWEI` | No approval ever offers a higher `maxFeePerGas` (default 1, about 200 times Base's usual base fee; one approval uses at most about 300k gas) |
+
+Log lines and alerts show `<url>` in place of every http(s) and ws(s) URL:
+endpoint URLs often carry an access key. Startup refuses an endpoint setting
+without the right scheme, and does not echo it.
 
 ## Run
 
@@ -161,7 +165,10 @@ WantedBy=multi-user.target
   set, that `BASE_RPC_URL` serves `BASE_CHAIN_ID` (`eth_chainId`, which the
   checkpoint's Base chain must match too) and that `PENDULUM_WS` serves
   `PENDULUM_GENESIS_HASH`, and refuses to run otherwise. These checks run on
-  every start, the first one without a checkpoint included. While running, it
+  every start, the first one without a checkpoint included. A Base read they
+  need that fails, as during an RPC outage, is tried again every 5 s and pages
+  `Base read failed at startup, retrying` at most once a minute, so a restart
+  during an outage waits for the endpoint instead of exiting. While running, it
   re-reads its attestor membership and generation on every finalized head and
   exits with `fatal error, exiting` when either changed (a key removed, or
   removed and re-added): the next start then refuses the checkpoint until it

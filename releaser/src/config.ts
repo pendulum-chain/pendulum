@@ -1,5 +1,5 @@
 import { parseGwei } from "viem";
-import { parseHeartbeatUrl } from "./alert.js";
+import { checkUrl, parseHeartbeatUrl } from "./alert.js";
 import { MIN_REPLACEMENT_PERCENT } from "./release.js";
 
 function required(name: string): string {
@@ -37,7 +37,7 @@ function finalityTag(): "safe" | "finalized" {
 
 export const config = {
 	/** Base JSON-RPC endpoint. */
-	baseRpcUrl: required("BASE_RPC_URL"),
+	baseRpcUrl: checkUrl("BASE_RPC_URL", required("BASE_RPC_URL")),
 	/** MigrationVault contract address on Base. */
 	vaultAddress: required("VAULT_ADDRESS") as `0x${string}`,
 	/** Gas-only signing key. `release()` is permissionless and can only pay the
@@ -55,7 +55,7 @@ export const config = {
 	maxBlockRange: BigInt(envNumber("MAX_BLOCK_RANGE", 10_000, 1, true)),
 	/** Alert when the gas wallet drops below this balance (wei). */
 	minGasBalanceWei: BigInt(process.env.MIN_GAS_BALANCE_WEI ?? "5000000000000000"),
-	alertWebhookUrl: process.env.ALERT_WEBHOOK_URL,
+	alertWebhookUrl: process.env.ALERT_WEBHOOK_URL ? checkUrl("ALERT_WEBHOOK_URL", process.env.ALERT_WEBHOOK_URL) : undefined,
 	/** Optional http(s) URL requested after a cycle that completed without
 	 *  error, at most once a minute: a dead-man's switch pages when the
 	 *  requests stop. */
